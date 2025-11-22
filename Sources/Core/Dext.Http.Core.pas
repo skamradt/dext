@@ -34,8 +34,7 @@ type
   TApplicationBuilder = class(TInterfacedObject, IApplicationBuilder)
   private
     FMiddlewares: TList<TMiddlewareRegistration>;
-    FMappedRoutes: TDictionary<string, TRequestDelegate>;
-    FRoutePatterns: TDictionary<TRoutePattern, TRequestDelegate>;
+    FRoutes: TList<TRouteDefinition>; // ✅ Changed to List of Definitions
     FServiceProvider: IServiceProvider;
 
     function CreateMiddlewarePipeline(const ARegistration: TMiddlewareRegistration; ANext: TRequestDelegate): TRequestDelegate;
@@ -54,11 +53,14 @@ type
     function UseModelBinding: IApplicationBuilder;
 
     function Map(const APath: string; ADelegate: TRequestDelegate): IApplicationBuilder;
+    function MapEndpoint(const AMethod, APath: string; ADelegate: TRequestDelegate): IApplicationBuilder; // ✅ NOVO
     function MapPost(const Path: string; Handler: TStaticHandler): IApplicationBuilder; overload;
     function MapGet(const Path: string; Handler: TStaticHandler): IApplicationBuilder; overload;
     function MapPut(const Path: string; Handler: TStaticHandler): IApplicationBuilder; overload;
     function MapDelete(const Path: string; Handler: TStaticHandler): IApplicationBuilder; overload;
     function Build: TRequestDelegate;
+    function GetRoutes: TArray<TEndpointMetadata>;
+    procedure UpdateLastRouteMetadata(const AMetadata: TEndpointMetadata);
   end;
 
   TMiddleware = class(TInterfacedObject, IMiddleware)
@@ -154,19 +156,17 @@ begin
   inherited Create;
   FServiceProvider := AServiceProvider;
   FMiddlewares := TList<TMiddlewareRegistration>.Create;
-  FMappedRoutes := TDictionary<string, TRequestDelegate>.Create;
-  FRoutePatterns := TDictionary<TRoutePattern, TRequestDelegate>.Create;
+  FRoutes := TList<TRouteDefinition>.Create;
 end;
 
 destructor TApplicationBuilder.Destroy;
 var
-  RoutePattern: TRoutePattern;
+  Route: TRouteDefinition;
 begin
   FMiddlewares.Free;
-  FMappedRoutes.Free;
-  for RoutePattern in FRoutePatterns.Keys do
-    RoutePattern.Free;
-  FRoutePatterns.Free;
+  for Route in FRoutes do
+    Route.Free;
+  FRoutes.Free;
   inherited Destroy;
 end;
 
@@ -243,36 +243,26 @@ begin
   Result := Self;
 end;
 
+function TApplicationBuilder.MapEndpoint(const AMethod, APath: string; ADelegate: TRequestDelegate): IApplicationBuilder;
+var
+  RouteDef: TRouteDefinition;
+begin
+  RouteDef := TRouteDefinition.Create(AMethod, APath, ADelegate);
+  FRoutes.Add(RouteDef);
+  Writeln(Format('📍 REGISTERED %s %s', [AMethod, APath]));
+  Result := Self;
+end;
+
 function TApplicationBuilder.Map(const APath: string;
   ADelegate: TRequestDelegate): IApplicationBuilder;
 begin
-  // ✅ Detecção automática: padrão com parâmetros ou rota fixa?
-  if APath.Contains('{') and APath.Contains('}') then
-  begin
-    // Padrão com parâmetros: /users/{id}, /posts/{year}/{month}
-    var RoutePattern := TRoutePattern.Create(APath);
-    FRoutePatterns.Add(RoutePattern, ADelegate);
-
-    Writeln(Format('Registered route pattern: %s', [APath]));
-    Writeln(Format('  Parameters: %s', [string.Join(', ', RoutePattern.ParameterNames)]));
-  end
-  else
-  begin
-    // Rota fixa: /api/users, /hello
-    FMappedRoutes.AddOrSetValue(APath, ADelegate);
-    Writeln(Format('Registered fixed route: %s', [APath]));
-  end;
-
-
-  Result := Self;
+  // Default to GET for legacy Map calls
+  Result := MapEndpoint('GET', APath, ADelegate);
 end;
 
 function TApplicationBuilder.MapGet(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
 begin
-  WriteLn('📍 REGISTERING GET: ', Path);
-
-  // ✅ USAR INVOKER BÁSICO
-  Result := Map(Path,
+  Result := MapEndpoint('GET', Path,
     procedure(Context: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -289,13 +279,9 @@ begin
   );
 end;
 
-
-
 function TApplicationBuilder.MapPost(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
 begin
-  WriteLn('📍 REGISTERING POST: ', Path);
-
-  Result := Map(Path,
+  Result := MapEndpoint('POST', Path,
     procedure(Context: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -314,14 +300,13 @@ end;
 
 function TApplicationBuilder.MapPut(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
 begin
-  WriteLn('📍 REGISTERING PUT: ', Path);
-
-  Result := Map(Path,
+  Result := MapEndpoint('PUT', Path,
     procedure(Context: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
+      // Method check is now handled by Routing Middleware, but double check is fine
       if Context.Request.Method <> 'PUT' then Exit;
       
       Binder := TModelBinder.Create;
@@ -337,9 +322,7 @@ end;
 
 function TApplicationBuilder.MapDelete(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
 begin
-  WriteLn('📍 REGISTERING DELETE: ', Path);
-
-  Result := Map(Path,
+  Result := MapEndpoint('DELETE', Path,
     procedure(Context: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -372,7 +355,7 @@ begin
 
   // ✅ CRIAR RouteMatcher (interface - auto-gerenciável)
   var RouteMatcher: IRouteMatcher :=
-    TRouteMatcher.Create(FMappedRoutes, FRoutePatterns);
+    TRouteMatcher.Create(FRoutes); // Pass list of definitions
 
   // ✅ CRIAR RoutingMiddleware com a interface
   var RoutingMiddleware := TRoutingMiddleware.Create(RouteMatcher);
@@ -391,4 +374,23 @@ begin
 
   Result := RoutingHandler;
 end;
+
+
+function TApplicationBuilder.GetRoutes: TArray<TEndpointMetadata>;
+var
+  I: Integer;
+begin
+  SetLength(Result, FRoutes.Count);
+  for I := 0 to FRoutes.Count - 1 do
+    Result[I] := FRoutes[I].Metadata;
+end;
+
+procedure TApplicationBuilder.UpdateLastRouteMetadata(const AMetadata: TEndpointMetadata);
+begin
+  if FRoutes.Count > 0 then
+  begin
+    FRoutes[FRoutes.Count - 1].Metadata := AMetadata;
+  end;
+end;
+
 end.

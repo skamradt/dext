@@ -90,13 +90,12 @@ implementation
 class function TApplicationBuilderExtensions.MapPost<T>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
 begin
-  Result := App.MapPost(Path, 
+  Result := App.MapEndpoint('POST', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      // Criar ModelBinder
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -110,7 +109,7 @@ end;
 class function TApplicationBuilderExtensions.MapPost<T1, T2>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2>): IApplicationBuilder;
 begin
-  Result := App.MapPost(Path, 
+  Result := App.MapEndpoint('POST', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -129,7 +128,7 @@ end;
 class function TApplicationBuilderExtensions.MapPost<T1, T2, T3>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2, T3>): IApplicationBuilder;
 begin
-  Result := App.MapPost(Path, 
+  Result := App.MapEndpoint('POST', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -148,7 +147,7 @@ end;
 class function TApplicationBuilderExtensions.MapGet<T>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path, 
+  Result := App.MapEndpoint('GET', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -167,7 +166,7 @@ end;
 class function TApplicationBuilderExtensions.MapGet<T1, T2>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path, 
+  Result := App.MapEndpoint('GET', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -186,7 +185,7 @@ end;
 class function TApplicationBuilderExtensions.MapGet<T1, T2, T3>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2, T3>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path, 
+  Result := App.MapEndpoint('GET', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -205,14 +204,12 @@ end;
 class function TApplicationBuilderExtensions.MapPut<T>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('PUT', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'PUT' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -226,14 +223,12 @@ end;
 class function TApplicationBuilderExtensions.MapPut<T1, T2>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('PUT', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'PUT' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -247,14 +242,12 @@ end;
 class function TApplicationBuilderExtensions.MapPut<T1, T2, T3>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2, T3>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('PUT', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'PUT' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -268,14 +261,12 @@ end;
 class function TApplicationBuilderExtensions.MapDelete<T>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('DELETE', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'DELETE' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -289,14 +280,12 @@ end;
 class function TApplicationBuilderExtensions.MapDelete<T1, T2>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('DELETE', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'DELETE' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -310,14 +299,12 @@ end;
 class function TApplicationBuilderExtensions.MapDelete<T1, T2, T3>(App: IApplicationBuilder; 
   const Path: string; Handler: THandlerProc<T1, T2, T3>): IApplicationBuilder;
 begin
-  Result := App.Map(Path, 
+  Result := App.MapEndpoint('DELETE', Path, 
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'DELETE' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -331,7 +318,7 @@ end;
 class function TApplicationBuilderExtensions.MapGetR<TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<TResult>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path,
+  Result := App.MapEndpoint('GET', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -350,7 +337,7 @@ end;
 class function TApplicationBuilderExtensions.MapGetR<T, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T, TResult>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path,
+  Result := App.MapEndpoint('GET', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -369,7 +356,7 @@ end;
 class function TApplicationBuilderExtensions.MapGetR<T1, T2, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T1, T2, TResult>): IApplicationBuilder;
 begin
-  Result := App.MapGet(Path,
+  Result := App.MapEndpoint('GET', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -388,7 +375,7 @@ end;
 class function TApplicationBuilderExtensions.MapPostR<T, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T, TResult>): IApplicationBuilder;
 begin
-  Result := App.MapPost(Path,
+  Result := App.MapEndpoint('POST', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -407,7 +394,7 @@ end;
 class function TApplicationBuilderExtensions.MapPostR<T1, T2, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T1, T2, TResult>): IApplicationBuilder;
 begin
-  Result := App.MapPost(Path,
+  Result := App.MapEndpoint('POST', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
@@ -427,14 +414,12 @@ end;
 class function TApplicationBuilderExtensions.MapPutR<T, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T, TResult>): IApplicationBuilder;
 begin
-  Result := App.Map(Path,
+  Result := App.MapEndpoint('PUT', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'PUT' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -448,14 +433,12 @@ end;
 class function TApplicationBuilderExtensions.MapPutR<T1, T2, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T1, T2, TResult>): IApplicationBuilder;
 begin
-  Result := App.Map(Path,
+  Result := App.MapEndpoint('PUT', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'PUT' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -469,14 +452,12 @@ end;
 class function TApplicationBuilderExtensions.MapDeleteR<T, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T, TResult>): IApplicationBuilder;
 begin
-  Result := App.Map(Path,
+  Result := App.MapEndpoint('DELETE', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'DELETE' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try
@@ -490,14 +471,12 @@ end;
 class function TApplicationBuilderExtensions.MapDeleteR<T1, T2, TResult>(App: IApplicationBuilder;
   const Path: string; Handler: THandlerFunc<T1, T2, TResult>): IApplicationBuilder;
 begin
-  Result := App.Map(Path,
+  Result := App.MapEndpoint('DELETE', Path,
     procedure(Ctx: IHttpContext)
     var
       Invoker: THandlerInvoker;
       Binder: IModelBinder;
     begin
-      if Ctx.Request.Method <> 'DELETE' then Exit;
-      
       Binder := TModelBinder.Create;
       Invoker := THandlerInvoker.Create(Ctx, Binder);
       try

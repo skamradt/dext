@@ -77,7 +77,11 @@ contains
   Dext.Utils in 'Dext.Utils.pas',
   Dext.Validation in 'Dext.Validation.pas',
   Dext.WebHost in 'Dext.WebHost.pas',
-  Dext.Core.Activator in 'Dext.Core.Activator.pas';
+  Dext.Core.Activator in 'Dext.Core.Activator.pas',
+  Dext.OpenAPI.Extensions in 'Dext.OpenAPI.Extensions.pas',
+  Dext.Swagger.Middleware in 'Dext.Swagger.Middleware.pas',
+  Dext.OpenAPI.Generator in 'Dext.OpenAPI.Generator.pas',
+  Dext.OpenAPI.Types in 'Dext.OpenAPI.Types.pas';
 
 end.
 

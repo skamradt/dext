@@ -24,6 +24,9 @@
         <Projects Include="Tests\Dext.MinimalAPITest.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Examples\SwaggerExample.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -95,14 +98,23 @@
     <Target Name="Dext_MinimalAPITest:Make">
         <MSBuild Projects="Tests\Dext.MinimalAPITest.dproj" Targets="Make"/>
     </Target>
+    <Target Name="SwaggerExample">
+        <MSBuild Projects="..\Examples\SwaggerExample.dproj"/>
+    </Target>
+    <Target Name="SwaggerExample:Clean">
+        <MSBuild Projects="..\Examples\SwaggerExample.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SwaggerExample:Make">
+        <MSBuild Projects="..\Examples\SwaggerExample.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_ServerTest;Dext_ServerTest_Cors;TaskFlowAPI;Dext_Core;Dext_MinimalAPITest"/>
+        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_ServerTest;Dext_ServerTest_Cors;TaskFlowAPI;Dext_Core;Dext_MinimalAPITest;SwaggerExample"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_ServerTest:Clean;Dext_ServerTest_Cors:Clean;TaskFlowAPI:Clean;Dext_Core:Clean;Dext_MinimalAPITest:Clean"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_ServerTest:Clean;Dext_ServerTest_Cors:Clean;TaskFlowAPI:Clean;Dext_Core:Clean;Dext_MinimalAPITest:Clean;SwaggerExample:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_ServerTest:Make;Dext_ServerTest_Cors:Make;TaskFlowAPI:Make;Dext_Core:Make;Dext_MinimalAPITest:Make"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_ServerTest:Make;Dext_ServerTest_Cors:Make;TaskFlowAPI:Make;Dext_Core:Make;Dext_MinimalAPITest:Make;SwaggerExample:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

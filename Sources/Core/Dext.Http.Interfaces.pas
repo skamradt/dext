@@ -22,6 +22,15 @@ type
   TStaticHandler = reference to procedure(AContext: IHttpContext);
   TMiddlewareDelegate = reference to procedure(AContext: IHttpContext; ANext: TRequestDelegate);
 
+  TEndpointMetadata = record
+    Method: string;
+    Path: string;
+    Summary: string;
+    Description: string;
+    Tags: TArray<string>;
+    Parameters: TArray<string>; // Added parameters
+  end;
+
   IResult = interface
     ['{D6F5E4A3-9B2C-4D1E-8F7A-6C5B4E3D2F1A}']
     procedure Execute(AContext: IHttpContext);
@@ -86,11 +95,15 @@ type
     function UseModelBinding: IApplicationBuilder;
 
     function Map(const APath: string; ADelegate: TRequestDelegate): IApplicationBuilder;
+    function MapEndpoint(const AMethod, APath: string; ADelegate: TRequestDelegate): IApplicationBuilder;
     function MapPost(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function MapGet(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function MapPut(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function MapDelete(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function Build: TRequestDelegate;
+    
+    function GetRoutes: TArray<TEndpointMetadata>; // ✅ Introspection
+    procedure UpdateLastRouteMetadata(const AMetadata: TEndpointMetadata); // ✅ For fluent API
   end;
 
   IWebHost = interface

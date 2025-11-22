@@ -1,4 +1,4 @@
-﻿// Dext.Http.RoutingMiddleware.pas - ATUALIZAR
+﻿// Dext.Http.RoutingMiddleware.pas
 unit Dext.Http.RoutingMiddleware;
 
 interface
@@ -35,12 +35,14 @@ procedure TRoutingMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDeleg
 var
   Handler: TRequestDelegate;
   RouteParams: TDictionary<string, string>;
+  Metadata: TEndpointMetadata;
   IndyContext: TIndyHttpContext;
 begin
   var Path := AContext.Request.Path;
+  var Method := AContext.Request.Method;
 
-  // ✅ USAR RouteMatcher via interface
-  if FRouteMatcher.FindMatchingRoute(Path, Handler, RouteParams) then
+  // ✅ USAR RouteMatcher via interface com suporte a Método
+  if FRouteMatcher.FindMatchingRoute(Method, Path, Handler, RouteParams, Metadata) then
   begin
     try
       // ✅ INJETAR parâmetros de rota se encontrados
@@ -49,6 +51,8 @@ begin
         IndyContext := TIndyHttpContext(AContext);
         IndyContext.SetRouteParams(RouteParams);
       end;
+
+      // TODO: Store Metadata in Context.Items if available for other middlewares (e.g. Auth)
 
       Handler(AContext);
     finally

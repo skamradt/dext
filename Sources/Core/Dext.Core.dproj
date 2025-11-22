@@ -150,6 +150,10 @@
         <DCCReference Include="Dext.Validation.pas"/>
         <DCCReference Include="Dext.WebHost.pas"/>
         <DCCReference Include="Dext.Core.Activator.pas"/>
+        <DCCReference Include="Dext.OpenAPI.Extensions.pas"/>
+        <DCCReference Include="Dext.Swagger.Middleware.pas"/>
+        <DCCReference Include="Dext.OpenAPI.Generator.pas"/>
+        <DCCReference Include="Dext.OpenAPI.Types.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

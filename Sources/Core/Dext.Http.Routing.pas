@@ -14,42 +14,50 @@ type
     FPattern: string;
     FRegex: TRegEx;
     FParameterNames: TArray<string>;
-
     function BuildRegexPattern(const APattern: string): string;
     function ExtractParameterNames(const APattern: string): TArray<string>;
   public
     constructor Create(const APattern: string);
-
     function Match(const APath: string; out AParams: TDictionary<string, string>): Boolean;
-
     property Pattern: string read FPattern;
     property ParameterNames: TArray<string> read FParameterNames;
   end;
 
-  // ✅ NOVO: Interface para Route Matcher
-  IRouteMatcher = interface
-    ['{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}']
-    function FindMatchingRoute(const APath: string;
-      out AHandler: TRequestDelegate;
-      out ARouteParams: TDictionary<string, string>): Boolean;
+  TRouteDefinition = class
+  private
+    FMethod: string;
+    FPath: string;
+    FHandler: TRequestDelegate;
+    FPattern: TRoutePattern;
+    FMetadata: TEndpointMetadata;
+  public
+    constructor Create(const AMethod, APath: string; AHandler: TRequestDelegate);
+    destructor Destroy; override;
+    property Method: string read FMethod;
+    property Path: string read FPath;
+    property Handler: TRequestDelegate read FHandler;
+    property Pattern: TRoutePattern read FPattern;
+    property Metadata: TEndpointMetadata read FMetadata write FMetadata;
   end;
 
-  // ✅ NOVO: Implementação do Route Matcher
+  IRouteMatcher = interface
+    ['{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}']
+    function FindMatchingRoute(const AMethod, APath: string;
+      out AHandler: TRequestDelegate;
+      out ARouteParams: TDictionary<string, string>;
+      out AMetadata: TEndpointMetadata): Boolean;
+  end;
+
   TRouteMatcher = class(TInterfacedObject, IRouteMatcher)
   private
-    FMappedRoutes: TDictionary<string, TRequestDelegate>;
-    FRoutePatterns: TDictionary<TRoutePattern, TRequestDelegate>;
-
-    function CloneRoutes(ASource: TDictionary<string, TRequestDelegate>): TDictionary<string, TRequestDelegate>;
-    function ClonePatterns(ASource: TDictionary<TRoutePattern, TRequestDelegate>): TDictionary<TRoutePattern, TRequestDelegate>;
+    FRoutes: TObjectList<TRouteDefinition>;
   public
-    constructor Create(AMappedRoutes: TDictionary<string, TRequestDelegate>;
-      ARoutePatterns: TDictionary<TRoutePattern, TRequestDelegate>);
+    constructor Create(const ARoutes: TList<TRouteDefinition>);
     destructor Destroy; override;
-
-    function FindMatchingRoute(const APath: string;
+    function FindMatchingRoute(const AMethod, APath: string;
       out AHandler: TRequestDelegate;
-      out ARouteParams: TDictionary<string, string>): Boolean;
+      out ARouteParams: TDictionary<string, string>;
+      out AMetadata: TEndpointMetadata): Boolean;
   end;
 
   ERouteException = class(Exception);
@@ -127,67 +135,90 @@ begin
   end;
 end;
 
-{ TRouteMatcher }
+{ TRouteDefinition }
 
-constructor TRouteMatcher.Create(AMappedRoutes: TDictionary<string, TRequestDelegate>;
-  ARoutePatterns: TDictionary<TRoutePattern, TRequestDelegate>);
+constructor TRouteDefinition.Create(const AMethod, APath: string; AHandler: TRequestDelegate);
 begin
   inherited Create;
-  FMappedRoutes := CloneRoutes(AMappedRoutes);
-  FRoutePatterns := ClonePatterns(ARoutePatterns);
+  FMethod := AMethod;
+  FPath := APath;
+  FHandler := AHandler;
+  
+  if APath.Contains('{') then
+    FPattern := TRoutePattern.Create(APath)
+  else
+    FPattern := nil;
+
+  FMetadata.Method := AMethod;
+  FMetadata.Path := APath;
 end;
 
-destructor TRouteMatcher.Destroy;
-var
-  RoutePattern: TRoutePattern;
+destructor TRouteDefinition.Destroy;
 begin
-  FMappedRoutes.Free;
-
-  for RoutePattern in FRoutePatterns.Keys do
-    RoutePattern.Free;
-  FRoutePatterns.Free;
-
-  inherited Destroy;
+  if Assigned(FPattern) then
+    FPattern.Free;
+  inherited;
 end;
 
-function TRouteMatcher.CloneRoutes(ASource: TDictionary<string, TRequestDelegate>): TDictionary<string, TRequestDelegate>;
-var
-  Path: string;
-begin
-  Result := TDictionary<string, TRequestDelegate>.Create;
-  for Path in ASource.Keys do
-    Result.Add(Path, ASource[Path]);
-end;
+{ TRouteMatcher }
 
-function TRouteMatcher.ClonePatterns(ASource: TDictionary<TRoutePattern, TRequestDelegate>): TDictionary<TRoutePattern, TRequestDelegate>;
+constructor TRouteMatcher.Create(const ARoutes: TList<TRouteDefinition>);
 var
-  Pattern: TRoutePattern;
+  Route: TRouteDefinition;
 begin
-  Result := TDictionary<TRoutePattern, TRequestDelegate>.Create;
-  for Pattern in ASource.Keys do
+  inherited Create;
+  FRoutes := TObjectList<TRouteDefinition>.Create(True); // Owns objects
+  
+  // Clone routes to ensure thread safety and independence
+  for Route in ARoutes do
   begin
-    var NewPattern := TRoutePattern.Create(Pattern.Pattern);
-    Result.Add(NewPattern, ASource[Pattern]);
+    var NewRoute := TRouteDefinition.Create(Route.Method, Route.Path, Route.Handler);
+    NewRoute.Metadata := Route.Metadata;
+    FRoutes.Add(NewRoute);
   end;
 end;
 
-function TRouteMatcher.FindMatchingRoute(const APath: string;
-  out AHandler: TRequestDelegate; out ARouteParams: TDictionary<string, string>): Boolean;
+destructor TRouteMatcher.Destroy;
+begin
+  FRoutes.Free;
+  inherited;
+end;
+
+function TRouteMatcher.FindMatchingRoute(const AMethod, APath: string;
+  out AHandler: TRequestDelegate;
+  out ARouteParams: TDictionary<string, string>;
+  out AMetadata: TEndpointMetadata): Boolean;
 var
-  RoutePattern: TRoutePattern;
+  Route: TRouteDefinition;
 begin
   ARouteParams := nil;
   Result := False;
 
-  if FMappedRoutes.TryGetValue(APath, AHandler) then
-    Exit(True);
-
-  for RoutePattern in FRoutePatterns.Keys do
+  // 1. Exact Match First (Performance optimization)
+  for Route in FRoutes do
   begin
-    if RoutePattern.Match(APath, ARouteParams) then
+    if (Route.Pattern = nil) and 
+       (Route.Method = AMethod) and 
+       (Route.Path = APath) then
     begin
-      AHandler := FRoutePatterns[RoutePattern];
+      AHandler := Route.Handler;
+      AMetadata := Route.Metadata;
       Exit(True);
+    end;
+  end;
+
+  // 2. Pattern Match
+  for Route in FRoutes do
+  begin
+    if (Route.Pattern <> nil) and 
+       (Route.Method = AMethod) then
+    begin
+      if Route.Pattern.Match(APath, ARouteParams) then
+      begin
+        AHandler := Route.Handler;
+        AMetadata := Route.Metadata;
+        Exit(True);
+      end;
     end;
   end;
 end;
