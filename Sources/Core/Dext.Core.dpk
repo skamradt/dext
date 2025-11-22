@@ -81,7 +81,8 @@ contains
   Dext.OpenAPI.Extensions in 'Dext.OpenAPI.Extensions.pas',
   Dext.Swagger.Middleware in 'Dext.Swagger.Middleware.pas',
   Dext.OpenAPI.Generator in 'Dext.OpenAPI.Generator.pas',
-  Dext.OpenAPI.Types in 'Dext.OpenAPI.Types.pas';
+  Dext.OpenAPI.Types in 'Dext.OpenAPI.Types.pas',
+  Dext.OpenAPI.Attributes in 'Dext.OpenAPI.Attributes.pas';
 
 end.
 

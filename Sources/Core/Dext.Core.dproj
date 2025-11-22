@@ -154,6 +154,7 @@
         <DCCReference Include="Dext.Swagger.Middleware.pas"/>
         <DCCReference Include="Dext.OpenAPI.Generator.pas"/>
         <DCCReference Include="Dext.OpenAPI.Types.pas"/>
+        <DCCReference Include="Dext.OpenAPI.Attributes.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -12,26 +12,58 @@ uses
   Dext.Swagger.Middleware,
   Dext.OpenAPI.Extensions,
   Dext.OpenAPI.Generator,
+  Dext.OpenAPI.Attributes,
   Dext.Http.Results,
   Dext.Json;
 
 type
+  [SwaggerSchema('User', 'Represents a user in the system')]
   TUser = record
+    [SwaggerProperty('Unique identifier for the user')]
+    [SwaggerExample('1')]
     Id: Integer;
+    
+    [SwaggerProperty('Full name of the user')]
+    [SwaggerExample('John Doe')]
     Name: string;
+    
+    [SwaggerProperty('Email address')]
+    [SwaggerFormat('email')]
+    [SwaggerExample('john@example.com')]
     Email: string;
   end;
 
+  [SwaggerSchema('Create User Request', 'Request body for creating a new user')]
   TCreateUserRequest = record
+    [SwaggerProperty('Full name of the user')]
+    [SwaggerRequired]
     Name: string;
+    
+    [SwaggerProperty('Email address')]
+    [SwaggerFormat('email')]
+    [SwaggerRequired]
     Email: string;
+    
+    [SwaggerProperty('User password')]
+    [SwaggerFormat('password')]
+    [SwaggerRequired]
+    [SwaggerIgnoreProperty]  // Don't show password in schema
     Password: string;
   end;
 
+  [SwaggerSchema('Product', 'Represents a product in the catalog')]
   TProduct = record
+    [SwaggerProperty('Unique identifier for the product')]
     Id: Integer;
+    
+    [SwaggerProperty('Product name')]
     Name: string;
+    
+    [SwaggerProperty('Product price in USD')]
+    [SwaggerExample('99.99')]
     Price: Double;
+    
+    [SwaggerProperty('Whether the product is in stock')]
     InStock: Boolean;
   end;
 

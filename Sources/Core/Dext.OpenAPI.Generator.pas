@@ -7,7 +7,9 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.TypInfo,
+  JsonDataObjects,
   Dext.OpenAPI.Types,
+  Dext.OpenAPI.Attributes,
   Dext.Http.Interfaces,
   Dext.Json;
 
@@ -49,9 +51,24 @@ type
     function TypeToSchema(ATypeInfo: PTypeInfo): TOpenAPISchema;
     
     /// <summary>
+    ///   Converts an OpenAPI schema to JSON object recursively.
+    /// </summary>
+    function SchemaToJson(ASchema: TOpenAPISchema): TJsonObject;
+    
+    /// <summary>
     ///   Extracts path parameters from a route pattern (e.g., /users/{id}).
     /// </summary>
     function ExtractPathParameters(const APath: string): TArray<string>;
+    
+    /// <summary>
+    ///   Processes Swagger attributes on a type and applies them to the schema.
+    /// </summary>
+    procedure ProcessTypeAttributes(ARttiType: TRttiType; ASchema: TOpenAPISchema);
+    
+    /// <summary>
+    ///   Processes Swagger attributes on a field/property and applies them to the schema.
+    /// </summary>
+    procedure ProcessFieldAttributes(AMember: TRttiMember; ASchema: TOpenAPISchema; out AShouldIgnore: Boolean);
     
   public
     constructor Create(const AOptions: TOpenAPIOptions);
@@ -71,7 +88,6 @@ type
 implementation
 
 uses
-  JsonDataObjects,
   System.RegularExpressions,
   System.StrUtils;
 
@@ -163,7 +179,16 @@ begin
 end;
 
 function TOpenAPIGenerator.TypeToSchema(ATypeInfo: PTypeInfo): TOpenAPISchema;
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  Field: TRttiField;
+  Prop: TRttiProperty;
+  FieldSchema: TOpenAPISchema;
+  ArrayType: TRttiDynamicArrayType;
+  ElementType: TRttiType;
 begin
+  // Check cache first to avoid infinite recursion
   if FSchemaCache.ContainsKey(ATypeInfo) then
     Exit(FSchemaCache[ATypeInfo]);
     
@@ -179,7 +204,24 @@ begin
     tkFloat:
     begin
       Result.DataType := odtNumber;
-      Result.Format := 'double';
+      // Check if it's a TDateTime
+      if ATypeInfo = TypeInfo(TDateTime) then
+      begin
+        Result.Format := 'date-time';
+        Result.Description := 'Date and time in ISO 8601 format';
+      end
+      else if ATypeInfo = TypeInfo(TDate) then
+      begin
+        Result.Format := 'date';
+        Result.Description := 'Date in ISO 8601 format';
+      end
+      else if ATypeInfo = TypeInfo(TTime) then
+      begin
+        Result.Format := 'time';
+        Result.Description := 'Time in ISO 8601 format';
+      end
+      else
+        Result.Format := 'double';
     end;
     
     tkString, tkLString, tkWString, tkUString:
@@ -194,42 +236,235 @@ begin
       else
       begin
         Result.DataType := odtString;
-        // TODO: Add enum values
+        // Extract enum values
+        var TypeData := GetTypeData(ATypeInfo);
+        if Assigned(TypeData) then
+        begin
+          var EnumValues: TArray<string>;
+          SetLength(EnumValues, TypeData.MaxValue - TypeData.MinValue + 1);
+          for var I := TypeData.MinValue to TypeData.MaxValue do
+            EnumValues[I - TypeData.MinValue] := GetEnumName(ATypeInfo, I);
+          Result.Enum := EnumValues;
+        end;
       end;
     end;
     
     tkRecord, tkClass:
     begin
       Result.DataType := odtObject;
-      // TODO: Introspect record/class fields using RTTI
-      var RttiContext := TRttiContext.Create;
+      
+      // Add to cache before processing fields to prevent infinite recursion
+      FSchemaCache.Add(ATypeInfo, Result);
+      
+      RttiContext := TRttiContext.Create;
       try
-        var RttiType := RttiContext.GetType(ATypeInfo);
+        RttiType := RttiContext.GetType(ATypeInfo);
         if Assigned(RttiType) then
         begin
-          for var Field in RttiType.GetFields do
+          // Process type-level attributes
+          ProcessTypeAttributes(RttiType, Result);
+          
+          // Process fields (for records and classes)
+          for Field in RttiType.GetFields do
           begin
             if Field.Visibility in [mvPublic, mvPublished] then
             begin
-              var FieldSchema := TypeToSchema(Field.FieldType.Handle);
-              Result.Properties.Add(Field.Name, FieldSchema);
+              var ShouldIgnore: Boolean;
+              FieldSchema := TypeToSchema(Field.FieldType.Handle);
+              ProcessFieldAttributes(Field, FieldSchema, ShouldIgnore);
+              
+              if not ShouldIgnore then
+                Result.Properties.Add(Field.Name, FieldSchema);
+            end;
+          end;
+          
+          // Process properties (for classes)
+          if ATypeInfo.Kind = tkClass then
+          begin
+            for Prop in RttiType.GetProperties do
+            begin
+              if (Prop.Visibility in [mvPublic, mvPublished]) and Prop.IsReadable then
+              begin
+                // Avoid duplicates if property has same name as field
+                if not Result.Properties.ContainsKey(Prop.Name) then
+                begin
+                  var ShouldIgnore: Boolean;
+                  FieldSchema := TypeToSchema(Prop.PropertyType.Handle);
+                  ProcessFieldAttributes(Prop, FieldSchema, ShouldIgnore);
+                  
+                  if not ShouldIgnore then
+                    Result.Properties.Add(Prop.Name, FieldSchema);
+                end;
+              end;
             end;
           end;
         end;
       finally
         RttiContext.Free;
       end;
+      
+      Exit; // Already added to cache above
     end;
     
     tkDynArray:
     begin
       Result.DataType := odtArray;
-      // TODO: Determine array element type
+      
+      // Try to determine array element type
+      RttiContext := TRttiContext.Create;
+      try
+        RttiType := RttiContext.GetType(ATypeInfo);
+        if Assigned(RttiType) and (RttiType is TRttiDynamicArrayType) then
+        begin
+          ArrayType := TRttiDynamicArrayType(RttiType);
+          ElementType := ArrayType.ElementType;
+          if Assigned(ElementType) then
+          begin
+            Result.Items := TypeToSchema(ElementType.Handle);
+          end;
+        end;
+      finally
+        RttiContext.Free;
+      end;
     end;
   end;
   
   FSchemaCache.Add(ATypeInfo, Result);
 end;
+
+function TOpenAPIGenerator.SchemaToJson(ASchema: TOpenAPISchema): TJsonObject;
+var
+  PropertiesJson: TJsonObject;
+  PropPair: TPair<string, TOpenAPISchema>;
+  PropSchema: TOpenAPISchema;
+  EnumArray: TJsonArray;
+  EnumValue: string;
+begin
+  Result := TJsonObject.Create;
+  
+  // Type
+  case ASchema.DataType of
+    odtString: Result.S['type'] := 'string';
+    odtNumber: Result.S['type'] := 'number';
+    odtInteger: Result.S['type'] := 'integer';
+    odtBoolean: Result.S['type'] := 'boolean';
+    odtArray: Result.S['type'] := 'array';
+    odtObject: Result.S['type'] := 'object';
+  end;
+  
+  // Format
+  if ASchema.Format <> '' then
+    Result.S['format'] := ASchema.Format;
+  
+  // Description
+  if ASchema.Description <> '' then
+    Result.S['description'] := ASchema.Description;
+  
+  // Enum values
+  if Length(ASchema.Enum) > 0 then
+  begin
+    EnumArray := TJsonArray.Create;
+    for EnumValue in ASchema.Enum do
+      EnumArray.Add(EnumValue);
+    Result.A['enum'] := EnumArray;
+  end;
+  
+  // Properties (for objects)
+  if (ASchema.DataType = odtObject) and (ASchema.Properties.Count > 0) then
+  begin
+    PropertiesJson := TJsonObject.Create;
+    for PropPair in ASchema.Properties do
+    begin
+      PropSchema := PropPair.Value;
+      PropertiesJson.O[PropPair.Key] := SchemaToJson(PropSchema);
+    end;
+    Result.O['properties'] := PropertiesJson;
+    
+    // Required fields
+    if Length(ASchema.Required) > 0 then
+    begin
+      var RequiredArray := TJsonArray.Create;
+      for var Req in ASchema.Required do
+        RequiredArray.Add(Req);
+      Result.A['required'] := RequiredArray;
+    end;
+  end;
+  
+  // Items (for arrays)
+  if (ASchema.DataType = odtArray) and Assigned(ASchema.Items) then
+  begin
+    Result.O['items'] := SchemaToJson(ASchema.Items);
+  end;
+end;
+
+procedure TOpenAPIGenerator.ProcessTypeAttributes(ARttiType: TRttiType; ASchema: TOpenAPISchema);
+var
+  Attr: TCustomAttribute;
+  SchemaAttr: SwaggerSchemaAttribute;
+begin
+  if not Assigned(ARttiType) then
+    Exit;
+    
+  for Attr in ARttiType.GetAttributes do
+  begin
+    if Attr is SwaggerSchemaAttribute then
+    begin
+      SchemaAttr := SwaggerSchemaAttribute(Attr);
+      if SchemaAttr.Title <> '' then
+        ASchema.Description := SchemaAttr.Title + '. ' + ASchema.Description;
+      if SchemaAttr.Description <> '' then
+        ASchema.Description := SchemaAttr.Description;
+    end;
+  end;
+end;
+
+procedure TOpenAPIGenerator.ProcessFieldAttributes(AMember: TRttiMember; ASchema: TOpenAPISchema; out AShouldIgnore: Boolean);
+var
+  Attr: TCustomAttribute;
+  PropAttr: SwaggerPropertyAttribute;
+  FormatAttr: SwaggerFormatAttribute;
+  ExampleAttr: SwaggerExampleAttribute;
+begin
+  AShouldIgnore := False;
+  
+  if not Assigned(AMember) then
+    Exit;
+    
+  for Attr in AMember.GetAttributes do
+  begin
+    // Check if should ignore
+    if Attr is SwaggerIgnorePropertyAttribute then
+    begin
+      AShouldIgnore := True;
+      Exit;
+    end;
+    
+    // Process property customization
+    if Attr is SwaggerPropertyAttribute then
+    begin
+      PropAttr := SwaggerPropertyAttribute(Attr);
+      if PropAttr.Description <> '' then
+        ASchema.Description := PropAttr.Description;
+      if PropAttr.Format <> '' then
+        ASchema.Format := PropAttr.Format;
+    end;
+    
+    // Process format
+    if Attr is SwaggerFormatAttribute then
+    begin
+      FormatAttr := SwaggerFormatAttribute(Attr);
+      ASchema.Format := FormatAttr.Format;
+    end;
+    
+    // Process example
+    if Attr is SwaggerExampleAttribute then
+    begin
+      ExampleAttr := SwaggerExampleAttribute(Attr);
+      ASchema.Description := ASchema.Description + ' (Example: ' + ExampleAttr.Value + ')';
+    end;
+  end;
+end;
+
 
 function TOpenAPIGenerator.CreateOperation(const AMetadata: TEndpointMetadata): TOpenAPIOperation;
 var
@@ -353,7 +588,6 @@ var
   Response: TOpenAPIResponse;
   ResponseJson: TJsonObject;
   ContentJson: TJsonObject;
-  SchemaJson: TJsonObject;
   Schema: TOpenAPISchema;
   Pair: TPair<string, TOpenAPIPathItem>;
   TagsArray: TJsonArray;
@@ -409,11 +643,12 @@ begin
         PathItem := Pair.Value;
         PathItemJson := TJsonObject.Create;
         
-        // Helper function to add operation
-        var AddOperation := procedure(Op: TOpenAPIOperation; const MethodName: string)
+        // Helper procedure to add operation
+        var AddOperation: TProc<TOpenAPIOperation, string>;
+        AddOperation := procedure(Op: TOpenAPIOperation; MethodName: string)
         begin
           if not Assigned(Op) then Exit;
-          
+
           OperationJson := TJsonObject.Create;
           if Op.Summary <> '' then
             OperationJson.S['summary'] := Op.Summary;
@@ -445,27 +680,14 @@ begin
                 oplHeader: ParamJson.S['in'] := 'header';
                 oplCookie: ParamJson.S['in'] := 'cookie';
               end;
-              
+
               ParamJson.B['required'] := Param.Required;
               
               if Param.Description <> '' then
                 ParamJson.S['description'] := Param.Description;
               
-              // Schema
-              SchemaJson := TJsonObject.Create;
-              case Param.Schema.DataType of
-                odtString: SchemaJson.S['type'] := 'string';
-                odtNumber: SchemaJson.S['type'] := 'number';
-                odtInteger: SchemaJson.S['type'] := 'integer';
-                odtBoolean: SchemaJson.S['type'] := 'boolean';
-                odtArray: SchemaJson.S['type'] := 'array';
-                odtObject: SchemaJson.S['type'] := 'object';
-              end;
-              
-              if Param.Schema.Format <> '' then
-                SchemaJson.S['format'] := Param.Schema.Format;
-              
-              ParamJson.O['schema'] := SchemaJson;
+              // Schema - use SchemaToJson for complete schema conversion
+              ParamJson.O['schema'] := SchemaToJson(Param.Schema);
               ParamsArray.Add(ParamJson);
             end;
             OperationJson.A['parameters'] := ParamsArray;
@@ -481,18 +703,7 @@ begin
             for var SchemaPair in Op.RequestBody.Content do
             begin
               Schema := SchemaPair.Value;
-              SchemaJson := TJsonObject.Create;
-              
-              case Schema.DataType of
-                odtString: SchemaJson.S['type'] := 'string';
-                odtNumber: SchemaJson.S['type'] := 'number';
-                odtInteger: SchemaJson.S['type'] := 'integer';
-                odtBoolean: SchemaJson.S['type'] := 'boolean';
-                odtArray: SchemaJson.S['type'] := 'array';
-                odtObject: SchemaJson.S['type'] := 'object';
-              end;
-              
-              ContentJson.O[SchemaPair.Key] := SchemaJson;
+              ContentJson.O[SchemaPair.Key] := SchemaToJson(Schema);
             end;
             
             RequestBodyJson.O['content'] := ContentJson;
@@ -513,18 +724,7 @@ begin
               for var SchemaPair in Response.Content do
               begin
                 Schema := SchemaPair.Value;
-                SchemaJson := TJsonObject.Create;
-                
-                case Schema.DataType of
-                  odtString: SchemaJson.S['type'] := 'string';
-                  odtNumber: SchemaJson.S['type'] := 'number';
-                  odtInteger: SchemaJson.S['type'] := 'integer';
-                  odtBoolean: SchemaJson.S['type'] := 'boolean';
-                  odtArray: SchemaJson.S['type'] := 'array';
-                  odtObject: SchemaJson.S['type'] := 'object';
-                end;
-                
-                ContentJson.O[SchemaPair.Key] := SchemaJson;
+                ContentJson.O[SchemaPair.Key] := SchemaToJson(Schema);
               end;
               ResponseJson.O['content'] := ContentJson;
             end;
@@ -532,7 +732,7 @@ begin
             ResponsesJson.O[ResponsePair.Key] := ResponseJson;
           end;
           OperationJson.O['responses'] := ResponsesJson;
-          
+
           PathItemJson.O[MethodName] := OperationJson;
         end;
         
