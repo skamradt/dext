@@ -75,7 +75,7 @@ type
     function ToJson(Indented: Boolean = False): string; override;
 
     // IDextJsonArray
-    function GetCount: Integer;
+    function GetCount: NativeInt;
     function GetNode(Index: Integer): IDextJsonNode;
     function GetString(Index: Integer): string;
     function GetInteger(Index: Integer): Integer;
@@ -345,7 +345,7 @@ begin
   Result := FArr.ToJSON(Indented);
 end;
 
-function TJsonDataArrayAdapter.GetCount: Integer;
+function TJsonDataArrayAdapter.GetCount: NativeInt;
 begin
   Result := FArr.Count;
 end;

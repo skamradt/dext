@@ -32,6 +32,7 @@ type
     FItems: TOpenAPISchema;
     FRef: string; // For $ref references
     FEnum: TArray<string>;
+    FExample: string; // Stores the example value
   public
     constructor Create;
     destructor Destroy; override;
@@ -44,6 +45,7 @@ type
     property Items: TOpenAPISchema read FItems write FItems;
     property Ref: string read FRef write FRef;
     property Enum: TArray<string> read FEnum write FEnum;
+    property Example: string read FExample write FExample;
   end;
 
   /// <summary>

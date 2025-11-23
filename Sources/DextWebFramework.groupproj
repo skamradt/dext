@@ -27,6 +27,9 @@
         <Projects Include="..\Examples\SwaggerExample.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Examples\ControllerExample.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -107,14 +110,23 @@
     <Target Name="SwaggerExample:Make">
         <MSBuild Projects="..\Examples\SwaggerExample.dproj" Targets="Make"/>
     </Target>
+    <Target Name="ControllerExample">
+        <MSBuild Projects="..\Examples\ControllerExample.dproj"/>
+    </Target>
+    <Target Name="ControllerExample:Clean">
+        <MSBuild Projects="..\Examples\ControllerExample.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ControllerExample:Make">
+        <MSBuild Projects="..\Examples\ControllerExample.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_ServerTest;Dext_ServerTest_Cors;TaskFlowAPI;Dext_Core;Dext_MinimalAPITest;SwaggerExample"/>
+        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_ServerTest;Dext_ServerTest_Cors;TaskFlowAPI;Dext_Core;Dext_MinimalAPITest;SwaggerExample;ControllerExample"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_ServerTest:Clean;Dext_ServerTest_Cors:Clean;TaskFlowAPI:Clean;Dext_Core:Clean;Dext_MinimalAPITest:Clean;SwaggerExample:Clean"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_ServerTest:Clean;Dext_ServerTest_Cors:Clean;TaskFlowAPI:Clean;Dext_Core:Clean;Dext_MinimalAPITest:Clean;SwaggerExample:Clean;ControllerExample:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_ServerTest:Make;Dext_ServerTest_Cors:Make;TaskFlowAPI:Make;Dext_Core:Make;Dext_MinimalAPITest:Make;SwaggerExample:Make"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_ServerTest:Make;Dext_ServerTest_Cors:Make;TaskFlowAPI:Make;Dext_Core:Make;Dext_MinimalAPITest:Make;SwaggerExample:Make;ControllerExample:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -29,6 +29,7 @@ type
 
   IControllerScanner = interface
     function FindControllers: TArray<TControllerInfo>;
+    procedure RegisterServices(Services: IServiceCollection); // New method
     function RegisterRoutes(AppBuilder: IApplicationBuilder): Integer;
     procedure RegisterControllerManual(AppBuilder: IApplicationBuilder);
   end;
@@ -40,11 +41,16 @@ type
   public
     constructor Create(AServiceProvider: IServiceProvider);
     function FindControllers: TArray<TControllerInfo>;
+    procedure RegisterServices(Services: IServiceCollection);
     function RegisterRoutes(AppBuilder: IApplicationBuilder): Integer;
     procedure RegisterControllerManual(AppBuilder: IApplicationBuilder);
   end;
 
 implementation
+
+uses
+  Dext.Core.ModelBinding,
+  Dext.Core.HandlerInvoker;
 
 { TControllerScanner }
 
@@ -157,10 +163,10 @@ begin
       WriteLn('  📝 Type: ', RttiType.Name, ' | Kind: ',
         GetEnumName(TypeInfo(TTypeKind), Integer(RttiType.TypeKind)));
 
-      // ✅ FILTRAR: Apenas records
-      if (RttiType.TypeKind = tkRecord) then
+      // ✅ FILTRAR: Records ou Classes
+      if (RttiType.TypeKind in [tkRecord, tkClass]) then
       begin
-        WriteLn('    ✅ Is record: ', RttiType.Name);
+        WriteLn('    ✅ Is record/class: ', RttiType.Name);
 
         // Verificar se tem métodos com atributos de rota
         var HasRouteMethods := False;
@@ -174,11 +180,18 @@ begin
           begin
             WriteLn('      🎯 Method: ', Method.Name, ' | Static: ', Method.IsStatic);
 
-            // ✅ APENAS MÉTODOS ESTÁTICOS
-            if not Method.IsStatic then
+            // ✅ APENAS MÉTODOS ESTÁTICOS (para records) ou PÚBLICOS (para classes)
+            if (RttiType.TypeKind = tkRecord) and (not Method.IsStatic) then
             begin
-              WriteLn('        ❌ Skipping - not static');
+              WriteLn('        ❌ Skipping - not static (record)');
               Continue;
+            end;
+            
+            // Para classes, aceitamos métodos de instância
+            if (RttiType.TypeKind = tkClass) and (Method.Visibility <> mvPublic) and (Method.Visibility <> mvPublished) then
+            begin
+               WriteLn('        ❌ Skipping - not public (class)');
+               Continue;
             end;
 
             var Attributes := Method.GetAttributes;
@@ -246,6 +259,26 @@ begin
   end;
 end;
 
+procedure TControllerScanner.RegisterServices(Services: IServiceCollection);
+var
+  Controllers: TArray<TControllerInfo>;
+  Controller: TControllerInfo;
+begin
+  Controllers := FindControllers;
+  WriteLn('🔧 Registering ', Length(Controllers), ' controllers in DI...');
+  
+  for Controller in Controllers do
+  begin
+    if Controller.RttiType.TypeKind = tkClass then
+    begin
+      // Register as Transient
+      var ClassType := Controller.RttiType.AsInstance.MetaclassType;
+      Services.AddTransient(TServiceType.FromClass(ClassType), ClassType);
+      WriteLn('  ✅ Registered service: ', Controller.RttiType.Name);
+    end;
+  end;
+end;
+
 function TControllerScanner.RegisterRoutes(AppBuilder: IApplicationBuilder): Integer;
 var
   Controllers: TArray<TControllerInfo>;
@@ -307,12 +340,42 @@ begin
 
         // Adicionar outros métodos: PUT, DELETE, PATCH, etc.
       else
+      begin
+        // ✅ REGISTRO GENÉRICO PARA INSTÂNCIA OU ESTÁTICO
+        // Precisamos capturar o tipo do controller e o método para usar no closure
+        var ControllerType := Controller.RttiType;
+        var TargetMethod := ControllerMethod.Method;
+        
         AppBuilder.Map(FullPath,
           procedure(Context: IHttpContext)
           begin
-            Context.Response.Json(Format('{"message": "Auto-route: %s (%s)"}',
-              [FullPath, ControllerMethod.HttpMethod]));
+            // Se for classe, resolver instância e invocar
+            if ControllerType.TypeKind = tkClass then
+            begin
+              var ControllerInstance := Context.GetServices.GetService(
+                TServiceType.FromClass(ControllerType.AsInstance.MetaclassType));
+                
+              if ControllerInstance = nil then
+                raise Exception.CreateFmt('Controller %s not found in DI container', [ControllerType.Name]);
+                
+              var Binder: IModelBinder := TModelBinder.Create;
+              var Invoker := THandlerInvoker.Create(Context, Binder);
+              try
+                Invoker.InvokeAction(ControllerInstance, TargetMethod);
+              finally
+                Invoker.Free;
+                Binder := nil; // Interface managed
+                // ControllerInstance lifecycle managed by DI (Transient/Scoped)
+              end;
+            end
+            else
+            begin
+              // Fallback para records estáticos (apenas log por enquanto, ou implementar InvokeStatic)
+              Context.Response.Json(Format('{"message": "Auto-route: %s (%s)"}',
+                [FullPath, ControllerMethod.HttpMethod]));
+            end;
           end);
+      end;
 
       // ✅ PROCESSAR ATRIBUTOS DE SEGURANÇA (SwaggerAuthorize)
       var SecuritySchemes := TList<string>.Create;

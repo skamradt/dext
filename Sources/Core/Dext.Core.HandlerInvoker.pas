@@ -23,6 +23,11 @@ type
   THandlerFunc<T1, T2, TResult> = reference to function(Arg1: T1; Arg2: T2): TResult;
   THandlerFunc<T1, T2, T3, TResult> = reference to function(Arg1: T1; Arg2: T2; Arg3: T3): TResult;
 
+  // Handlers with explicit IHttpContext parameter (better UX)
+  THandlerProcWithContext<T> = reference to procedure(Arg1: T; Ctx: IHttpContext);
+  THandlerProcWithContext<T1, T2> = reference to procedure(Arg1: T1; Arg2: T2; Ctx: IHttpContext);
+  THandlerFuncWithContext<T, TResult> = reference to function(Arg1: T; Ctx: IHttpContext): TResult;
+
   THandlerInvoker = class
   private
     FModelBinder: IModelBinder;
@@ -61,6 +66,17 @@ type
     function Invoke<T, TResult>(AHandler: THandlerFunc<T, TResult>): Boolean; overload;
     function Invoke<T1, T2, TResult>(AHandler: THandlerFunc<T1, T2, TResult>): Boolean; overload;
     function Invoke<T1, T2, T3, TResult>(AHandler: THandlerFunc<T1, T2, T3, TResult>): Boolean; overload;
+
+    // Invoke for handlers with explicit IHttpContext
+    function Invoke<T>(AHandler: THandlerProcWithContext<T>): Boolean; overload;
+    function Invoke<T1, T2>(AHandler: THandlerProcWithContext<T1, T2>): Boolean; overload;
+    function Invoke<T, TResult>(AHandler: THandlerFuncWithContext<T, TResult>): Boolean; overload;
+
+    /// <summary>
+    ///   Invokes a controller action method dynamically using RTTI.
+    ///   Resolves parameters from Body, Query, Route, or Services.
+    /// </summary>
+    function InvokeAction(AInstance: TObject; AMethod: TRttiMethod): Boolean;
   end;
 
 implementation
@@ -401,6 +417,93 @@ begin
   end;
 
   Res := AHandler(Arg1, Arg2, Arg3);
+  if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
+    ResIntf.Execute(FContext);
+  Result := True;
+end;
+
+function THandlerInvoker.InvokeAction(AInstance: TObject; AMethod: TRttiMethod): Boolean;
+var
+  Args: TArray<TValue>;
+  Params: TArray<TRttiParameter>;
+  I: Integer;
+  ParamType: TRttiType;
+  ResultValue: TValue;
+  ResIntf: IResult;
+begin
+  Params := AMethod.GetParameters;
+  SetLength(Args, Length(Params));
+
+  for I := 0 to High(Params) do
+  begin
+    ParamType := Params[I].ParamType;
+    
+    // 1. IHttpContext
+    if ParamType.Handle = TypeInfo(IHttpContext) then
+      Args[I] := TValue.From<IHttpContext>(FContext)
+      
+    // 2. Records -> Body or Query (Smart Binding)
+    else if ParamType.TypeKind = tkRecord then
+    begin
+      if (FContext.Request.Method = 'GET') or (FContext.Request.Method = 'DELETE') then
+        Args[I] := FModelBinder.BindQuery(ParamType.Handle, FContext)
+      else
+        Args[I] := FModelBinder.BindBody(ParamType.Handle, FContext);
+    end
+    
+    // 3. Interfaces -> Services
+    else if ParamType.TypeKind = tkInterface then
+      Args[I] := FModelBinder.BindServices(ParamType.Handle, FContext)
+      
+    // 4. Primitives -> Route or Query
+    else
+    begin
+      if FContext.Request.RouteParams.Count > 0 then
+        Args[I] := FModelBinder.BindRoute(ParamType.Handle, FContext)
+      else
+        Args[I] := FModelBinder.BindQuery(ParamType.Handle, FContext);
+    end;
+  end;
+
+  ResultValue := AMethod.Invoke(AInstance, Args);
+  
+  // Handle IResult return
+  if ResultValue.TryAsType<IResult>(ResIntf) then
+    ResIntf.Execute(FContext);
+    
+  Result := True;
+end;
+
+// Handlers with explicit IHttpContext
+function THandlerInvoker.Invoke<T>(AHandler: THandlerProcWithContext<T>): Boolean;
+var
+  Arg1: T;
+begin
+  Arg1 := FModelBinder.Bind<T>(FContext);
+  AHandler(Arg1, FContext); // Pass context explicitly
+  Result := True;
+end;
+
+function THandlerInvoker.Invoke<T1, T2>(AHandler: THandlerProcWithContext<T1, T2>): Boolean;
+var
+  Arg1: T1;
+  Arg2: T2;
+begin
+  Arg1 := FModelBinder.Bind<T1>(FContext);
+  Arg2 := FModelBinder.Bind<T2>(FContext);
+  AHandler(Arg1, Arg2, FContext); // Pass context explicitly
+  Result := True;
+end;
+
+function THandlerInvoker.Invoke<T, TResult>(AHandler: THandlerFuncWithContext<T, TResult>): Boolean;
+var
+  Arg1: T;
+  Res: TResult;
+  ResIntf: IResult;
+begin
+  Arg1 := FModelBinder.Bind<T>(FContext);
+  Res := AHandler(Arg1, FContext); // Pass context explicitly
+  
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
     ResIntf.Execute(FContext);
   Result := True;

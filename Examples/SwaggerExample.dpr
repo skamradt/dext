@@ -94,12 +94,16 @@ begin
     Options.Title := 'Dext Example API';
     Options.Description := 'A sample API demonstrating Dext Framework with Swagger/OpenAPI integration';
     Options.Version := '1.0.0';
-    Options.ServerUrl := 'http://localhost:8080';
-    Options.ServerDescription := 'Development server';
     Options.ContactName := 'Dext Team';
     Options.ContactEmail := 'contact@dext.dev';
     Options.LicenseName := 'MIT';
     Options.LicenseUrl := 'https://opensource.org/licenses/MIT';
+    
+    // Configure servers (fluent API)
+    Options := Options.WithServer('http://localhost:8080', 'Development server');
+    // You can add more servers:
+    // Options := Options.WithServer('https://staging.example.com', 'Staging server');
+    // Options := Options.WithServer('https://api.example.com', 'Production server');
     
     // Configure Security Schemes
     Options := Options.WithBearerAuth('JWT', 'Enter JWT token in format: Bearer {token}');
@@ -129,28 +133,22 @@ begin
         // GET /api/users - Get all users
         Writeln('1. GET /api/users');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapGet<IHttpContext>(
-            App,
-            '/api/users',
+          App.MapGet('/api/users',
             procedure(Ctx: IHttpContext)
             var
               UsersJson: string;
             begin
               UsersJson := TDextJson.Serialize<TArray<TUser>>(Users);
               Ctx.Response.Json(UsersJson);
-            end
-          ),
+            end),
           'Get all users',
           'Retrieves a list of all registered users in the system',
-          ['Users']
-        );
+          ['Users']);
         
         // GET /api/users/{id} - Get user by ID
         Writeln('2. GET /api/users/{id}');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapGet<Integer, IHttpContext>(
-            App,
-            '/api/users/{id}',
+          App.MapGet<Integer>('/api/users/{id}',
             procedure(UserId: Integer; Ctx: IHttpContext)
             var
               User: TUser;
@@ -172,19 +170,15 @@ begin
                 Ctx.Response.StatusCode := 404;
                 Ctx.Response.Json('{"error": "User not found"}');
               end;
-            end
-          ),
+            end),
           'Get user by ID',
           'Retrieves detailed information about a specific user by their unique identifier. Returns 404 if the user is not found.',
-          ['Users']
-        );
+          ['Users']);
         
         // POST /api/users - Create new user
         Writeln('3. POST /api/users');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapPost<TCreateUserRequest, IHttpContext>(
-            App,
-            '/api/users',
+          App.MapPost<TCreateUserRequest>('/api/users',
             procedure(Req: TCreateUserRequest; Ctx: IHttpContext)
             var
               NewUser: TUser;
@@ -207,19 +201,15 @@ begin
               
               Ctx.Response.StatusCode := 201;
               Ctx.Response.Json(TDextJson.Serialize<TUser>(NewUser));
-            end
-          ),
+            end),
           'Create a new user',
           'Creates a new user account with the provided information. Returns the created user with assigned ID.',
-          ['Users']
-        );
+          ['Users']);
 
         // DELETE /api/users/{id} - Delete user
         Writeln('4. DELETE /api/users/{id}');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapDelete<Integer, IHttpContext>(
-            App,
-            '/api/users/{id}',
+          App.MapDelete<Integer>('/api/users/{id}',
             procedure(UserId: Integer; Ctx: IHttpContext)
             var
               I: Integer;
@@ -249,12 +239,10 @@ begin
                 Ctx.Response.StatusCode := 404;
                 Ctx.Response.Json('{"error": "User not found"}');
               end;
-            end
-          ),
+            end),
           'Delete user',
           'Deletes a user from the system. Returns 204 on success, 404 if user not found.',
-          ['Users']
-        );
+          ['Users']);
 
         // ========================================
         // Product Endpoints
@@ -263,9 +251,7 @@ begin
         // GET /api/products - Get all products
         Writeln('5. GET /api/products');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapGet<IHttpContext>(
-            App,
-            '/api/products',
+          App.MapGet('/api/products',
             procedure(Ctx: IHttpContext)
             var
               Products: TArray<TProduct>;
@@ -282,12 +268,10 @@ begin
               Products[1].InStock := False;
 
               Ctx.Response.Json(TDextJson.Serialize<TArray<TProduct>>(Products));
-            end
-          ),
+            end),
           'Get all products',
           'Retrieves a list of all available products in the catalog',
-          ['Products']
-        );
+          ['Products']);
 
         // ========================================
         // Health Check
@@ -295,18 +279,14 @@ begin
 
         Writeln('6. GET /health');
         TEndpointMetadataExtensions.WithMetadata(
-          TApplicationBuilderExtensions.MapGet<IHttpContext>(
-            App,
-            '/health',
+          App.MapGet('/health',
             procedure(Ctx: IHttpContext)
             begin
               Ctx.Response.Json('{"status": "healthy", "timestamp": "' + DateTimeToStr(Now) + '"}');
-            end
-          ),
+            end),
           'Health check',
           'Returns the health status of the API',
-          ['System']
-        );
+          ['System']);
 
         // ========================================
         // Protected Endpoint
@@ -315,21 +295,16 @@ begin
         Writeln('7. GET /api/admin/secure-data');
         TEndpointMetadataExtensions.RequireAuthorization(
           TEndpointMetadataExtensions.WithMetadata(
-            TApplicationBuilderExtensions.MapGet<IHttpContext>(
-              App,
-              '/api/admin/secure-data',
+            App.MapGet('/api/admin/secure-data',
               procedure(Ctx: IHttpContext)
               begin
                 // In a real scenario, middleware would validate the token before reaching here
                 Ctx.Response.Json('{"data": "This is top secret data", "access": "granted"}');
-              end
-            ),
+              end),
             'Get secure data',
             'Retrieves sensitive data. Requires Bearer authentication.',
-            ['Admin']
-          ),
-          'bearerAuth'
-        );
+            ['Admin']),
+          'bearerAuth');
       end)
       .Build;
 
