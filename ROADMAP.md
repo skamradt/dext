@@ -6,9 +6,9 @@ Bem-vindo ao documento oficial de roadmap do **Project Dext**. Este documento se
 
 ---
 
-## 📊 Status Atual do Projeto: **Beta 0.9** 🚀
+## 📊 Status Atual do Projeto: **Beta 0.95** 🚀
 
-O framework já possui a maioria das funcionalidades do núcleo (Core) implementadas e estáveis. Estamos na fase de polimento, documentação e expansão do ecossistema (testes, exemplos, templates).
+O framework possui todas as funcionalidades core implementadas e testadas. Estamos na fase final de polimento, documentação e preparação para v1.0.
 
 ### 🏆 Comparativo de Funcionalidades
 
@@ -21,11 +21,12 @@ Abaixo, comparamos o Dext com as principais alternativas do mercado Delphi e sua
 | **Minimal APIs** | ✅ `App.MapGet('/route', ...)` | ✅ | ❌ | ✅ |
 | **Controllers** | ✅ Suporte completo (Attributes) | ❌ | ✅ | ✅ |
 | **Model Binding** | ✅ **Avançado** (Body, Query, Route, Header, Services) | ⚠️ Básico | ✅ | ✅ |
+| **Validation** | ✅ **Automática** (Attributes + Minimal APIs) | ❌ | ✅ | ✅ |
 | **Middleware Pipeline** | ✅ Robusto (`UseMiddleware<T>`) | ✅ Simples | ✅ | ✅ |
 | **Autenticação/AuthZ** | ✅ **Nativa** (Identity, JWT, Policies) | ⚠️ (Middleware externo) | ✅ | ✅ |
-| **OpenAPI / Swagger** | 🚧 **Nativo** (Geração automática) | ✅ (Swagger-UI) | ✅ | ✅ |
-| **Caching** | ✅ **Nativo** (In-Memory, Redis) | ❌ | ❌ | ✅ |
-| **Rate Limiting** | ✅ **Nativo** | ⚠️ (Middleware externo) | ✅ | ✅ |
+| **OpenAPI / Swagger** | ✅ **Nativo** (Geração automática + Global Responses) | ✅ (Swagger-UI) | ✅ | ✅ |
+| **Caching** | ✅ **Nativo** (In-Memory, Response Cache) | ❌ | ❌ | ✅ |
+| **Rate Limiting** | ✅ **Avançado** (4 algoritmos, Partition Strategies) | ⚠️ (Middleware externo) | ✅ | ✅ |
 | **Async/Await** | ❌ (Limitação da linguagem*) | ❌ | ❌ | ✅ |
 
 *\* O Dext utiliza Tasks e Futures para operações assíncronas onde possível.*
@@ -37,39 +38,68 @@ Abaixo, comparamos o Dext com as principais alternativas do mercado Delphi e sua
 ### 1. Core & Arquitetura (✅ Concluído)
 - [x] **IHost / IWebApplication**: Abstração do ciclo de vida da aplicação.
 - [x] **Dependency Injection**: Container IOC completo (Singleton, Scoped, Transient).
+- [x] **Activator**: Suporte a Pure DI, Manual, e Hybrid Injection.
 - [x] **Configuration**: Sistema de configuração (JSON, Environment Variables).
 - [x] **Logging**: Abstração `ILogger` com múltiplos sinks (Console, File).
 
 ### 2. HTTP & Routing (✅ Concluído)
 - [x] **HttpContext**: Abstração robusta de Request/Response.
+- [x] **RemoteIpAddress**: Identificação real do cliente por IP.
 - [x] **Routing**: Árvore de rotas eficiente, parâmetros de rota, constraints.
 - [x] **Minimal APIs**: Métodos de extensão `MapGet`, `MapPost`, etc.
 - [x] **Model Binding**: Binding inteligente de parâmetros (JSON -> Record/Class).
+- [x] **Case-Insensitive Binding**: Suporte a binding independente de case.
 - [x] **Content Negotiation**: Suporte a JSON nativo (`Dext.Json`).
 
 ### 3. Middleware & Pipeline (✅ Concluído)
 - [x] **Middleware Factory**: Criação e injeção de middlewares tipados.
+- [x] **Singleton Middleware**: Suporte a middlewares com estado persistente.
 - [x] **Exception Handling**: Middleware global de tratamento de erros (RFC 7807 Problem Details).
+- [x] **HTTP Logging**: Logging estruturado de requisições/respostas.
 - [x] **CORS**: Configuração flexível de Cross-Origin Resource Sharing.
-- [x] **Static Files**: Servir arquivos estáticos.
+- [x] **Static Files**: Servir arquivos estáticos (HTML, CSS, JS, imagens).
 
-### 4. Funcionalidades Avançadas (🚧 Em Polimento)
+### 4. Funcionalidades Avançadas (✅ Concluído)
 - [x] **Controllers**: Suporte a Controllers baseados em classes com Atributos (`[HttpGet]`, `[Route]`).
 - [x] **Authentication**: Sistema base (`IIdentity`, `IPrincipal`) e JWT Bearer.
-- [x] **Caching**: Abstração `IDistributedCache` com implementações Memory e Redis.
-- [x] **Rate Limiting**: Middleware de limitação de requisições.
-- [ ] **Validation**: Integração de validação de modelos (FluentValidation style).
+- [x] **Caching**: Abstração `IDistributedCache` com implementações Memory e Response Cache.
+- [x] **Rate Limiting**: Sistema avançado com 4 algoritmos:
+  - [x] Fixed Window (janela fixa)
+  - [x] Sliding Window (janela deslizante, mais preciso)
+  - [x] Token Bucket (permite bursts controlados)
+  - [x] Concurrency Limiter (limite de requisições simultâneas)
+- [x] **Partition Strategies**: Múltiplas estratégias de particionamento:
+  - [x] Por IP (padrão)
+  - [x] Por Header (API Key, Authorization)
+  - [x] Por Route
+  - [x] Custom (função personalizada)
+- [x] **Global Rate Limits**: Proteção de recursos do servidor independente do cliente.
+- [x] **Validation**: Integração automática de validação (Attributes) em Controllers e Minimal APIs.
+- [x] **Swagger/OpenAPI**: Geração automática de documentação com Global Responses.
 
-### 5. Ecossistema & Tooling (📅 Planejado)
+### 5. Ecossistema & Tooling (📅 Planejado para v1.1)
 - [ ] **CLI**: Ferramenta de linha de comando (`dext new webapi`).
 - [ ] **Templates**: Templates de projeto para Delphi (IDE Wizards).
 - [ ] **Web Stencils**: Integração com engine de renderização server-side.
 - [ ] **Docker**: Imagens oficiais e exemplos de deploy.
+- [ ] **Distributed Cache**: Implementação Redis para `IDistributedCache`.
+- [ ] **Distributed Rate Limiting**: Suporte a Redis para Rate Limiting distribuído.
 
 ### 6. Documentação & Qualidade (🚧 Em Andamento)
+- [x] **Integration Tests**: Testes de integração completos (MinimalAPITest, ControllerExample).
+- [x] **Rate Limiting Docs**: Documentação completa do sistema de Rate Limiting.
 - [ ] **Unit Tests**: Cobertura abrangente (Core, DI, Http).
 - [ ] **Documentation**: Site de documentação oficial (VitePress/Docusaurus).
 - [ ] **Samples**: Repositório de exemplos "Real World".
+
+---
+
+## 🎯 Próximos Passos para v1.0
+
+1. **Testes Unitários**: Aumentar cobertura de testes automatizados.
+2. **Documentação**: Criar site de documentação oficial.
+3. **Performance**: Benchmarks e otimizações.
+4. **Estabilidade**: Testes de carga e stress.
 
 ---
 
@@ -84,4 +114,4 @@ O projeto é Open Source e aceita contribuições!
 
 ---
 
-*Última atualização: 25 de Novembro de 2025*
+*Última atualização: 26 de Novembro de 2025*
