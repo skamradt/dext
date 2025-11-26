@@ -32,8 +32,8 @@ end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseHttpLogging(const ABuilder: IApplicationBuilder; const AOptions: THttpLoggingOptions): IApplicationBuilder;
 begin
-  var LLogger := TServiceProviderExtensions.GetRequiredService<ILogger>(ABuilder.GetServiceProvider);
-  Result := ABuilder.UseMiddleware(THttpLoggingMiddleware, [TValue.From(LLogger), TValue.From(AOptions)]);
+  // Let DI resolve ILogger automatically via Hybrid Activator
+  Result := ABuilder.UseMiddleware(THttpLoggingMiddleware, TValue.From(AOptions));
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseExceptionHandler(const ABuilder: IApplicationBuilder): IApplicationBuilder;
@@ -43,8 +43,8 @@ end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseExceptionHandler(const ABuilder: IApplicationBuilder; const AOptions: TExceptionHandlerOptions): IApplicationBuilder;
 begin
-  var LLogger := TServiceProviderExtensions.GetRequiredService<ILogger>(ABuilder.GetServiceProvider);
-  Result := ABuilder.UseMiddleware(TExceptionHandlerMiddleware, [TValue.From(LLogger), TValue.From(AOptions)]);
+  // Let DI resolve ILogger automatically via Hybrid Activator
+  Result := ABuilder.UseMiddleware(TExceptionHandlerMiddleware, TValue.From(AOptions));
 end;
 
 end.

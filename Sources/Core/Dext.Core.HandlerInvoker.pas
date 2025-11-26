@@ -32,6 +32,7 @@ type
   private
     FModelBinder: IModelBinder;
     FContext: IHttpContext;
+    function Validate(const AValue: TValue): Boolean;
   public
     constructor Create(AContext: IHttpContext; AModelBinder: IModelBinder);
 
@@ -90,6 +91,24 @@ begin
   FModelBinder := AModelBinder;
 end;
 
+function THandlerInvoker.Validate(const AValue: TValue): Boolean;
+begin
+  if AValue.Kind <> tkRecord then Exit(True);
+
+  var ValidationResult := TValidator.Validate(AValue);
+  try
+    if not ValidationResult.IsValid then
+    begin
+      FContext.Response.Status(400).Json(TDextJson.Serialize(ValidationResult.Errors));
+      Result := False;
+    end
+    else
+      Result := True;
+  finally
+    ValidationResult.Free;
+  end;
+end;
+
 function THandlerInvoker.Invoke(AHandler: TStaticHandler): Boolean;
 begin
   AHandler(FContext);
@@ -123,6 +142,8 @@ begin
     else
       Arg1 := TModelBinderHelper.BindQuery<T>(FModelBinder, FContext);
   end;
+
+  if not Validate(TValue.From<T>(Arg1)) then Exit(False);
 
   AHandler(Arg1);
   Result := True;
@@ -172,6 +193,9 @@ begin
     else
       Arg2 := TModelBinderHelper.BindQuery<T2>(FModelBinder, FContext);
   end;
+
+  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
 
   AHandler(Arg1, Arg2);
   Result := True;
@@ -243,6 +267,10 @@ begin
       Arg3 := TModelBinderHelper.BindQuery<T3>(FModelBinder, FContext);
   end;
 
+  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+  if not Validate(TValue.From<T3>(Arg3)) then Exit(False);
+
   AHandler(Arg1, Arg2, Arg3);
   Result := True;
 end;
@@ -286,6 +314,8 @@ begin
     else
       Arg1 := TModelBinderHelper.BindQuery<T>(FModelBinder, FContext);
   end;
+
+  if not Validate(TValue.From<T>(Arg1)) then Exit(False);
 
   Res := AHandler(Arg1);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
@@ -339,6 +369,9 @@ begin
     else
       Arg2 := TModelBinderHelper.BindQuery<T2>(FModelBinder, FContext);
   end;
+
+  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
 
   Res := AHandler(Arg1, Arg2);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
@@ -414,6 +447,10 @@ begin
       Arg3 := TModelBinderHelper.BindQuery<T3>(FModelBinder, FContext);
   end;
 
+  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+  if not Validate(TValue.From<T3>(Arg3)) then Exit(False);
+
   Res := AHandler(Arg1, Arg2, Arg3);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
     ResIntf.Execute(FContext);
@@ -469,28 +506,7 @@ begin
   // ✅ VALIDATION: Validate all record parameters
   for I := 0 to High(Args) do
   begin
-    if Args[I].Kind = tkRecord then
-    begin
-      WriteLn(Format('  🔍 Validating argument %d (Type: %s)', [I, Args[I].TypeInfo.Name]));
-      WriteLn('  📦 Content: ', TDextJson.Serialize(Args[I]));
-      
-      var ValidationResult := TValidator.Validate(Args[I]);
-      try
-        if not ValidationResult.IsValid then
-        begin
-          WriteLn('❌ Validation failed for argument ', I, ' (', Args[I].TypeInfo.Name, ')');
-          WriteLn('  Errors: ', TDextJson.Serialize(ValidationResult.Errors));
-          FContext.Response.Status(400).Json(TDextJson.Serialize(ValidationResult.Errors));
-          Exit(False);
-        end
-        else
-        begin
-          WriteLn('  ✅ Validation passed for argument ', I);
-        end;
-      finally
-        ValidationResult.Free;
-      end;
-    end;
+    if not Validate(Args[I]) then Exit(False);
   end;
 
   WriteLn('🚀 Invoking ', AMethod.Name, ' with ', Length(Args), ' args...');
