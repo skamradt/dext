@@ -11,8 +11,20 @@ uses
 type
   TActivator = class
   public
+    // 1. Manual Instantiation (No DI)
+    // Uses only provided arguments. Must match exactly.
     class function CreateInstance(AClass: TClass; const AArgs: array of TValue): TObject; overload;
+
+    // 2. Pure DI Instantiation (No Manual Args)
+    // Uses DI container to resolve all dependencies.
+    // Uses "Greedy" strategy: prefers constructor with MOST resolvable parameters.
+    class function CreateInstance(AProvider: IServiceProvider; AClass: TClass): TObject; overload;
+
+    // 3. Hybrid Instantiation (Manual Args + DI)
+    // Uses provided arguments for the first N parameters, then DI for the rest.
     class function CreateInstance(AProvider: IServiceProvider; AClass: TClass; const AArgs: array of TValue): TObject; overload;
+
+    // Generic Helper
     class function CreateInstance<T: class>(const AArgs: array of TValue): T; overload;
   end;
 
@@ -20,6 +32,7 @@ implementation
 
 { TActivator }
 
+// 1. Manual Instantiation
 class function TActivator.CreateInstance(AClass: TClass; const AArgs: array of TValue): TObject;
 var
   Context: TRttiContext;
@@ -99,7 +112,8 @@ begin
   end;
 end;
 
-class function TActivator.CreateInstance(AProvider: IServiceProvider; AClass: TClass; const AArgs: array of TValue): TObject;
+// 2. Pure DI Instantiation (Greedy)
+class function TActivator.CreateInstance(AProvider: IServiceProvider; AClass: TClass): TObject;
 var
   Context: TRttiContext;
   TypeObj: TRttiType;
@@ -131,6 +145,94 @@ begin
       if Method.IsConstructor then
       begin
         Params := Method.GetParameters;
+        SetLength(Args, Length(Params));
+        Matched := True;
+
+        for I := 0 to High(Params) do
+        begin
+          // Resolve from DI
+          ParamType := Params[I].ParamType;
+          ResolvedService := TValue.Empty;
+
+          if ParamType.TypeKind = tkInterface then
+          begin
+             var Guid := TRttiInterfaceType(ParamType).GUID;
+             ServiceType := TServiceType.FromInterface(Guid);
+             var Intf := AProvider.GetServiceAsInterface(ServiceType);
+             if Intf <> nil then
+               TValue.Make(@Intf, ParamType.Handle, ResolvedService);
+          end
+          else if ParamType.TypeKind = tkClass then
+          begin
+             var Cls := TRttiInstanceType(ParamType).MetaclassType;
+             ServiceType := TServiceType.FromClass(Cls);
+             var Obj := AProvider.GetService(ServiceType);
+             if Obj <> nil then
+               ResolvedService := TValue.From(Obj);
+          end;
+
+          if not ResolvedService.IsEmpty then
+            Args[I] := ResolvedService
+          else
+          begin
+            // Dependency not found -> Match failed
+            Matched := False;
+            Break;
+          end;
+        end;
+
+        if Matched then
+        begin
+          // Greedy selection: prefer constructor with MORE parameters
+          if Length(Params) > MaxParams then
+          begin
+            MaxParams := Length(Params);
+            BestMethod := Method;
+            BestArgs := Args;
+          end;
+        end;
+      end;
+    end;
+
+    if BestMethod <> nil then
+      Result := BestMethod.Invoke(AClass, BestArgs).AsObject
+    else
+      // Fallback: Try parameterless constructor if no DI constructor matched
+      Result := AClass.Create;
+  finally
+    Context.Free;
+  end;
+end;
+
+// 3. Hybrid Instantiation (Manual Args + DI)
+class function TActivator.CreateInstance(AProvider: IServiceProvider; AClass: TClass; const AArgs: array of TValue): TObject;
+var
+  Context: TRttiContext;
+  TypeObj: TRttiType;
+  Method: TRttiMethod;
+  Params: TArray<TRttiParameter>;
+  Args: TArray<TValue>;
+  I: Integer;
+  Matched: Boolean;
+  ParamType: TRttiType;
+  ServiceType: TServiceType;
+  ResolvedService: TValue;
+begin
+  // If no args provided, delegate to Pure DI overload
+  if Length(AArgs) = 0 then
+    Exit(CreateInstance(AProvider, AClass));
+
+  Context := TRttiContext.Create;
+  try
+    TypeObj := Context.GetType(AClass);
+    if TypeObj = nil then
+      raise EArgumentException.CreateFmt('RTTI not found for %s', [AClass.ClassName]);
+
+    for Method in TypeObj.GetMethods do
+    begin
+      if Method.IsConstructor then
+      begin
+        Params := Method.GetParameters;
         
         // Must have at least enough params for explicit args
         if Length(Params) < Length(AArgs) then
@@ -148,7 +250,7 @@ begin
              Continue;
           end;
 
-          // 2. Resolve from DI
+          // 2. Resolve remaining from DI
           ParamType := Params[I].ParamType;
           ResolvedService := TValue.Empty;
 
@@ -181,23 +283,13 @@ begin
 
         if Matched then
         begin
-          // Greedy selection: prefer constructor with MORE parameters
-          if Length(Params) > MaxParams then
-          begin
-            MaxParams := Length(Params);
-            BestMethod := Method;
-            BestArgs := Args;
-          end;
+          Result := Method.Invoke(AClass, Args).AsObject;
+          Exit;
         end;
       end;
     end;
 
-    if BestMethod <> nil then
-    begin
-      Result := BestMethod.Invoke(AClass, BestArgs).AsObject;
-    end
-    else
-      raise EArgumentException.CreateFmt('No compatible constructor found for %s using DI', [AClass.ClassName]);
+    raise EArgumentException.CreateFmt('No compatible constructor found for %s using Hybrid Injection', [AClass.ClassName]);
   finally
     Context.Free;
   end;

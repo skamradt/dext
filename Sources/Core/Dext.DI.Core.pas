@@ -182,7 +182,7 @@ begin
     Result := ADescriptor.Factory(Self)
   else
     // Resolução via TActivator (suporta injeção de dependência no construtor)
-    Result := TActivator.CreateInstance(Self, ADescriptor.ImplementationClass, []);
+    Result := TActivator.CreateInstance(Self, ADescriptor.ImplementationClass);
 end;
 
 function TDextServiceProvider.GetService(const AServiceType: TServiceType): TObject;

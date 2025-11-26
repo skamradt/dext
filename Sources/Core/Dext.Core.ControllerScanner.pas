@@ -50,6 +50,7 @@ type
     FServiceProvider: IServiceProvider;
     FCachedMethods: TList<TCachedMethod>;
     procedure ExecuteCachedMethod(Context: IHttpContext; const CachedMethod: TCachedMethod);
+    function CreateHandler(const AMethod: TCachedMethod): TRequestDelegate;
   public
     constructor Create(AServiceProvider: IServiceProvider);
     destructor Destroy; override;
@@ -346,36 +347,12 @@ begin
         CachedMethod.RequiresAuth := HasAuthorizeAttribute and not HasAllowAnonymousAttribute;
       end;
 
+      WriteLn('📝 Caching: ', CachedMethod.FullPath, ' -> ', CachedMethod.TypeName, '.', CachedMethod.MethodName);
       FCachedMethods.Add(CachedMethod);
 
       // ✅ REGISTRAR ROTA USANDO CACHE (EVITA PROBLEMAS DE REFERÊNCIA RTTI)
-      AppBuilder.MapEndpoint(ControllerMethod.HttpMethod, FullPath,
-        procedure(Context: IHttpContext)
-        begin
-          // Buscar o método cacheado correspondente
-          var FoundCachedMethod: TCachedMethod;
-          var Found := False;
-
-          for var Cached in FCachedMethods do
-          begin
-            if (Cached.FullPath = FullPath) and (Cached.HttpMethod = ControllerMethod.HttpMethod) then
-            begin
-              FoundCachedMethod := Cached;
-              Found := True;
-              Break;
-            end;
-          end;
-
-          if Found then
-            ExecuteCachedMethod(Context, FoundCachedMethod)
-          else
-           // Context.Response.Status(500).Json('{"error": "Cached method not found"}');
-        begin
-          // Fallback para records estáticos (apenas log por enquanto, ou implementar InvokeStatic)
-          Context.Response.Json(Format('{"message": "Auto-route: %s (%s) - Static Record not fully supported yet"}',
-            [FullPath, ControllerMethod.HttpMethod]));
-        end;
-        end);
+      // Usar CreateHandler para garantir captura correta da variável no loop
+      AppBuilder.MapEndpoint(ControllerMethod.HttpMethod, FullPath, CreateHandler(CachedMethod));
 
       // ✅ PROCESSAR ATRIBUTOS DE SEGURANÇA (SwaggerAuthorize)
       var SecuritySchemes := TList<string>.Create;
@@ -447,6 +424,14 @@ begin
   inherited;
 end;
 
+function TControllerScanner.CreateHandler(const AMethod: TCachedMethod): TRequestDelegate;
+begin
+  Result := procedure(Context: IHttpContext)
+  begin
+    ExecuteCachedMethod(Context, AMethod);
+  end;
+end;
+
 procedure TControllerScanner.ExecuteCachedMethod(Context: IHttpContext; const CachedMethod: TCachedMethod);
 var
   Ctx: TRttiContext;
@@ -455,6 +440,7 @@ var
   ControllerInstance: TObject;
 begin
   WriteLn('🔄 Executing cached method: ', CachedMethod.TypeName, '.', CachedMethod.MethodName);
+  WriteLn('🔄 Executing: ', CachedMethod.FullPath, ' -> ', CachedMethod.TypeName, '.', CachedMethod.MethodName);
 
   // ✅ ENFORCE AUTHORIZATION
   if CachedMethod.RequiresAuth then
