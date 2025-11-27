@@ -1,4 +1,4 @@
-unit ControllerExample.Services;
+﻿unit ControllerExample.Services;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   System.Classes,
   System.SyncObjs,
   System.Threading,
-  DextFramework; // ✅ All-in-one framework unit
+  Dext; // ✅ All-in-one framework unit
 
 type
   // Settings Class for IOptions<T>

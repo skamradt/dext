@@ -13,7 +13,7 @@ interface
 uses
   System.Classes,
   System.SysUtils,
-  DextFramework, // ✅ All-in-one framework unit
+  Dext, // ✅ All-in-one framework unit
   Dext.Options, // Needed for IOptions<T>
   ControllerExample.Services; // For TMySettings
 

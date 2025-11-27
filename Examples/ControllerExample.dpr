@@ -5,7 +5,7 @@
 uses
   System.SysUtils,
   System.Rtti,
-  DextFramework, // ✅ The only core unit needed!
+  Dext, // ✅ The only core unit needed!
   ControllerExample.Controller in 'ControllerExample.Controller.pas',
   ControllerExample.Services in 'ControllerExample.Services.pas';
 

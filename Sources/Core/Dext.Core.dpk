@@ -100,7 +100,7 @@ contains
   Dext.Hosting.BackgroundService in 'Dext.Hosting.BackgroundService.pas',
   Dext.HealthChecks in 'Dext.HealthChecks.pas',
   Dext.Core.Extensions in 'Dext.Core.Extensions.pas',
-  DextFramework in 'DextFramework.pas',
+  Dext in 'Dext.pas',
   Dext.Options.Extensions in 'Dext.Options.Extensions.pas';
 
 end.
