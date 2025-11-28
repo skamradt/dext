@@ -21,11 +21,6 @@ type
     FTake: Integer;
     FIsPagingEnabled: Boolean;
     
-    // Fluent Builders
-    procedure Where(const ACriteria: ICriterion);
-    procedure AddInclude(const APath: string);
-    procedure ApplyPaging(ASkip, ATake: Integer);
-    
     // Implementation of ISpecification<T>
     function GetCriteria: ICriterion;
     function GetIncludes: TArray<string>;
@@ -36,6 +31,12 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    
+    // Fluent Builders (public for TSpecificationBuilder)
+    procedure Where(const ACriteria: ICriterion); overload;
+    procedure Where(const AExpr: TProp.TExpr); overload;
+    procedure AddInclude(const APath: string);
+    procedure ApplyPaging(ASkip, ATake: Integer);
   end;
 
 implementation
@@ -64,6 +65,11 @@ begin
   else
     // Combine with AND
     FCriteria := TLogicalCriterion.Create(FCriteria, ACriteria, loAnd);
+end;
+
+procedure TSpecification<T>.Where(const AExpr: TProp.TExpr);
+begin
+  Where(ICriterion(AExpr));
 end;
 
 procedure TSpecification<T>.AddInclude(const APath: string);

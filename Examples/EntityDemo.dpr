@@ -8,7 +8,8 @@ uses
   EntityDemo.Tests.Relationships,
   EntityDemo.Tests.CompositeKeys,
   EntityDemo.Tests.Bulk,
-  EntityDemo.Tests.Concurrency;
+  EntityDemo.Tests.Concurrency,
+  EntityDemo.Tests.FluentAPI;
 
 procedure RunAllTests;
 var
@@ -17,6 +18,7 @@ var
   CompKeyTest: TCompositeKeyTest;
   BulkTest: TBulkTest;
   ConcTest: TConcurrencyTest;
+  FluentTest: TFluentAPITest;
 begin
   WriteLn('🚀 Dext Entity ORM Demo Suite');
   WriteLn('=============================');
@@ -55,6 +57,13 @@ begin
     ConcTest.Run;
   finally
     ConcTest.Free;
+  end;
+
+  FluentTest := TFluentAPITest.Create;
+  try
+    FluentTest.Run;
+  finally
+    FluentTest.Free;
   end;
   
   WriteLn('✨ All tests completed.');

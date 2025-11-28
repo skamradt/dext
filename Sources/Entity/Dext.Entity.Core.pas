@@ -51,10 +51,16 @@ type
     // Queries via Specifications
     function List(const ASpec: ISpecification<T>): TList<T>; overload;
     function List: TList<T>; overload; // All
-    function FirstOrDefault(const ASpec: ISpecification<T>): T;
+    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
     
-    function Any(const ASpec: ISpecification<T>): Boolean;
-    function Count(const ASpec: ISpecification<T>): Integer;
+    function Any(const ASpec: ISpecification<T>): Boolean; overload;
+    function Count(const ASpec: ISpecification<T>): Integer; overload;
+    
+    // Inline Queries (aceita ICriterion diretamente)
+    function List(const ACriterion: ICriterion): TList<T>; overload;
+    function FirstOrDefault(const ACriterion: ICriterion): T; overload;
+    function Any(const ACriterion: ICriterion): Boolean; overload;
+    function Count(const ACriterion: ICriterion): Integer; overload;
   end;
 
   /// <summary>

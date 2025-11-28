@@ -14,6 +14,7 @@ uses
   Dext.Entity.Core,
   Dext.Entity.Dialects,
   Dext.Entity.Drivers.Interfaces,
+  Dext.Specifications.Base,
   Dext.Specifications.Interfaces,
   Dext.Specifications.SQL.Generator;
 
@@ -60,10 +61,22 @@ type
 
     function List(const ASpec: ISpecification<T>): TList<T>; overload;
     function List: TList<T>; overload;
-    function FirstOrDefault(const ASpec: ISpecification<T>): T;
+    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
     
-    function Any(const ASpec: ISpecification<T>): Boolean;
-    function Count(const ASpec: ISpecification<T>): Integer;
+    function Any(const ASpec: ISpecification<T>): Boolean; overload;
+    function Count(const ASpec: ISpecification<T>): Integer; overload;
+    
+    // Inline Queries
+    function List(const ACriterion: ICriterion): TList<T>; overload;
+    function FirstOrDefault(const ACriterion: ICriterion): T; overload;
+    function Any(const ACriterion: ICriterion): Boolean; overload;
+    function Count(const ACriterion: ICriterion): Integer; overload;
+  end;
+
+  // Helper class for inline queries (internal use)
+  TInlineSpecification<T: class> = class(TSpecification<T>)
+  public
+    constructor CreateWithCriterion(const ACriterion: ICriterion);
   end;
 
 implementation
@@ -1218,6 +1231,63 @@ begin
     Result := Cmd.ExecuteScalar.AsInteger;
   finally
     Generator.Free;
+  end;
+end;
+
+{ Inline Query Overloads - aceita ICriterion diretamente }
+
+constructor TInlineSpecification<T>.CreateWithCriterion(const ACriterion: ICriterion);
+begin
+  inherited Create;
+  if ACriterion <> nil then
+    Where(ACriterion);
+end;
+
+function TDbSet<T>.List(const ACriterion: ICriterion): TList<T>;
+var
+  Spec: TInlineSpecification<T>;
+begin
+  Spec := TInlineSpecification<T>.CreateWithCriterion(ACriterion);
+  try
+    Result := List(Spec as ISpecification<T>);
+  finally
+    Spec.Free;
+  end;
+end;
+
+function TDbSet<T>.FirstOrDefault(const ACriterion: ICriterion): T;
+var
+  Spec: TInlineSpecification<T>;
+begin
+  Spec := TInlineSpecification<T>.CreateWithCriterion(ACriterion);
+  try
+    Result := FirstOrDefault(Spec as ISpecification<T>);
+  finally
+    Spec.Free;
+  end;
+end;
+
+function TDbSet<T>.Any(const ACriterion: ICriterion): Boolean;
+var
+  Spec: TInlineSpecification<T>;
+begin
+  Spec := TInlineSpecification<T>.CreateWithCriterion(ACriterion);
+  try
+    Result := Any(Spec as ISpecification<T>);
+  finally
+    Spec.Free;
+  end;
+end;
+
+function TDbSet<T>.Count(const ACriterion: ICriterion): Integer;
+var
+  Spec: TInlineSpecification<T>;
+begin
+  Spec := TInlineSpecification<T>.CreateWithCriterion(ACriterion);
+  try
+    Result := Count(Spec as ISpecification<T>);
+  finally
+    Spec.Free;
   end;
 end;
 

@@ -6,7 +6,8 @@ uses
   Dext.Entity.Attributes,
   Dext.Specifications.Base,
   Dext.Specifications.Criteria,
-  Dext.Specifications.Interfaces;
+  Dext.Specifications.Interfaces,
+  Dext.Specifications.Types;
 
 type
   [Table('addresses')]
@@ -79,11 +80,14 @@ type
     property Version: Integer read FVersion write FVersion;
   end;
 
-  // 🧬 Metadata Prototype (TypeOf)
+  // 🧬 Metadata Implementation (TypeOf)
   UserEntity = class
   public
-    class function Age: TProp;
-    class function Name: TProp;
+    class var Id: TProp;
+    class var Name: TProp;
+    class var Age: TProp;
+    
+    class constructor Create;
   end;
 
   // Specification using Metadata
@@ -96,14 +100,11 @@ implementation
 
 { UserEntity }
 
-class function UserEntity.Age: TProp;
+class constructor UserEntity.Create;
 begin
-  Result := Prop('Age');
-end;
-
-class function UserEntity.Name: TProp;
-begin
-  Result := Prop('full_name');
+  Id := TProp.Create('Id');
+  Name := TProp.Create('Name'); // Should match property name, not column name for now, unless we map it
+  Age := TProp.Create('Age');
 end;
 
 { TAdultUsersSpec }
@@ -111,6 +112,7 @@ end;
 constructor TAdultUsersSpec.Create;
 begin
   inherited Create;
+  // Now we can use the typed metadata!
   Where(UserEntity.Age >= 18);
 end;
 
