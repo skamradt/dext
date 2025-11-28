@@ -195,7 +195,7 @@ begin
   // Note: This requires that Entities<T> has been called for all entities we want to create.
   // In a real app, we might want a way to scan and register all entities in a package/assembly.
   // For now, the user must register them (as done in the Demo).
-  
+
   for SetIntf in FCache.Values do
   begin
     if Supports(SetIntf, IDbSet, DbSet) then

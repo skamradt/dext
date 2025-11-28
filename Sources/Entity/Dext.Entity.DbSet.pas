@@ -23,18 +23,18 @@ type
     FContext: IDbContext;
     FRttiContext: TRttiContext; // Keep RTTI context alive
     FTableName: string;
-    FPKName: string;
+    FPKColumns: TList<string>; // List of PK Column Names
     FProps: TDictionary<string, TRttiProperty>; // Column Name -> Property
     FColumns: TDictionary<string, string>;      // Property Name -> Column Name
     FIdentityMap: TObjectDictionary<string, T>; // ID (String) -> Entity. Owns objects.
     
     procedure MapEntity;
     function GetTableName: string;
-    function GetPKColumn: string;
     function Hydrate(Reader: IDbReader): T;
     function GetRelatedId(const AObject: TObject): TValue;
   protected
     function GetEntityId(const AEntity: T): string;
+    function GetPKColumns: TArray<string>;
   public
     constructor Create(AContext: IDbContext);
     destructor Destroy; override;
@@ -45,8 +45,9 @@ type
     procedure Add(const AEntity: T);
     procedure Update(const AEntity: T);
     procedure Remove(const AEntity: T);
-    function Find(const AId: Variant): T;
-    
+    function Find(const AId: Variant): T; overload;
+    function Find(const AId: array of Integer): T; overload;
+
     function List(const ASpec: ISpecification<T>): TList<T>; overload;
     function List: TList<T>; overload;
     function FirstOrDefault(const ASpec: ISpecification<T>): T;
@@ -65,6 +66,7 @@ begin
   FContext := AContext;
   FProps := TDictionary<string, TRttiProperty>.Create;
   FColumns := TDictionary<string, string>.Create;
+  FPKColumns := TList<string>.Create;
   FIdentityMap := TObjectDictionary<string, T>.Create([doOwnsValues]);
   MapEntity;
 end;
@@ -74,6 +76,7 @@ begin
   FIdentityMap.Free;
   FProps.Free;
   FColumns.Free;
+  FPKColumns.Free;
   inherited;
 end;
 
@@ -105,25 +108,25 @@ begin
     if not IsMapped then Continue;
     
     ColName := Prop.Name; // Default
+    var IsPK := False;
     
+    // First pass: determine column name
     for Attr in Prop.GetAttributes do
     begin
       if Attr is ColumnAttribute then
         ColName := ColumnAttribute(Attr).Name;
         
-      if Attr is PKAttribute then
-        FPKName := ColName;
-        
-      // Handle ForeignKey - we map it to the column name it refers to
-      // But wait, the property itself is the Entity, not the ID.
-      // So we need to know the Column Name that holds the ID.
       if Attr is ForeignKeyAttribute then
-      begin
-        // This property is a relationship.
-        // We store it in FProps with the FK Column Name so Hydrate can find it?
-        // No, Hydrate iterates columns from DB.
-        // If DB has 'AddressId', we need to map 'AddressId' -> Prop 'Address'.
         ColName := ForeignKeyAttribute(Attr).ColumnName;
+    end;
+    
+    // Second pass: check for PK (now ColName is final)
+    for Attr in Prop.GetAttributes do
+    begin
+      if Attr is PKAttribute then
+      begin
+        FPKColumns.Add(ColName);
+        IsPK := True;
       end;
     end;
     
@@ -131,8 +134,14 @@ begin
     FColumns.Add(Prop.Name, ColName);
   end;
   
-  if FPKName = '' then
-    FPKName := 'Id'; // Convention
+  // Fallback if no PK defined: assume 'Id'
+  if FPKColumns.Count = 0 then
+  begin
+    if FColumns.ContainsKey('Id') then
+      FPKColumns.Add(FColumns['Id'])
+    else if FColumns.ContainsKey('ID') then
+      FPKColumns.Add(FColumns['ID']);
+  end;
 end;
 
 function TDbSet<T>.GetTableName: string;
@@ -140,20 +149,52 @@ begin
   Result := FContext.Dialect.QuoteIdentifier(FTableName);
 end;
 
-function TDbSet<T>.GetPKColumn: string;
+function TDbSet<T>.GetPKColumns: TArray<string>;
+var
+  i: Integer;
 begin
-  Result := FContext.Dialect.QuoteIdentifier(FPKName);
+  SetLength(Result, FPKColumns.Count);
+  for i := 0 to FPKColumns.Count - 1 do
+    Result[i] := FContext.Dialect.QuoteIdentifier(FPKColumns[i]);
 end;
 
 function TDbSet<T>.GetEntityId(const AEntity: T): string;
 var
   Prop: TRttiProperty;
   Val: TValue;
+  SB: TStringBuilder;
+  i: Integer;
 begin
-  if not FProps.TryGetValue(FPKName.ToLower, Prop) then
-    raise Exception.Create('Primary Key property not found.');
-  Val := Prop.GetValue(Pointer(AEntity));
-  Result := Val.ToString;
+  if FPKColumns.Count = 0 then
+    raise Exception.Create('No Primary Key defined for entity ' + FTableName);
+
+  if FPKColumns.Count = 1 then
+  begin
+    if not FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
+      raise Exception.Create('Primary Key property not found: ' + FPKColumns[0]);
+    Val := Prop.GetValue(Pointer(AEntity));
+    Result := Val.ToString;
+  end
+  else
+  begin
+    // Composite Key: "Val1|Val2"
+    SB := TStringBuilder.Create;
+    try
+      for i := 0 to FPKColumns.Count - 1 do
+      begin
+        if i > 0 then SB.Append('|');
+        
+        if not FProps.TryGetValue(FPKColumns[i].ToLower, Prop) then
+          raise Exception.Create('Primary Key property not found: ' + FPKColumns[i]);
+          
+        Val := Prop.GetValue(Pointer(AEntity));
+        SB.Append(Val.ToString);
+      end;
+      Result := SB.ToString;
+    finally
+      SB.Free;
+    end;
+  end;
 end;
 
 function TDbSet<T>.GetRelatedId(const AObject: TObject): TValue;
@@ -195,24 +236,63 @@ var
   RelatedEntity: TObject;
   RelatedSet: IDbSet;
   PKVal: string;
-//  PKColIndex: Integer;
+  PKValues: TDictionary<string, string>;
 begin
   // 1. Find PK Value first to check Identity Map
   PKVal := '';
-  //PKColIndex := -1;
   
-  // We need to find which column index corresponds to PK
-  // This is a bit slow if we iterate every time. 
-  // Optimization: Cache PK Column Index? But Reader column order might change.
-  // Let's iterate.
-  for i := 0 to Reader.GetColumnCount - 1 do
+  if FPKColumns.Count > 0 then
   begin
-    ColName := Reader.GetColumnName(i);
-    if SameText(ColName, FPKName) then
-    begin
-      PKVal := Reader.GetValue(i).ToString;
-      // PKColIndex := i;
-      Break;
+    PKValues := TDictionary<string, string>.Create;
+    try
+      // Scan columns to find PKs
+      for i := 0 to Reader.GetColumnCount - 1 do
+      begin
+        ColName := Reader.GetColumnName(i);
+        // Check if ColName is in FPKColumns
+        // Simple linear search is fine for small number of PKs
+        if FPKColumns.Contains(ColName) then // Case sensitive? FPKColumns usually from Attr/Prop name
+        begin
+          // We need to match case insensitive if DB returns different case
+          // But FPKColumns stores what we mapped.
+          // Let's assume Reader returns correct case or we normalize.
+          // Actually, let's just store by name.
+           PKValues.Add(ColName, Reader.GetValue(i).ToString);
+        end;
+      end;
+      
+      // Construct PKVal
+      if PKValues.Count = FPKColumns.Count then
+      begin
+        if FPKColumns.Count = 1 then
+          PKVal := PKValues[FPKColumns[0]]
+        else
+        begin
+          var SB := TStringBuilder.Create;
+          try
+            for i := 0 to FPKColumns.Count - 1 do
+            begin
+              if i > 0 then SB.Append('|');
+              if PKValues.ContainsKey(FPKColumns[i]) then
+                SB.Append(PKValues[FPKColumns[i]])
+              else
+              begin
+                // Missing PK column in result set?
+                // Try case insensitive lookup?
+                // For now, fail or empty.
+                PKVal := ''; 
+                Break;
+              end;
+            end;
+            if PKVal = '' then PKVal := SB.ToString;
+          finally
+            SB.Free;
+          end;
+        end;
+      end;
+      
+    finally
+      PKValues.Free;
     end;
   end;
   
@@ -284,6 +364,17 @@ begin
   end;
 end;
 
+function TDbSet<T>.Find(const AId: array of Integer): T;
+var
+  i: Integer;
+  VArray: array of Variant;
+begin
+  SetLength(VArray, Length(AId));
+  for i := 0 to High(AId) do
+    VArray[i] := AId[i];
+  Result := Find(VarArrayOf(VArray));
+end;
+
 function TDbSet<T>.FindObject(const AId: Variant): TObject;
 begin
   Result := Find(AId);
@@ -314,7 +405,7 @@ begin
       ColName := Pair.Value;
       Prop := FProps[ColName.ToLower];
       
-      IsPK := SameText(ColName, FPKName);
+      IsPK := FPKColumns.Contains(ColName);
       IsAutoInc := False;
       for var Attr in Prop.GetAttributes do
         if Attr is AutoIncAttribute then
@@ -327,12 +418,22 @@ begin
       ColType := FContext.Dialect.GetColumnType(Prop.PropertyType.Handle, IsAutoInc);
       SB.Append(ColType);
       
-      if IsPK and not IsAutoInc then // If AutoInc, Dialect usually handles PK definition (like SQLite INTEGER PRIMARY KEY)
+      // Inline PK only if single PK and not composite (or if dialect supports inline composite which is rare)
+      // Actually, let's just use inline for single PK for now to match previous behavior
+      if IsPK and (FPKColumns.Count = 1) and not IsAutoInc then 
         SB.Append(' PRIMARY KEY');
-        
-      // TODO: Foreign Keys?
-      // SQLite supports inline FKs, but usually better to add constraints at end.
-      // For "Basic" generator, we skip FK constraints for now to avoid dependency order issues.
+    end;
+    
+    // Composite PK Constraint
+    if FPKColumns.Count > 1 then
+    begin
+      SB.Append(', PRIMARY KEY (');
+      for var i := 0 to FPKColumns.Count - 1 do
+      begin
+        if i > 0 then SB.Append(', ');
+        SB.Append(FContext.Dialect.QuoteIdentifier(FPKColumns[i]));
+      end;
+      SB.Append(')');
     end;
     
     SB.Append(')');
@@ -366,7 +467,6 @@ begin
     
     for Pair in FColumns do
     begin
-      WriteLn('DEBUG: Processing column: ' + Pair.Value);
       Prop := FProps[Pair.Value.ToLower];
       
       // Check for AutoInc (skip PK if autoinc)
@@ -442,6 +542,7 @@ var
   ParamName: string;
   PKValue: TValue;
   First: Boolean;
+  i: Integer;
 begin
   SB := TStringBuilder.Create;
   try
@@ -454,12 +555,8 @@ begin
     begin
       Prop := FProps[Pair.Value.ToLower];
       
-      // If it is PK, store value for WHERE clause, don't update it
-      if SameText(Pair.Value, FPKName) then
-      begin
-        PKValue := Prop.GetValue(Pointer(AEntity));
-        Continue;
-      end;
+      // If it is PK, don't update it
+      if FPKColumns.Contains(Pair.Value) then Continue;
 
       if not First then
         SB.Append(', ');
@@ -471,17 +568,22 @@ begin
         .Append(ParamName);
     end;
     
-    if PKValue.IsEmpty then
-      raise Exception.Create('Primary Key value is required for Update.');
-
-    SB.Append(' WHERE ').Append(GetPKColumn).Append(' = :pk_val');
+    // WHERE Clause
+    SB.Append(' WHERE ');
+    for i := 0 to FPKColumns.Count - 1 do
+    begin
+      if i > 0 then SB.Append(' AND ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(FPKColumns[i]))
+        .Append(' = :pk_')
+        .Append(FPKColumns[i]);
+    end;
     
-    Cmd := FContext.Connection.CreateCommand(SB.ToString) as IDbCommand;
+    Cmd := IDbCommand(FContext.Connection.CreateCommand(SB.ToString));
     
-    // Bind Params
+    // Bind Params (Update fields)
     for Pair in FColumns do
     begin
-      if SameText(Pair.Value, FPKName) then Continue;
+      if FPKColumns.Contains(Pair.Value) then Continue;
       
       Prop := FProps[Pair.Value.ToLower];
       Val := Prop.GetValue(Pointer(AEntity));
@@ -502,7 +604,16 @@ begin
       Cmd.AddParam('p_' + Pair.Value, Val);
     end;
     
-    Cmd.AddParam('pk_val', PKValue);
+    // Bind PK Params
+    for i := 0 to FPKColumns.Count - 1 do
+    begin
+      if not FProps.TryGetValue(FPKColumns[i].ToLower, Prop) then
+        raise Exception.Create('PK Property not found: ' + FPKColumns[i]);
+        
+      Val := Prop.GetValue(Pointer(AEntity));
+      Cmd.AddParam('pk_' + FPKColumns[i], Val);
+    end;
+    
     Cmd.ExecuteNonQuery;
     
   finally
@@ -512,51 +623,125 @@ end;
 
 procedure TDbSet<T>.Remove(const AEntity: T);
 var
-  SQL: string;
+  SB: TStringBuilder;
   Cmd: IDbCommand;
+  i: Integer;
   Prop: TRttiProperty;
-  PKValue: TValue;
-  PKStr: string;
+  Val: TValue;
 begin
-  if not FProps.TryGetValue(FPKName.ToLower, Prop) then
-    raise Exception.Create('Primary Key property not found.');
-
-  PKValue := Prop.GetValue(Pointer(AEntity));
-  PKStr := PKValue.ToString;
-  
-  SQL := Format('DELETE FROM %s WHERE %s = :pk_val', [GetTableName, GetPKColumn]);
-  
-  Cmd := FContext.Connection.CreateCommand(SQL) as IDbCommand;
-  Cmd.AddParam('pk_val', PKValue);
-  Cmd.ExecuteNonQuery;
-  
-  // Remove from Identity Map
-  if FIdentityMap.ContainsKey(PKStr) then
-    FIdentityMap.Remove(PKStr);
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('DELETE FROM ').Append(GetTableName).Append(' WHERE ');
+    
+    for i := 0 to FPKColumns.Count - 1 do
+    begin
+      if i > 0 then SB.Append(' AND ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(FPKColumns[i]))
+        .Append(' = :pk_')
+        .Append(FPKColumns[i]);
+    end;
+    
+    Cmd := IDbCommand(FContext.Connection.CreateCommand(SB.ToString));
+    
+    for i := 0 to FPKColumns.Count - 1 do
+    begin
+      if not FProps.TryGetValue(FPKColumns[i].ToLower, Prop) then
+        raise Exception.Create('PK Property not found: ' + FPKColumns[i]);
+        
+      Val := Prop.GetValue(Pointer(AEntity));
+      Cmd.AddParam('pk_' + FPKColumns[i], Val);
+    end;
+    
+    Cmd.ExecuteNonQuery;
+    
+    // Remove from Identity Map
+    var Id := GetEntityId(AEntity);
+    if FIdentityMap.ContainsKey(Id) then
+      FIdentityMap.ExtractPair(Id); // Extract so we don't free the instance we are holding
+  finally
+    SB.Free;
+  end;
 end;
 
 function TDbSet<T>.Find(const AId: Variant): T;
 var
   Cmd: IDbCommand;
   Reader: IDbReader;
-  SQL: string;
+  SB: TStringBuilder;
   IdStr: string;
+  i: Integer;
+  Val: TValue;
 begin
-  IdStr := VarToStr(AId);
+  // 1. Construct ID String for Cache
+  if VarIsArray(AId) then
+  begin
+    // Composite Key passed as Array
+    if VarArrayHighBound(AId, 1) - VarArrayLowBound(AId, 1) + 1 <> FPKColumns.Count then
+      raise Exception.Create('Find: Argument count does not match PK column count.');
+      
+    SB := TStringBuilder.Create;
+    try
+      for i := VarArrayLowBound(AId, 1) to VarArrayHighBound(AId, 1) do
+      begin
+        if i > VarArrayLowBound(AId, 1) then SB.Append('|');
+        SB.Append(VarToStr(AId[i]));
+      end;
+      IdStr := SB.ToString;
+    finally
+      SB.Free;
+    end;
+  end
+  else
+  begin
+    // Single Value
+    if FPKColumns.Count > 1 then
+      raise Exception.Create('Find: Entity has composite PK, but single value provided.');
+    IdStr := VarToStr(AId);
+  end;
   
-  // 1. Check Identity Map
+  // 2. Check Identity Map
   if FIdentityMap.TryGetValue(IdStr, Result) then
     Exit;
 
   Result := nil;
-  SQL := Format('SELECT * FROM %s WHERE %s = :id', [GetTableName, GetPKColumn]);
   
-  Cmd := FContext.Connection.CreateCommand(SQL) as IDbCommand;
-  Cmd.AddParam('id', TValue.FromVariant(AId));
-  
-  Reader := Cmd.ExecuteQuery;
-  if Reader.Next then
-    Result := Hydrate(Reader); // Hydrate will add to map
+  // 3. Build Query
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('SELECT * FROM ').Append(GetTableName).Append(' WHERE ');
+    
+    for i := 0 to FPKColumns.Count - 1 do
+    begin
+      if i > 0 then SB.Append(' AND ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(FPKColumns[i]))
+        .Append(' = :pk_')
+        .Append(FPKColumns[i]);
+    end;
+    
+    Cmd := IDbCommand(FContext.Connection.CreateCommand(SB.ToString));
+    
+    // Bind Params
+    if VarIsArray(AId) then
+    begin
+      for i := 0 to FPKColumns.Count - 1 do
+      begin
+        Val := TValue.FromVariant(AId[VarArrayLowBound(AId, 1) + i]);
+        Cmd.AddParam('pk_' + FPKColumns[i], Val);
+      end;
+    end
+    else
+    begin
+      Val := TValue.FromVariant(AId);
+      Cmd.AddParam('pk_' + FPKColumns[0], Val);
+    end;
+    
+    Reader := Cmd.ExecuteQuery;
+    if Reader.Next then
+      Result := Hydrate(Reader); // Hydrate will add to map
+      
+  finally
+    SB.Free;
+  end;
 end;
 
 function TDbSet<T>.List(const ASpec: ISpecification<T>): TList<T>;

@@ -47,7 +47,7 @@ Com base na análise, definimos as seguintes fases para estabilizar o ORM.
 2.  **Gerador de Schema (Básico)**:
     *   ✅ Método `EnsureCreated()` implementado.
     *   Gera SQL `CREATE TABLE` baseado nos metadados da entidade e dialeto.
-    *   *Nota: Issue conhecida com AV no `Add` após EnsureCreated, sob investigação.*
+    *   ✅ **Estável**: Bugs de interface e AV resolvidos.
 
 ### 📍 Fase 4: Cenários Avançados & Legado (Longo Prazo)
 1.  **Chaves Primárias Compostas**:

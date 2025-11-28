@@ -31,8 +31,9 @@ type
     procedure Add(const AEntity: T);
     procedure Update(const AEntity: T);
     procedure Remove(const AEntity: T);
-    function Find(const AId: Variant): T;
-    
+    function Find(const AId: Variant): T; overload;
+    function Find(const AId: array of Integer): T; overload;
+
     // Queries via Specifications
     function List(const ASpec: ISpecification<T>): TList<T>; overload;
     function List: TList<T>; overload; // All
