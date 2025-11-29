@@ -1,36 +1,35 @@
-// Examples/MinimalAPI/MinimalAPIExample.pas
+﻿// Examples/MinimalAPI/MinimalAPIExample.pas
 program MinimalAPIExample;
 
 {$APPTYPE CONSOLE}
 
 {$R *.res}
 
-//// Como ficará o uso na prática
-//var
-//  Services: IServiceCollection;
-//  Provider: IServiceProvider;
-//  MyService: IMyService;
-//begin
-//  Services := TDextDIFactory.CreateServiceCollection;
-//
-//  // Usando os helpers genéricos
-//  TServiceCollectionExtensions.AddSingleton<IMyService, TMyService>(Services);
-//  TServiceCollectionExtensions.AddTransient<IOtherService, TOtherService>(Services);
-//
-//  Provider := Services.BuildServiceProvider;
-//
-//  // Obtendo serviços
-//  MyService := TServiceProviderExtensions.GetService<IMyService>(Provider);
-//
-//  // Ou sem generics
-//  MyService := Provider.GetService(IMyService) as IMyService;
-//end;
-
-
 uses
+  System.DateUtils,
+  System.SysUtils,
   Dext.WebHost,
   Dext.DI.Interfaces,
+  Dext.DI.Extensions,
   Dext.Http.Interfaces;
+
+type
+  ISomeService = interface
+    ['{89A82D2C-D213-4629-A77E-F6C7D8A1B2C3}']
+    procedure DoSomething;
+  end;
+
+  TSomeService = class(TInterfacedObject, ISomeService)
+  public
+    procedure DoSomething;
+  end;
+
+{ TSomeService }
+
+procedure TSomeService.DoSomething;
+begin
+  WriteLn('Doing something...');
+end;
 
 var
   Builder: IWebHostBuilder;
@@ -42,7 +41,7 @@ begin
   Builder.ConfigureServices(
     procedure(Services: IServiceCollection)
     begin
-      Services.AddSingleton<ISomeService, TSomeService>;
+      TServiceCollectionExtensions.AddSingleton<ISomeService, TSomeService>(Services);
     end);
 
   Builder.Configure(

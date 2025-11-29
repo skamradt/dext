@@ -1,4 +1,4 @@
-program JwtAuthDemo;
+﻿program JwtAuthDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -14,7 +14,8 @@ uses
   Dext.Auth.JWT,
   Dext.Auth.Identity,
   Dext.Auth.Middleware,
-  Dext.Auth.Attributes;
+  Dext.Auth.Attributes,
+  Dext.Core.HandlerInvoker;
 
 type
   // DTO para login
@@ -53,18 +54,16 @@ begin
     var Builder := App.GetApplicationBuilder;
 
     // ✅ 1. Middleware de Autenticação JWT
+    // ✅ 1. Middleware de Autenticação JWT
     WriteLn('📦 Configuring JWT Authentication Middleware...');
-    Builder.UseMiddleware(TJwtAuthenticationMiddleware, 
-      TValue.From<TJwtAuthenticationOptions>(
-        TJwtAuthenticationOptions.Default(SecretKey)
-      ));
+    TApplicationBuilderJwtExtensions.UseJwtAuthentication(Builder, TJwtOptions.Create(SecretKey));
     WriteLn('   ✅ JWT middleware registered');
     WriteLn;
 
     // ✅ 2. Endpoint de Login (público - gera token)
     WriteLn('🔓 Registering public endpoints...');
     TApplicationBuilderExtensions.MapPostR<TLoginRequest, IResult>(Builder, '/api/auth/login',
-      function(Request: TLoginRequest): IResult
+      THandlerFunc<TLoginRequest, IResult>(function(Request: TLoginRequest): IResult
       var
         Claims: TArray<TClaim>;
         Token: string;
@@ -93,12 +92,12 @@ begin
           WriteLn('   ❌ Invalid credentials');
           Result := Results.BadRequest('{"error":"Invalid username or password"}');
         end;
-      end);
+      end));
 
     // ✅ 3. Endpoint Protegido (requer autenticação)
     WriteLn('🔒 Registering protected endpoints...');
     TApplicationBuilderExtensions.MapGetR<IHttpContext, IResult>(Builder, '/api/protected',
-      function(Context: IHttpContext): IResult
+      THandlerFunc<IHttpContext, IResult>(function(Context: IHttpContext): IResult
       var
         User: IClaimsPrincipal;
         UserName: string;
@@ -124,11 +123,11 @@ begin
           '{"message":"This is protected data","userId":"%s","username":"%s","timestamp":"%s"}',
           [UserId, UserName, DateTimeToStr(Now)]
         ));
-      end);
+      end));
 
     // ✅ 4. Endpoint Admin (requer role específica)
     TApplicationBuilderExtensions.MapGetR<IHttpContext, IResult>(Builder, '/api/admin',
-      function(Context: IHttpContext): IResult
+      THandlerFunc<IHttpContext, IResult>(function(Context: IHttpContext): IResult
       var
         User: IClaimsPrincipal;
       begin
@@ -151,15 +150,15 @@ begin
 
         WriteLn(Format('   ✅ Admin access granted: %s', [User.Identity.Name]));
         Result := Results.Ok('{"message":"Welcome, Admin!"}');
-      end);
+      end));
 
     // ✅ 5. Endpoint Público (sem autenticação)
     TApplicationBuilderExtensions.MapGetR<IResult>(Builder, '/api/public',
-      function: IResult
+      THandlerFunc<IResult>(function: IResult
       begin
         WriteLn('   📖 Public endpoint accessed');
         Result := Results.Ok('{"message":"This is public data, no authentication required"}');
-      end);
+      end));
 
     WriteLn;
     WriteLn('✅ All endpoints configured');

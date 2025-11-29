@@ -48,8 +48,6 @@ begin
             .Build;
       end)
 
-
-
       // ✨ JWT Authentication with Fluent API
       .UseJwtAuthentication(JwtSecret,
       procedure(Auth: TJwtOptionsBuilder)

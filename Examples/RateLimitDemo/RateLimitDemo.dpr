@@ -1,14 +1,17 @@
-program RateLimitDemo;
+﻿program RateLimitDemo;
 
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
   Dext.Core.WebApplication,
+  Dext,
   Dext.Core.ApplicationBuilder.Extensions,
   Dext.Http.Interfaces,
   Dext.Http.Results,
-  Dext.RateLimiting;
+  Dext.RateLimiting,
+  Dext.RateLimiting.Policy,
+  Dext.Core.HandlerInvoker;
 
 var
   App: IWebApplication;
@@ -25,31 +28,29 @@ begin
 
     // ✅ Configurar Rate Limiting
     WriteLn('📦 Configuring Rate Limiting...');
-    TApplicationBuilderRateLimitExtensions.UseRateLimiting(Builder,
-      procedure(RateLimit: TRateLimitBuilder)
-      begin
-        RateLimit
-          .WithPermitLimit(10)          // 10 requests
-          .WithWindow(60)                // per 60 seconds
-          .WithRejectionMessage('{"error":"Too many requests! Please slow down."}')
-          .WithRejectionStatusCode(429);
-      end);
+    
+    var Policy := TRateLimitPolicy.FixedWindow(10, 60)
+      .WithRejectionMessage('{"error":"Too many requests! Please slow down."}')
+      .WithRejectionStatusCode(429);
+      
+    TApplicationBuilderRateLimitExtensions.UseRateLimiting(Builder, Policy);
+
     WriteLn('   ✅ Rate limiting configured: 10 requests per minute');
     WriteLn;
 
     // ✅ Endpoint de teste
     TApplicationBuilderExtensions.MapGetR<IResult>(Builder, '/api/test',
-      function: IResult
+      THandlerFunc<IResult>(function: IResult
       begin
         Result := Results.Ok('{"message":"Request successful!","timestamp":"' + 
           DateTimeToStr(Now) + '"}');
-      end);
+      end));
 
     TApplicationBuilderExtensions.MapGetR<IResult>(Builder, '/',
-      function: IResult
+      THandlerFunc<IResult>(function: IResult
       begin
         Result := Results.Ok('{"message":"Rate Limiting Demo - Try /api/test"}');
-      end);
+      end));
 
     WriteLn('✅ Endpoints configured');
     WriteLn;

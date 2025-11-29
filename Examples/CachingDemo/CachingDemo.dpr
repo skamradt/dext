@@ -1,4 +1,4 @@
-program CachingDemo;
+﻿program CachingDemo;
 
 {$APPTYPE CONSOLE}
 

@@ -146,6 +146,41 @@ begin
   OrderedDesc.Free;
 
   Log('');
+  Log('🔗 Test: Include (Eager Loading)');
+  Log('--------------------------------');
+  
+  // Create user with address
+  var UWithAddr := TUser.Create;
+  UWithAddr.Name := 'User With Address';
+  UWithAddr.Age := 40;
+  UWithAddr.Email := 'addr@example.com';
+  
+  var Addr := TAddress.Create;
+  Addr.Street := 'Main St';
+  Addr.City := 'New York';
+  
+  UWithAddr.Address := Addr; // Cascade insert should handle this
+  FContext.Entities<TUser>.Add(UWithAddr);
+  LogSuccess(Format('Inserted user with address ID: %d', [UWithAddr.AddressId]));
+  
+  // Fetch with Include
+  var UsersWithAddr := FContext.Entities<TUser>.List(
+    Specification.Where<TUser>(UserEntity.Id = UWithAddr.Id)
+      .Include('Address')
+  );
+  
+  AssertTrue(UsersWithAddr.Count = 1, 'Include count', 'Expected 1 user');
+  if UsersWithAddr.Count > 0 then
+  begin
+    var LoadedUser := UsersWithAddr[0];
+    if LoadedUser.Address <> nil then
+      LogSuccess(Format('✓ Include: Address loaded: %s, %s', [LoadedUser.Address.Street, LoadedUser.Address.City]))
+    else
+      LogError('Include: Address NOT loaded (nil)');
+  end;
+  UsersWithAddr.Free;
+
+  Log('');
   Log('�📖 Available Fluent Operators:');
   Log('------------------------------');
   Log('');

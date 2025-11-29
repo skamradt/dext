@@ -30,6 +30,7 @@ type
     FName: string;
     FAge: Integer;
     FEmail: string;
+    FAddressId: Integer;
     FAddress: TAddress;
   public
     [PK, AutoInc]
@@ -40,6 +41,9 @@ type
 
     property Age: Integer read FAge write FAge;
     property Email: string read FEmail write FEmail;
+    
+    [Column('address_id')]
+    property AddressId: Integer read FAddressId write FAddressId;
 
     [ForeignKey('AddressId', caCascade)]  // CASCADE on delete
     property Address: TAddress read FAddress write FAddress;

@@ -3,6 +3,9 @@
         <ProjectGuid>{C07C1443-9858-4C5A-95EA-4618BD46F23E}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
+        <Projects Include="Core\Dext.Core.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="Tests\Dext.AppBuilderTest.dproj">
             <Dependencies/>
         </Projects>
@@ -16,9 +19,6 @@
             <Dependencies/>
         </Projects>
         <Projects Include="Tests\Dext.MinimalAPITest.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="Examples\TaskFlowAPI\TaskFlowAPI.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="..\Examples\SwaggerExample.dproj">
@@ -36,10 +36,25 @@
         <Projects Include="..\Examples\RealWorld\DextStore.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Core\Dext.Core.dproj">
+        <Projects Include="..\Examples\EntityDemo.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Examples\EntityDemo.dproj">
+        <Projects Include="..\Examples\TestDbSet.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\CachingDemo\CachingDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\TaskFlowAPI\TaskFlowAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\RateLimitDemo\RateLimitDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\JwtAuthDemo\JwtAuthDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\MinimalAPI\MinimalAPIExample.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -50,6 +65,15 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
+    <Target Name="Dext_Core">
+        <MSBuild Projects="Core\Dext.Core.dproj"/>
+    </Target>
+    <Target Name="Dext_Core:Clean">
+        <MSBuild Projects="Core\Dext.Core.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Core:Make">
+        <MSBuild Projects="Core\Dext.Core.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Dext_AppBuilderTest">
         <MSBuild Projects="Tests\Dext.AppBuilderTest.dproj"/>
     </Target>
@@ -94,15 +118,6 @@
     </Target>
     <Target Name="Dext_MinimalAPITest:Make">
         <MSBuild Projects="Tests\Dext.MinimalAPITest.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="TaskFlowAPI">
-        <MSBuild Projects="Examples\TaskFlowAPI\TaskFlowAPI.dproj"/>
-    </Target>
-    <Target Name="TaskFlowAPI:Clean">
-        <MSBuild Projects="Examples\TaskFlowAPI\TaskFlowAPI.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="TaskFlowAPI:Make">
-        <MSBuild Projects="Examples\TaskFlowAPI\TaskFlowAPI.dproj" Targets="Make"/>
     </Target>
     <Target Name="SwaggerExample">
         <MSBuild Projects="..\Examples\SwaggerExample.dproj"/>
@@ -149,15 +164,6 @@
     <Target Name="DextStore:Make">
         <MSBuild Projects="..\Examples\RealWorld\DextStore.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Dext_Core">
-        <MSBuild Projects="Core\Dext.Core.dproj"/>
-    </Target>
-    <Target Name="Dext_Core:Clean">
-        <MSBuild Projects="Core\Dext.Core.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Dext_Core:Make">
-        <MSBuild Projects="Core\Dext.Core.dproj" Targets="Make"/>
-    </Target>
     <Target Name="EntityDemo">
         <MSBuild Projects="..\Examples\EntityDemo.dproj"/>
     </Target>
@@ -167,14 +173,68 @@
     <Target Name="EntityDemo:Make">
         <MSBuild Projects="..\Examples\EntityDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestDbSet">
+        <MSBuild Projects="..\Examples\TestDbSet.dproj"/>
+    </Target>
+    <Target Name="TestDbSet:Clean">
+        <MSBuild Projects="..\Examples\TestDbSet.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestDbSet:Make">
+        <MSBuild Projects="..\Examples\TestDbSet.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="CachingDemo">
+        <MSBuild Projects="..\Examples\CachingDemo\CachingDemo.dproj"/>
+    </Target>
+    <Target Name="CachingDemo:Clean">
+        <MSBuild Projects="..\Examples\CachingDemo\CachingDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="CachingDemo:Make">
+        <MSBuild Projects="..\Examples\CachingDemo\CachingDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TaskFlowAPI">
+        <MSBuild Projects="..\Examples\TaskFlowAPI\TaskFlowAPI.dproj"/>
+    </Target>
+    <Target Name="TaskFlowAPI:Clean">
+        <MSBuild Projects="..\Examples\TaskFlowAPI\TaskFlowAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TaskFlowAPI:Make">
+        <MSBuild Projects="..\Examples\TaskFlowAPI\TaskFlowAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RateLimitDemo">
+        <MSBuild Projects="..\Examples\RateLimitDemo\RateLimitDemo.dproj"/>
+    </Target>
+    <Target Name="RateLimitDemo:Clean">
+        <MSBuild Projects="..\Examples\RateLimitDemo\RateLimitDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RateLimitDemo:Make">
+        <MSBuild Projects="..\Examples\RateLimitDemo\RateLimitDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JwtAuthDemo">
+        <MSBuild Projects="..\Examples\JwtAuthDemo\JwtAuthDemo.dproj"/>
+    </Target>
+    <Target Name="JwtAuthDemo:Clean">
+        <MSBuild Projects="..\Examples\JwtAuthDemo\JwtAuthDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JwtAuthDemo:Make">
+        <MSBuild Projects="..\Examples\JwtAuthDemo\JwtAuthDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MinimalAPIExample">
+        <MSBuild Projects="..\Examples\MinimalAPI\MinimalAPIExample.dproj"/>
+    </Target>
+    <Target Name="MinimalAPIExample:Clean">
+        <MSBuild Projects="..\Examples\MinimalAPI\MinimalAPIExample.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MinimalAPIExample:Make">
+        <MSBuild Projects="..\Examples\MinimalAPI\MinimalAPIExample.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_AppBuilderTest;Dext_ServerTest_Cors;Dext_ServerTest;Dext_DITest;Dext_MinimalAPITest;TaskFlowAPI;SwaggerExample;TestController;TestConfig;ControllerExample;DextStore;Dext_Core;EntityDemo"/>
+        <CallTarget Targets="Dext_Core;Dext_AppBuilderTest;Dext_ServerTest_Cors;Dext_ServerTest;Dext_DITest;Dext_MinimalAPITest;SwaggerExample;TestController;TestConfig;ControllerExample;DextStore;EntityDemo;TestDbSet;CachingDemo;TaskFlowAPI;RateLimitDemo;JwtAuthDemo;MinimalAPIExample"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ServerTest:Clean;Dext_DITest:Clean;Dext_MinimalAPITest:Clean;TaskFlowAPI:Clean;SwaggerExample:Clean;TestController:Clean;TestConfig:Clean;ControllerExample:Clean;DextStore:Clean;Dext_Core:Clean;EntityDemo:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_AppBuilderTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ServerTest:Clean;Dext_DITest:Clean;Dext_MinimalAPITest:Clean;SwaggerExample:Clean;TestController:Clean;TestConfig:Clean;ControllerExample:Clean;DextStore:Clean;EntityDemo:Clean;TestDbSet:Clean;CachingDemo:Clean;TaskFlowAPI:Clean;RateLimitDemo:Clean;JwtAuthDemo:Clean;MinimalAPIExample:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_ServerTest_Cors:Make;Dext_ServerTest:Make;Dext_DITest:Make;Dext_MinimalAPITest:Make;TaskFlowAPI:Make;SwaggerExample:Make;TestController:Make;TestConfig:Make;ControllerExample:Make;DextStore:Make;Dext_Core:Make;EntityDemo:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_AppBuilderTest:Make;Dext_ServerTest_Cors:Make;Dext_ServerTest:Make;Dext_DITest:Make;Dext_MinimalAPITest:Make;SwaggerExample:Make;TestController:Make;TestConfig:Make;ControllerExample:Make;DextStore:Make;EntityDemo:Make;TestDbSet:Make;CachingDemo:Make;TaskFlowAPI:Make;RateLimitDemo:Make;JwtAuthDemo:Make;MinimalAPIExample:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
