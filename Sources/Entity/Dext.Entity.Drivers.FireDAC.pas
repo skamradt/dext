@@ -7,6 +7,7 @@ uses
   System.Classes,
   System.Variants,
   System.Rtti,
+  System.TypInfo,
   System.Generics.Collections,
   Data.DB,
   FireDAC.Comp.Client,
@@ -211,7 +212,40 @@ begin
         Param.DataType := ftString; 
     end
     else
-      Param.Value := AValue.AsVariant;
+    begin
+      case AValue.Kind of
+        tkInteger, tkInt64: 
+        begin
+          Param.DataType := ftInteger;
+          Param.AsInteger := AValue.AsInteger;
+        end;
+        tkFloat:
+        begin
+          Param.DataType := ftFloat;
+          Param.AsFloat := AValue.AsExtended;
+        end;
+        tkString, tkUString, tkWString, tkChar, tkWChar:
+        begin
+          Param.DataType := ftString;
+          Param.AsString := AValue.AsString;
+        end;
+        tkEnumeration:
+        begin
+          if AValue.TypeInfo = TypeInfo(Boolean) then
+          begin
+            Param.DataType := ftBoolean;
+            Param.AsBoolean := AValue.AsBoolean;
+          end
+          else
+          begin
+            Param.DataType := ftInteger;
+            Param.AsInteger := AValue.AsOrdinal;
+          end;
+        end;
+      else
+        Param.Value := AValue.AsVariant;
+      end;
+    end;
   except
     on E: Exception do
     begin

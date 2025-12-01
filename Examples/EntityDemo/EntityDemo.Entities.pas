@@ -10,7 +10,8 @@ uses
   Dext.Specifications.Base,
   Dext.Specifications.Expression,
   Dext.Specifications.Interfaces,
-  Dext.Specifications.Types;
+  Dext.Specifications.Types,
+  Dext.Types.Lazy;
 
 type
   TUser = class; // Forward declaration
@@ -21,10 +22,10 @@ type
     FId: Integer;
     FStreet: string;
     FCity: string;
-    FUsers: TList<TUser>;
-    function GetUsers: TList<TUser>; virtual;
+    FUsers: Lazy<TList<TUser>>;
+    function GetUsers: TList<TUser>;
   public
-    constructor Create;
+    constructor Create; virtual;
     destructor Destroy; override;
 
     [PK, AutoInc]
@@ -32,6 +33,7 @@ type
     property Street: string read FStreet write FStreet;
     property City: string read FCity write FCity;
     
+    [NotMapped]
     property Users: TList<TUser> read GetUsers;
   end;
 
@@ -44,10 +46,9 @@ type
     FEmail: string;
     FCity: string;
     FAddressId: Integer;
-    FAddress: TAddress;
-    FContext: IInterface;  // Will hold IDbContext - using IInterface to avoid circular reference
-    function GetAddress: TAddress; virtual;
-    procedure SetAddress(const Value: TAddress); virtual;
+    FAddress: Lazy<TAddress>;
+    function GetAddress: TAddress;
+    procedure SetAddress(const Value: TAddress);
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
@@ -62,7 +63,7 @@ type
     [Column('address_id')]
     property AddressId: Integer read FAddressId write FAddressId;
 
-    [ForeignKey('AddressId', caCascade)]  // CASCADE on delete
+    [ForeignKey('AddressId', caCascade), NotMapped]  // CASCADE on delete
     property Address: TAddress read GetAddress write SetAddress;
   end;
 
@@ -127,58 +128,35 @@ implementation
 
 constructor TAddress.Create;
 begin
-  FUsers := TList<TUser>.Create;
+  inherited Create;
+  // FUsers is initialized as empty Lazy (default record)
+  // For new objects created by user:
+  FUsers := Lazy<TList<TUser>>.CreateFrom(TList<TUser>.Create);
 end;
 
 destructor TAddress.Destroy;
 begin
-  FUsers.Free;
+  if FUsers.IsValueCreated then
+    FUsers.Value.Free;
   inherited;
 end;
 
 function TAddress.GetUsers: TList<TUser>;
 begin
-  // TODO : Criar automaticamente com Activator
-  // Lazy initialization: Criar lista se não existe
-  if FUsers = nil then
-  begin
-    FUsers := TList<TUser>.Create;
-  end;
-  
-  // NOTE: Lazy Loading de coleções NÃO é automático!
-  // Use Context.Entry(Address).Collection('Users').Load explicitamente
-  // ou use Include ao carregar a entidade
-  
-  Result := FUsers;
+  Result := FUsers.Value;
 end;
 
 { TUser }
 
 function TUser.GetAddress: TAddress;
-var
-  Ctx: IDbContext;
 begin
-  // Lazy Loading: Se FAddress é nil mas temos AddressId, carregar do banco
-  if (FAddress = nil) and (FAddressId > 0) and (FContext <> nil) then
-  begin
-    // Cast FContext to IDbContext
-    if Supports(FContext, IDbContext, Ctx) then
-    begin
-      try
-        Ctx.Entry(Self).Reference('Address').Load;
-      except
-        on E: Exception do
-          WriteLn('DEBUG: Error loading Address: ', E.Message);
-      end;
-    end;
-  end;
-  
-  Result := FAddress;
+  Result := FAddress.Value;
 end;
 
 procedure TUser.SetAddress(const Value: TAddress);
 begin
-  FAddress := Value;
+  // When setting manually, we wrap it in a Lazy that is already created
+  FAddress := Lazy<TAddress>.CreateFrom(Value);
 end;
 
 { UserEntity }

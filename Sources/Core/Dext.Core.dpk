@@ -126,7 +126,8 @@ contains
   Dext.Entity.Grouping in '..\Entity\Dext.Entity.Grouping.pas',
   Dext.Entity.Joining in '..\Entity\Dext.Entity.Joining.pas',
   Dext.Specifications.Evaluator in '..\Specifications\Dext.Specifications.Evaluator.pas',
-  Dext.Entity.LazyLoading in '..\Entity\Dext.Entity.LazyLoading.pas';
+  Dext.Entity.LazyLoading in '..\Entity\Dext.Entity.LazyLoading.pas',
+  Dext.Types.Lazy in 'Dext.Types.Lazy.pas';
 
 end.
 

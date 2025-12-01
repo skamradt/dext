@@ -68,7 +68,7 @@ begin
     WriteLn('OK');
   except
     on E: Exception do
-      WriteLn('FAILED: ' + E.Message);
+      WriteLn('FAILED: ' + E.ClassName + ': ' + E.Message);
   end;
 end;
 
@@ -101,15 +101,18 @@ begin
   FContext.Clear;
   LoadedAddr := FContext.Entities<TAddress>.Find(Addr.Id);
   try
+    // 1. Verify Automatic Lazy Loading
     if LoadedAddr.Users = nil then
       raise Exception.Create('Users collection should not be nil');
 
-    // For collections, we need to explicitly call Load
-    // (automatic lazy loading of collections causes recursion issues)
+    if LoadedAddr.Users.Count <> 2 then
+      raise Exception.Create('Automatic Lazy Loading failed. Expected 2, got ' + LoadedAddr.Users.Count.ToString);
+
+    // 2. Verify Explicit Loading (should not duplicate)
     FContext.Entry(LoadedAddr).Collection('Users').Load;
     
     if LoadedAddr.Users.Count <> 2 then
-      raise Exception.Create('Users count mismatch. Expected 2, got ' + LoadedAddr.Users.Count.ToString);
+      raise Exception.Create('Explicit Loading caused duplication. Expected 2, got ' + LoadedAddr.Users.Count.ToString);
       
     WriteLn('OK');
   except

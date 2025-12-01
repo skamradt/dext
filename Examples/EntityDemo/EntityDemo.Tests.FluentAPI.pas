@@ -59,7 +59,7 @@ begin
   Log('📊 Test: Using Specification with Fluent API');
   Log('---------------------------------------------');
   var AdultSpec := TAdultUsersSpec.Create;
-  var Adults := FContext.Entities<TUser>.List(AdultSpec);
+  var Adults := FContext.Entities<TUser>.ListSpec(AdultSpec);
   LogSuccess(Format('✓ Found %d adult user(s) using: UserEntity.Age >= 18', [Adults.Count]));
   AssertTrue(Adults.Count = 2, 'Adult users spec', 'Expected 2 adult users');
   Adults.Free;
@@ -105,7 +105,7 @@ begin
   Log('--------------------------------------');
   
   // Managed Specification with automatic cleanup
-  var FluentAdults := FContext.Entities<TUser>.List(
+  var FluentAdults := FContext.Entities<TUser>.ListSpec(
     Specification.Where<TUser>(UserEntity.Age >= 18)
   );
   LogSuccess(Format('✓ Fluent Spec: Found %d adult(s)', [FluentAdults.Count]));
@@ -113,7 +113,7 @@ begin
   FluentAdults.Free;
   
   // Complex fluent with chaining
-  var FluentComplex := FContext.Entities<TUser>.List(
+  var FluentComplex := FContext.Entities<TUser>.ListSpec(
     Specification.Where<TUser>((UserEntity.Age >= 18) and UserEntity.Name.Contains('o'))
       .Take(10)
       .Skip(0)
@@ -122,11 +122,11 @@ begin
   FluentComplex.Free;
 
   Log('');
-  Log('� Test: OrderBy Tipado');
+  Log(' Test: OrderBy Tipado');
   Log('------------------------');
   
   // OrderBy with Asc
-  var OrderedAsc := FContext.Entities<TUser>.List(
+  var OrderedAsc := FContext.Entities<TUser>.ListSpec(
     Specification.Where<TUser>(UserEntity.Age >= 18)
       .OrderBy(UserEntity.Name.Asc)
   );
@@ -136,7 +136,7 @@ begin
   OrderedAsc.Free;
   
   // OrderBy with Desc
-  var OrderedDesc := FContext.Entities<TUser>.List(
+  var OrderedDesc := FContext.Entities<TUser>.ListSpec(
     Specification.Where<TUser>(UserEntity.Age >= 18)
       .OrderBy(UserEntity.Age.Desc)
   );
@@ -164,7 +164,7 @@ begin
   LogSuccess(Format('Inserted user with address ID: %d', [UWithAddr.AddressId]));
   
   // Fetch with Include
-  var UsersWithAddr := FContext.Entities<TUser>.List(
+  var UsersWithAddr := FContext.Entities<TUser>.ListSpec(
     Specification.Where<TUser>(UserEntity.Id = UWithAddr.Id)
       .Include('Address')
   );
@@ -181,7 +181,7 @@ begin
   UsersWithAddr.Free;
 
   Log('');
-  Log('�📖 Available Fluent Operators:');
+  Log('📖 Available Fluent Operators:');
   Log('------------------------------');
   Log('');
   Log('🔢 Comparison Operators:');

@@ -44,13 +44,6 @@ var
   I: Integer;
   Matched: Boolean;
 begin
-  // Simple case: no arguments
-  if Length(AArgs) = 0 then
-  begin
-    Result := AClass.Create;
-    Exit;
-  end;
-
   Context := TRttiContext.Create;
   try
     TypeObj := Context.GetType(AClass);

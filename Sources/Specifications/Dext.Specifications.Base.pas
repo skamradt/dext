@@ -32,7 +32,8 @@ type
     function IsPagingEnabled: Boolean;
     function GetSelectedColumns: TArray<string>;
   public
-    constructor Create; virtual;
+    constructor Create; overload; virtual;
+    constructor Create(const AExpression: IExpression); overload; virtual;
     destructor Destroy; override;
     
     // Fluent Builders (public for TSpecificationBuilder)
@@ -55,6 +56,12 @@ begin
   FSelectedColumns := TList<string>.Create;
   FOrderBy := TList<IOrderBy>.Create;
   FExpression := nil; // Empty expression matches all
+end;
+
+constructor TSpecification<T>.Create(const AExpression: IExpression);
+begin
+  Create;
+  FExpression := AExpression;
 end;
 
 destructor TSpecification<T>.Destroy;

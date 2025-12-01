@@ -9,6 +9,7 @@ uses
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
   Dext.Entity.Query,
+  Dext.Specifications.Base,
   Dext.Specifications.Interfaces;
 
 type
@@ -48,6 +49,8 @@ type
     procedure PersistAdd(const AEntity: TObject);
     procedure PersistUpdate(const AEntity: TObject);
     procedure PersistRemove(const AEntity: TObject);
+    
+    function GetEntityId(const AEntity: TObject): string;
   end;
 
   /// <summary>
@@ -58,8 +61,8 @@ type
     
     // CRUD
     procedure Add(const AEntity: T);
-    procedure Update(const AEntity: T);
-    procedure Remove(const AEntity: T);
+    procedure UpdateEntity(const AEntity: T);
+    procedure RemoveEntity(const AEntity: T);
     function Find(const AId: Variant): T; overload;
     function Find(const AId: array of Integer): T; overload;
 
@@ -74,12 +77,12 @@ type
     procedure RemoveRange(const AEntities: TEnumerable<T>); overload;
 
     // Queries via Specifications
-    function List(const ASpec: ISpecification<T>): TList<T>; overload;
-    function List: TList<T>; overload; // All
-    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
+    function List: TList<T>; overload;
+    function ListSpec(const ASpec: ISpecification<T>): TList<T>;
+    // function FirstOrDefault(const ASpec: IInterface): T;
     
-    function Any(const ASpec: ISpecification<T>): Boolean; overload;
-    function Count(const ASpec: ISpecification<T>): Integer; overload;
+    // function AnyEntity(ASpec: IInterface): Boolean;
+    // function CountEntities(ASpec: IInterface): Integer;
     
     // Inline Queries (aceita IExpression diretamente)
     function List(const AExpression: IExpression): TList<T>; overload;
@@ -92,9 +95,9 @@ type
     ///   Returns a lazy query that executes only when enumerated.
     ///   Call .ToList() to force execution and materialize results.
     /// </summary>
-    function Query(const ASpec: ISpecification<T>): TFluentQuery<T>; overload;
-    function Query(const AExpression: IExpression): TFluentQuery<T>; overload;
-    function Query: TFluentQuery<T>; overload; // All records (lazy)
+    function Query(const ASpec: ISpecification<T>): TFluentQuery<T>;
+    function QueryExpr(const AExpression: IExpression): TFluentQuery<T>;
+    function QueryAll: TFluentQuery<T>;
   end;
 
   ICollectionEntry = interface

@@ -199,6 +199,7 @@
         <DCCReference Include="..\Entity\Dext.Entity.Joining.pas"/>
         <DCCReference Include="..\Specifications\Dext.Specifications.Evaluator.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.LazyLoading.pas"/>
+        <DCCReference Include="Dext.Types.Lazy.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

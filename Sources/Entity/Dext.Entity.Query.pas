@@ -240,6 +240,9 @@ type
   /// <summary>
   ///   Iterator that returns distinct elements.
   /// </summary>
+
+
+  
   TDistinctIterator<T> = class(TQueryIterator<T>)
   private
     FSource: TEnumerable<T>;
@@ -1100,6 +1103,8 @@ begin
   
   Result := False;
 end;
+
+
 
 
 end.

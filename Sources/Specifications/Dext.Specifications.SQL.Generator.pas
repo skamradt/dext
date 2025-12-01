@@ -7,12 +7,18 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.Rtti,
+  System.TypInfo,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Entity.Dialects,
   Dext.Entity.Attributes;
 
 type
+  ISQLColumnMapper = interface
+    ['{6C3E8F9A-1B2C-4D5E-9F0A-1B2C3D4E5F6A}']
+    function MapColumn(const AName: string): string;
+  end;
+
   /// <summary>
   ///   Translates a Expression Tree into a SQL WHERE clause and Parameters.
   /// </summary>
@@ -22,6 +28,7 @@ type
     FParams: TDictionary<string, TValue>;
     FParamCount: Integer;
     FDialect: ISQLDialect;
+    FColumnMapper: ISQLColumnMapper;
     
     procedure Process(const AExpression: IExpression);
     procedure ProcessBinary(const C: TBinaryExpression);
@@ -33,20 +40,19 @@ type
     function GetBinaryOpSQL(Op: TBinaryOperator): string;
     function GetLogicalOpSQL(Op: TLogicalOperator): string;
     function GetUnaryOpSQL(Op: TUnaryOperator): string;
+    function MapColumn(const AName: string): string;
   public
-    constructor Create(ADialect: ISQLDialect);
+    constructor Create(ADialect: ISQLDialect; AMapper: ISQLColumnMapper = nil);
     destructor Destroy; override;
     
-    /// <summary>
-    ///   Generates the SQL and populates Params.
-    ///   Returns empty string if Expression is nil.
-    /// </summary>
     function Generate(const AExpression: IExpression): string;
     
-    /// <summary>
-    ///   Access the parameters generated during the process.
-    /// </summary>
     property Params: TDictionary<string, TValue> read FParams;
+  end;
+
+  TSQLColumnMapper<T: class> = class(TInterfacedObject, ISQLColumnMapper)
+  public
+    function MapColumn(const AName: string): string;
   end;
 
   /// <summary>
@@ -68,6 +74,10 @@ type
     function GenerateUpdate(const AEntity: T): string;
     function GenerateDelete(const AEntity: T): string;
     
+    function GenerateSelect(const ASpec: ISpecification<T>): string;
+    function GenerateCount(const ASpec: ISpecification<T>): string;
+    function GenerateCreateTable(const ATableName: string): string;
+    
     property Params: TDictionary<string, TValue> read FParams;
   end;
 
@@ -75,12 +85,13 @@ implementation
 
 { TSQLWhereGenerator }
 
-constructor TSQLWhereGenerator.Create(ADialect: ISQLDialect);
+constructor TSQLWhereGenerator.Create(ADialect: ISQLDialect; AMapper: ISQLColumnMapper = nil);
 begin
   FSQL := TStringBuilder.Create;
   FParams := TDictionary<string, TValue>.Create;
   FParamCount := 0;
   FDialect := ADialect;
+  FColumnMapper := AMapper;
 end;
 
 destructor TSQLWhereGenerator.Destroy;
@@ -88,6 +99,14 @@ begin
   FSQL.Free;
   FParams.Free;
   inherited;
+end;
+
+function TSQLWhereGenerator.MapColumn(const AName: string): string;
+begin
+  if FColumnMapper <> nil then
+    Result := FColumnMapper.MapColumn(AName)
+  else
+    Result := AName;
 end;
 
 function TSQLWhereGenerator.Generate(const AExpression: IExpression): string;
@@ -153,7 +172,7 @@ begin
         
         // Generate SQL: (Column IN (:p1, :p2, :p3))
         FSQL.Append('(')
-            .Append(FDialect.QuoteIdentifier(C.PropertyName))
+            .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
             .Append(' ')
             .Append(GetBinaryOpSQL(C.BinaryOperator))
             .Append(' (')
@@ -170,7 +189,7 @@ begin
       FParams.Add(ParamName, C.Value);
       
       FSQL.Append('(')
-          .Append(FDialect.QuoteIdentifier(C.PropertyName))
+          .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
           .Append(' ')
           .Append(GetBinaryOpSQL(C.BinaryOperator))
           .Append(' (:')
@@ -188,7 +207,7 @@ begin
     
     // Generate SQL: (Column Op :Param)
     FSQL.Append('(')
-        .Append(FDialect.QuoteIdentifier(C.PropertyName))
+        .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
         .Append(' ')
         .Append(GetBinaryOpSQL(C.BinaryOperator))
         .Append(' :')
@@ -196,7 +215,6 @@ begin
         .Append(')');
   end;
 end;
-
 
 procedure TSQLWhereGenerator.ProcessLogical(const C: TLogicalExpression);
 begin
@@ -221,7 +239,7 @@ begin
   begin
     // IsNull / IsNotNull
     FSQL.Append('(')
-        .Append(FDialect.QuoteIdentifier(C.PropertyName))
+        .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
         .Append(' ')
         .Append(GetUnaryOpSQL(C.UnaryOperator))
         .Append(')');
@@ -275,6 +293,29 @@ begin
 end;
 
 
+
+{ TSQLColumnMapper<T> }
+
+function TSQLColumnMapper<T>.MapColumn(const AName: string): string;
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Prop: TRttiProperty;
+  Attr: TCustomAttribute;
+begin
+  Result := AName;
+  Ctx := TRttiContext.Create;
+  Typ := Ctx.GetType(T);
+  Prop := Typ.GetProperty(AName);
+  if Prop <> nil then
+  begin
+    for Attr in Prop.GetAttributes do
+    begin
+      if Attr is ColumnAttribute then Exit(ColumnAttribute(Attr).Name);
+      if Attr is ForeignKeyAttribute then Exit(ForeignKeyAttribute(Attr).ColumnName);
+    end;
+  end;
+end;
 
 { TSQLGenerator<T> }
 
@@ -525,6 +566,251 @@ begin
       
   finally
     SBWhere.Free;
+  end;
+end;
+
+
+
+function TSQLGenerator<T>.GenerateSelect(const ASpec: ISpecification<T>): string;
+var
+  WhereGen: TSQLWhereGenerator;
+  WhereSQL: string;
+  SB: TStringBuilder;
+  Prop: TRttiProperty;
+  ColName: string;
+  Attr: TCustomAttribute;
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  First: Boolean;
+  SelectedCols: TArray<string>;
+  OrderBy: TArray<IOrderBy>;
+  Skip, Take: Integer;
+begin
+  FParams.Clear;
+  FParamCount := 0;
+  
+  WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
+    
+  try
+    WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    
+    // Copy params
+    for var Pair in WhereGen.Params do
+    begin
+      FParams.Add(Pair.Key, Pair.Value);
+    end;
+  finally
+    WhereGen.Free;
+  end;
+  
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('SELECT ');
+    
+    SelectedCols := ASpec.GetSelectedColumns;
+    if Length(SelectedCols) > 0 then
+    begin
+      // Custom projection
+      for var i := 0 to High(SelectedCols) do
+      begin
+        if i > 0 then SB.Append(', ');
+        SB.Append(FDialect.QuoteIdentifier(SelectedCols[i]));
+      end;
+    end
+    else
+    begin
+      // Select all mapped columns
+      Ctx := TRttiContext.Create;
+      Typ := Ctx.GetType(T);
+      First := True;
+      
+      for Prop in Typ.GetProperties do
+      begin
+        ColName := Prop.Name;
+        var IsMapped := True;
+        
+        for Attr in Prop.GetAttributes do
+        begin
+          if Attr is NotMappedAttribute then IsMapped := False;
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+        
+        if not IsMapped then Continue;
+        
+        if not First then SB.Append(', ');
+        First := False;
+        
+        SB.Append(FDialect.QuoteIdentifier(ColName));
+      end;
+    end;
+    
+    SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+    
+    if WhereSQL <> '' then
+      SB.Append(' WHERE ').Append(WhereSQL);
+      
+    // Order By
+    OrderBy := ASpec.GetOrderBy;
+    if Length(OrderBy) > 0 then
+    begin
+      SB.Append(' ORDER BY ');
+      for var i := 0 to High(OrderBy) do
+      begin
+        if i > 0 then SB.Append(', ');
+        
+        var SortCol := OrderBy[i].GetPropertyName;
+        // Lookup column name (simplified)
+        Ctx := TRttiContext.Create;
+        Typ := Ctx.GetType(T);
+        var P := Typ.GetProperty(SortCol);
+        if P <> nil then
+        begin
+           for Attr in P.GetAttributes do
+           begin
+             if Attr is ColumnAttribute then SortCol := ColumnAttribute(Attr).Name;
+             if Attr is ForeignKeyAttribute then SortCol := ForeignKeyAttribute(Attr).ColumnName;
+           end;
+        end;
+        
+        SB.Append(FDialect.QuoteIdentifier(SortCol));
+        
+        if not OrderBy[i].GetAscending then
+          SB.Append(' DESC');
+      end;
+    end;
+    
+    // Paging
+    if ASpec.IsPagingEnabled then
+    begin
+      Skip := ASpec.GetSkip;
+      Take := ASpec.GetTake;
+      Result := SB.ToString + ' ' + FDialect.GeneratePaging(Skip, Take);
+    end
+    else
+    begin
+      Result := SB.ToString;
+    end;
+    
+  finally
+    SB.Free;
+  end;
+end;
+
+function TSQLGenerator<T>.GenerateCount(const ASpec: ISpecification<T>): string;
+var
+  WhereGen: TSQLWhereGenerator;
+  WhereSQL: string;
+  SB: TStringBuilder;
+begin
+  FParams.Clear;
+  FParamCount := 0;
+  
+  WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
+
+    
+  try
+    WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    
+    // Copy params
+    for var Pair in WhereGen.Params do
+    begin
+      FParams.Add(Pair.Key, Pair.Value);
+    end;
+  finally
+    WhereGen.Free;
+  end;
+  
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('SELECT COUNT(*) FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+    
+    if WhereSQL <> '' then
+      SB.Append(' WHERE ').Append(WhereSQL);
+      
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+function TSQLGenerator<T>.GenerateCreateTable(const ATableName: string): string;
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Prop: TRttiProperty;
+  Attr: TCustomAttribute;
+  ColName, ColType, Body: string;
+  SB: TStringBuilder;
+  IsPK, IsAutoInc, IsMapped, HasAutoInc: Boolean;
+  First: Boolean;
+  PKCols: TList<string>;
+begin
+  SB := TStringBuilder.Create;
+  PKCols := TList<string>.Create;
+  try
+    Ctx := TRttiContext.Create;
+    Typ := Ctx.GetType(T);
+    First := True;
+    HasAutoInc := False;
+    
+    for Prop in Typ.GetProperties do
+    begin
+      IsMapped := True;
+      IsPK := False;
+      IsAutoInc := False;
+      ColName := Prop.Name;
+      
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is NotMappedAttribute then IsMapped := False;
+        if Attr is PKAttribute then IsPK := True;
+        if Attr is AutoIncAttribute then IsAutoInc := True;
+        if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+        if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+      end;
+      
+      if not IsMapped then Continue;
+      
+      if not First then SB.Append(', ');
+      First := False;
+      
+      SB.Append(FDialect.QuoteIdentifier(ColName));
+      SB.Append(' ');
+      
+      ColType := FDialect.GetColumnType(Prop.PropertyType.Handle, IsAutoInc);
+      SB.Append(ColType);
+      
+      if IsPK then
+      begin
+        PKCols.Add(FDialect.QuoteIdentifier(ColName));
+        if IsAutoInc then
+        begin
+           SB.Append(' PRIMARY KEY AUTOINCREMENT'); // SQLite specific inline
+           HasAutoInc := True;
+        end
+        else
+           SB.Append(' NOT NULL');
+      end;
+    end;
+    
+    // Add Composite PK constraint or Single PK constraint (if not AutoInc)
+    if (PKCols.Count > 0) and not HasAutoInc then
+    begin
+      SB.Append(', PRIMARY KEY (');
+      for var i := 0 to PKCols.Count - 1 do
+      begin
+        if i > 0 then SB.Append(', ');
+        SB.Append(PKCols[i]);
+      end;
+      SB.Append(')');
+    end;
+    
+    Body := SB.ToString;
+    Result := FDialect.GetCreateTableSQL(ATableName, Body);
+  finally
+    PKCols.Free;
+    SB.Free;
   end;
 end;
 

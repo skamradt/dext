@@ -539,7 +539,10 @@ begin
     end;
   end;
   
-  WriteLn('DEBUG: Collection.Load - FKName=', FKName, ', ParentPKVal=', ParentPKVal.ToString);
+  // Clear the collection before loading to ensure it reflects current DB state
+  var ClearMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Clear');
+  if ClearMethod <> nil then
+    ClearMethod.Invoke(ListObj, []);
     
   // Build Query: Child.FK = Parent.Id
   var Expr := TBinaryExpression.Create(
@@ -550,11 +553,9 @@ begin
   
   var Results := DbSet.ListObjects(Expr);
   try
-    WriteLn('DEBUG: Collection.Load - Found ', Results.Count, ' results');
     // Add results to ListObj
     for var ChildObj in Results do
     begin
-      WriteLn('DEBUG: Collection.Load - Adding ', ChildObj.ClassName);
       AddMethod.Invoke(ListObj, [ChildObj]);
     end;
   finally

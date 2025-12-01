@@ -132,16 +132,18 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="EntityDemo.Entities.pas"/>
         <DCCReference Include="EntityDemo.Tests.AdvancedQuery.pas"/>
         <DCCReference Include="EntityDemo.Tests.Base.pas"/>
         <DCCReference Include="EntityDemo.Tests.Bulk.pas"/>
         <DCCReference Include="EntityDemo.Tests.CompositeKeys.pas"/>
         <DCCReference Include="EntityDemo.Tests.Concurrency.pas"/>
         <DCCReference Include="EntityDemo.Tests.CRUD.pas"/>
+        <DCCReference Include="EntityDemo.Tests.ExplicitLoading.pas"/>
         <DCCReference Include="EntityDemo.Tests.FluentAPI.pas"/>
         <DCCReference Include="EntityDemo.Tests.LazyExecution.pas"/>
+        <DCCReference Include="EntityDemo.Tests.LazyLoading.pas"/>
         <DCCReference Include="EntityDemo.Tests.Relationships.pas"/>
+        <DCCReference Include="EntityDemo.Entities.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
