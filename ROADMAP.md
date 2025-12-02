@@ -196,6 +196,8 @@ Abaixo, comparamos o Dext com as principais alternativas do mercado Delphi e sua
 - [x] **Basic CRUD**: Operações Create, Read, Update, Delete.
 - [x] **Fluent API**: Consultas fluentes (`Query()`, `Where()`, `Skip()`, `Take()`).
 - [x] **Lazy Loading**: Carregamento tardio com `VirtualInterface` e `ILazy<T>`.
+- [x] **Naming Strategy**: Estratégias de nomenclatura (SnakeCase, CamelCase, etc.).
+- [x] **External Mapping**: Mapeamento fluente externo (`TEntityMap<T>`).
 - [ ] **Concurrency**: Correção de testes de concorrência otimista.
 - [ ] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` e projeções.
 - [ ] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
@@ -244,4 +246,4 @@ O projeto é Open Source e aceita contribuições!
 
 ---
 
-*Última atualização: 27 de Novembro de 2025*
+*Última atualização: 01 de Dezembro de 2025*

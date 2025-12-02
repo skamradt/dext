@@ -13,6 +13,7 @@ uses
   Dext.Entity.Attributes,
   Dext.Entity.Core,
   Dext.Entity.Dialects,
+  Dext.Entity.Mapping, // Add Mapping unit
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Query,
   Dext.Specifications.Base,
@@ -30,6 +31,7 @@ type
     FProps: TDictionary<string, TRttiProperty>; // Column Name -> Property
     FColumns: TDictionary<string, string>;      // Property Name -> Column Name
     FIdentityMap: TObjectDictionary<string, T>; // ID (String) -> Entity. Owns objects.
+    FMap: TEntityMap;
 
     procedure MapEntity;
     function Hydrate(Reader: IDbReader): T;
@@ -116,24 +118,53 @@ var
   Attr: TCustomAttribute;
   Prop: TRttiProperty;
   ColName: string;
+  PropMap: TPropertyMap;
+  IsMapped: Boolean;
 begin
   FRttiContext := TRttiContext.Create;
   Typ := FRttiContext.GetType(T);
+  
+  // Retrieve Fluent Mapping if available
+  FMap := TEntityMap(FContext.GetMapping(TypeInfo(T)));
 
   // 1. Table Name
   FTableName := '';
-  for Attr in Typ.GetAttributes do
-    if Attr is TableAttribute then
-      FTableName := TableAttribute(Attr).Name;
-      
+  
+  // Priority 1: Fluent Mapping
+  if (FMap <> nil) and (FMap.TableName <> '') then
+    FTableName := FMap.TableName;
+    
+  // Priority 2: Attributes
   if FTableName = '' then
-    FTableName := FContext.NamingStrategy.GetTableName(T);
+  begin
+    for Attr in Typ.GetAttributes do
+      if Attr is TableAttribute then
+        FTableName := TableAttribute(Attr).Name;
+  end;
+      
+  // Priority 3: Naming Strategy
+  if FTableName = '' then
+    FTableName := FContext.Dialect.QuoteIdentifier(FContext.NamingStrategy.GetTableName(T)); 
+    
+  if FTableName = '' then
+     FTableName := FContext.NamingStrategy.GetTableName(T);
 
   // 2. Properties & Columns
   for Prop in Typ.GetProperties do
   begin
-    // Skip unmapped
-    var IsMapped := True;
+    IsMapped := True;
+    PropMap := nil;
+    
+    // Check Fluent Mapping for Property
+    if FMap <> nil then
+    begin
+      if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
+      begin
+        if PropMap.IsIgnored then IsMapped := False;
+      end;
+    end;
+
+    // Check Attributes
     for Attr in Prop.GetAttributes do
       if Attr is NotMappedAttribute then
         IsMapped := False;
@@ -142,38 +173,73 @@ begin
 
     ColName := '';
 
-    // First pass: determine column name from attributes
-    for Attr in Prop.GetAttributes do
-    begin
-      if Attr is ColumnAttribute then
-        ColName := ColumnAttribute(Attr).Name;
+    // Priority 1: Fluent Mapping
+    if (PropMap <> nil) and (PropMap.ColumnName <> '') then
+      ColName := PropMap.ColumnName;
 
-      if Attr is ForeignKeyAttribute then
-        ColName := ForeignKeyAttribute(Attr).ColumnName;
+    // Priority 2: Attributes
+    if ColName = '' then
+    begin
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is ColumnAttribute then
+          ColName := ColumnAttribute(Attr).Name;
+
+        if Attr is ForeignKeyAttribute then
+          ColName := ForeignKeyAttribute(Attr).ColumnName;
+      end;
     end;
     
-    // If no attribute, use Naming Strategy
+    // Priority 3: Naming Strategy
     if ColName = '' then
       ColName := FContext.NamingStrategy.GetColumnName(Prop);
 
-    // Second pass: check for PK (now ColName is final)
-    for Attr in Prop.GetAttributes do
+    // PK Detection
+    // Priority 1: Fluent Mapping
+    if (PropMap <> nil) and PropMap.IsPK then
     begin
-      if Attr is PKAttribute then
+      if not FPKColumns.Contains(ColName) then
         FPKColumns.Add(ColName);
     end;
+    
+    // Priority 2: Attributes (Only if not already added by Fluent)
+    
+    if (FMap = nil) or (FMap.Keys.Count = 0) then
+    begin
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is PKAttribute then
+          if not FPKColumns.Contains(ColName) then
+            FPKColumns.Add(ColName);
+      end;
+    end;
 
-    FProps.Add(ColName.ToLower, Prop); // Store lower for case-insensitive matching
+    FProps.Add(ColName.ToLower, Prop);
     FColumns.Add(Prop.Name, ColName);
   end;
 
   // Fallback if no PK defined: assume 'Id'
   if FPKColumns.Count = 0 then
   begin
-    if FColumns.ContainsKey('Id') then
-      FPKColumns.Add(FColumns['Id'])
-    else if FColumns.ContainsKey('ID') then
-      FPKColumns.Add(FColumns['ID']);
+    // If Map has keys defined but they weren't found in properties loop (e.g. composite key defined via HasKey(['A','B']))
+    // We need to handle that.
+    if (FMap <> nil) and (FMap.Keys.Count > 0) then
+    begin
+      for var KeyProp in FMap.Keys do
+      begin
+        if FColumns.ContainsKey(KeyProp) then
+          FPKColumns.Add(FColumns[KeyProp]);
+      end;
+    end;
+    
+    // Default 'Id' convention
+    if FPKColumns.Count = 0 then
+    begin
+      if FColumns.ContainsKey('Id') then
+        FPKColumns.Add(FColumns['Id'])
+      else if FColumns.ContainsKey('ID') then
+        FPKColumns.Add(FColumns['ID']);
+    end;
   end;
 end;
 
@@ -375,7 +441,7 @@ var
   Prop: TRttiProperty;
   PKVal: Variant;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect);
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateInsert(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
@@ -441,7 +507,7 @@ var
   Val: TValue;
   NewVer: Integer;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect);
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateUpdate(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
@@ -485,7 +551,7 @@ var
   Sql: string;
   Cmd: IDbCommand;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect);
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateDelete(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
@@ -511,7 +577,7 @@ function TDbSet<T>.GenerateCreateTableScript: string;
 var
   Generator: TSqlGenerator<T>;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect);
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Result := Generator.GenerateCreateTable(GetTableName);
     // Result := ''; // TODO: Implement GenerateCreateTable in TSqlGenerator
@@ -637,7 +703,7 @@ var
   Reader: IDbReader;
 begin
   Result := TList<T>.Create;
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect);
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateSelect(ASpec);
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;

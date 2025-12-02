@@ -57,6 +57,9 @@
         <Projects Include="..\Examples\EntityDemo\EntityDemo.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Tests\Dext.Entity.Tests.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -227,14 +230,23 @@
     <Target Name="EntityDemo:Make">
         <MSBuild Projects="..\Examples\EntityDemo\EntityDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Dext_Entity_Tests">
+        <MSBuild Projects="Tests\Dext.Entity.Tests.dproj"/>
+    </Target>
+    <Target Name="Dext_Entity_Tests:Clean">
+        <MSBuild Projects="Tests\Dext.Entity.Tests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Entity_Tests:Make">
+        <MSBuild Projects="Tests\Dext.Entity.Tests.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_AppBuilderTest;Dext_ServerTest_Cors;Dext_ServerTest;Dext_DITest;Dext_MinimalAPITest;TestController;TestConfig;CachingDemo;TaskFlowAPI;RateLimitDemo;JwtAuthDemo;SwaggerExample;MinimalAPIExample;TestDbSet;DextStore;ControllerExample;Dext_Core;EntityDemo"/>
+        <CallTarget Targets="Dext_AppBuilderTest;Dext_ServerTest_Cors;Dext_ServerTest;Dext_DITest;Dext_MinimalAPITest;TestController;TestConfig;CachingDemo;TaskFlowAPI;RateLimitDemo;JwtAuthDemo;SwaggerExample;MinimalAPIExample;TestDbSet;DextStore;ControllerExample;Dext_Core;EntityDemo;Dext_Entity_Tests"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ServerTest:Clean;Dext_DITest:Clean;Dext_MinimalAPITest:Clean;TestController:Clean;TestConfig:Clean;CachingDemo:Clean;TaskFlowAPI:Clean;RateLimitDemo:Clean;JwtAuthDemo:Clean;SwaggerExample:Clean;MinimalAPIExample:Clean;TestDbSet:Clean;DextStore:Clean;ControllerExample:Clean;Dext_Core:Clean;EntityDemo:Clean"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ServerTest:Clean;Dext_DITest:Clean;Dext_MinimalAPITest:Clean;TestController:Clean;TestConfig:Clean;CachingDemo:Clean;TaskFlowAPI:Clean;RateLimitDemo:Clean;JwtAuthDemo:Clean;SwaggerExample:Clean;MinimalAPIExample:Clean;TestDbSet:Clean;DextStore:Clean;ControllerExample:Clean;Dext_Core:Clean;EntityDemo:Clean;Dext_Entity_Tests:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_ServerTest_Cors:Make;Dext_ServerTest:Make;Dext_DITest:Make;Dext_MinimalAPITest:Make;TestController:Make;TestConfig:Make;CachingDemo:Make;TaskFlowAPI:Make;RateLimitDemo:Make;JwtAuthDemo:Make;SwaggerExample:Make;MinimalAPIExample:Make;TestDbSet:Make;DextStore:Make;ControllerExample:Make;Dext_Core:Make;EntityDemo:Make"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_ServerTest_Cors:Make;Dext_ServerTest:Make;Dext_DITest:Make;Dext_MinimalAPITest:Make;TestController:Make;TestConfig:Make;CachingDemo:Make;TaskFlowAPI:Make;RateLimitDemo:Make;JwtAuthDemo:Make;SwaggerExample:Make;MinimalAPIExample:Make;TestDbSet:Make;DextStore:Make;ControllerExample:Make;Dext_Core:Make;EntityDemo:Make;Dext_Entity_Tests:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

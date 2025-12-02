@@ -8,6 +8,7 @@ uses
   System.Rtti,
   System.Generics.Collections,
   Dext.Entity.Naming, // Add Naming unit
+  Dext.Entity.Mapping, // Add Mapping unit
   Dext.Entity.Core,
   Dext.Entity.DbSet,
   Dext.Entity.Drivers.Interfaces,
@@ -78,7 +79,8 @@ type
   private
     FConnection: IDbConnection;
     FDialect: ISQLDialect;
-    FNamingStrategy: INamingStrategy; // Add Naming Strategy field
+    FNamingStrategy: INamingStrategy;
+    FModelBuilder: TModelBuilder; // Model Builder
     FTransaction: IDbTransaction;
     FCache: TDictionary<PTypeInfo, IInterface>; // Cache for DbSets
     FChangeTracker: IChangeTracker;
@@ -88,13 +90,19 @@ type
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
     
+    /// <summary>
+    ///   Override this method to configure the model (Fluent Mapping).
+    /// </summary>
+    procedure OnModelCreating(Builder: TModelBuilder); virtual;
+    
   public
     constructor Create(AConnection: IDbConnection; ADialect: ISQLDialect; ANamingStrategy: INamingStrategy = nil);
     destructor Destroy; override;
     
     function Connection: IDbConnection;
     function Dialect: ISQLDialect;
-    function NamingStrategy: INamingStrategy; // Expose Naming Strategy
+    function NamingStrategy: INamingStrategy;
+    function ModelBuilder: TModelBuilder; // Expose ModelBuilder
     
     procedure BeginTransaction;
     procedure Commit;
@@ -110,6 +118,8 @@ type
     function SaveChanges: Integer;
     procedure Clear;
     function ChangeTracker: IChangeTracker;
+    
+    function GetMapping(AType: PTypeInfo): TObject;
     
     /// <summary>
     ///   Access the DbSet for a specific entity type.
@@ -135,6 +145,10 @@ begin
     
   FCache := TDictionary<PTypeInfo, IInterface>.Create;
   FChangeTracker := TChangeTracker.Create;
+  FModelBuilder := TModelBuilder.Create;
+  
+  // Initialize Model
+  OnModelCreating(FModelBuilder);
 end;
 
 destructor TDbContext.Destroy;
@@ -174,6 +188,25 @@ end;
 function TDbContext.NamingStrategy: INamingStrategy;
 begin
   Result := FNamingStrategy;
+end;
+
+function TDbContext.ModelBuilder: TModelBuilder;
+begin
+  Result := FModelBuilder;
+end;
+
+procedure TDbContext.OnModelCreating(Builder: TModelBuilder);
+begin
+  // Default implementation does nothing.
+  // Override this in your derived context to configure mappings.
+end;
+
+function TDbContext.GetMapping(AType: PTypeInfo): TObject;
+begin
+  if FModelBuilder.HasMap(AType) then
+    Result := FModelBuilder.GetMap(AType)
+  else
+    Result := nil;
 end;
 
 procedure TDbContext.BeginTransaction;

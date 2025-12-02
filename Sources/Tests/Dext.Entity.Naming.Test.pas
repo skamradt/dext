@@ -1,4 +1,4 @@
-unit Dext.Entity.Naming.Test;
+﻿unit Dext.Entity.Naming.Test;
 
 interface
 
@@ -23,6 +23,7 @@ type
     FCtx: TRttiContext;
     procedure AssertEqual(const Expected, Actual, Msg: string);
     procedure Log(const Msg: string);
+  protected
     function GetProp(AClass: TClass; const APropName: string): TRttiProperty;
   public
     constructor Create;

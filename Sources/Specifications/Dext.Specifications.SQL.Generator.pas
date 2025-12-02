@@ -11,7 +11,8 @@ uses
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Entity.Dialects,
-  Dext.Entity.Attributes;
+  Dext.Entity.Attributes,
+  Dext.Entity.Mapping;
 
 type
   ISQLColumnMapper = interface
@@ -63,11 +64,12 @@ type
     FDialect: ISQLDialect;
     FParams: TDictionary<string, TValue>;
     FParamCount: Integer;
+    FMap: TEntityMap;
     
     function GetNextParamName: string;
     function GetTableName: string;
   public
-    constructor Create(ADialect: ISQLDialect);
+    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
     destructor Destroy; override;
     
     function GenerateInsert(const AEntity: T): string;
@@ -319,9 +321,10 @@ end;
 
 { TSQLGenerator<T> }
 
-constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect);
+constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
 begin
   FDialect := ADialect;
+  FMap := AMap;
   FParams := TDictionary<string, TValue>.Create;
   FParamCount := 0;
 end;
@@ -344,6 +347,9 @@ var
   Typ: TRttiType;
   Attr: TCustomAttribute;
 begin
+  if (FMap <> nil) and (FMap.TableName <> '') then
+    Exit(FMap.TableName);
+
   Ctx := TRttiContext.Create;
   Typ := Ctx.GetType(T);
   Result := Typ.Name;
@@ -381,12 +387,29 @@ begin
       IsAutoInc := False;
       ColName := Prop.Name;
       
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+      if PropMap <> nil then
+      begin
+        if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsAutoInc then IsAutoInc := True;
+        if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+      end;
+
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        if Attr is AutoIncAttribute then IsAutoInc := True;
-        if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
-        if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        
+        if (PropMap = nil) or not PropMap.IsAutoInc then
+          if Attr is AutoIncAttribute then IsAutoInc := True;
+          
+        if (PropMap = nil) or (PropMap.ColumnName = '') then
+        begin
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
       end;
       
       if not IsMapped or IsAutoInc then Continue;
@@ -447,13 +470,32 @@ begin
       IsVersion := False;
       ColName := Prop.Name;
       
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+      if PropMap <> nil then
+      begin
+        if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsPK then IsPK := True;
+        // Version not yet supported in Fluent Mapping explicitly? Assuming no for now or check map.
+        if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+      end;
+
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        if Attr is PKAttribute then IsPK := True;
-        if Attr is VersionAttribute then IsVersion := True;
-        if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
-        if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        
+        if (PropMap = nil) or not PropMap.IsPK then
+          if Attr is PKAttribute then IsPK := True;
+          
+        if Attr is VersionAttribute then IsVersion := True; // Version attribute still respected
+        
+        if (PropMap = nil) or (PropMap.ColumnName = '') then
+        begin
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
       end;
       
       if not IsMapped then Continue;
@@ -541,10 +583,23 @@ begin
       IsPK := False;
       ColName := Prop.Name;
       
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+      if PropMap <> nil then
+      begin
+        if PropMap.IsPK then IsPK := True;
+        if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+      end;
+
       for Attr in Prop.GetAttributes do
       begin
-        if Attr is PKAttribute then IsPK := True;
-        if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+        if (PropMap = nil) or not PropMap.IsPK then
+          if Attr is PKAttribute then IsPK := True;
+          
+        if (PropMap = nil) or (PropMap.ColumnName = '') then
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
       end;
       
       if not IsPK then Continue;
@@ -629,11 +684,25 @@ begin
         ColName := Prop.Name;
         var IsMapped := True;
         
+        var PropMap: TPropertyMap := nil;
+        if FMap <> nil then
+          FMap.Properties.TryGetValue(Prop.Name, PropMap);
+          
+        if PropMap <> nil then
+        begin
+          if PropMap.IsIgnored then IsMapped := False;
+          if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+        end;
+
         for Attr in Prop.GetAttributes do
         begin
           if Attr is NotMappedAttribute then IsMapped := False;
-          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
-          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+          
+          if (PropMap = nil) or (PropMap.ColumnName = '') then
+          begin
+            if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+            if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+          end;
         end;
         
         if not IsMapped then Continue;
@@ -761,13 +830,35 @@ begin
       IsAutoInc := False;
       ColName := Prop.Name;
       
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+      if PropMap <> nil then
+      begin
+        if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsPK then IsPK := True;
+        if PropMap.IsAutoInc then IsAutoInc := True;
+        if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+      end;
+      
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        if Attr is PKAttribute then IsPK := True;
-        if Attr is AutoIncAttribute then IsAutoInc := True;
-        if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
-        if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        // Attributes only apply if not overridden by Fluent (or we can merge, but Fluent usually wins)
+        // Here we let Fluent win if defined.
+        
+        if (PropMap = nil) or not PropMap.IsPK then
+          if Attr is PKAttribute then IsPK := True;
+          
+        if (PropMap = nil) or not PropMap.IsAutoInc then
+          if Attr is AutoIncAttribute then IsAutoInc := True;
+          
+        if (PropMap = nil) or (PropMap.ColumnName = '') then
+        begin
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
       end;
       
       if not IsMapped then Continue;

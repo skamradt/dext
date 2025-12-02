@@ -8,6 +8,7 @@ uses
   System.Generics.Collections,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
+  Dext.Entity.Naming, // Add Naming unit
   Dext.Entity.Query,
   Dext.Specifications.Base,
   Dext.Specifications.Interfaces;
@@ -119,6 +120,7 @@ type
     ['{30000000-0000-0000-0000-000000000002}']
     function Connection: IDbConnection;
     function Dialect: ISQLDialect;
+    function NamingStrategy: INamingStrategy;
     
     // Transaction Management
     procedure BeginTransaction;
@@ -152,6 +154,12 @@ type
     ///   Access the Change Tracker.
     /// </summary>
     function ChangeTracker: IChangeTracker;
+    
+    /// <summary>
+    ///   Retrieves the mapping object for a specific type (TEntityMap).
+    ///   Returns nil if no mapping is defined.
+    /// </summary>
+    function GetMapping(AType: PTypeInfo): TObject;
     
     function Entry(const AEntity: TObject): IEntityEntry;
   end;

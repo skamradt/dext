@@ -18,6 +18,8 @@ O núcleo do ORM está funcional, suportando operações CRUD, mapeamento básic
 - [x] **Database Drivers**: Abstração de driver (FireDAC implementado).
 - [x] **Dialects**: Suporte multi-banco (SQLite, PostgreSQL).
 - [x] **Schema Generation**: Geração automática de scripts `CREATE TABLE`.
+- [x] **Naming Strategies**: Convenções de nomenclatura configuráveis (SnakeCase, CamelCase).
+- [x] **Fluent Mapping**: Mapeamento externo via código (`TEntityMap<T>`) para isolamento do domínio.
 
 #### 2. CRUD & Operações
 - [x] **Basic CRUD**: `Add`, `Update`, `Remove`, `Find` (por ID).
@@ -139,8 +141,8 @@ Melhorar como os dados relacionados são carregados e gerenciar ciclo de vida da
 - [ ] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
 - [ ] **Concurrency Fixes**: Correção de testes de concorrência otimista em cenários complexos.
 - [ ] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` e projeções em casos de borda.
-- [ ] **Global Naming Strategy**: Estratégia global para convenção de nomes (SnakeCase, CamelCase) sem poluir entidades.
-- [ ] **External Mapping (Fluent Mapping)**: Configuração de mapeamento via código (Startup) para evitar Attributes nas entidades.
+- [x] **Global Naming Strategy**: Estratégia global para convenção de nomes (SnakeCase, CamelCase) sem poluir entidades.
+- [x] **External Mapping (Fluent Mapping)**: Configuração de mapeamento via código (Startup) para evitar Attributes nas entidades.
   - *Objetivo*: Separar domínio de persistência (Clean Architecture).
   - *Ref*: Spring4D Generators e ANSI SQL Fallback.
 

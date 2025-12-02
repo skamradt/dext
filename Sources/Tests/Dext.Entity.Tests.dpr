@@ -1,4 +1,4 @@
-program Dext.Entity.Tests;
+﻿program Dext.Entity.Tests;
 
 {$APPTYPE CONSOLE}
 
@@ -12,7 +12,8 @@ uses
   Dext.Entity.Dialect.MSSQL.Test in 'Dext.Entity.Dialect.MSSQL.Test.pas',
   Dext.Entity.Dialect.MySQL.Test in 'Dext.Entity.Dialect.MySQL.Test.pas',
   Dext.Entity.Dialect.Oracle.Test in 'Dext.Entity.Dialect.Oracle.Test.pas',
-  Dext.Entity.Naming.Test in 'Dext.Entity.Naming.Test.pas';
+  Dext.Entity.Naming.Test in 'Dext.Entity.Naming.Test.pas',
+  Dext.Entity.Mapping.Test in 'Dext.Entity.Mapping.Test.pas';
 
 procedure RunTests;
 var
@@ -22,10 +23,20 @@ var
   TestMY: TMySQLDialectTest;
   TestOR: TOracleDialectTest;
   TestNS: TNamingStrategyTest;
+  TestMap: TMappingTest;
 begin
   WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
   
+  // Fluent Mapping
+  TestMap := TMappingTest.Create;
+  try
+    TestMap.Run;
+  finally
+    TestMap.Free;
+  end;
+  WriteLn('');
+
   // Naming Strategy
   TestNS := TNamingStrategyTest.Create;
   try

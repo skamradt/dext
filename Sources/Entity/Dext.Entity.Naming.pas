@@ -71,7 +71,7 @@ function TDefaultNamingStrategy.GetTableName(const AClass: TClass): string;
 begin
   Result := AClass.ClassName;
   // Remove 'T' prefix if present and length > 1
-  if (Result.Length > 1) and (Result.Chars[0] = 'T') and IsUpper(Result.Chars[1]) then
+  if (Result.Length > 1) and (Result.Chars[0] = 'T') and Result.Chars[1].IsUpper then
     Result := Result.Substring(1);
 end;
 
@@ -88,7 +88,7 @@ var
 begin
   Name := AClass.ClassName;
   // Remove 'T' prefix
-  if (Name.Length > 1) and (Name.Chars[0] = 'T') and IsUpper(Name.Chars[1]) then
+  if (Name.Length > 1) and (Name.Chars[0] = 'T') and Name.Chars[1].IsUpper then
     Name := Name.Substring(1);
     
   Result := ToSnakeCase(Name);
@@ -112,11 +112,11 @@ begin
     for i := 0 to AName.Length - 1 do
     begin
       C := AName.Chars[i];
-      if IsUpper(C) then
+      if C.IsUpper then
       begin
         if i > 0 then
           SB.Append('_');
-        SB.Append(ToLower(C));
+        SB.Append(C.ToLower);
       end
       else
         SB.Append(C);
@@ -134,7 +134,7 @@ var
   Name: string;
 begin
   Name := AClass.ClassName;
-  if (Name.Length > 1) and (Name.Chars[0] = 'T') and IsUpper(Name.Chars[1]) then
+  if (Name.Length > 1) and (Name.Chars[0] = 'T') and Name.Chars[1].IsUpper then
     Name := Name.Substring(1);
   Result := Name.ToLower;
 end;
@@ -151,7 +151,7 @@ var
   Name: string;
 begin
   Name := AClass.ClassName;
-  if (Name.Length > 1) and (Name.Chars[0] = 'T') and IsUpper(Name.Chars[1]) then
+  if (Name.Length > 1) and (Name.Chars[0] = 'T') and Name.Chars[1].IsUpper then
     Name := Name.Substring(1);
   Result := Name.ToUpper;
 end;
