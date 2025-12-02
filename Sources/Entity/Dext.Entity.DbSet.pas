@@ -121,10 +121,13 @@ begin
   Typ := FRttiContext.GetType(T);
 
   // 1. Table Name
-  FTableName := Typ.Name; // Default
+  FTableName := '';
   for Attr in Typ.GetAttributes do
     if Attr is TableAttribute then
       FTableName := TableAttribute(Attr).Name;
+      
+  if FTableName = '' then
+    FTableName := FContext.NamingStrategy.GetTableName(T);
 
   // 2. Properties & Columns
   for Prop in Typ.GetProperties do
@@ -137,9 +140,9 @@ begin
 
     if not IsMapped then Continue;
 
-    ColName := Prop.Name; // Default
+    ColName := '';
 
-    // First pass: determine column name
+    // First pass: determine column name from attributes
     for Attr in Prop.GetAttributes do
     begin
       if Attr is ColumnAttribute then
@@ -148,6 +151,10 @@ begin
       if Attr is ForeignKeyAttribute then
         ColName := ForeignKeyAttribute(Attr).ColumnName;
     end;
+    
+    // If no attribute, use Naming Strategy
+    if ColName = '' then
+      ColName := FContext.NamingStrategy.GetColumnName(Prop);
 
     // Second pass: check for PK (now ColName is final)
     for Attr in Prop.GetAttributes do

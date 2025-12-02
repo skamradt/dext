@@ -11,7 +11,8 @@ uses
   Dext.Entity.Dialect.Firebird.Test in 'Dext.Entity.Dialect.Firebird.Test.pas',
   Dext.Entity.Dialect.MSSQL.Test in 'Dext.Entity.Dialect.MSSQL.Test.pas',
   Dext.Entity.Dialect.MySQL.Test in 'Dext.Entity.Dialect.MySQL.Test.pas',
-  Dext.Entity.Dialect.Oracle.Test in 'Dext.Entity.Dialect.Oracle.Test.pas';
+  Dext.Entity.Dialect.Oracle.Test in 'Dext.Entity.Dialect.Oracle.Test.pas',
+  Dext.Entity.Naming.Test in 'Dext.Entity.Naming.Test.pas';
 
 procedure RunTests;
 var
@@ -20,10 +21,20 @@ var
   TestMS: TSQLServerDialectTest;
   TestMY: TMySQLDialectTest;
   TestOR: TOracleDialectTest;
+  TestNS: TNamingStrategyTest;
 begin
   WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
   
+  // Naming Strategy
+  TestNS := TNamingStrategyTest.Create;
+  try
+    TestNS.Run;
+  finally
+    TestNS.Free;
+  end;
+  WriteLn('');
+
   // PostgreSQL
   TestPG := TPostgreSQLDialectTest.Create;
   try

@@ -7,6 +7,7 @@ uses
   System.TypInfo,
   System.Rtti,
   System.Generics.Collections,
+  Dext.Entity.Naming, // Add Naming unit
   Dext.Entity.Core,
   Dext.Entity.DbSet,
   Dext.Entity.Drivers.Interfaces,
@@ -77,6 +78,7 @@ type
   private
     FConnection: IDbConnection;
     FDialect: ISQLDialect;
+    FNamingStrategy: INamingStrategy; // Add Naming Strategy field
     FTransaction: IDbTransaction;
     FCache: TDictionary<PTypeInfo, IInterface>; // Cache for DbSets
     FChangeTracker: IChangeTracker;
@@ -87,11 +89,12 @@ type
     function _Release: Integer; stdcall;
     
   public
-    constructor Create(AConnection: IDbConnection; ADialect: ISQLDialect);
+    constructor Create(AConnection: IDbConnection; ADialect: ISQLDialect; ANamingStrategy: INamingStrategy = nil);
     destructor Destroy; override;
     
     function Connection: IDbConnection;
     function Dialect: ISQLDialect;
+    function NamingStrategy: INamingStrategy; // Expose Naming Strategy
     
     procedure BeginTransaction;
     procedure Commit;
@@ -120,11 +123,16 @@ implementation
 
 { TDbContext }
 
-constructor TDbContext.Create(AConnection: IDbConnection; ADialect: ISQLDialect);
+constructor TDbContext.Create(AConnection: IDbConnection; ADialect: ISQLDialect; ANamingStrategy: INamingStrategy = nil);
 begin
   inherited Create;
   FConnection := AConnection;
   FDialect := ADialect;
+  if ANamingStrategy <> nil then
+    FNamingStrategy := ANamingStrategy
+  else
+    FNamingStrategy := TDefaultNamingStrategy.Create; // Default
+    
   FCache := TDictionary<PTypeInfo, IInterface>.Create;
   FChangeTracker := TChangeTracker.Create;
 end;
@@ -161,6 +169,11 @@ end;
 function TDbContext.Dialect: ISQLDialect;
 begin
   Result := FDialect;
+end;
+
+function TDbContext.NamingStrategy: INamingStrategy;
+begin
+  Result := FNamingStrategy;
 end;
 
 procedure TDbContext.BeginTransaction;
