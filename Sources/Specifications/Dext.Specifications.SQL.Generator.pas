@@ -12,7 +12,8 @@ uses
   Dext.Specifications.Types,
   Dext.Entity.Dialects,
   Dext.Entity.Attributes,
-  Dext.Entity.Mapping;
+  Dext.Entity.Mapping,
+  Dext.Types.Nullable;
 
 type
   ISQLColumnMapper = interface
@@ -56,6 +57,13 @@ type
     function MapColumn(const AName: string): string;
   end;
 
+  TSQLGeneratorHelper = class
+  public
+    class function GetCascadeSQL(AAction: TCascadeAction): string;
+    class function GetColumnNameForProperty(ATyp: TRttiType; const APropName: string): string;
+    class function GetRelatedTableAndPK(ACtx: TRttiContext; AClass: TClass; out ATable, APK: string): Boolean;
+  end;
+
   /// <summary>
   ///   Generates SQL for CRUD operations (Insert, Update, Delete).
   /// </summary>
@@ -84,6 +92,79 @@ type
   end;
 
 implementation
+
+{ TSQLGeneratorHelper }
+
+class function TSQLGeneratorHelper.GetCascadeSQL(AAction: TCascadeAction): string;
+begin
+  case AAction of
+    caCascade: Result := 'CASCADE';
+    caSetNull: Result := 'SET NULL';
+    caRestrict: Result := 'RESTRICT';
+    else Result := 'NO ACTION';
+  end;
+end;
+
+class function TSQLGeneratorHelper.GetColumnNameForProperty(ATyp: TRttiType; const APropName: string): string;
+var
+  P: TRttiProperty;
+  A: TCustomAttribute;
+begin
+  Result := APropName; // Default
+  P := ATyp.GetProperty(APropName);
+  if P <> nil then
+  begin
+    for A in P.GetAttributes do
+    begin
+      if A is ColumnAttribute then Exit(ColumnAttribute(A).Name);
+    end;
+  end;
+end;
+
+class function TSQLGeneratorHelper.GetRelatedTableAndPK(ACtx: TRttiContext; AClass: TClass; out ATable, APK: string): Boolean;
+var
+  RTyp: TRttiType;
+  RProp: TRttiProperty;
+  RAttr: TCustomAttribute;
+begin
+  Result := False;
+  RTyp := ACtx.GetType(AClass);
+  if RTyp = nil then Exit;
+  
+  // Table Name
+  ATable := RTyp.Name;
+  for RAttr in RTyp.GetAttributes do
+    if RAttr is TableAttribute then
+      ATable := TableAttribute(RAttr).Name;
+      
+  // PK
+  for RProp in RTyp.GetProperties do
+  begin
+    for RAttr in RProp.GetAttributes do
+    begin
+      if RAttr is PKAttribute then
+      begin
+        APK := RProp.Name;
+        // Check for Column Attribute on PK
+        for var SubAttr in RProp.GetAttributes do
+          if SubAttr is ColumnAttribute then
+            APK := ColumnAttribute(SubAttr).Name;
+        Exit(True);
+      end;
+    end;
+  end;
+  
+  // Fallback to 'Id'
+  RProp := RTyp.GetProperty('Id');
+  if RProp <> nil then
+  begin
+    APK := 'Id';
+    for RAttr in RProp.GetAttributes do
+      if RAttr is ColumnAttribute then
+        APK := ColumnAttribute(RAttr).Name;
+    Exit(True);
+  end;
+end;
 
 { TSQLWhereGenerator }
 
@@ -423,10 +504,28 @@ begin
       
       SBCols.Append(FDialect.QuoteIdentifier(ColName));
       
-      ParamName := GetNextParamName;
-      SBVals.Append(':').Append(ParamName);
       
       Val := Prop.GetValue(Pointer(AEntity));
+      
+      // Check for Nullable<T>
+      if IsNullable(Val.TypeInfo) then
+      begin
+        var Helper := TNullableHelper.Create(Val.TypeInfo);
+        if not Helper.HasValue(Val.GetReferenceToRawData) then
+        begin
+          // It is NULL.
+          SBVals.Append('NULL');
+          Continue; // Skip adding parameter
+        end
+        else
+        begin
+          // It has value. Extract it.
+          Val := Helper.GetValue(Val.GetReferenceToRawData);
+        end;
+      end;
+
+      ParamName := GetNextParamName;
+      SBVals.Append(':').Append(ParamName);
       FParams.Add(ParamName, Val);
     end;
     
@@ -814,9 +913,11 @@ var
   IsPK, IsAutoInc, IsMapped, HasAutoInc: Boolean;
   First: Boolean;
   PKCols: TList<string>;
+  FKConstraints: TList<string>;
 begin
   SB := TStringBuilder.Create;
   PKCols := TList<string>.Create;
+  FKConstraints := TList<string>.Create;
   try
     Ctx := TRttiContext.Create;
     Typ := Ctx.GetType(T);
@@ -825,6 +926,35 @@ begin
     
     for Prop in Typ.GetProperties do
     begin
+      // 1. Check for Foreign Keys (even if NotMapped)
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is ForeignKeyAttribute then
+        begin
+          var FK := ForeignKeyAttribute(Attr);
+          var FKPropName := FK.ColumnName;
+          var FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
+          var RelatedTable, RelatedPK: string;
+          
+          if (Prop.PropertyType.TypeKind = tkClass) and 
+             TSQLGeneratorHelper.GetRelatedTableAndPK(Ctx, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
+          begin
+             var Constraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
+               [FDialect.QuoteIdentifier(FKColName), 
+                FDialect.QuoteIdentifier(RelatedTable), 
+                FDialect.QuoteIdentifier(RelatedPK)]);
+                
+             if FK.OnDelete <> caNoAction then
+               Constraint := Constraint + ' ON DELETE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnDelete);
+               
+             if FK.OnUpdate <> caNoAction then
+               Constraint := Constraint + ' ON UPDATE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnUpdate);
+               
+             FKConstraints.Add(Constraint);
+          end;
+        end;
+      end;
+    
       IsMapped := True;
       IsPK := False;
       IsAutoInc := False;
@@ -869,7 +999,17 @@ begin
       SB.Append(FDialect.QuoteIdentifier(ColName));
       SB.Append(' ');
       
-      ColType := FDialect.GetColumnType(Prop.PropertyType.Handle, IsAutoInc);
+      var PropTypeHandle := Prop.PropertyType.Handle;
+      
+      // Handle Nullable<T>
+      if IsNullable(Prop.PropertyType.Handle) then
+      begin
+        var Underlying := GetUnderlyingType(Prop.PropertyType.Handle);
+        if Underlying <> nil then
+          PropTypeHandle := Underlying;
+      end;
+      
+      ColType := FDialect.GetColumnType(PropTypeHandle, IsAutoInc);
       SB.Append(ColType);
       
       if IsPK then
@@ -877,8 +1017,8 @@ begin
         PKCols.Add(FDialect.QuoteIdentifier(ColName));
         if IsAutoInc then
         begin
-           SB.Append(' PRIMARY KEY AUTOINCREMENT'); // SQLite specific inline
-           HasAutoInc := True;
+            SB.Append(' PRIMARY KEY'); // AutoInc implies PK
+            HasAutoInc := True;
         end
         else
            SB.Append(' NOT NULL');
@@ -897,9 +1037,16 @@ begin
       SB.Append(')');
     end;
     
+    // Add FK Constraints
+    for var Constraint in FKConstraints do
+    begin
+      SB.Append(', ').Append(Constraint);
+    end;
+    
     Body := SB.ToString;
     Result := FDialect.GetCreateTableSQL(ATableName, Body);
   finally
+    FKConstraints.Free;
     PKCols.Free;
     SB.Free;
   end;

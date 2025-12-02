@@ -51,6 +51,82 @@ type
 
 implementation
 
+{ Helper Functions }
+
+/// <summary>
+///   Unwraps Nullable<T> values and validates if FK is valid (non-zero for integers, non-empty for strings)
+/// </summary>
+function TryUnwrapAndValidateFK(var AValue: TValue; AContext: TRttiContext): Boolean;
+var
+  RType: TRttiType;
+  TypeName: string;
+  Fields: TArray<TRttiField>;
+  HasValueField, ValueField: TRttiField;
+  HasValue: Boolean;
+  Instance: Pointer;
+begin
+  Result := False;
+  
+  // Handle Nullable<T> unwrapping
+  if AValue.Kind = tkRecord then
+  begin
+    RType := AContext.GetType(AValue.TypeInfo);
+    if RType <> nil then
+    begin
+      TypeName := RType.Name;
+      
+      // Check if it's a Nullable<T> by name (Delphi doesn't generate RTTI for generic record properties)
+      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      begin
+        // Access fields directly since GetProperty won't work for generic records
+        Fields := RType.GetFields;
+        HasValueField := nil;
+        ValueField := nil;
+        
+        // Find fHasValue and fValue fields
+        for var Field in Fields do
+        begin
+          if Field.Name.ToLower.Contains('hasvalue') then
+            HasValueField := Field
+          else if Field.Name.ToLower = 'fvalue' then
+            ValueField := Field;
+        end;
+        
+        if (HasValueField <> nil) and (ValueField <> nil) then
+        begin
+          Instance := AValue.GetReferenceToRawData;
+          
+          // Check HasValue - it can be a string (Spring4D) or Boolean
+          var HasValueVal := HasValueField.GetValue(Instance);
+          if HasValueVal.Kind = tkUString then
+            HasValue := HasValueVal.AsString <> ''
+          else if HasValueVal.Kind = tkEnumeration then
+            HasValue := HasValueVal.AsBoolean
+          else
+            HasValue := False;
+            
+          if not HasValue then Exit; // Null, nothing to load
+          
+          // Get the actual value
+          AValue := ValueField.GetValue(Instance);
+        end
+        else
+          Exit; // Couldn't find fields, treat as invalid
+      end;
+    end;
+  end;
+
+  if AValue.IsEmpty then Exit;
+
+  // Validate based on type
+  if AValue.Kind in [tkInteger, tkInt64] then
+    Result := AValue.AsInt64 <> 0
+  else if AValue.Kind in [tkString, tkUString, tkWString, tkLString] then
+    Result := AValue.AsString <> ''
+  else
+    Result := True; // For other types like GUID, assume valid if not empty
+end;
+
 { TLazyLoader }
 
 constructor TLazyLoader.Create(AContext: IDbContext; AEntity: TObject);
@@ -285,7 +361,9 @@ begin
             if FKProp <> nil then
             begin
                 FKVal := FKProp.GetValue(FEntity);
-                if not FKVal.IsEmpty and (FKVal.AsInteger > 0) then
+                
+                // Unwrap Nullable<T> and validate FK value
+                if TryUnwrapAndValidateFK(FKVal, Ctx) then
                 begin
                     Prop := Ctx.GetType(FEntity.ClassType).GetProperty(FPropName);
                     TargetType := Prop.PropertyType.Handle;

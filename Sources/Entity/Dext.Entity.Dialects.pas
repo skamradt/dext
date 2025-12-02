@@ -21,6 +21,10 @@ type
     function GetCascadeActionSQL(AAction: TCascadeAction): string;
     function GetLastInsertIdSQL: string;
     function GetCreateTableSQL(const ATableName, ABody: string): string;
+    
+    // New methods for RETURNING clause support
+    function SupportsInsertReturning: Boolean;
+    function GetReturningSQL(const AColumnName: string): string;
   end;
 
   /// <summary>
@@ -36,6 +40,9 @@ type
     function GetCascadeActionSQL(AAction: TCascadeAction): string; virtual;
     function GetLastInsertIdSQL: string; virtual; abstract;
     function GetCreateTableSQL(const ATableName, ABody: string): string; virtual;
+    
+    function SupportsInsertReturning: Boolean; virtual;
+    function GetReturningSQL(const AColumnName: string): string; virtual;
   end;
 
   /// <summary>
@@ -62,6 +69,9 @@ type
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
+    
+    function SupportsInsertReturning: Boolean; override;
+    function GetReturningSQL(const AColumnName: string): string; override;
   end;
 
   /// <summary>
@@ -75,6 +85,9 @@ type
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
+    
+    function SupportsInsertReturning: Boolean; override;
+    function GetReturningSQL(const AColumnName: string): string; override;
   end;
 
   /// <summary>
@@ -114,6 +127,9 @@ type
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
+    
+    function SupportsInsertReturning: Boolean; override;
+    function GetReturningSQL(const AColumnName: string): string; override;
   end;
 
 implementation
@@ -530,6 +546,52 @@ function TOracleDialect.GetCreateTableSQL(const ATableName, ABody: string): stri
 begin
   // Oracle doesn't support IF NOT EXISTS.
   Result := Format('CREATE TABLE %s (%s);', [ATableName, ABody]);
+end;
+
+function TOracleDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := True;
+end;
+
+function TOracleDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := 'RETURNING ' + QuoteIdentifier(AColumnName) + ' INTO :RET_VAL';
+end;
+
+{ TBaseDialect }
+
+function TBaseDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := '';
+end;
+
+{ TPostgreSQLDialect }
+
+function TPostgreSQLDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := True;
+end;
+
+function TPostgreSQLDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
+end;
+
+{ TFirebirdDialect }
+
+function TFirebirdDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := True;
+end;
+
+function TFirebirdDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
 end;
 
 end.

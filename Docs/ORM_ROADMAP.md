@@ -20,6 +20,11 @@ O núcleo do ORM está funcional, suportando operações CRUD, mapeamento básic
 - [x] **Schema Generation**: Geração automática de scripts `CREATE TABLE`.
 - [x] **Naming Strategies**: Convenções de nomenclatura configuráveis (SnakeCase, CamelCase).
 - [x] **Fluent Mapping**: Mapeamento externo via código (`TEntityMap<T>`) para isolamento do domínio.
+- [x] **Nullable Support**: Suporte completo a `Nullable<T>` para campos opcionais e Foreign Keys.
+  - *Tipos*: `Nullable<Integer>`, `Nullable<String>`, `Nullable<TGUID>`, etc.
+  - *Compatibilidade*: Spring4D e Delphi nativo
+  - *Funcionalidades*: Persist, Hydrate, Foreign Key loading
+  - *Documentação*: [NULLABLE_SUPPORT.md](NULLABLE_SUPPORT.md)
 
 #### 2. CRUD & Operações
 - [x] **Basic CRUD**: `Add`, `Update`, `Remove`, `Find` (por ID).
@@ -138,8 +143,8 @@ Melhorar como os dados relacionados são carregados e gerenciar ciclo de vida da
 - [x] **Explicit Loading**: Carregamento manual de navegações (`Context.Entry(User).Collection('Orders').Load()`).
 
 ### 🔧 Manutenção & Débito Técnico
-- [ ] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
-- [ ] **Concurrency Fixes**: Correção de testes de concorrência otimista em cenários complexos.
+- [x] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
+- [x] **Concurrency Fixes**: Correção de testes de concorrência otimista em cenários complexos.
 - [ ] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` e projeções em casos de borda.
 - [x] **Global Naming Strategy**: Estratégia global para convenção de nomes (SnakeCase, CamelCase) sem poluir entidades.
 - [x] **External Mapping (Fluent Mapping)**: Configuração de mapeamento via código (Startup) para evitar Attributes nas entidades.
@@ -163,22 +168,22 @@ Melhorar como os dados relacionados são carregados e gerenciar ciclo de vida da
 
 ### Status Atual
 - ✅ **SQLite**: Suporte completo e testado
-- ⚠️ **PostgreSQL**: Dialeto implementado, mas não validado completamente
+- ✅ **PostgreSQL**: Suporte completo e validado (incluindo RETURNING clause, Nullable support)
 
 ### Expansão Planejada (Baseada em Pesquisa de Mercado Delphi)
 
 #### Prioridade 1 - Crítica (Mercado BR + Prototipagem)
-1. **Firebird 3.0/4.0** (Promovido)
+1. **Firebird 3.0/4.0** (Próximo)
    - **Segmento**: ERPs Modernos, Mercado BR
    - **Driver**: FireDAC (TFDPhysFBDriverLink)
    - **Desafios**: Dialeto SQL, Transações, Generators
    - **Status**: ⚠️ **Dialeto validado via Unit Tests, precisa validação de integração**
 
-2. **PostgreSQL** (Promovido)
+2. **PostgreSQL** ✅
    - **Segmento**: Microserviços, Cloud, Docker, Uso Diário
    - **Driver**: FireDAC (TFDPhysPGDriverLink)
    - **Desafios**: JSONB, Case Sensitivity, Batch
-   - **Status**: ⚠️ **Dialeto validado via Unit Tests, precisa validação de integração**
+   - **Status**: ✅ **Implementado e Validado** (Todos os testes passando)
 
 3. **SQLite** ✅
    - **Segmento**: Mobile, Testes, Prototipagem

@@ -6,7 +6,8 @@ uses
   System.SysUtils,
   System.Generics.Collections,
   Dext.Persistence,
-  Dext.Specifications.Base;
+  Dext.Specifications.Base,
+  Dext.Types.Nullable;
 
 type
   TUser = class; // Forward declaration
@@ -40,7 +41,7 @@ type
     FAge: Integer;
     FEmail: string;
     FCity: string;
-    FAddressId: Integer;
+    FAddressId: Nullable<Integer>;
     FAddress: Lazy<TAddress>;
     function GetAddress: TAddress;
     procedure SetAddress(const Value: TAddress);
@@ -56,7 +57,7 @@ type
     property City: string read FCity write FCity;
     
     [Column('address_id')]
-    property AddressId: Integer read FAddressId write FAddressId;
+    property AddressId: Nullable<Integer> read FAddressId write FAddressId;
 
     [ForeignKey('AddressId', caCascade), NotMapped]  // CASCADE on delete
     property Address: TAddress read GetAddress write SetAddress;

@@ -45,6 +45,10 @@ type
     
     // Non-generic query support
     function ListObjects(const AExpression: IExpression): TList<TObject>;
+
+    // Tracking Methods (Consistent with IDbSet<T>)
+    procedure Update(const AEntity: TObject);
+    procedure Remove(const AEntity: TObject);
     
     // Internal Persistence Methods (called by SaveChanges)
     procedure PersistAdd(const AEntity: TObject);

@@ -192,15 +192,29 @@ Abaixo, comparamos o Dext com as principais alternativas do mercado Delphi e sua
 - [x] **Background Services**: Suporte a `IHostedService` e `TBackgroundService` para tarefas em segundo plano.
 - [x] **Options Pattern**: Configuração fortemente tipada via `IOptions<T>`.
 
-### 5. Entity ORM (🚧 Em Andamento)
+### 5. Entity ORM (✅ Alpha 0.6 - Funcional)
 - [x] **Basic CRUD**: Operações Create, Read, Update, Delete.
+- [x] **Composite Keys**: Suporte a chaves primárias compostas.
 - [x] **Fluent API**: Consultas fluentes (`Query()`, `Where()`, `Skip()`, `Take()`).
 - [x] **Lazy Loading**: Carregamento tardio com `VirtualInterface` e `ILazy<T>`.
+- [x] **Eager Loading**: Carregamento antecipado com `.Include()`.
+- [x] **Explicit Loading**: Carregamento manual com `Entry().Reference().Load()`.
 - [x] **Naming Strategy**: Estratégias de nomenclatura (SnakeCase, CamelCase, etc.).
 - [x] **External Mapping**: Mapeamento fluente externo (`TEntityMap<T>`).
-- [ ] **Concurrency**: Correção de testes de concorrência otimista.
-- [ ] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` e projeções.
-- [ ] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
+- [x] **Nullable Support**: Suporte completo a `Nullable<T>` para campos opcionais e Foreign Keys.
+  - Tipos: `Nullable<Integer>`, `Nullable<String>`, `Nullable<TGUID>`, etc.
+  - Compatibilidade: Spring4D e Delphi nativo
+  - Funcionalidades: Persist, Hydrate, Foreign Key loading
+- [x] **Optimistic Concurrency**: Controle de concorrência via `[Version]`.
+- [x] **Database Support**:
+  - ✅ **SQLite**: Suporte completo e testado
+  - ✅ **PostgreSQL**: Suporte completo e validado (incluindo Nullable)
+  - ⚠️ **Firebird**: Próximo na fila para validação completa
+- [x] **Database Configuration**: Sistema de configuração para alternar facilmente entre bancos
+  - `TDbConfig` helper class
+  - Suporte a múltiplos providers
+  - Configuração via código ou environment variables
+- [ ] **Migrations**: Sistema de migração de schema (planejado para v1.1).
 
 ### 6. Ecossistema & Tooling (📅 Planejado para v1.1)
 - [ ] **CLI**: Ferramenta de linha de comando (`dext new webapi`).

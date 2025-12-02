@@ -1,4 +1,4 @@
-unit Dext.Entity;
+﻿unit Dext.Entity;
 
 interface
 
@@ -131,7 +131,94 @@ type
 
 implementation
 
+{ Helper Functions }
+
+/// <summary>
+///   Unwraps Nullable<T> values and validates if FK is valid (non-zero for integers, non-empty for strings)
+/// </summary>
+function TryUnwrapAndValidateFK(var AValue: TValue; AContext: TRttiContext): Boolean;
+var
+  RType: TRttiType;
+  TypeName: string;
+  Fields: TArray<TRttiField>;
+  HasValueField, ValueField: TRttiField;
+  HasValue: Boolean;
+  Instance: Pointer;
+begin
+  Result := False;
+  
+  // Handle Nullable<T> unwrapping
+  if AValue.Kind = tkRecord then
+  begin
+    RType := AContext.GetType(AValue.TypeInfo);
+    if RType <> nil then
+    begin
+      TypeName := RType.Name;
+      
+      // Check if it's a Nullable<T> by name (Delphi doesn't generate RTTI for generic record properties)
+      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      begin
+        // Access fields directly since GetProperty won't work for generic records
+        Fields := RType.GetFields;
+        HasValueField := nil;
+        ValueField := nil;
+        
+        // Find fHasValue and fValue fields
+        for var Field in Fields do
+        begin
+          if Field.Name.ToLower.Contains('hasvalue') then
+            HasValueField := Field
+          else if Field.Name.ToLower = 'fvalue' then
+            ValueField := Field;
+        end;
+        
+        if (HasValueField <> nil) and (ValueField <> nil) then
+        begin
+          Instance := AValue.GetReferenceToRawData;
+          
+          // Check HasValue - it can be a string (Spring4D) or Boolean
+          var HasValueVal := HasValueField.GetValue(Instance);
+          if HasValueVal.Kind = tkUString then
+            HasValue := HasValueVal.AsString <> ''
+          else if HasValueVal.Kind = tkEnumeration then
+            HasValue := HasValueVal.AsBoolean
+          else
+            HasValue := False;
+            
+          if not HasValue then Exit; // Null, nothing to load
+          
+          // Get the actual value
+          AValue := ValueField.GetValue(Instance);
+        end
+        else
+          Exit; // Couldn't find fields, treat as invalid
+      end;
+    end;
+  end;
+
+  if AValue.IsEmpty then Exit;
+
+  // Validate based on type
+  if AValue.Kind in [tkInteger, tkInt64] then
+    Result := AValue.AsInt64 <> 0
+  else if AValue.Kind in [tkString, tkUString, tkWString, tkLString] then
+    Result := AValue.AsString <> ''
+  else
+    Result := True; // For other types like GUID, assume valid if not empty
+end;
+
+
 { TDbContext }
+
+type
+  TEntityNode = class
+  public
+    TypeInfo: PTypeInfo;
+    DbSet: IDbSet;
+    Dependencies: TList<PTypeInfo>;
+    constructor Create;
+    destructor Destroy; override;
+  end;
 
 constructor TDbContext.Create(AConnection: IDbConnection; ADialect: ISQLDialect; ANamingStrategy: INamingStrategy = nil);
 begin
@@ -299,31 +386,146 @@ end;
 
 procedure TDbContext.EnsureCreated;
 var
-  SetIntf: IInterface;
+  Nodes: TObjectList<TEntityNode>;
+  Created: TList<PTypeInfo>;
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Prop: TRttiProperty;
+  Attr: TCustomAttribute;
+  Node: TEntityNode;
+  Pair: TPair<PTypeInfo, IInterface>;
   DbSet: IDbSet;
   SQL: string;
   Cmd: IDbCommand;
   CmdIntf: IInterface;
+  HasProgress, CanCreate: Boolean;
+  i: Integer;
 begin
-  // Iterate over all registered DbSets in Cache
-  // Note: This requires that Entities<T> has been called for all entities we want to create.
-  // In a real app, we might want a way to scan and register all entities in a package/assembly.
-  // For now, the user must register them (as done in the Demo).
-
-  for SetIntf in FCache.Values do
-  begin
-    if Supports(SetIntf, IDbSet, DbSet) then
+  Nodes := TObjectList<TEntityNode>.Create;
+  Created := TList<PTypeInfo>.Create;
+  Ctx := TRttiContext.Create;
+  try
+    // 1. Build Dependency Graph
+    for Pair in FCache do
     begin
-      SQL := DbSet.GenerateCreateTableScript;
-      if SQL <> '' then
+      if not Supports(Pair.Value, IDbSet, DbSet) then Continue;
+      
+      Node := TEntityNode.Create;
+      Node.TypeInfo := Pair.Key;
+      Node.DbSet := DbSet;
+      Nodes.Add(Node);
+      
+      // Analyze Dependencies
+      Typ := Ctx.GetType(Pair.Key);
+      if Typ = nil then Continue;
+      
+      for Prop in Typ.GetProperties do
       begin
-        // Execute creation script
-        CmdIntf := FConnection.CreateCommand(SQL);
-        Cmd := IDbCommand(CmdIntf);
-        Cmd.ExecuteNonQuery;
+        for Attr in Prop.GetAttributes do
+        begin
+          if Attr is ForeignKeyAttribute then
+          begin
+            // Found a FK. Check if the property type is a class we manage.
+            if Prop.PropertyType.TypeKind = tkClass then
+            begin
+               var DepType := Prop.PropertyType.Handle;
+               // Only add dependency if it's in our Cache (managed entity)
+               if FCache.ContainsKey(DepType) and (DepType <> Pair.Key) then // Avoid self-dependency
+               begin
+                 if not Node.Dependencies.Contains(DepType) then
+                   Node.Dependencies.Add(DepType);
+               end;
+            end;
+          end;
+        end;
       end;
     end;
+    
+    // 2. Topological Sort / Execution
+    while Nodes.Count > 0 do
+    begin
+      HasProgress := False;
+      
+      for i := Nodes.Count - 1 downto 0 do
+      begin
+        Node := Nodes[i];
+        CanCreate := True;
+        
+        // Check if all dependencies are created
+        for var Dep in Node.Dependencies do
+        begin
+          if not Created.Contains(Dep) then
+          begin
+            CanCreate := False;
+            Break;
+          end;
+        end;
+        
+        if CanCreate then
+        begin
+          // Execute Creation
+          SQL := Node.DbSet.GenerateCreateTableScript;
+          if SQL <> '' then
+          begin
+            try
+              CmdIntf := FConnection.CreateCommand(SQL);
+              Cmd := IDbCommand(CmdIntf);
+              Cmd.ExecuteNonQuery;
+            except
+               on E: Exception do
+                 WriteLn('Warning creating table for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+            end;
+          end;
+          
+          Created.Add(Node.TypeInfo);
+          Nodes.Delete(i); // Remove from pending
+          HasProgress := True;
+        end;
+      end;
+      
+      if not HasProgress then
+      begin
+        // Cycle detected or missing dependency.
+        // For now, force create the remaining ones (might fail on FKs, but better than hanging)
+        WriteLn('⚠️ Warning: Cyclic dependency or missing dependency detected in EnsureCreated. Force creating remaining tables...');
+        for i := Nodes.Count - 1 downto 0 do
+        begin
+           Node := Nodes[i];
+           SQL := Node.DbSet.GenerateCreateTableScript;
+            if SQL <> '' then
+            begin
+              try
+                CmdIntf := FConnection.CreateCommand(SQL);
+                Cmd := IDbCommand(CmdIntf);
+                Cmd.ExecuteNonQuery;
+              except
+                 on E: Exception do
+                   WriteLn('Error creating table (forced) for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+              end;
+            end;
+           Nodes.Delete(i);
+        end;
+        Break;
+      end;
+    end;
+    
+  finally
+    Created.Free;
+    Nodes.Free;
   end;
+end;
+
+{ TEntityNode }
+
+constructor TEntityNode.Create;
+begin
+  Dependencies := TList<PTypeInfo>.Create;
+end;
+
+destructor TEntityNode.Destroy;
+begin
+  Dependencies.Free;
+  // inherited; // Removing inherited call to fix E2075
 end;
 
 function TDbContext.SaveChanges: Integer;
@@ -667,7 +869,10 @@ begin
     raise Exception.CreateFmt('Foreign Key property %s not found for reference %s', [FKName, FPropName]);
     
   FKVal := FKProp.GetValue(Pointer(FParent));
-  if FKVal.IsEmpty or (FKVal.AsInteger = 0) then Exit; // No FK, nothing to load
+  
+  // Unwrap Nullable<T> and validate FK value
+  if not TryUnwrapAndValidateFK(FKVal, Ctx) then Exit;
+
   
   // Find Child
   WriteLn('DEBUG: Loading Reference ' + FPropName + ' FK=' + FKVal.ToString);
@@ -682,10 +887,6 @@ begin
     WriteLn('DEBUG: Value Set');
   end;
 end;
-
-
-
-
 
 { TEntityEntry }
 

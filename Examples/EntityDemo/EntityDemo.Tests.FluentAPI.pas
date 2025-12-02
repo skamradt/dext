@@ -160,7 +160,7 @@ begin
   
   UWithAddr.Address := Addr; // Cascade insert should handle this
   FContext.Entities<TUser>.Add(UWithAddr);
-  LogSuccess(Format('Inserted user with address ID: %d', [UWithAddr.AddressId]));
+  LogSuccess(Format('Inserted user with address ID: %d', [UWithAddr.AddressId.GetValueOrDefault]));
   
   // Fetch with Include
   var UsersWithAddr := FContext.Entities<TUser>.List(

@@ -202,6 +202,7 @@
         <DCCReference Include="..\Entity\Dext.Entity.Drivers.Interfaces.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Attributes.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Mapping.pas"/>
+        <DCCReference Include="Dext.Types.Nullable.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

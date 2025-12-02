@@ -51,16 +51,25 @@ var
   Spec: ISpecification<TUser>;
   Builder: TSpecificationBuilder<TUser>;
   U: TUser;
+  Addr: TAddress;
 begin
   Log('   Testing Select Optimized (Projections)...');
   TearDown;
   Setup;
   
+  // Create dummy address
+  Addr := TAddress.Create;
+  Addr.Street := 'Proj St';
+  Addr.City := 'Proj City';
+  FContext.Entities<TAddress>.Add(Addr);
+  FContext.SaveChanges;
+
   // Insert user with Name and Age
   U := TUser.Create;
   U.Name := 'John Doe';
   U.Age := 30;
   U.City := 'New York';
+  U.AddressId := Addr.Id;
   FContext.Entities<TUser>.Add(U);
   FContext.SaveChanges;
   
@@ -88,13 +97,20 @@ var
   SumAge: Double;
   AvgAge: Double;
   MinAge, MaxAge: Double;
+  Addr: TAddress;
 begin
   Log('   Testing Aggregations...');
   
   // Setup Data
-  var U1 := TUser.Create; U1.Name := 'A'; U1.Age := 10; FContext.Entities<TUser>.Add(U1);
-  var U2 := TUser.Create; U2.Name := 'B'; U2.Age := 20; FContext.Entities<TUser>.Add(U2);
-  var U3 := TUser.Create; U3.Name := 'C'; U3.Age := 30; FContext.Entities<TUser>.Add(U3);
+  Addr := TAddress.Create;
+  Addr.Street := 'Agg St';
+  Addr.City := 'Agg City';
+  FContext.Entities<TAddress>.Add(Addr);
+  FContext.SaveChanges;
+
+  var U1 := TUser.Create; U1.Name := 'A'; U1.Age := 10; U1.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U1);
+  var U2 := TUser.Create; U2.Name := 'B'; U2.Age := 20; U2.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U2);
+  var U3 := TUser.Create; U3.Name := 'C'; U3.Age := 30; U3.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U3);
   FContext.SaveChanges;
   
   Users := FContext.Entities<TUser>.QueryAll;
@@ -150,13 +166,21 @@ var
   Users: TFluentQuery<TUser>;
   Cities: TFluentQuery<string>;
   DistinctCities: TList<string>;
+  Addr: TAddress;
 begin
   Log('   Testing Distinct...');
   
+  // Create dummy address
+  Addr := TAddress.Create;
+  Addr.Street := 'Dist St';
+  Addr.City := 'Dist City';
+  FContext.Entities<TAddress>.Add(Addr);
+  FContext.SaveChanges;
+
   // Let's add users with duplicate cities
-  var U4 := TUser.Create; U4.Name := 'D'; U4.City := 'New York'; FContext.Entities<TUser>.Add(U4);
-  var U5 := TUser.Create; U5.Name := 'E'; U5.City := 'New York'; FContext.Entities<TUser>.Add(U5);
-  var U6 := TUser.Create; U6.Name := 'F'; U6.City := 'London'; FContext.Entities<TUser>.Add(U6);
+  var U4 := TUser.Create; U4.Name := 'D'; U4.City := 'New York'; U4.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U4);
+  var U5 := TUser.Create; U5.Name := 'E'; U5.City := 'New York'; U5.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U5);
+  var U6 := TUser.Create; U6.Name := 'F'; U6.City := 'London'; U6.AddressId := Addr.Id; FContext.Entities<TUser>.Add(U6);
   FContext.SaveChanges;
   
   // Project to City then Distinct
@@ -192,15 +216,24 @@ procedure TAdvancedQueryTest.TestPagination;
 var
   Paged: IPagedResult<TUser>;
   i: Integer;
+  Addr: TAddress;
 begin
   Log('   Testing Pagination...');
   
+  // Create dummy address
+  Addr := TAddress.Create;
+  Addr.Street := 'Page St';
+  Addr.City := 'Page City';
+  FContext.Entities<TAddress>.Add(Addr);
+  FContext.SaveChanges;
+
   // We have 6 users now (3 from Aggregations + 3 from Distinct)
   // Let's add 4 more to make 10
   for i := 7 to 10 do
   begin
     var U := TUser.Create;
     U.Name := 'User' + i.ToString;
+    U.AddressId := Addr.Id;
     FContext.Entities<TUser>.Add(U);
   end;
   FContext.SaveChanges;

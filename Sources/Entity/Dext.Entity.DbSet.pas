@@ -48,6 +48,8 @@ type
     function GetTableName: string;
     function FindObject(const AId: Variant): TObject;
     procedure Add(const AEntity: TObject); overload;
+    procedure Update(const AEntity: TObject); overload;
+    procedure Remove(const AEntity: TObject); overload;
     function ListObjects(const AExpression: IExpression): TList<TObject>;
     procedure PersistAdd(const AEntity: TObject);
     procedure PersistUpdate(const AEntity: TObject);
@@ -56,8 +58,8 @@ type
     procedure Clear;
 
     procedure Add(const AEntity: T); overload;
-    procedure Update(const AEntity: T);
-    procedure Remove(const AEntity: T);
+    procedure Update(const AEntity: T); overload;
+    procedure Remove(const AEntity: T); overload;
     function Find(const AId: Variant): T; overload;
     function Find(const AId: array of Integer): T; overload;
 
@@ -400,10 +402,17 @@ begin
   begin
     ColName := Reader.GetColumnName(i);
     Val := Reader.GetValue(i);
+    
+    // WriteLn(Format('DEBUG: Hydrate Col: %s, Val: %s', [ColName, Val.ToString]));
 
     if FProps.TryGetValue(ColName.ToLower, Prop) then
     begin
-      TValueConverter.ConvertAndSet(Result, Prop, Val);
+      try
+        TValueConverter.ConvertAndSet(Result, Prop, Val);
+      except
+        on E: Exception do
+          WriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
+      end;
     end;
   end;
 end;
@@ -416,6 +425,16 @@ end;
 procedure TDbSet<T>.Add(const AEntity: TObject);
 begin
   Add(T(AEntity));
+end;
+
+procedure TDbSet<T>.Update(const AEntity: TObject);
+begin
+  Update(T(AEntity));
+end;
+
+procedure TDbSet<T>.Remove(const AEntity: TObject);
+begin
+  Remove(T(AEntity));
 end;
 
 procedure TDbSet<T>.Add(const AEntity: T);
@@ -440,52 +459,79 @@ var
   Cmd: IDbCommand;
   Prop: TRttiProperty;
   PKVal: Variant;
+  UseReturning: Boolean;
+  RetVal: TValue;
 begin
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateInsert(T(AEntity));
+    
+    // Check for RETURNING support
+    UseReturning := (FPKColumns.Count = 1) and FContext.Dialect.SupportsInsertReturning;
+    
+    if UseReturning then
+    begin
+      // Append RETURNING clause
+      Sql := Sql + ' ' + FContext.Dialect.GetReturningSQL(FPKColumns[0]);
+    end;
+
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
 
     // Bind Params from Generator
     for var Pair in Generator.Params do
     begin
       try
-        var V := Pair.Value.AsVariant;
+        // Debug logging
+        WriteLn(Format('DEBUG: Param %s, Type: %s', [Pair.Key, Pair.Value.TypeInfo.Name]));
+        
+        Cmd.AddParam(Pair.Key, Pair.Value);
       except
         on E: Exception do
-          WriteLn('  AsVariant FAILED: ' + E.Message);
+        begin
+          WriteLn(Format('CRITICAL ERROR in AddParam(%s): %s. Type: %s', 
+            [Pair.Key, E.Message, Pair.Value.TypeInfo.Name]));
+          raise;
+        end;
       end;
-      Cmd.AddParam(Pair.Key, Pair.Value);
     end;
 
-    Cmd.ExecuteNonQuery;
-    
-    // Retrieve AutoInc ID if applicable
-    if FPKColumns.Count = 1 then
+    if UseReturning then
     begin
-       // Check if AutoInc
-       // For SQLite: select last_insert_rowid()
-       // This should be part of Dialect or Driver
-       PKVal := FContext.Connection.GetLastInsertId;
-
-       if not VarIsNull(PKVal) then
+      // Execute Scalar to get the ID
+      RetVal := Cmd.ExecuteScalar;
+      if not RetVal.IsEmpty then
+        PKVal := RetVal.AsVariant
+      else
+        PKVal := Null;
+    end
+    else
+    begin
+      // Standard Execute
+      Cmd.ExecuteNonQuery;
+      
+      // Retrieve AutoInc ID if applicable (Old way)
+      if FPKColumns.Count = 1 then
+         PKVal := FContext.Connection.GetLastInsertId;
+    end;
+    
+    // Assign ID to Entity
+    if (FPKColumns.Count = 1) and not VarIsNull(PKVal) then
+    begin
+       if FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
        begin
-         if FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
-         begin
-           try
-             TValueConverter.ConvertAndSet(AEntity, Prop, TValue.FromVariant(PKVal));
-           except
-             on E: Exception do
-               WriteLn('ConvertAndSet FAILED: ' + E.ClassName + ': ' + E.Message);
-           end;
+         try
+           TValueConverter.ConvertAndSet(AEntity, Prop, TValue.FromVariant(PKVal));
+         except
+           on E: Exception do
+             WriteLn('ConvertAndSet FAILED: ' + E.ClassName + ': ' + E.Message);
+         end;
 
-           // Update Identity Map with new ID?
-           // The entity is already in memory, but maybe not in map if ID was 0.
+         // Update Identity Map with new ID?
+         // The entity is already in memory, but maybe not in map if ID was 0.
            // We should add it to map now.
            var NewId := VarToStr(PKVal); // Simple conversion
            if not FIdentityMap.ContainsKey(NewId) then
              FIdentityMap.Add(NewId, T(AEntity));
-         end;
        end;
     end;
 

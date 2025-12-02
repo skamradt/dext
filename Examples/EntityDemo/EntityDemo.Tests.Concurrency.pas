@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Concurrency;
+﻿unit EntityDemo.Tests.Concurrency;
 
 interface
 
@@ -80,9 +80,44 @@ begin
     
     // Verify DB state
     // Check DB directly
-    var DBPrice: Double := FConn.ExecSQLScalar('SELECT Price FROM products WHERE Id = ' + P.Id.ToString);
+    var DBPrice: Double := FConn.ExecSQLScalar('SELECT "Price" FROM products WHERE "Id" = ' + P.Id.ToString);
     AssertTrue(DBPrice = 150, 'DB Price is 150 (User A)', 'DB Price mismatch: ' + DBPrice.ToString);
     
+    // 3. Concurrent Delete Scenario
+    Log('Testing Concurrent Delete...');
+    
+    // Create new product for delete test
+    var PDelete := TProduct.Create;
+    PDelete.Name := 'Delete Product';
+    PDelete.Price := 300;
+    PDelete.Version := 1;
+    FContext.Entities<TProduct>.Add(PDelete);
+    FContext.SaveChanges;
+    
+    // User A loads (FContext)
+    var ProductDeleteA := FContext.Entities<TProduct>.Find(PDelete.Id);
+    
+    // User B loads (Context2)
+    var ProductDeleteB := Context2.Entities<TProduct>.Find(PDelete.Id);
+    
+    // User A deletes
+    FContext.Entities<TProduct>.Remove(ProductDeleteA);
+    FContext.SaveChanges;
+    LogSuccess('User A deleted product.');
+    
+    // User B tries to update
+    ProductDeleteB.Price := 400;
+    try
+      Context2.Entities<TProduct>.Update(ProductDeleteB);
+      Context2.SaveChanges;
+      LogError('User B update after delete should have failed!');
+    except
+      on E: EOptimisticConcurrencyException do
+        LogSuccess('✅ Caught expected Concurrency Exception (Delete): ' + E.Message);
+      on E: Exception do
+        LogError('Caught unexpected exception: ' + E.ClassName + ' - ' + E.Message);
+    end;
+
   finally
     Context2.Free;
   end;

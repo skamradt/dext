@@ -17,93 +17,45 @@ uses
   EntityDemo.Tests.Relationships in 'EntityDemo.Tests.Relationships.pas',
   EntityDemo.Entities in 'EntityDemo.Entities.pas';
 
-procedure RunAllTests;
+procedure RunTest(const TestClass: TBaseTestClass);
 var
   Test: TBaseTest;
+begin
+  WriteLn('Running Test: ', TestClass.ClassName);
+  Test := TestClass.Create;
+  try
+    Test.Run;
+  finally
+    Test.Free;
+  end;
+end;
+
+procedure RunAllTests;
 begin
   WriteLn('🚀 Dext Entity ORM Demo Suite');
   WriteLn('=============================');
   WriteLn('');
 
   // 1. CRUD Tests
-  Test := TCRUDTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TCRUDTest);
   // 2. Relationships Tests
-  Test := TRelationshipTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TRelationshipTest);
   // 3. Advanced Query Tests
-  Test := TAdvancedQueryTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TAdvancedQueryTest);
   // 4. Composite Keys Tests
-  Test := TCompositeKeyTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TCompositeKeyTest);
   // 5. Explicit Loading Tests
-  Test := TExplicitLoadingTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TExplicitLoadingTest);
   // 6. Lazy Loading Tests
-  Test := TLazyLoadingTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TLazyLoadingTest);
   // 7. Fluent API Tests
-  Test := TFluentAPITest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TFluentAPITest);
   // 8. Lazy Execution Tests
-  Test := TLazyExecutionTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TLazyExecutionTest);
   // 9. Bulk Operations Tests
-  Test := TBulkTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
-
+  RunTest(TBulkTest);
   // 10. Concurrency Tests
-  Test := TConcurrencyTest.Create;
-  try
-    Test.Run;
-  finally
-    Test.Free;
-  end;
+  RunTest(TConcurrencyTest);
   
   WriteLn('');
   WriteLn('✨ All tests completed.');

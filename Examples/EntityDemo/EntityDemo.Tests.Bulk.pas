@@ -49,8 +49,8 @@ begin
     Duration := Now - StartTime;
     
     LogSuccess(Format('Inserted 100 users in %s', [FormatDateTime('ss.zzz', Duration)]));
-    
-    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE Age = 20 AND full_name LIKE ''Bulk User%''');
+
+    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE "Age" = 20 AND full_name LIKE ''Bulk User%''');
     AssertTrue(Count = 100, 'Bulk Add Verified.', Format('Bulk Add Failed: Found %d users.', [Count]));
 
     // 2. Bulk Update
@@ -69,7 +69,7 @@ begin
 
     LogSuccess(Format('Updated 100 users in %s', [FormatDateTime('ss.zzz', Duration)]));
 
-    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE Age = 30 AND full_name LIKE ''Bulk User%''');
+    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE "Age" = 30 AND full_name LIKE ''Bulk User%''');
     AssertTrue(Count = 100, 'Bulk Update Verified.', Format('Bulk Update Failed: Found %d users.', [Count]));
 
     // 3. Bulk Remove

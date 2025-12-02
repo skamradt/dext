@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Relationships;
+﻿unit EntityDemo.Tests.Relationships;
 
 interface
 
@@ -58,7 +58,7 @@ begin
     LogSuccess('Address removed.');
     
     // Verify User is gone from DB
-    var Count: Integer := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE Id = ' + UserId.ToString);
+    var Count: Integer := FConn.ExecSQLScalar('SELECT COUNT(*) FROM users WHERE "Id" = ' + UserId.ToString);
     AssertTrue(Count = 0, 'Cascade Delete Verified: User is gone from DB.', 'Cascade Delete Failed: User still exists in DB.');
   end;
   

@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Base;
+﻿unit EntityDemo.Tests.Base;
 
 interface
 
@@ -14,10 +14,9 @@ uses
   FireDAC.Stan.Pool,
   FireDAC.Stan.Async,
   FireDAC.Phys,
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.SQLiteDef,
+  FireDAC.Phys.PG,
+  FireDAC.Phys.PGDef,
   FireDAC.Stan.ExprFuncs,
-  FireDAC.Phys.SQLiteWrapper.Stat,
   FireDAC.ConsoleUI.Wait,
   FireDAC.Comp.Client,
   FireDAC.DApt,
@@ -27,6 +26,7 @@ uses
   EntityDemo.Entities;
 
 type
+  TBaseTestClass = class of TBaseTest;
   TBaseTest = class
   protected
     FConn: TFDConnection;
@@ -63,15 +63,40 @@ end;
 
 procedure TBaseTest.Setup;
 begin
-  // 1. Setup FireDAC Connection (SQLite In-Memory)
+  // 1. Setup FireDAC Connection (PostgreSQL)
   FConn := TFDConnection.Create(nil);
-  FConn.DriverName := 'SQLite';
-  FConn.Params.Database := ':memory:';
+  FConn.DriverName := 'PG';
+  FConn.Params.Database := 'postgres';
+  FConn.Params.UserName := 'postgres';
+  FConn.Params.Password := 'root';
+  FConn.Params.Add('Server=localhost');
   FConn.LoginPrompt := False;
-  FConn.Connected := True;
+  
+  try
+    FConn.Connected := True;
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ Failed to connect to PostgreSQL: ' + E.Message);
+      WriteLn('⚠️ Make sure PostgreSQL is running and credentials are correct (user: postgres, pass: root).');
+      Halt(1);
+    end;
+  end;
+
+  // Drop tables to ensure clean state (Case sensitive if quoted)
+  try
+    // Order matters due to FKs
+    FConn.ExecSQL('DROP TABLE IF EXISTS order_items CASCADE');
+    FConn.ExecSQL('DROP TABLE IF EXISTS products CASCADE');
+    FConn.ExecSQL('DROP TABLE IF EXISTS users CASCADE');
+    FConn.ExecSQL('DROP TABLE IF EXISTS addresses CASCADE');
+  except
+    on E: Exception do
+      WriteLn('⚠️ Warning dropping tables: ' + E.Message);
+  end;
 
   // 2. Initialize Context
-  FContext := TDbContext.Create(TFireDACConnection.Create(FConn, False), TSQLiteDialect.Create);
+  FContext := TDbContext.Create(TFireDACConnection.Create(FConn, False), TPostgreSQLDialect.Create);
   
   // 3. Register Entities & Create Schema
   FContext.Entities<TAddress>;

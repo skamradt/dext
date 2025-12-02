@@ -129,7 +129,8 @@ contains
   Dext.Entity.Grouping in '..\Entity\Dext.Entity.Grouping.pas',
   Dext.Entity.Drivers.Interfaces in '..\Entity\Dext.Entity.Drivers.Interfaces.pas',
   Dext.Entity.Attributes in '..\Entity\Dext.Entity.Attributes.pas',
-  Dext.Entity.Mapping in '..\Entity\Dext.Entity.Mapping.pas';
+  Dext.Entity.Mapping in '..\Entity\Dext.Entity.Mapping.pas',
+  Dext.Types.Nullable in 'Dext.Types.Nullable.pas';
 
 end.
 

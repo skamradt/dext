@@ -18,7 +18,8 @@ uses
   FireDAC.Phys.Intf,
   FireDAC.DApt.Intf,
   FireDAC.Comp.DataSet,
-  Dext.Entity.Drivers.Interfaces;
+  Dext.Entity.Drivers.Interfaces,
+  Dext.Types.Nullable;
 
 type
   TFireDACConnection = class;
@@ -55,6 +56,7 @@ type
   private
     FQuery: TFDQuery;
     FConnection: TFDConnection;
+    procedure SetParamValue(Param: TFDParam; const AValue: TValue);
   public
     constructor Create(AConnection: TFDConnection);
     destructor Destroy; override;
@@ -205,52 +207,90 @@ var
 begin
   try
     Param := FQuery.ParamByName(AName);
-    if AValue.IsEmpty then
-    begin
-      Param.Clear;
-      if Param.DataType = ftUnknown then
-        Param.DataType := ftString; 
-    end
-    else
-    begin
-      case AValue.Kind of
-        tkInteger, tkInt64: 
-        begin
-          Param.DataType := ftInteger;
-          Param.AsInteger := AValue.AsInteger;
-        end;
-        tkFloat:
-        begin
-          Param.DataType := ftFloat;
-          Param.AsFloat := AValue.AsExtended;
-        end;
-        tkString, tkUString, tkWString, tkChar, tkWChar:
-        begin
-          Param.DataType := ftString;
-          Param.AsString := AValue.AsString;
-        end;
-        tkEnumeration:
-        begin
-          if AValue.TypeInfo = TypeInfo(Boolean) then
-          begin
-            Param.DataType := ftBoolean;
-            Param.AsBoolean := AValue.AsBoolean;
-          end
-          else
-          begin
-            Param.DataType := ftInteger;
-            Param.AsInteger := AValue.AsOrdinal;
-          end;
-        end;
-      else
-        Param.Value := AValue.AsVariant;
-      end;
-    end;
+    SetParamValue(Param, AValue);
   except
     on E: Exception do
     begin
       Writeln(ErrOutput, Format('CRITICAL ERROR in AddParam(%s): %s', [AName, E.Message]));
       raise;
+    end;
+  end;
+end;
+
+procedure TFireDACCommand.SetParamValue(Param: TFDParam; const AValue: TValue);
+begin
+  if AValue.IsEmpty then
+  begin
+    Param.Clear;
+    if Param.DataType = ftUnknown then
+      Param.DataType := ftString; 
+  end
+  else
+  begin
+    case AValue.Kind of
+      tkInteger, tkInt64: 
+      begin
+        Param.DataType := ftInteger;
+        Param.AsInteger := AValue.AsInteger;
+      end;
+      tkFloat:
+      begin
+        Param.DataType := ftFloat;
+        Param.AsFloat := AValue.AsExtended;
+      end;
+      tkString, tkUString, tkWString, tkChar, tkWChar:
+      begin
+        Param.DataType := ftString;
+        Param.AsString := AValue.AsString;
+      end;
+      tkEnumeration:
+      begin
+        if AValue.TypeInfo = TypeInfo(Boolean) then
+        begin
+          Param.DataType := ftBoolean;
+          Param.AsBoolean := AValue.AsBoolean;
+        end
+        else
+        begin
+          Param.DataType := ftInteger;
+          Param.AsInteger := AValue.AsOrdinal;
+        end;
+      end;
+      tkRecord:
+      begin
+        if IsNullable(AValue.TypeInfo) then
+        begin
+           var Helper := TNullableHelper.Create(AValue.TypeInfo);
+           if Helper.HasValue(AValue.GetReferenceToRawData) then
+           begin
+             var InnerVal := Helper.GetValue(AValue.GetReferenceToRawData);
+             SetParamValue(Param, InnerVal);
+           end
+           else
+           begin
+             Param.Clear;
+             // Try to set type from underlying type
+             var Underlying := GetUnderlyingType(AValue.TypeInfo);
+             if Underlying <> nil then
+             begin
+               case Underlying.Kind of
+                 tkInteger, tkInt64: Param.DataType := ftInteger;
+                 tkFloat: Param.DataType := ftFloat;
+                 tkString, tkUString, tkWString: Param.DataType := ftString;
+                 tkEnumeration: 
+                   if Underlying = TypeInfo(Boolean) then 
+                     Param.DataType := ftBoolean
+                   else 
+                     Param.DataType := ftInteger;
+               end;
+             end;
+           end;
+        end
+        else
+           Param.Value := AValue.AsVariant;
+      end;
+    else
+      Param.Value := AValue.AsVariant;
     end;
   end;
 end;

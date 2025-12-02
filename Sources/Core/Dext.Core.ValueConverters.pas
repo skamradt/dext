@@ -171,6 +171,14 @@ end;
 class function TValueConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 var
   Converter: IValueConverter;
+  Ctx: TRttiContext;
+  TargetRType: TRttiType;
+  TypeName: string;
+  Fields: TArray<TRttiField>;
+  HasValueField, ValueField: TRttiField;
+  NullableInstance: Pointer;
+  InnerValue: TValue;
+  InnerType: PTypeInfo;
 begin
   if AValue.IsEmpty then
     Exit(TValue.Empty);
@@ -178,6 +186,58 @@ begin
   // If types are same, return value
   if AValue.TypeInfo = ATargetType then
     Exit(AValue);
+
+  // Check if target is Nullable<T>
+  if ATargetType.Kind = tkRecord then
+  begin
+    Ctx := TRttiContext.Create;
+    TargetRType := Ctx.GetType(ATargetType);
+    if TargetRType <> nil then
+    begin
+      TypeName := TargetRType.Name;
+      
+      // Check if it's a Nullable<T> by name
+      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      begin
+        // Find the fields
+        Fields := TargetRType.GetFields;
+        HasValueField := nil;
+        ValueField := nil;
+        
+        for var Field in Fields do
+        begin
+          if Field.Name.ToLower.Contains('hasvalue') then
+            HasValueField := Field
+          else if Field.Name.ToLower = 'fvalue' then
+            ValueField := Field;
+        end;
+        
+        if (HasValueField <> nil) and (ValueField <> nil) then
+        begin
+          // Get the inner type from fValue field
+          InnerType := ValueField.FieldType.Handle;
+          
+          // Convert the source value to the inner type
+          InnerValue := Convert(AValue, InnerType);
+          
+          // Create a new Nullable<T> instance
+          TValue.Make(nil, ATargetType, Result);
+          NullableInstance := Result.GetReferenceToRawData;
+          
+          // Set the inner value
+          ValueField.SetValue(NullableInstance, InnerValue);
+          
+          // Set HasValue to true (can be string or boolean)
+          if HasValueField.FieldType.TypeKind = tkUString then
+            HasValueField.SetValue(NullableInstance, 'HasValue')
+          else if HasValueField.FieldType.TypeKind = tkEnumeration then
+            HasValueField.SetValue(NullableInstance, True); // Standard boolean
+          
+          Exit;
+        end;
+      end;
+    end;
+  end;
 
   Converter := TValueConverterRegistry.GetConverter(AValue.TypeInfo, ATargetType);
   if Converter <> nil then
