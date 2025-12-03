@@ -145,9 +145,10 @@ Melhorar como os dados relacionados são carregados e gerenciar ciclo de vida da
 ### 🔧 Manutenção & Débito Técnico
 - [x] **API Cleanup**: Padronização de nomes de métodos (`Update` vs `Update`) usando overloads.
 - [x] **Concurrency Fixes**: Correção de testes de concorrência otimista em cenários complexos.
-- [ ] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` e projeções em casos de borda.
+- [x] **Fluent API Fixes**: Correção de `Any`, `FirstOrDefault` (Otimizados com LIMIT 1) e implementação de `Take`/`Skip` em `TSpecification`.
 - [x] **Global Naming Strategy**: Estratégia global para convenção de nomes (SnakeCase, CamelCase) sem poluir entidades.
 - [x] **External Mapping (Fluent Mapping)**: Configuração de mapeamento via código (Startup) para evitar Attributes nas entidades.
+- [x] **ID Retrieval Fixes**: Correção crítica na recuperação de IDs em inserts (Single/Bulk) para garantir integridade referencial (FKs).
 - [ ] **CLI Tools**: Comandos para gerar migrations e atualizar banco.
 - [ ] **Scaffolding**: Gerar classes de entidade a partir de banco existente (Db-First).
 

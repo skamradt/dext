@@ -595,7 +595,12 @@ begin
         begin
           var List := AddedGroups[TypeInfo];
           DbSet := DataSet(TypeInfo);
-          DbSet.PersistAddRange(List.ToArray);
+          
+          // Force loop to ensure IDs are retrieved for all entities.
+          // Bulk Insert (PersistAddRange) does not currently support ID retrieval.
+          for var Item in List do
+            DbSet.PersistAdd(Item);
+            
           Inc(Result, List.Count);
         end;
       finally

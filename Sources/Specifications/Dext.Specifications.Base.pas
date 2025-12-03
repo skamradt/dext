@@ -43,6 +43,10 @@ type
     procedure AddOrderBy(const AOrderBy: IOrderBy);
     procedure ApplyPaging(ASkip, ATake: Integer);
     procedure AddSelect(const AColumn: string);
+    
+    // Fluent Helpers
+    procedure Take(const ACount: Integer);
+    procedure Skip(const ACount: Integer);
   end;
 
 implementation
@@ -141,6 +145,18 @@ end;
 procedure TSpecification<T>.AddSelect(const AColumn: string);
 begin
   FSelectedColumns.Add(AColumn);
+end;
+
+procedure TSpecification<T>.Take(const ACount: Integer);
+begin
+  FTake := ACount;
+  FIsPagingEnabled := True;
+end;
+
+procedure TSpecification<T>.Skip(const ACount: Integer);
+begin
+  FSkip := ACount;
+  FIsPagingEnabled := True;
 end;
 
 end.

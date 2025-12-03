@@ -511,9 +511,26 @@ begin
       // Standard Execute
       Cmd.ExecuteNonQuery;
       
-      // Retrieve AutoInc ID if applicable (Old way)
+      // Retrieve AutoInc ID if applicable
       if FPKColumns.Count = 1 then
-         PKVal := FContext.Connection.GetLastInsertId;
+      begin
+         var LastIdSQL := FContext.Dialect.GetLastInsertIdSQL;
+         if LastIdSQL <> '' then
+         begin
+           // Execute explicit SQL to get ID
+           var IdCmd := FContext.Connection.CreateCommand(LastIdSQL) as IDbCommand;
+           var IdVal := IdCmd.ExecuteScalar;
+           if not IdVal.IsEmpty then
+             PKVal := IdVal.AsVariant
+           else
+             PKVal := Null;
+         end
+         else
+         begin
+           // Fallback to Connection method
+           PKVal := FContext.Connection.GetLastInsertId;
+         end;
+      end;
     end;
     
     // Assign ID to Entity
@@ -699,7 +716,6 @@ begin
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Result := Generator.GenerateCreateTable(GetTableName);
-    // Result := ''; // TODO: Implement GenerateCreateTable in TSqlGenerator
   finally
     Generator.Free;
   end;
@@ -861,13 +877,23 @@ begin
 end;
 
 function TDbSet<T>.FirstOrDefault(const AExpression: IExpression): T;
+var
+  Spec: TSpecification<T>;
 begin
-  Result := Query(TSpecification<T>.Create(AExpression)).FirstOrDefault;
+  // Optimization: Use LIMIT 1 via Spec
+  Spec := TSpecification<T>.Create(AExpression);
+  Spec.Take(1);
+  Result := Query(Spec).FirstOrDefault;
 end;
 
 function TDbSet<T>.Any(const AExpression: IExpression): Boolean;
+var
+  Spec: TSpecification<T>;
 begin
-  Result := Query(TSpecification<T>.Create(AExpression)).Any;
+  // Optimization: Use LIMIT 1 via Spec
+  Spec := TSpecification<T>.Create(AExpression);
+  Spec.Take(1);
+  Result := Query(Spec).Any;
 end;
 
 function TDbSet<T>.Count(const AExpression: IExpression): Integer;
@@ -884,7 +910,7 @@ begin
       Result := TSpecificationQueryIterator<T>.Create(
         function: TList<T>
         begin
-          Result := Self.List(Spec);
+          Result := Self.List(ISpecification<T>(Spec));
         end
       );
     end

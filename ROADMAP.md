@@ -260,4 +260,4 @@ O projeto é Open Source e aceita contribuições!
 
 ---
 
-*Última atualização: 01 de Dezembro de 2025*
+*Última atualização: 02 de Dezembro de 2025*
