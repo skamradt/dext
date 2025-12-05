@@ -3,9 +3,11 @@ unit Dext.Entity.Core;
 interface
 
 uses
+  System.Generics.Collections,
+  System.Rtti,
   System.SysUtils,
   System.TypInfo,
-  System.Generics.Collections,
+  Dext.Collections,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
   Dext.Entity.Naming, // Add Naming unit
@@ -47,7 +49,7 @@ type
     procedure Detach(const AEntity: TObject);
     
     // Non-generic query support
-    function ListObjects(const AExpression: IExpression): TList<TObject>;
+    function ListObjects(const AExpression: IExpression): IList<TObject>;
 
     // Tracking Methods (Consistent with IDbSet<T>)
     procedure Update(const AEntity: TObject);
@@ -87,11 +89,11 @@ type
     procedure RemoveRange(const AEntities: TEnumerable<T>); overload;
 
     // Queries via Specifications
-    function List: TList<T>; overload;
-    function List(const ASpec: ISpecification<T>): TList<T>;  overload;
+    function List: IList<T>; overload;
+    function List(const ASpec: ISpecification<T>): IList<T>;  overload;
 
     // Inline Queries (aceita IExpression diretamente)
-    function List(const AExpression: IExpression): TList<T>; overload;
+    function List(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
@@ -184,6 +186,82 @@ type
     function Entry(const AEntity: TObject): IEntityEntry;
   end;
 
+/// <summary>
+///   Unwraps Nullable<T> values and validates if FK is valid (non-zero for integers, non-empty for strings)
+/// </summary>
+function TryUnwrapAndValidateFK(var AValue: TValue; AContext: TRttiContext): Boolean;
+
 implementation
+
+function TryUnwrapAndValidateFK(var AValue: TValue; AContext: TRttiContext): Boolean;
+var
+  RType: TRttiType;
+  TypeName: string;
+  Fields: TArray<TRttiField>;
+  HasValueField, ValueField: TRttiField;
+  HasValue: Boolean;
+  Instance: Pointer;
+begin
+  Result := False;
+  
+  // Handle Nullable<T> unwrapping
+  if AValue.Kind = tkRecord then
+  begin
+    RType := AContext.GetType(AValue.TypeInfo);
+    if RType <> nil then
+    begin
+      TypeName := RType.Name;
+      
+      // Check if it's a Nullable<T> by name
+      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      begin
+        // Access fields directly since GetProperty won't work for generic records
+        Fields := RType.GetFields;
+        HasValueField := nil;
+        ValueField := nil;
+        
+        // Find fHasValue and fValue fields
+        for var Field in Fields do
+        begin
+          if Field.Name.ToLower.Contains('hasvalue') then
+            HasValueField := Field
+          else if Field.Name.ToLower = 'fvalue' then
+            ValueField := Field;
+        end;
+        
+        if (HasValueField <> nil) and (ValueField <> nil) then
+        begin
+          Instance := AValue.GetReferenceToRawData;
+          
+          // Check HasValue - it can be a string (Spring4D) or Boolean
+          var HasValueVal := HasValueField.GetValue(Instance);
+          if HasValueVal.Kind = tkUString then
+            HasValue := HasValueVal.AsString <> ''
+          else if HasValueVal.Kind = tkEnumeration then
+            HasValue := HasValueVal.AsBoolean
+          else
+            HasValue := False;
+            
+          if not HasValue then Exit; // Null, nothing to load
+          
+          // Get the actual value
+          AValue := ValueField.GetValue(Instance);
+        end
+        else
+          Exit; // Couldn't find fields, treat as invalid
+      end;
+    end;
+  end;
+
+  if AValue.IsEmpty then Exit;
+
+  // Validate based on type
+  if AValue.Kind in [tkInteger, tkInt64] then
+    Result := AValue.AsInt64 <> 0
+  else if AValue.Kind in [tkString, tkUString, tkWString, tkLString] then
+    Result := AValue.AsString <> ''
+  else
+    Result := True; // For other types like GUID, assume valid if not empty
+end;
 
 end.

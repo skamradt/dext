@@ -11,12 +11,13 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.Generics.Defaults,
+  Dext.Collections,
   Dext.Specifications.Interfaces;
 
 type
   IPagedResult<T> = interface
     ['{6A8B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}']
-    function GetItems: TList<T>;
+    function GetItems: IList<T>;
     function GetTotalCount: Integer;
     function GetPageNumber: Integer;
     function GetPageSize: Integer;
@@ -24,7 +25,7 @@ type
     function GetHasNextPage: Boolean;
     function GetHasPreviousPage: Boolean;
     
-    property Items: TList<T> read GetItems;
+    property Items: IList<T> read GetItems;
     property TotalCount: Integer read GetTotalCount;
     property PageNumber: Integer read GetPageNumber;
     property PageSize: Integer read GetPageSize;
@@ -35,14 +36,14 @@ type
 
   TPagedResult<T> = class(TInterfacedObject, IPagedResult<T>)
   private
-    FItems: TList<T>;
+    FItems: IList<T>;
     FTotalCount: Integer;
     FPageNumber: Integer;
     FPageSize: Integer;
   public
-    constructor Create(AItems: TList<T>; ATotalCount, APageNumber, APageSize: Integer);
+    constructor Create(AItems: IList<T>; ATotalCount, APageNumber, APageSize: Integer);
     destructor Destroy; override;
-    function GetItems: TList<T>;
+    function GetItems: IList<T>;
     function GetTotalCount: Integer;
     function GetPageNumber: Integer;
     function GetPageSize: Integer;
@@ -50,8 +51,6 @@ type
     function GetHasNextPage: Boolean;
     function GetHasPreviousPage: Boolean;
   end;
-
-
 
   /// <summary>
   ///   Base iterator for lazy query execution.
@@ -67,10 +66,6 @@ type
     constructor Create;
   end;
 
-  /// <summary>
-  ///   Concrete class for fluent queries.
-  ///   Inherits from TEnumerable<T> to support for..in loops and standard collection behavior.
-  /// </summary>
   /// <summary>
   ///   Concrete type for fluent queries.
   ///   Implemented as a record for automatic lifecycle management.
@@ -112,7 +107,7 @@ type
     /// <summary>
     ///   Force execution and return materialized list.
     /// </summary>
-    function ToList: TList<T>;
+    function ToList: IList<T>;
 
     /// <summary>
     ///   Returns distinct elements from a sequence.
@@ -159,14 +154,14 @@ type
   /// </summary>
   TSpecificationQueryIterator<T: class> = class(TQueryIterator<T>)
   private
-    FGetList: TFunc<TList<T>>;
-    FList: TList<T>;
+    FGetList: TFunc<IList<T>>;
+    FList: IList<T>;
     FIndex: Integer;
     FExecuted: Boolean;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const AGetList: TFunc<TList<T>>);
+    constructor Create(const AGetList: TFunc<IList<T>>);
     destructor Destroy; override;
     function Clone: TQueryIterator<T>;
   end;
@@ -233,9 +228,6 @@ type
   /// <summary>
   ///   Iterator that returns distinct elements.
   /// </summary>
-  /// <summary>
-  ///   Iterator that returns distinct elements.
-  /// </summary>
   TDistinctIterator<T> = class(TQueryIterator<T>)
   private
     FSource: TFluentQuery<T>;
@@ -271,7 +263,7 @@ end;
 
 { TPagedResult<T> }
 
-constructor TPagedResult<T>.Create(AItems: TList<T>; ATotalCount, APageNumber, APageSize: Integer);
+constructor TPagedResult<T>.Create(AItems: IList<T>; ATotalCount, APageNumber, APageSize: Integer);
 begin
   inherited Create;
   FItems := AItems;
@@ -282,11 +274,10 @@ end;
 
 destructor TPagedResult<T>.Destroy;
 begin
-  FItems.Free;
   inherited;
 end;
 
-function TPagedResult<T>.GetItems: TList<T>;
+function TPagedResult<T>.GetItems: IList<T>;
 begin
   Result := FItems;
 end;
@@ -349,9 +340,9 @@ end;
 function TFluentQuery<T>.GetEnumerator: TEnumerator<T>;
 begin
   if Assigned(FIteratorFactory) then
-    Result := FIteratorFactory()
+     Result := FIteratorFactory()
   else
-    Result := TEmptyIterator<T>.Create; // Empty iterator if not initialized
+     Result := TEmptyIterator<T>.Create;
 end;
 
 function TFluentQuery<T>.Select<TResult>(const ASelector: TFunc<T, TResult>): TFluentQuery<TResult>;
@@ -427,7 +418,6 @@ begin
           
           if Typ.TypeKind = tkClass then
           begin
-             // Create new instance using the class type
              ObjDest := Typ.AsInstance.MetaclassType.Create;
              ObjSource := TValue.From<T>(Source).AsObject;
              
@@ -492,11 +482,14 @@ begin
     end);
 end;
 
-function TFluentQuery<T>.ToList: TList<T>;
+function TFluentQuery<T>.ToList: IList<T>;
 var
   Enumerator: TEnumerator<T>;
 begin
-  Result := TList<T>.Create;
+  // Create Smart List
+  // Objects are owned by IdentityMap, not by this list
+  Result := TCollections.CreateList<T>(False);
+    
   try
     Enumerator := GetEnumerator;
     try
@@ -506,7 +499,6 @@ begin
       Enumerator.Free;
     end;
   except
-    Result.Free;
     raise;
   end;
 end;
@@ -532,7 +524,6 @@ var
   OuterSelector: TFunc<T, TKey>;
   InnerSelector: TFunc<TInner, TKey>;
 begin
-  // Create selectors from property names
   OuterSelector := TFunc<T, TKey>(function(const Item: T): TKey
     var
       Ctx: TRttiContext;
@@ -797,19 +788,19 @@ var
   HasValue: Boolean;
 begin
   HasValue := False;
-  Result := 0; // Suppress warning
+  Result := 0;
   Enumerator := GetEnumerator;
   try
-    while Enumerator.MoveNext do
+    if Enumerator.MoveNext then
     begin
-      Val := ASelector(Enumerator.Current);
-      if not HasValue then
+      Result := ASelector(Enumerator.Current);
+      HasValue := True;
+      
+      while Enumerator.MoveNext do
       begin
-        Result := Val;
-        HasValue := True;
-      end
-      else if Val < Result then
-        Result := Val;
+        Val := ASelector(Enumerator.Current);
+        if Val < Result then Result := Val;
+      end;
     end;
   finally
     Enumerator.Free;
@@ -833,24 +824,22 @@ begin
   Ctx := TRttiContext.Create;
   Enumerator := GetEnumerator;
   try
-    while Enumerator.MoveNext do
+    if Enumerator.MoveNext then
     begin
       Obj := TValue.From<T>(Enumerator.Current).AsObject;
       if Obj = nil then raise Exception.Create('Item is not an object');
-      
       Prop := Ctx.GetType(Obj.ClassType).GetProperty(APropertyName);
-      if Prop = nil then
-        raise Exception.CreateFmt('Property "%s" not found on class "%s"', [APropertyName, Obj.ClassName]);
-        
-      Val := Prop.GetValue(Obj).AsType<Double>;
       
-      if not HasValue then
+      Val := Prop.GetValue(Obj).AsType<Double>;
+      Result := Val;
+      HasValue := True;
+      
+      while Enumerator.MoveNext do
       begin
-        Result := Val;
-        HasValue := True;
-      end
-      else if Val < Result then
-        Result := Val;
+        Obj := TValue.From<T>(Enumerator.Current).AsObject;
+        Val := Prop.GetValue(Obj).AsType<Double>;
+        if Val < Result then Result := Val;
+      end;
     end;
   finally
     Enumerator.Free;
@@ -867,19 +856,19 @@ var
   HasValue: Boolean;
 begin
   HasValue := False;
-  Result := 0; // Suppress warning
+  Result := 0;
   Enumerator := GetEnumerator;
   try
-    while Enumerator.MoveNext do
+    if Enumerator.MoveNext then
     begin
-      Val := ASelector(Enumerator.Current);
-      if not HasValue then
+      Result := ASelector(Enumerator.Current);
+      HasValue := True;
+      
+      while Enumerator.MoveNext do
       begin
-        Result := Val;
-        HasValue := True;
-      end
-      else if Val > Result then
-        Result := Val;
+        Val := ASelector(Enumerator.Current);
+        if Val > Result then Result := Val;
+      end;
     end;
   finally
     Enumerator.Free;
@@ -903,24 +892,22 @@ begin
   Ctx := TRttiContext.Create;
   Enumerator := GetEnumerator;
   try
-    while Enumerator.MoveNext do
+    if Enumerator.MoveNext then
     begin
       Obj := TValue.From<T>(Enumerator.Current).AsObject;
       if Obj = nil then raise Exception.Create('Item is not an object');
-      
       Prop := Ctx.GetType(Obj.ClassType).GetProperty(APropertyName);
-      if Prop = nil then
-        raise Exception.CreateFmt('Property "%s" not found on class "%s"', [APropertyName, Obj.ClassName]);
-        
-      Val := Prop.GetValue(Obj).AsType<Double>;
       
-      if not HasValue then
+      Val := Prop.GetValue(Obj).AsType<Double>;
+      Result := Val;
+      HasValue := True;
+      
+      while Enumerator.MoveNext do
       begin
-        Result := Val;
-        HasValue := True;
-      end
-      else if Val > Result then
-        Result := Val;
+        Obj := TValue.From<T>(Enumerator.Current).AsObject;
+        Val := Prop.GetValue(Obj).AsType<Double>;
+        if Val > Result then Result := Val;
+      end;
     end;
   finally
     Enumerator.Free;
@@ -930,44 +917,36 @@ begin
     raise Exception.Create('Sequence contains no elements');
 end;
 
-
-
-
-
 function TFluentQuery<T>.Paginate(const APageNumber, APageSize: Integer): IPagedResult<T>;
 var
+  SkipCount: Integer;
   Total: Integer;
-  Items: TList<T>;
-  SkippedQuery, TakenQuery: TFluentQuery<T>;
+  Items: IList<T>;
 begin
-  // 1. Calculate Total Count (Iterates full list)
+  if APageNumber < 1 then raise Exception.Create('PageNumber must be >= 1');
+  if APageSize < 1 then raise Exception.Create('PageSize must be >= 1');
+  
   Total := Self.Count;
+  SkipCount := (APageNumber - 1) * APageSize;
   
-  // 2. Fetch Page (Iterates again, but optimized)
-  // We must carefully manage the intermediate queries created by Skip and Take
-  // Skip returns a new TFluentQuery<T> (SkippedQuery)
-  // Take returns a new TFluentQuery<T> (TakenQuery)
-  
-  SkippedQuery := Self.Skip((APageNumber - 1) * APageSize);
-  TakenQuery := SkippedQuery.Take(APageSize);
-  Items := TakenQuery.ToList;
+  Items := Self.Skip(SkipCount).Take(APageSize).ToList;
   
   Result := TPagedResult<T>.Create(Items, Total, APageNumber, APageSize);
 end;
 
 { TSpecificationQueryIterator<T> }
 
-constructor TSpecificationQueryIterator<T>.Create(const AGetList: TFunc<TList<T>>);
+constructor TSpecificationQueryIterator<T>.Create(const AGetList: TFunc<IList<T>>);
 begin
   inherited Create;
   FGetList := AGetList;
   FIndex := -1;
   FExecuted := False;
+  FList := nil; 
 end;
 
 destructor TSpecificationQueryIterator<T>.Destroy;
 begin
-  FList.Free;
   inherited;
 end;
 
@@ -982,25 +961,28 @@ begin
   begin
     FList := FGetList();
     FExecuted := True;
+    FIndex := -1;
   end;
   
   Inc(FIndex);
-  Result := (FList <> nil) and (FIndex < FList.Count);
-  
-  if Result then
-    FCurrent := FList[FIndex]
+  if (FList <> nil) and (FIndex < FList.Count) then
+  begin
+    FCurrent := FList[FIndex];
+    Result := True;
+  end
   else
-    FCurrent := Default(T);
+    Result := False;
 end;
 
 { TProjectingIterator<TSource, TResult> }
 
-constructor TProjectingIterator<TSource, TResult>.Create(const ASource: TFluentQuery<TSource>; const ASelector: TFunc<TSource, TResult>);
+constructor TProjectingIterator<TSource, TResult>.Create(const ASource: TFluentQuery<TSource>;
+  const ASelector: TFunc<TSource, TResult>);
 begin
   inherited Create;
   FSource := ASource;
   FSelector := ASelector;
-  FEnumerator := nil;
+  FEnumerator := FSource.GetEnumerator;
 end;
 
 destructor TProjectingIterator<TSource, TResult>.Destroy;
@@ -1011,23 +993,24 @@ end;
 
 function TProjectingIterator<TSource, TResult>.MoveNextCore: Boolean;
 begin
-  if FEnumerator = nil then
-    FEnumerator := FSource.GetEnumerator;
-    
-  Result := FEnumerator.MoveNext;
-  
-  if Result then
+  if FEnumerator.MoveNext then
+  begin
     FCurrent := FSelector(FEnumerator.Current);
+    Result := True;
+  end
+  else
+    Result := False;
 end;
 
 { TFilteringIterator<T> }
 
-constructor TFilteringIterator<T>.Create(const ASource: TFluentQuery<T>; const APredicate: TPredicate<T>);
+constructor TFilteringIterator<T>.Create(const ASource: TFluentQuery<T>;
+  const APredicate: TPredicate<T>);
 begin
   inherited Create;
   FSource := ASource;
   FPredicate := APredicate;
-  FEnumerator := nil;
+  FEnumerator := FSource.GetEnumerator;
 end;
 
 destructor TFilteringIterator<T>.Destroy;
@@ -1038,9 +1021,6 @@ end;
 
 function TFilteringIterator<T>.MoveNextCore: Boolean;
 begin
-  if FEnumerator = nil then
-    FEnumerator := FSource.GetEnumerator;
-    
   while FEnumerator.MoveNext do
   begin
     if FPredicate(FEnumerator.Current) then
@@ -1049,7 +1029,6 @@ begin
       Exit(True);
     end;
   end;
-  
   Result := False;
 end;
 
@@ -1060,7 +1039,7 @@ begin
   inherited Create;
   FSource := ASource;
   FCount := ACount;
-  FEnumerator := nil;
+  FEnumerator := FSource.GetEnumerator;
   FIndex := 0;
 end;
 
@@ -1072,18 +1051,20 @@ end;
 
 function TSkipIterator<T>.MoveNextCore: Boolean;
 begin
-  if FEnumerator = nil then
+  // First time filtering
+  while FIndex < FCount do
   begin
-    FEnumerator := FSource.GetEnumerator;
-    // Skip first N elements
-    while (FIndex < FCount) and FEnumerator.MoveNext do
-      Inc(FIndex);
+    if not FEnumerator.MoveNext then Exit(False);
+    Inc(FIndex);
   end;
-    
-  Result := FEnumerator.MoveNext;
   
-  if Result then
+  if FEnumerator.MoveNext then
+  begin
     FCurrent := FEnumerator.Current;
+    Result := True;
+  end
+  else
+    Result := False;
 end;
 
 { TTakeIterator<T> }
@@ -1093,7 +1074,7 @@ begin
   inherited Create;
   FSource := ASource;
   FCount := ACount;
-  FEnumerator := nil;
+  FEnumerator := FSource.GetEnumerator;
   FIndex := 0;
 end;
 
@@ -1105,19 +1086,16 @@ end;
 
 function TTakeIterator<T>.MoveNextCore: Boolean;
 begin
-  if FIndex >= FCount then
-    Exit(False);
-
-  if FEnumerator = nil then
-    FEnumerator := FSource.GetEnumerator;
-    
-  Result := FEnumerator.MoveNext;
+  if FIndex >= FCount then Exit(False);
   
-  if Result then
+  if FEnumerator.MoveNext then
   begin
     FCurrent := FEnumerator.Current;
     Inc(FIndex);
-  end;
+    Result := True;
+  end
+  else
+    Result := False;
 end;
 
 { TDistinctIterator<T> }
@@ -1126,8 +1104,8 @@ constructor TDistinctIterator<T>.Create(const ASource: TFluentQuery<T>);
 begin
   inherited Create;
   FSource := ASource;
-  FEnumerator := nil;
-  FSeen := TDictionary<T, Byte>.Create;
+  FEnumerator := FSource.GetEnumerator;
+  FSeen := TDictionary<T, Byte>.Create; 
 end;
 
 destructor TDistinctIterator<T>.Destroy;
@@ -1139,9 +1117,6 @@ end;
 
 function TDistinctIterator<T>.MoveNextCore: Boolean;
 begin
-  if FEnumerator = nil then
-    FEnumerator := FSource.GetEnumerator;
-    
   while FEnumerator.MoveNext do
   begin
     if not FSeen.ContainsKey(FEnumerator.Current) then
@@ -1151,11 +1126,7 @@ begin
       Exit(True);
     end;
   end;
-  
   Result := False;
 end;
-
-
-
 
 end.

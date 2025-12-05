@@ -62,7 +62,6 @@ begin
   var Adults := FContext.Entities<TUser>.List(AdultSpec);
   LogSuccess(Format('✓ Found %d adult user(s) using: UserEntity.Age >= 18', [Adults.Count]));
   AssertTrue(Adults.Count = 2, 'Adult users spec', 'Expected 2 adult users');
-  Adults.Free;
   AdultSpec.Free;
 
   Log('');
@@ -73,7 +72,6 @@ begin
   var InlineAdults := FContext.Entities<TUser>.List(UserEntity.Age >= 18);
   LogSuccess(Format('✓ Inline query: Found %d adult(s)', [InlineAdults.Count]));
   AssertTrue(InlineAdults.Count = 2, 'Inline adults', 'Expected 2 adults');
-  InlineAdults.Free;
   
   // FirstOrDefault inline
   var John := FContext.Entities<TUser>.FirstOrDefault(UserEntity.Name.StartsWith('John'));
@@ -98,7 +96,6 @@ begin
     (UserEntity.Age >= 18) and UserEntity.Name.Contains('o')
   );
   LogSuccess(Format('✓ Complex inline: Found %d user(s) with Age >= 18 AND Name contains "o"', [ComplexResult.Count]));
-  ComplexResult.Free;
 
   Log('');
   Log('✨ Test: Fluent Specification Builder');
@@ -110,7 +107,6 @@ begin
   );
   LogSuccess(Format('✓ Fluent Spec: Found %d adult(s)', [FluentAdults.Count]));
   AssertTrue(FluentAdults.Count = 2, 'Fluent spec adults', 'Expected 2 adults');
-  FluentAdults.Free;
   
   // Complex fluent with chaining
   var FluentComplex := FContext.Entities<TUser>.List(
@@ -119,7 +115,6 @@ begin
       .Skip(0)
   );
   LogSuccess(Format('✓ Fluent Complex: Found %d user(s) with chaining', [FluentComplex.Count]));
-  FluentComplex.Free;
 
   Log('');
   Log(' Test: OrderBy Tipado');
@@ -133,7 +128,6 @@ begin
   LogSuccess(Format('✓ OrderBy Asc: Found %d user(s) ordered by Name ascending', [OrderedAsc.Count]));
   if OrderedAsc.Count > 0 then
     LogSuccess(Format('  First: %s', [OrderedAsc[0].Name]));
-  OrderedAsc.Free;
   
   // OrderBy with Desc
   var OrderedDesc := FContext.Entities<TUser>.List(
@@ -143,7 +137,6 @@ begin
   LogSuccess(Format('✓ OrderBy Desc: Found %d user(s) ordered by Age descending', [OrderedDesc.Count]));
   if OrderedDesc.Count > 0 then
     LogSuccess(Format('  First: %s (Age: %d)', [OrderedDesc[0].Name, OrderedDesc[0].Age]));
-  OrderedDesc.Free;
 
   Log('');
   Log('🔗 Test: Include (Eager Loading)');
@@ -180,7 +173,6 @@ begin
     else
       LogError('Include: Address NOT loaded (nil)');
   end;
-  UsersWithAddr.Free;
   Addr.Free;
   Log('');
   Log('📖 Available Fluent Operators:');

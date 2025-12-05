@@ -17,6 +17,7 @@ implementation
 uses
   EntityDemo.Entities,
   System.Generics.Collections,
+  Dext.Collections, // Add Collections
   Dext.Entity.Query;
 
 { TLazyExecutionTest }
@@ -83,7 +84,9 @@ begin
   Log('-----------------------------------');
   Count := 0;
   for User in LazyQuery do
+  begin
     Inc(Count);
+  end;
   LogSuccess(Format('✓ Re-enumerated: Found %d users again', [Count]));
   Log('  Note: Query executes AGAIN (not cached)');
   Log('');
@@ -105,18 +108,17 @@ begin
   // Test 5: Demonstrate difference between List() and Query()
   Log('⚡ Test 5: List() vs Query() - Execution Timing');
   Log('------------------------------------------------');
-  Log('  List():  Executes IMMEDIATELY and returns TList<T>');
+  Log('  List():  Executes IMMEDIATELY and returns IList<T>');
   Log('  Query(): Defers execution until enumerated (IEnumerable<T>)');
   Log('');
   
   var EagerList := FContext.Entities<TUser>.List(UserEntity.Age >= 18);
   LogSuccess(Format('✓ List() executed immediately: %d results', [EagerList.Count]));
-  EagerList.Free;
+  // EagerList.Free; // REMOVED: Managed by ARC (IList<T>)
   
   var LazyEnum := FContext.Entities<TUser>.Query(UserEntity.Age >= 18);
   LogSuccess('✓ Query() created (deferred execution)');
   Log(Format('  → Execution happens when we enumerate it (Query object: %p)', [Pointer(@LazyEnum)]));
-  // LazyEnum.Free; // Free it since we are not enumerating it fully or transferring ownership
   Log('');
   
   // Test 6: Projections (Select)
@@ -138,7 +140,6 @@ begin
     Inc(Count);
     LogSuccess(Format('  Found Name: %s', [Name]));
   end;
-  //NamesQuery.Free;
   
   AssertTrue(Count = 2, 
     Format('Found %d names', [Count]), 
@@ -195,7 +196,7 @@ begin
   Log('  • Select<TResult>() projects results to a new type');
   Log('  • Where() filters results in memory (lazy)');
   Log('  • Skip() and Take() enable pagination');
-  Log('  • List() returns TList<T> with immediate execution');
+  Log('  • List() returns IList<T> with immediate execution and ARC memory management');
   Log('  • Use Query() when you might not need all results');
   Log('  • Use List() when you need to materialize results immediately');
   Log('');

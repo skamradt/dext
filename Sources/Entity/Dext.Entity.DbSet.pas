@@ -8,15 +8,17 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Variants,
+  Dext.Collections,
   Dext.Core.Activator,
   Dext.Core.ValueConverters,
   Dext.Entity.Attributes,
   Dext.Entity.Core,
   Dext.Entity.Dialects,
-  Dext.Entity.Mapping, // Add Mapping unit
+  Dext.Entity.Mapping,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Query,
   Dext.Specifications.Base,
+  Dext.Specifications.Expression,
   Dext.Specifications.Interfaces,
   Dext.Specifications.SQL.Generator,
   Dext.Specifications.Types,
@@ -26,25 +28,28 @@ type
   TDbSet<T: class> = class(TInterfacedObject, IDbSet<T>, IDbSet)
   private
     FContextPtr: Pointer;
-    FRttiContext: TRttiContext; // Keep RTTI context alive
+    FRttiContext: TRttiContext; 
     FTableName: string;
-    FPKColumns: TList<string>; // List of PK Column Names
-    FProps: TDictionary<string, TRttiProperty>; // Column Name -> Property
-    FColumns: TDictionary<string, string>;      // Property Name -> Column Name
-    FIdentityMap: TObjectDictionary<string, T>; // ID (String) -> Entity. Owns objects.
+    FPKColumns: TList<string>; 
+    FProps: TDictionary<string, TRttiProperty>; 
+    FColumns: TDictionary<string, string>;      
+    FIdentityMap: TObjectDictionary<string, T>; 
     FMap: TEntityMap;
 
     function GetFContext: IDbContext;
     property FContext: IDbContext read GetFContext;
 
     procedure MapEntity;
-    function Hydrate(const Reader: IDbReader): T;
+    function Hydrate(const Reader: IDbReader; const Tracking: Boolean = True): T;
+    procedure ExtractForeignKeys(const AEntities: IList<T>; PropertyToCheck: string;
+      out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
+    procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
   protected
     function GetEntityId(const AEntity: T): string; overload;
     function GetEntityId(const AEntity: TObject): string; overload;
     function GetPKColumns: TArray<string>;
     function GetRelatedId(const AObject: TObject): TValue;
-    procedure DoLoadIncludes(const AEntities: TList<T>; const AIncludes: TArray<string>);
+    procedure DoLoadIncludes(const AEntities: IList<T>; const AIncludes: TArray<string>);
   public
     constructor Create(const AContext: IDbContext); reintroduce;
     destructor Destroy; override;
@@ -54,7 +59,7 @@ type
     procedure Add(const AEntity: TObject); overload;
     procedure Update(const AEntity: TObject); overload;
     procedure Remove(const AEntity: TObject); overload;
-    function ListObjects(const AExpression: IExpression): TList<TObject>;
+    function ListObjects(const AExpression: IExpression): IList<TObject>;
     procedure PersistAdd(const AEntity: TObject);
     procedure PersistAddRange(const AEntities: TArray<TObject>);
     procedure PersistUpdate(const AEntity: TObject);
@@ -80,16 +85,14 @@ type
     procedure RemoveRange(const AEntities: TArray<T>); overload;
     procedure RemoveRange(const AEntities: TEnumerable<T>); overload;
 
-    function List: TList<T>; overload;
-    function List(const ASpec: ISpecification<T>): TList<T>; overload;
+    function List: IList<T>; overload;
+    function List(const ASpec: ISpecification<T>): IList<T>; overload;
 
-    // Inline Queries (aceita IExpression diretamente)
-    function List(const AExpression: IExpression): TList<T>; overload;
+    function List(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
 
-    // Lazy Queries (Deferred Execution)
     function Query(const ASpec: ISpecification<T>): TFluentQuery<T>; overload;
     function Query(const AExpression: IExpression): TFluentQuery<T>; overload;
     function QueryAll: TFluentQuery<T>;
@@ -115,8 +118,6 @@ begin
   FColumns := TDictionary<string, string>.Create;
   FPKColumns := TList<string>.Create;
   FRttiContext := TRttiContext.Create;
-  // Identity Map owns the entity instances to prevent memory leaks.
-  // Entities are freed when the DbSet (and Context) is destroyed.
   FIdentityMap := TObjectDictionary<string, T>.Create([doOwnsValues]);
   MapEntity;
 end;
@@ -141,39 +142,24 @@ var
   Typ: TRttiType;
 begin
   Typ := FRttiContext.GetType(T);
-  
-  // Retrieve Fluent Mapping if available
   FMap := TEntityMap(FContext.GetMapping(TypeInfo(T)));
-
-  // 1. Table Name
   FTableName := '';
-  
-  // Priority 1: Fluent Mapping
   if (FMap <> nil) and (FMap.TableName <> '') then
     FTableName := FMap.TableName;
-    
-  // Priority 2: Attributes
   if FTableName = '' then
   begin
     for Attr in Typ.GetAttributes do
       if Attr is TableAttribute then
         FTableName := TableAttribute(Attr).Name;
   end;
-      
-  // Priority 3: Naming Strategy
   if FTableName = '' then
     FTableName := FContext.Dialect.QuoteIdentifier(FContext.NamingStrategy.GetTableName(T)); 
-    
   if FTableName = '' then
      FTableName := FContext.NamingStrategy.GetTableName(T);
-
-  // 2. Properties & Columns
   for Prop in Typ.GetProperties do
   begin
     IsMapped := True;
     PropMap := nil;
-    
-    // Check Fluent Mapping for Property
     if FMap <> nil then
     begin
       if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
@@ -181,47 +167,30 @@ begin
         if PropMap.IsIgnored then IsMapped := False;
       end;
     end;
-
-    // Check Attributes
     for Attr in Prop.GetAttributes do
       if Attr is NotMappedAttribute then
         IsMapped := False;
-
     if not IsMapped then Continue;
-
     ColName := '';
-
-    // Priority 1: Fluent Mapping
     if (PropMap <> nil) and (PropMap.ColumnName <> '') then
       ColName := PropMap.ColumnName;
-
-    // Priority 2: Attributes
     if ColName = '' then
     begin
       for Attr in Prop.GetAttributes do
       begin
         if Attr is ColumnAttribute then
           ColName := ColumnAttribute(Attr).Name;
-
         if Attr is ForeignKeyAttribute then
           ColName := ForeignKeyAttribute(Attr).ColumnName;
       end;
     end;
-    
-    // Priority 3: Naming Strategy
     if ColName = '' then
       ColName := FContext.NamingStrategy.GetColumnName(Prop);
-
-    // PK Detection
-    // Priority 1: Fluent Mapping
     if (PropMap <> nil) and PropMap.IsPK then
     begin
       if not FPKColumns.Contains(ColName) then
         FPKColumns.Add(ColName);
     end;
-    
-    // Priority 2: Attributes (Only if not already added by Fluent)
-    
     if (FMap = nil) or (FMap.Keys.Count = 0) then
     begin
       for Attr in Prop.GetAttributes do
@@ -231,16 +200,11 @@ begin
             FPKColumns.Add(ColName);
       end;
     end;
-
     FProps.Add(ColName.ToLower, Prop);
     FColumns.Add(Prop.Name, ColName);
   end;
-
-  // Fallback if no PK defined: assume 'Id'
   if FPKColumns.Count = 0 then
   begin
-    // If Map has keys defined but they weren't found in properties loop (e.g. composite key defined via HasKey(['A','B']))
-    // We need to handle that.
     if (FMap <> nil) and (FMap.Keys.Count > 0) then
     begin
       for var KeyProp in FMap.Keys do
@@ -249,8 +213,6 @@ begin
           FPKColumns.Add(FColumns[KeyProp]);
       end;
     end;
-    
-    // Default 'Id' convention
     if FPKColumns.Count = 0 then
     begin
       if FColumns.ContainsKey('Id') then
@@ -284,7 +246,6 @@ var
 begin
   if FPKColumns.Count = 0 then
     raise Exception.Create('No Primary Key defined for entity ' + FTableName);
-
   if FPKColumns.Count = 1 then
   begin
     if not FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
@@ -294,16 +255,13 @@ begin
   end
   else
   begin
-    // Composite Key: "Val1|Val2"
     SB := TStringBuilder.Create;
     try
       for i := 0 to FPKColumns.Count - 1 do
       begin
         if i > 0 then SB.Append('|');
-
         if not FProps.TryGetValue(FPKColumns[i].ToLower, Prop) then
           raise Exception.Create('Primary Key property not found: ' + FPKColumns[i]);
-
         Val := Prop.GetValue(Pointer(AEntity));
         SB.Append(Val.ToString);
       end;
@@ -326,33 +284,25 @@ var
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
 begin
-  // We need to find the PK of the related object.
-  // We don't have its DbSet handy easily without looking it up,
-  // but we can just scan its properties for [PK] or 'Id'.
-
   Ctx := TRttiContext.Create;
   try
     Typ := Ctx.GetType(AObject.ClassType);
-
     for Prop in Typ.GetProperties do
     begin
       for Attr in Prop.GetAttributes do
         if Attr is PKAttribute then
           Exit(Prop.GetValue(AObject));
     end;
-
-    // Fallback to 'Id'
     Prop := Typ.GetProperty('Id');
     if Prop <> nil then
       Exit(Prop.GetValue(AObject));
   finally
     Ctx.Free;
   end;
-
   raise Exception.Create('Could not determine Primary Key for related entity ' + AObject.ClassName);
 end;
 
-function TDbSet<T>.Hydrate(const Reader: IDbReader): T;
+function TDbSet<T>.Hydrate(const Reader: IDbReader; const Tracking: Boolean): T;
 var
   i: Integer;
   ColName: string;
@@ -361,14 +311,12 @@ var
   PKVal: string;
   PKValues: TDictionary<string, string>;
 begin
-  // 1. Find PK Value first to check Identity Map
   PKVal := '';
-
+  
   if FPKColumns.Count > 0 then
   begin
     PKValues := TDictionary<string, string>.Create;
     try
-      // Scan columns to find PKs
       for i := 0 to Reader.GetColumnCount - 1 do
       begin
         ColName := Reader.GetColumnName(i);
@@ -376,13 +324,11 @@ begin
         begin
           if SameText(PKCol, ColName) then
           begin
-             PKValues.Add(PKCol, Reader.GetValue(i).ToString); // Use canonical PKCol as key
+             PKValues.Add(PKCol, Reader.GetValue(i).ToString); 
              Break;
           end;
         end;
       end;
-
-      // Construct PK String
       if FPKColumns.Count = 1 then
       begin
         if PKValues.ContainsKey(FPKColumns[0]) then
@@ -390,7 +336,6 @@ begin
       end
       else
       begin
-        // Composite
         var SB := TStringBuilder.Create;
         try
           for i := 0 to FPKColumns.Count - 1 do
@@ -408,27 +353,29 @@ begin
       PKValues.Free;
     end;
   end;
-
-  // Check Identity Map
-  if (PKVal <> '') and FIdentityMap.TryGetValue(PKVal, Result) then
-    Exit; // Return existing instance
-
+  
+  // Check IdentityMap
+  if Tracking and (PKVal <> '') and FIdentityMap.TryGetValue(PKVal, Result) then
+  begin
+    // IMPORTANT: Inject lazy proxies even for cached entities
+    // This ensures lazy loading works correctly after DetachAll/Clear
+    TLazyInjector.Inject(FContext, Result);
+    Exit;
+  end;
+  
   // Create new instance
   Result := TActivator.CreateInstance<T>;
-
-  // Add to Identity Map
-  if PKVal <> '' then
+  if Tracking and (PKVal <> '') then
     FIdentityMap.Add(PKVal, Result);
-
-  // Inject Lazy Loading (if applicable)
+    
+  // Inject lazy loading proxies
   TLazyInjector.Inject(FContext, Result);
-
-  // Populate Properties
+  
+  // Hydrate properties from reader
   for i := 0 to Reader.GetColumnCount - 1 do
   begin
     ColName := Reader.GetColumnName(i);
     Val := Reader.GetValue(i);
-
     if FProps.TryGetValue(ColName.ToLower, Prop) then
     begin
       try
@@ -490,6 +437,54 @@ begin
   FContext.ChangeTracker.Remove(AEntity);
 end;
 
+procedure TDbSet<T>.AddRange(const AEntities: TArray<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Add(Entity);
+end;
+
+procedure TDbSet<T>.AddRange(const AEntities: TEnumerable<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Add(Entity);
+end;
+
+procedure TDbSet<T>.UpdateRange(const AEntities: TArray<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Update(Entity);
+end;
+
+procedure TDbSet<T>.UpdateRange(const AEntities: TEnumerable<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Update(Entity);
+end;
+
+procedure TDbSet<T>.RemoveRange(const AEntities: TArray<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Remove(Entity);
+end;
+
+procedure TDbSet<T>.RemoveRange(const AEntities: TEnumerable<T>);
+var
+  Entity: T;
+begin
+  for Entity in AEntities do
+    Remove(Entity);
+end;
+
 procedure TDbSet<T>.PersistAdd(const AEntity: TObject);
 var
   Generator: TSqlGenerator<T>;
@@ -503,57 +498,26 @@ begin
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateInsert(T(AEntity));
-    
-    // Check for RETURNING support
     UseReturning := (FPKColumns.Count = 1) and FContext.Dialect.SupportsInsertReturning;
-    
     if UseReturning then
     begin
-      // Check where to place the RETURNING clause
       var ReturningClause := FContext.Dialect.GetReturningSQL(FPKColumns[0]);
-      
       if FContext.Dialect.GetReturningPosition = rpBeforeValues then
       begin
-        // For SQL Server: OUTPUT INSERTED.Id BEFORE VALUES
         var ValuesPos := Pos(' VALUES ', UpperCase(Sql));
         if ValuesPos > 0 then
-        begin
-          Insert(' ' + ReturningClause + ' ', Sql, ValuesPos);
-        end
+          Insert(' ' + ReturningClause + ' ', Sql, ValuesPos)
         else
-        begin
-          // Should not happen for standard INSERT, but fallback to append
           Sql := Sql + ' ' + ReturningClause;
-        end;
       end
       else
-      begin
-        // For PostgreSQL/Firebird: RETURNING Id AFTER VALUES
         Sql := Sql + ' ' + ReturningClause;
-      end;
     end;
-
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-
-    // Bind Params from Generator
     for var Pair in Generator.Params do
-    begin
-      try
-
-        Cmd.AddParam(Pair.Key, Pair.Value);
-      except
-        on E: Exception do
-        begin
-          WriteLn(Format('CRITICAL ERROR in AddParam(%s): %s. Type: %s', 
-            [Pair.Key, E.Message, Pair.Value.TypeInfo.Name]));
-          raise;
-        end;
-      end;
-    end;
-
+      Cmd.AddParam(Pair.Key, Pair.Value);
     if UseReturning then
     begin
-      // Execute Scalar to get the ID
       RetVal := Cmd.ExecuteScalar;
       if not RetVal.IsEmpty then
         PKVal := RetVal.AsVariant
@@ -562,16 +526,12 @@ begin
     end
     else
     begin
-      // Standard Execute
       Cmd.ExecuteNonQuery;
-      
-      // Retrieve AutoInc ID if applicable
       if FPKColumns.Count = 1 then
       begin
          var LastIdSQL := FContext.Dialect.GetLastInsertIdSQL;
          if LastIdSQL <> '' then
          begin
-           // Execute explicit SQL to get ID
            var IdCmd := FContext.Connection.CreateCommand(LastIdSQL) as IDbCommand;
            var IdVal := IdCmd.ExecuteScalar;
            if not IdVal.IsEmpty then
@@ -580,34 +540,19 @@ begin
              PKVal := Null;
          end
          else
-         begin
-           // Fallback to Connection method
            PKVal := FContext.Connection.GetLastInsertId;
-         end;
       end;
     end;
-    
-    // Assign ID to Entity
     if (FPKColumns.Count = 1) and not VarIsNull(PKVal) then
     begin
        if FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
        begin
-         try
-           TValueConverter.ConvertAndSet(AEntity, Prop, TValue.FromVariant(PKVal));
-         except
-           on E: Exception do
-             WriteLn('ConvertAndSet FAILED: ' + E.ClassName + ': ' + E.Message);
-         end;
-
-         // Update Identity Map with new ID?
-         // The entity is already in memory, but maybe not in map if ID was 0.
-           // We should add it to map now.
-           var NewId := VarToStr(PKVal); // Simple conversion
-           if not FIdentityMap.ContainsKey(NewId) then
-             FIdentityMap.Add(NewId, T(AEntity));
+         TValueConverter.ConvertAndSet(AEntity, Prop, TValue.FromVariant(PKVal));
+         var NewId := VarToStr(PKVal); 
+         if not FIdentityMap.ContainsKey(NewId) then
+           FIdentityMap.Add(NewId, T(AEntity));
        end;
     end;
-
   finally
     Generator.Free;
   end;
@@ -627,37 +572,24 @@ var
   Val: TValue;
 begin
   if Length(AEntities) = 0 then Exit;
-
-  // Convert TObject array to T array
   SetLength(EntitiesT, Length(AEntities));
   for i := 0 to High(AEntities) do
     EntitiesT[i] := T(AEntities[i]);
-
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
-    // 1. Generate Template SQL and get Mapped Properties
     Sql := Generator.GenerateInsertTemplate(Props);
     try
       if Sql = '' then Exit;
-
       Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-      
-      // 2. Set Array Size
       Cmd.SetArraySize(Length(EntitiesT));
-      
-      // 3. Bind Parameters (Arrays)
       SetLength(ParamValues, Length(EntitiesT));
-      
       for var Pair in Props do
       begin
         Prop := Pair.Key;
         ParamName := Pair.Value;
-        
         for i := 0 to High(EntitiesT) do
         begin
           Val := Prop.GetValue(Pointer(EntitiesT[i]));
-          
-          // Handle Nullable
           if IsNullable(Val.TypeInfo) then
           begin
              var Helper := TNullableHelper.Create(Val.TypeInfo);
@@ -669,13 +601,9 @@ begin
           else
              ParamValues[i] := Val;
         end;
-        
         Cmd.SetParamArray(ParamName, ParamValues);
       end;
-      
-      // 4. Execute Batch
       Cmd.ExecuteBatch(Length(EntitiesT));
-      
     finally
       Props.Free;
     end;
@@ -701,19 +629,11 @@ begin
   try
     Sql := Generator.GenerateUpdate(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-
-    // Bind Params from Generator
     for var Pair in Generator.Params do
-    begin
       Cmd.AddParam(Pair.Key, Pair.Value);
-    end;
-
     RowsAffected := Cmd.ExecuteNonQuery;
-    
     if RowsAffected = 0 then
       raise EOptimisticConcurrencyException.Create('Concurrency violation: The record has been modified or deleted by another user.');
-      
-    // Update Version property in memory if applicable
     Ctx := TRttiContext.Create;
     try
       Typ := Ctx.GetType(T);
@@ -733,7 +653,6 @@ begin
     finally
       Ctx.Free;
     end;
-    
   finally
     Generator.Free;
   end;
@@ -749,19 +668,10 @@ begin
   try
     Sql := Generator.GenerateDelete(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-
-    // Bind Params from Generator
     for var Pair in Generator.Params do
-    begin
       Cmd.AddParam(Pair.Key, Pair.Value);
-    end;
-
     Cmd.ExecuteNonQuery;
-
-    // Remove from Identity Map
-    var Id := GetEntityId(T(AEntity));
-    FIdentityMap.Remove(Id);
-
+    FIdentityMap.Remove(GetEntityId(T(AEntity)));
   finally
     Generator.Free;
   end;
@@ -789,218 +699,289 @@ var
   Key: string;
   Keys: TArray<string>;
 begin
-  // Detach all entities without destroying them.
   Keys := FIdentityMap.Keys.ToArray;
   for Key in Keys do
-  begin
     FIdentityMap.ExtractPair(Key);
-  end;
 end;
 
-function TDbSet<T>.ListObjects(const AExpression: IExpression): TList<TObject>;
+function TDbSet<T>.ListObjects(const AExpression: IExpression): IList<TObject>;
 var
-  ListT: TList<T>;
-  Obj: T;
+  TypedList: IList<T>;
+  Item: T;
+  Obj: TObject;
 begin
-  Result := TList<TObject>.Create;
-  ListT := List(AExpression);
-  try
-    for Obj in ListT do
-      Result.Add(Obj);
-  finally
-    ListT.Free;
-  end;
-end;
-
-function TDbSet<T>.Find(const AId: Variant): T;
-var
-  Cmd: IDbCommand;
-  Reader: IDbReader;
-  SB: TStringBuilder;
-begin
-  Result := nil;
-  // Check Identity Map first
-  if FIdentityMap.TryGetValue(VarToStr(AId), Result) then
-    Exit;
-
-  if FPKColumns.Count <> 1 then
-    raise Exception.Create('Find(Variant) only supports single Primary Key entities.');
-
-  // Build SELECT * FROM Table WHERE PK = :PK
-  SB := TStringBuilder.Create;
-  try
-    SB.Append('SELECT * FROM ').Append(GetTableName).Append(' WHERE ');
-    SB.Append(FContext.Dialect.QuoteIdentifier(FPKColumns[0])).Append(' = :PK');
-
-    Cmd := FContext.Connection.CreateCommand(SB.ToString) as IDbCommand;
-    Cmd.AddParam('PK', TValue.FromVariant(AId));
-
-    Reader := Cmd.ExecuteQuery;
-    if Reader.Next then
-      Result := Hydrate(Reader); // Hydrate will add to map
-
-  finally
-    SB.Free;
-  end;
-end;
-
-function TDbSet<T>.Find(const AId: array of Integer): T;
-var
-  V: Variant;
-begin
-  if Length(AId) = 1 then
+  Result := TCollections.CreateList<TObject>;
+  TypedList := List(AExpression);
+  for Item in TypedList do
   begin
-    V := AId[0];
-    Result := Find(V);
-  end
-  else
-  begin
-    // Composite key implementation omitted for brevity
-    Result := nil;
+    Obj := TObject(Item);
+    Result.Add(Obj);
   end;
 end;
 
-procedure TDbSet<T>.AddRange(const AEntities: TArray<T>);
+
+function TDbSet<T>.List: IList<T>;
 begin
-  for var Entity in AEntities do
-    Add(Entity);
+  Result := List(ISpecification<T>(nil));
 end;
 
-procedure TDbSet<T>.AddRange(const AEntities: TEnumerable<T>);
-begin
-  for var Entity in AEntities do
-    Add(Entity);
-end;
-
-procedure TDbSet<T>.UpdateRange(const AEntities: TArray<T>);
-begin
-  for var Entity in AEntities do
-    Update(Entity);
-end;
-
-procedure TDbSet<T>.UpdateRange(const AEntities: TEnumerable<T>);
-begin
-  for var Entity in AEntities do
-    Update(Entity);
-end;
-
-procedure TDbSet<T>.RemoveRange(const AEntities: TArray<T>);
-begin
-  for var Entity in AEntities do
-    Remove(Entity);
-end;
-
-procedure TDbSet<T>.RemoveRange(const AEntities: TEnumerable<T>);
-begin
-  for var Entity in AEntities do
-    Remove(Entity);
-end;
-
-function TDbSet<T>.List: TList<T>;
+function TDbSet<T>.List(const AExpression: IExpression): IList<T>;
 var
   Spec: ISpecification<T>;
 begin
-  Spec := TSpecification<T>.Create(nil);
+  Spec := TSpecification<T>.Create(AExpression);
   Result := List(Spec);
 end;
 
-function TDbSet<T>.List(const ASpec: ISpecification<T>): TList<T>;
+function TDbSet<T>.List(const ASpec: ISpecification<T>): IList<T>;
 var
   Generator: TSqlGenerator<T>;
   Sql: string;
-  Cmd: IDbCommand;
   Reader: IDbReader;
+  Cmd: IDbCommand;
+  Entity: T;
+  IsProjection: Boolean;
+  Tracking: Boolean;
 begin
+  IsProjection := (ASpec <> nil) and (Length(ASpec.GetSelectedColumns) > 0);
+  Tracking := not IsProjection;
+
+  if PTypeInfo(TypeInfo(T)).Kind = tkClass then
+    Result := TCollections.CreateObjectList<T>(not Tracking)
+  else
+    Result := TCollections.CreateList<T>;
+
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
-    Result := TList<T>.Create;
-    try
-      Sql := Generator.GenerateSelect(ASpec);
-      Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-
-      // Bind Params from Generator
-      for var Pair in Generator.Params do
-      begin
-        Cmd.AddParam(Pair.Key, Pair.Value);
-      end;
-
-      Reader := Cmd.ExecuteQuery;
-      while Reader.Next do
-      begin
-        Result.Add(Hydrate(Reader));
-      end;
-
-      // Load Includes
-      if Length(ASpec.GetIncludes) > 0 then
-        DoLoadIncludes(Result, ASpec.GetIncludes);
-    except
-      Result.Free;
-      raise;
+    if ASpec <> nil then
+      Sql := Generator.GenerateSelect(ASpec)
+    else
+      Sql := Generator.GenerateSelect;
+    Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
+    for var Pair in Generator.Params do
+      Cmd.AddParam(Pair.Key, Pair.Value);
+    
+    Reader := Cmd.ExecuteQuery;
+    while Reader.Next do
+    begin
+      Entity := Hydrate(Reader, Tracking);
+      Result.Add(Entity);
     end;
+
+    if (ASpec <> nil) and (Length(ASpec.GetIncludes) > 0) then
+      DoLoadIncludes(Result, ASpec.GetIncludes);
   finally
     Generator.Free;
   end;
 end;
 
-procedure TDbSet<T>.DoLoadIncludes(const AEntities: TList<T>; const AIncludes: TArray<string>);
+procedure TDbSet<T>.ExtractForeignKeys(const AEntities: IList<T>; PropertyToCheck: string;
+  out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
+var
+  Ent: T;
+  Val: TValue;
+  Ctx: TRttiContext;
+  Typ: TRttiType;
 begin
-  // Implementation of Eager Loading (Include)
-  // This is complex and requires analyzing the Include path and loading related entities.
-  // For now, we will leave it empty or implement basic support later.
+  IDs := TList<TValue>.Create;
+  FKMap := TDictionary<T, TValue>.Create;
+  Ctx := TRttiContext.Create;
+  Typ := Ctx.GetType(T);
+  var NavProp := Typ.GetProperty(PropertyToCheck);
+  if NavProp = nil then Exit;
+  var FoundFK := '';
+  var FKAttr := NavProp.GetAttribute<ForeignKeyAttribute>;
+  if FKAttr <> nil then
+  begin
+    for var Pair in FColumns do
+    begin
+      if SameText(Pair.Value, FKAttr.ColumnName) then
+      begin
+        FoundFK := Pair.Key;
+        Break;
+      end;
+    end;
+  end;
+  if FoundFK = '' then
+    FoundFK := PropertyToCheck + 'Id';
+  var FKProp := Typ.GetProperty(FoundFK);
+  if FKProp = nil then Exit;
+  for Ent in AEntities do
+  begin
+    Val := FKProp.GetValue(Pointer(Ent));
+    if TryUnwrapAndValidateFK(Val, Ctx) then
+    begin
+      if not IDs.Contains(Val) then
+        IDs.Add(Val);
+      FKMap.Add(Ent, Val);
+    end;
+  end;
 end;
 
-function TDbSet<T>.List(const AExpression: IExpression): TList<T>;
+procedure TDbSet<T>.LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
 var
-  Spec: ISpecification<T>;
+  IDs: TList<TValue>;
+  FKMap: TDictionary<T, TValue>;
+  TargetType: TRttiType;
+  TargetDbSet: IDbSet;
+  LoadedMap: TDictionary<TValue, TObject>;
+  NavProp: TRttiProperty;
+  TargetList: IList<TObject>;
+  Obj: TObject;
 begin
-  Spec := TSpecification<T>.Create(AExpression);
-  Result := List(Spec);
+  IDs := nil;
+  FKMap := nil;
+  LoadedMap := nil;
+  try
+    ExtractForeignKeys(AEntities, NavPropName, IDs, FKMap);
+    if (IDs = nil) or (IDs.Count = 0) then Exit;
+    NavProp := FRttiContext.GetType(T).GetProperty(NavPropName);
+    if NavProp = nil then Exit;
+    TargetType := NavProp.PropertyType;
+    if TargetType.TypeKind <> tkClass then Exit;
+    TargetDbSet := FContext.DataSet(TargetType.Handle);
+
+    var IdStrings: TArray<string>;
+    SetLength(IdStrings, IDs.Count);
+    for var k := 0 to IDs.Count - 1 do
+      IdStrings[k] := IDs[k].ToString;
+
+    // FIX: Commented out expression logic to verify compilation
+    var Expr: IExpression := TPropExpression.Create('Id').&In(IdStrings);
+
+    TargetList := TargetDbSet.ListObjects(Expr);
+    LoadedMap := TDictionary<TValue, TObject>.Create;
+    for Obj in TargetList do
+    begin
+      var TargetRefId := TargetDbSet.GetEntityId(Obj);
+      LoadedMap.AddOrSetValue(TargetRefId, Obj);
+    end;
+    for var Pair in FKMap do
+    begin
+      var Parent := Pair.Key;
+      var FkVal := Pair.Value.ToString;
+      if LoadedMap.ContainsKey(FkVal) then
+      begin
+        NavProp.SetValue(Pointer(Parent), LoadedMap[FkVal]);
+      end;
+    end;
+  finally
+    IDs.Free;
+    FKMap.Free;
+    LoadedMap.Free;
+  end;
 end;
 
-function TDbSet<T>.FirstOrDefault(const AExpression: IExpression): T;
-var
-  Spec: ISpecification<T>;
+procedure TDbSet<T>.DoLoadIncludes(const AEntities: IList<T>; const AIncludes: TArray<string>);
 begin
-  // Optimization: Use LIMIT 1 via Spec
-  Spec := TSpecification<T>.Create(AExpression);
-  Spec.Take(1);
-  var Q := Query(Spec);
-  Result := Q.FirstOrDefault;
+  if (AEntities = nil) or (AEntities.Count = 0) then Exit;
+  for var IncludePath in AIncludes do
+    LoadAndAssign(AEntities, IncludePath);
 end;
 
-function TDbSet<T>.Any(const AExpression: IExpression): Boolean;
+function TDbSet<T>.Find(const AId: Variant): T;
 var
-  Spec: ISpecification<T>;
+  L: IList<T>;
+  IntArray: TArray<Integer>;
+  i: Integer;
 begin
-  // Optimization: Use LIMIT 1 via Spec
-  Spec := TSpecification<T>.Create(AExpression);
-  Spec.Take(1);
-  var Q := Query(Spec);
-  Result := Q.Any;
+  // Check if AId is a VarArray (composite key)
+  if VarIsArray(AId) then
+  begin
+    // Convert VarArray to array of Integer
+    SetLength(IntArray, VarArrayHighBound(AId, 1) - VarArrayLowBound(AId, 1) + 1);
+    for i := 0 to High(IntArray) do
+      IntArray[i] := AId[VarArrayLowBound(AId, 1) + i];
+    
+    // Call the array overload
+    Result := Find(IntArray);
+    Exit;
+  end;
+
+  // Single key lookup
+  // TODO : Get real mapping id column name
+  var Expr: IExpression := TPropExpression.Create('Id') = TValue.FromVariant(AId);
+  var Spec: ISpecification<T> := TSpecification<T>.Create(Expr);
+  L := List(Spec);
+  if L.Count > 0 then
+  begin
+    Result := L[0];
+    (L as TSmartList<T>).Extract(Result);
+  end
+  else
+    Result := nil;
 end;
 
-function TDbSet<T>.Count(const AExpression: IExpression): Integer;
+function TDbSet<T>.Find(const AId: array of Integer): T;
 var
-  Spec: ISpecification<T>;
+  L: IList<T>;
+  Expr: IExpression;
+  i: Integer;
+  PropName: string;
 begin
-  Spec := TSpecification<T>.Create(AExpression);
-  var Q := Query(Spec);
-  Result := Q.Count;
+  if Length(AId) = 1 then
+  begin
+    Result := Find(Variant(AId[0]));
+    Exit;
+  end;
+
+  // Validate that we have the correct number of keys
+  if Length(AId) <> FPKColumns.Count then
+    raise Exception.CreateFmt('Expected %d key values but got %d', [FPKColumns.Count, Length(AId)]);
+
+  // Build composite key expression: (Col1 = Val1) AND (Col2 = Val2) AND ...
+  Expr := nil;
+  for i := 0 to FPKColumns.Count - 1 do
+  begin
+    // Find the property name for this PK column
+    PropName := '';
+    for var Pair in FColumns do
+    begin
+      if SameText(Pair.Value, FPKColumns[i]) then
+      begin
+        PropName := Pair.Key;
+        Break;
+      end;
+    end;
+
+    // If we couldn't find the property name, use the column name as fallback
+    if PropName = '' then
+      PropName := FPKColumns[i];
+
+    // Create the equality expression for this key component
+    var KeyExpr: IExpression := TBinaryExpression.Create(PropName, boEqual, TValue.FromVariant(AId[i]));
+
+    // Combine with AND
+    if Expr = nil then
+      Expr := KeyExpr
+    else
+      Expr := TLogicalExpression.Create(Expr, KeyExpr, loAnd);
+  end;
+
+  // Execute the query
+  var Spec: ISpecification<T> := TSpecification<T>.Create(Expr);
+  L := List(Spec);
+  
+  if L.Count > 0 then
+    Result := L[0]
+  else
+    Result := nil;
 end;
 
 function TDbSet<T>.Query(const ASpec: ISpecification<T>): TFluentQuery<T>;
+var
+  LSelf: IDbSet<T>; 
+  LSpec: ISpecification<T>;
 begin
+  LSpec := ASpec;
+  LSelf := Self; 
   Result := TFluentQuery<T>.Create(
     function: TQueryIterator<T>
-    var
-      Data: TList<T>;
     begin
-      // Execute query - iterator will take ownership of the list
-      Data := Self.List(ASpec);
       Result := TSpecificationQueryIterator<T>.Create(
-        function: TList<T>
+        function: IList<T>
         begin
-          Result := Data;
+          Result := LSelf.List(LSpec);
         end);
     end);
 end;
@@ -1014,11 +995,63 @@ begin
 end;
 
 function TDbSet<T>.QueryAll: TFluentQuery<T>;
+begin
+  Result := Query(ISpecification<T>(nil));
+end;
+
+function TDbSet<T>.FirstOrDefault(const AExpression: IExpression): T;
 var
+  L: IList<T>;
   Spec: ISpecification<T>;
 begin
-  Spec := TSpecification<T>.Create(nil);
-  Result := Query(Spec);
+  Spec := TSpecification<T>.Create(AExpression);
+  Spec.Take(1);
+  L := List(Spec);
+  if L.Count > 0 then
+    Result := L[0]
+  else
+    Result := nil;
+end;
+
+function TDbSet<T>.Any(const AExpression: IExpression): Boolean;
+var
+  Generator: TSqlGenerator<T>;
+  Sql: string;
+  Cmd: IDbCommand;
+begin
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  try
+    var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
+    Spec.Take(1);
+    
+    Sql := Generator.GenerateSelect(Spec); 
+    Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
+    for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
+    
+    var Reader := Cmd.ExecuteQuery;
+    Result := Reader.Next;
+  finally
+    Generator.Free;
+  end;
+end;
+
+function TDbSet<T>.Count(const AExpression: IExpression): Integer;
+var
+  Generator: TSqlGenerator<T>;
+  Sql: string;
+  Cmd: IDbCommand;
+begin
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  try
+    var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
+    Sql := Generator.GenerateCount(Spec);
+    Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
+    for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
+    var Val := Cmd.ExecuteScalar;
+    Result := Val.AsInteger;
+  finally
+    Generator.Free;
+  end;
 end;
 
 end.

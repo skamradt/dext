@@ -334,7 +334,6 @@ begin
   Result := FTransaction <> nil;
 end;
 
-
 function TDbContext.DataSet(AEntityType: PTypeInfo): IDbSet;
 var
   //Method: TRttiMethod;
@@ -580,7 +579,7 @@ begin
   // (Though we are iterating, and Persist methods shouldn't modify the list structure, 
   // but they might update state to Unchanged if we did it per item. 
   // Here we accept all changes at the end.)
-  
+
   TrackedEntities := TList<TPair<TObject, TEntityState>>.Create;
   try
     TrackedEntities.AddRange(FChangeTracker.GetTrackedEntities);
@@ -709,8 +708,6 @@ begin
   Result := TEntityEntry.Create(Self, AEntity);
 end;
 
-
-
 { TChangeTracker }
 
 constructor TChangeTracker.Create;
@@ -815,6 +812,10 @@ var
   Typ: TRttiType;
   Prop: TRttiProperty;
   Val: TValue;
+  ListObj: TObject;
+  ListIntf: IInterface;
+  IsInterface: Boolean;
+  ListType: TRttiType;
 begin
   Ctx := TRttiContext.Create;
   Typ := Ctx.GetType(FParent.ClassType);
@@ -823,12 +824,32 @@ begin
     raise Exception.CreateFmt('Property %s not found on %s', [FPropName, Typ.Name]);
 
   Val := Prop.GetValue(Pointer(FParent));
-  if Val.IsEmpty or (Val.AsObject = nil) then
+  if Val.IsEmpty then
     raise Exception.Create('Collection must be initialized before loading.');
+  
+  // Detect if property is Interface or Class
+  IsInterface := Prop.PropertyType.TypeKind = tkInterface;
+
+  if IsInterface then
+  begin
+    // Handle IList<T> (interface)
+    if not Val.TryAsType<IInterface>(ListIntf) or (ListIntf = nil) then
+      raise Exception.Create('Collection interface is nil and must be initialized before loading.');
     
-  // Determine Child Type
-  var ListObj := Val.AsObject;
-  var AddMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Add');
+    // Get the interface type to find Add method
+    ListType := Prop.PropertyType;
+  end
+  else
+  begin
+    // Handle TList<T> or TObjectList<T> (class)
+    if not Val.TryAsType<TObject>(ListObj) or (ListObj = nil) then
+      raise Exception.Create('Collection must be initialized before loading.');
+    
+    ListType := Ctx.GetType(ListObj.ClassType);
+  end;
+  
+  // Find Add method
+  var AddMethod := ListType.GetMethod('Add');
   if AddMethod = nil then
     raise Exception.Create('Collection does not have Add method');
     
@@ -892,9 +913,14 @@ begin
   end;
   
   // Clear the collection before loading to ensure it reflects current DB state
-  var ClearMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Clear');
+  var ClearMethod := ListType.GetMethod('Clear');
   if ClearMethod <> nil then
-    ClearMethod.Invoke(ListObj, []);
+  begin
+    if IsInterface then
+      ClearMethod.Invoke(Val, [])
+    else
+      ClearMethod.Invoke(ListObj, []);
+  end;
     
   // Build Query: Child.FK = Parent.Id
   var Expr := TBinaryExpression.Create(
@@ -904,14 +930,13 @@ begin
   );
   
   var Results := DbSet.ListObjects(Expr);
-  try
-    // Add results to ListObj
-    for var ChildObj in Results do
-    begin
+  // Add results to collection
+  for var ChildObj in Results do
+  begin
+    if IsInterface then
+      AddMethod.Invoke(Val, [ChildObj])
+    else
       AddMethod.Invoke(ListObj, [ChildObj]);
-    end;
-  finally
-    Results.Free;
   end;
 end;
 

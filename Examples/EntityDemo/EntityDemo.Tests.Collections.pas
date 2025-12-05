@@ -131,6 +131,7 @@ begin
   
   AssertTrue(LFiltered.Count = 1, 'Found 1 (Alice)', 'Complex expression mismatch');
   AssertTrue(LFiltered.First.Name = 'Alice', 'It is Alice', 'Complex expression items mismatch');
+  for P in LList do P.Free;
 end;
 
 { TCollectionsTest.TPerson }

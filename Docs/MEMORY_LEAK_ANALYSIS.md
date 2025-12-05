@@ -1,6 +1,6 @@
 # Análise de Memory Leaks - Dext ORM
 
-## Status Atual (2025-12-02)
+## Status Atual (2025-12-05)
 
 ### Leaks Resolvidos ✅
 1. **TModelBuilder** - Corrigido adicionando `FModelBuilder.Free` no destrutor de `TDbContext`
@@ -9,6 +9,14 @@
    - Custom `TEqualityComparer<TObject>` baseado em ponteiros
    - `Remove()` method para remover entidades antes de deletar
    - `Clear()` no destrutor de `TDbContext`
+4. **Lazy Loading / TLazyLoader** - Corrigido:
+   - Substituição de `TVirtualInterface` por `Lazy<T>` e `TLazyLoader`
+   - Gerenciamento correto de ciclo de vida de `IList<T>` dentro do Loader
+   - Tratamento de `OwnsObjects` para listas criadas internamente
+5. **Projections (Select)** - Corrigido:
+   - Implementado "Implicit No-Tracking" para projeções
+   - Listas de projeção agora usam `OwnsObjects=True` para liberar entidades parciais
+   - `TDbSet.Hydrate` suporta instanciação sem tracking
 
 ### Leaks Pendentes 🔍
 
@@ -25,86 +33,15 @@
 - 36 bytes: System.Rtti.TRttiInstanceMethodEx
 ```
 
-#### 2. Lazy Loading / TVirtualInterface Leaks (Média Prioridade)
-**Tipo:** `System.Rtti.TVirtualInterface.TImplInfo`, closures relacionados
-**Causa:** Interfaces virtuais criadas para lazy loading não sendo liberadas corretamente
-**Impacto:** Médio (16-24 bytes por entidade)
-**Localização:** `Dext.Entity.LazyLoading.pas` linha 193
+#### 2. FluentQuery Closure Leaks (Média Prioridade)
+**Tipo:** `Dext.Entity.Query.@TFluentQuery`1.Skip$ActRec`
+**Causa:** Closures (funções anônimas) capturando variáveis
+**Status:** Parcialmente mitigado com a migração para `IList<T>` e iteradores, mas requer monitoramento contínuo.
 
-**Stack Trace:**
-```
-TLazyInjector.InjectField -> TVirtualInterface.Create
-```
-
-**Ação Recomendada:**
-- Revisar o ciclo de vida das interfaces virtuais em `TLazyInjector`
-- Considerar usar weak references ou um pool de interfaces
-
-#### 3. FluentQuery Closure Leaks (Alta Prioridade)
-**Tipo:** `Dext.Entity.Query.@TFluentQuery`1.Skip$ActRec`, `Take$ActRec`
-**Causa:** Closures (funções anônimas) capturando variáveis não sendo liberadas
-**Impacto:** Médio (28 bytes por closure)
-**Localização:** `Dext.Entity.Query.pas` linhas 486-510
-
-**Código Problemático:**
-```pascal
-function TFluentQuery<T>.Skip(const ACount: Integer): TFluentQuery<T>;
-var
-  LSource: TEnumerable<T>;
-begin
-  LSource := Self;  // Captura Self
-  Result := TFluentQuery<T>.Create(
-    function: TQueryIterator<T>
-    begin
-      Result := TSkipIterator<T>.Create(LSource, ACount);  // Closure captura LSource
-    end,
-    TObject(Self));
-end;
-```
-
-**Ação Recomendada:**
-- Evitar captura de variáveis locais em closures
-- Passar parâmetros diretamente para os iteradores
-- Considerar usar métodos nomeados ao invés de closures anônimas
-
-#### 4. Attribute Leaks (Baixa Prioridade)
-**Tipo:** `Dext.Entity.Attributes.ColumnAttribute`
-**Causa:** Atributos criados via RTTI não sendo liberados
-**Impacto:** Pequeno (12 bytes)
-**Localização:** Criação via RTTI durante `MapEntity`
-
-**Ação:** Verificar se os atributos estão sendo corretamente liberados após uso
-
-#### 5. Unknown Leaks (Investigação Necessária)
-**Tipo:** Unknown (6152 bytes, 200 bytes)
-**Causa:** Não identificada - possivelmente arrays dinâmicos do RTTI
-**Impacto:** Médio a Alto
-**Ação:** Requer investigação mais profunda com stack traces
-
-## Melhorias Implementadas
-
-### Const Correctness
-Aplicado `const` em parâmetros de tipos gerenciados (interfaces, strings, records) em:
-- `TDbContext.Create`
-- `TDbSet<T>.Create`
-- `TCollectionEntry.Create`, `TReferenceEntry.Create`, `TEntityEntry.Create`
-- `TDbSet<T>.Hydrate`
-
-### Memory Management
-- `FIdentityMap` com `[doOwnsValues]` para gerenciar lifecycle de entidades
-- `FChangeTracker.Clear()` antes de destruir DbSets
-- `FChangeTracker.Remove()` antes de deletar entidades
-- `FModelBuilder.Free` no destrutor de `TDbContext`
-
-## Próximos Passos
-
-1. **Prioridade Alta:**
-   - Resolver leaks de FluentQuery closures
-   - Investigar Unknown leaks de 6152 bytes
-
-2. **Prioridade Média:**
-   - Otimizar lazy loading para reduzir leaks de TVirtualInterface
-   - Adicionar testes específicos para detectar leaks
+#### 3. Unknown Leaks (Investigação Necessária)
+**Tipo:** Unknown (Eventuais leaks de 200 bytes)
+**Causa:** Arrays dinâmicos ou buffers internos
+**Impacto:** Baixo após correções principais
 
 3. **Prioridade Baixa:**
    - Documentar limitações conhecidas do RTTI

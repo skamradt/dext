@@ -83,7 +83,6 @@ type
     property Value: Boolean read FValue;
     function ToString: string; override;
   end;
-
   /// <summary>
   ///   Helper record to build expressions fluently.
   ///   Usage: PropExpression('Age') > 18
@@ -107,13 +106,10 @@ type
         class operator LogicalOr(const Left, Right: TExpression): IExpression;
         class operator LogicalNot(const Value: TExpression): IExpression;
       end;
-      
     var
       FName: string;
-      
   public
     constructor Create(const AName: string);
-    
     // Comparison Operators
     class operator Equal(const Left: TPropExpression; const Right: TValue): TExpression;
     class operator NotEqual(const Left: TPropExpression; const Right: TValue): TExpression;
@@ -121,9 +117,7 @@ type
     class operator GreaterThanOrEqual(const Left: TPropExpression; const Right: TValue): TExpression;
     class operator LessThan(const Left: TPropExpression; const Right: TValue): TExpression;
     class operator LessThanOrEqual(const Left: TPropExpression; const Right: TValue): TExpression;
-
     class operator Implicit(const Value: TPropExpression): string;
-
     // Special Methods (Like, In, etc)
     function Like(const Pattern: string): IExpression;
     function NotLike(const Pattern: string): IExpression;

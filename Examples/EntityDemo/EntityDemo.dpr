@@ -4,7 +4,7 @@ program EntityDemo;
 {$APPTYPE CONSOLE}
 
 uses
-  FastMM5,
+  // FastMM5,
   System.SysUtils,
   FireDAC.Comp.Client,
   EntityDemo.DbConfig in 'EntityDemo.DbConfig.pas',

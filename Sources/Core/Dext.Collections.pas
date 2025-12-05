@@ -24,6 +24,7 @@ type
   end;
 
   // IList<T> inherits from our clean IEnumerable<T>
+  {$M+}
   IList<T> = interface(IEnumerable<T>)
     ['{8877539D-3522-488B-933B-8C4581177699}']
     function GetCount: Integer;
@@ -35,8 +36,9 @@ type
     procedure AddRange(const Values: array of T); overload;
     procedure Insert(Index: Integer; const Value: T);
     function Remove(const Value: T): Boolean;
+    function Extract(const Value: T): T;  // Remove without freeing (for OwnsObjects lists)
     procedure RemoveAt(Index: Integer);
-    procedure Clear;
+    procedure Clear();
     function Contains(const Value: T): Boolean;
     function IndexOf(const Value: T): Integer;
 
@@ -96,6 +98,7 @@ type
     procedure AddRange(const Values: array of T); overload;
     procedure Insert(Index: Integer; const Value: T);
     function Remove(const Value: T): Boolean;
+    function Extract(const Value: T): T;
     procedure RemoveAt(Index: Integer);
     procedure Clear;
     function Contains(const Value: T): Boolean;
@@ -126,8 +129,8 @@ type
   /// </summary>
   TCollections = class
   public
-    class function CreateList<T>(OwnsObjects: Boolean = True): IList<T>;
-    class function CreateObjectList<T: class>(OwnsObjects: Boolean = True): IList<T>;
+    class function CreateList<T>(OwnsObjects: Boolean = False): IList<T>;
+    class function CreateObjectList<T: class>(OwnsObjects: Boolean = False): IList<T>;
   end;
 
 implementation
@@ -247,6 +250,23 @@ end;
 function TSmartList<T>.Remove(const Value: T): Boolean;
 begin
   Result := FList.Remove(Value) >= 0;
+end;
+
+function TSmartList<T>.Extract(const Value: T): T;
+var
+  SavedNotify: TCollectionNotifyEvent<T>;
+begin
+  // Temporarily disable OnNotify to prevent freeing the object
+  SavedNotify := FList.OnNotify;
+  try
+    FList.OnNotify := nil;
+    if FList.Remove(Value) >= 0 then
+      Result := Value
+    else
+      Result := Default(T);
+  finally
+    FList.OnNotify := SavedNotify;
+  end;
 end;
 
 procedure TSmartList<T>.RemoveAt(Index: Integer);

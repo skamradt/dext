@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   System.Generics.Collections,
   Dext.Persistence,
+  Dext.Collections, // Add Collections
   Dext.Specifications.Base,
   Dext.Types.Nullable;
 
@@ -18,8 +19,8 @@ type
     FId: Integer;
     FStreet: string;
     FCity: string;
-    FUsers: Lazy<TList<TUser>>;
-    function GetUsers: TList<TUser>;
+    FUsers: Lazy<IList<TUser>>; // Changed to IList
+    function GetUsers: IList<TUser>; // Changed to IList
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -31,7 +32,7 @@ type
     property City: string read FCity write FCity;
     
     [NotMapped]
-    property Users: TList<TUser> read GetUsers;
+    property Users: IList<TUser> read GetUsers; // Changed to IList
   end;
 
   [Table('users')]
@@ -128,28 +129,28 @@ implementation
 constructor TAddress.Create;
 begin
   inherited Create;
-  //WriteLn('DEBUG: TAddress.Create');
-  // FUsers is initialized as empty Lazy (default record)
-  // For new objects created by user, use CreateFrom with AOwnsValue=True so Lazy<T> frees the list.
-  FUsers := Lazy<TList<TUser>>.CreateFrom(TList<TUser>.Create, True);
+  // Initialize FUsers with empty list
+  // This is needed for manually created entities (not from DB)
+  // For entities from DB, TLazyInjector will replace this with TLazyLoader
+  FUsers := Lazy<IList<TUser>>.CreateFrom(TCollections.CreateObjectList<TUser>(False), True);
 end;
 
 destructor TAddress.Destroy;
 begin
-  //WriteLn('DEBUG: TAddress.Destroy ' + FStreet);
-  // FUsers.Value is now freed by Lazy<T> if it owns it.
-  // if FUsers.IsValueCreated then
-  //   FUsers.Value.Free;
+  // FUsers is managed. If it holds an interface, ARC handles it.
+  // If lazy created a value, Lazy destructor might free it if not interface?
+  // Lazy<T> implementation handles interface/object distinction usually?
+  // Actually, Dext.Types.Lazy might need check.
+  // Generally, if T is interface, Delphi manages it.
   inherited;
 end;
 
 class function TAddress.NewInstance: TObject;
 begin
   Result := inherited NewInstance;
-  //WriteLn('DEBUG: TAddress.NewInstance');
 end;
 
-function TAddress.GetUsers: TList<TUser>;
+function TAddress.GetUsers: IList<TUser>;
 begin
   Result := FUsers.Value;
 end;
@@ -169,7 +170,6 @@ end;
 
 destructor TUser.Destroy;
 begin
-  //WriteLn('DEBUG: TUser.Destroy ' + FName);
   inherited;
 end;
 
@@ -191,7 +191,6 @@ end;
 constructor TAdultUsersSpec.Create;
 begin
   inherited Create;
-  // Now we can use the typed metadata!
   Where(UserEntity.Age >= 18);
 end;
 

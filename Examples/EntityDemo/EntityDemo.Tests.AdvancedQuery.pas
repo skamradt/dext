@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Generics.Collections, Dext.Entity, Dext.Entity.Query,
+  Dext.Collections, // Add Collections unit
   Dext.Entity.Grouping, Dext.Entity.Joining, Dext.Persistence,
   Dext.Specifications.Interfaces, Dext.Specifications.Fluent,
   EntityDemo.Entities, EntityDemo.Tests.Base;
@@ -40,7 +41,7 @@ end;
 
 procedure TAdvancedQueryTest.TestSelectOptimized;
 var
-  Users: TList<TUser>;
+  Users: IList<TUser>; // Changed to IList
   Spec: ISpecification<TUser>;
   Builder: TSpecificationBuilder<TUser>;
   U: TUser;
@@ -72,17 +73,13 @@ begin
   Spec := Builder.Select(UserEntity.Name);
 
   Users := FContext.Entities<TUser>.List(Spec);
-  try
-    AssertTrue(Users.Count = 1, 'Should find 1 user', Format('Found %d', [Users.Count]));
-    AssertTrue(Users[0].Name = 'John Doe', 'Name should be loaded', Format('Found "%s"', [Users[0].Name]));
-    // Age should be default (0) because it wasn't selected
-    AssertTrue(Users[0].Age = 0, 'Age should be 0 (not loaded)', Format('Found %d', [Users[0].Age]));
-    // City should be default ('')
-    AssertTrue(Users[0].City = '', 'City should be empty (not loaded)', Format('Found "%s"', [Users[0].City]));
-  finally
-    for U in users do U.Free;
-    Users.Free;
-  end;
+  // No try..finally needed for Users, it's ARC managed
+  AssertTrue(Users.Count = 1, 'Should find 1 user', Format('Found %d', [Users.Count]));
+  AssertTrue(Users[0].Name = 'John Doe', 'Name should be loaded', Format('Found "%s"', [Users[0].Name]));
+  // Age should be default (0) because it wasn't selected
+  AssertTrue(Users[0].Age = 0, 'Age should be 0 (not loaded)', Format('Found %d', [Users[0].Age]));
+  // City should be default ('')
+  AssertTrue(Users[0].City = '', 'City should be empty (not loaded)', Format('Found "%s"', [Users[0].City]));
 end;
 
 procedure TAdvancedQueryTest.TestAggregations;
@@ -178,7 +175,7 @@ procedure TAdvancedQueryTest.TestDistinct;
 var
   UsersQuery: TFluentQuery<TUser>;
   CitiesQuery: TFluentQuery<string>;
-  DistinctCities: TList<string>;
+  DistinctCities: IList<string>; // Changed to IList
   Addr: TAddress;
 begin
   Log('   Testing Distinct...');
@@ -226,16 +223,13 @@ begin
     .Distinct;
 
   DistinctCities := CitiesQuery.ToList;
-  try
-    AssertTrue(DistinctCities.Count = 2,
-      'Should have 2 distinct cities (New York, London)', Format('Found %d', [DistinctCities.Count]));
-    AssertTrue(DistinctCities.Contains('New York'), 'Should contain New York',
-      'Missing New York');
-    AssertTrue(DistinctCities.Contains('London'), 'Should contain London',
-      'Missing London');
-  finally
-    DistinctCities.Free;
-  end;
+  // No try..finally
+  AssertTrue(DistinctCities.Count = 2,
+    'Should have 2 distinct cities (New York, London)', Format('Found %d', [DistinctCities.Count]));
+  AssertTrue(DistinctCities.Contains('New York'), 'Should contain New York',
+    'Missing New York');
+  AssertTrue(DistinctCities.Contains('London'), 'Should contain London',
+    'Missing London');
 end;
 
 procedure TAdvancedQueryTest.TestPagination;
@@ -283,7 +277,7 @@ end;
 procedure TAdvancedQueryTest.TestGroupBy;
 var
   Grouped: TFluentQuery<IGrouping<string, TUser>>;
-  GroupsList: TList<IGrouping<string, TUser>>;
+  GroupsList: IList<IGrouping<string, TUser>>; // Changed to IList
   Group: IGrouping<string, TUser>;
 begin
   Log('   Testing GroupBy...');
@@ -306,34 +300,30 @@ begin
     end);
 
   GroupsList := Grouped.ToList;
-  try
-    AssertTrue(GroupsList.Count = 2, 'Should have 2 groups', Format('Found %d',
-      [GroupsList.Count]));
+  // No try..finally
+  AssertTrue(GroupsList.Count = 2, 'Should have 2 groups', Format('Found %d',
+    [GroupsList.Count]));
 
-    for Group in GroupsList do
+  for Group in GroupsList do
+  begin
+    if Group.Key = 'New York' then
     begin
-      if Group.Key = 'New York' then
-      begin
-       // Count items in group
-        var Count := 0;
-        for var U in Group do
-          Inc(Count);
-        AssertTrue(Count = 2, 'New York group should have 2 users', Format('Found %d', [Count]));
-      end
-      else if Group.Key = 'London' then
-      begin
-        var Count := 0;
-        for var U in Group do
-          Inc(Count);
-        AssertTrue(Count = 1, 'London group should have 1 user', Format('Found %d',
-          [Count]));
-      end
-      else
-        AssertTrue(False, 'Unexpected group key', Group.Key);
-    end;
-
-  finally
-    GroupsList.Free;
+     // Count items in group
+      var Count := 0;
+      for var U in Group do
+        Inc(Count);
+      AssertTrue(Count = 2, 'New York group should have 2 users', Format('Found %d', [Count]));
+    end
+    else if Group.Key = 'London' then
+    begin
+      var Count := 0;
+      for var U in Group do
+        Inc(Count);
+      AssertTrue(Count = 1, 'London group should have 1 user', Format('Found %d',
+        [Count]));
+    end
+    else
+      AssertTrue(False, 'Unexpected group key', Group.Key);
   end;
 end;
 
@@ -344,7 +334,7 @@ end;
 
 procedure TAdvancedQueryTest.TestInclude;
 var
-  Users: TList<TUser>;
+  Users: IList<TUser>; // Changed to IList
   U1, U2: TUser;
   A1, A2: TAddress;
   Spec: ISpecification<TUser>;
@@ -385,29 +375,26 @@ begin
   Spec := Builder.Include(UserEntity.Address.Name);
   Users := FContext.Entities<TUser>.List(Spec);
 
-  try
-    AssertTrue(Users.Count = 2, 'Should have 2 users', Format('Found %d', [Users.Count]));
+  // No try..finally
+  AssertTrue(Users.Count = 2, 'Should have 2 users', Format('Found %d', [Users.Count]));
 
-    // Verify that Address navigation property is loaded
-    if Users.Count >= 1 then
-    begin
-      AssertTrue(Users[0].Address <> nil, 'User 1 Address should be loaded',
-        'User 1 Address is nil');
-      if Users[0].Address <> nil then
-        AssertTrue(Users[0].Address.Street = 'Main Street',
-          'User 1 should live on Main Street', Format('Found: %s', [Users[0].Address.Street]));
-    end;
+  // Verify that Address navigation property is loaded
+  if Users.Count >= 1 then
+  begin
+    AssertTrue(Users[0].Address <> nil, 'User 1 Address should be loaded',
+      'User 1 Address is nil');
+    if Users[0].Address <> nil then
+      AssertTrue(Users[0].Address.Street = 'Main Street',
+        'User 1 should live on Main Street', Format('Found: %s', [Users[0].Address.Street]));
+  end;
 
-    if Users.Count >= 2 then
-    begin
-      AssertTrue(Users[1].Address <> nil, 'User 2 Address should be loaded',
-        'User 2 Address is nil');
-      if Users[1].Address <> nil then
-        AssertTrue(Users[1].Address.Street = 'Second Avenue',
-          'User 2 should live on Second Avenue', Format('Found: %s', [Users[1].Address.Street]));
-    end;
-  finally
-    Users.Free;
+  if Users.Count >= 2 then
+  begin
+    AssertTrue(Users[1].Address <> nil, 'User 2 Address should be loaded',
+      'User 2 Address is nil');
+    if Users[1].Address <> nil then
+      AssertTrue(Users[1].Address.Street = 'Second Avenue',
+        'User 2 should live on Second Avenue', Format('Found: %s', [Users[1].Address.Street]));
   end;
 end;
 
@@ -417,4 +404,3 @@ begin
 end;
 
 end.
-

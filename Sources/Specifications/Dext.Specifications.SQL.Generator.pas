@@ -85,8 +85,10 @@ type
     function GenerateUpdate(const AEntity: T): string;
     function GenerateDelete(const AEntity: T): string;
     
-    function GenerateSelect(const ASpec: ISpecification<T>): string;
-    function GenerateCount(const ASpec: ISpecification<T>): string;
+    function GenerateSelect(const ASpec: ISpecification<T>): string; overload;
+    function GenerateSelect: string; overload;
+    function GenerateCount(const ASpec: ISpecification<T>): string; overload;
+    function GenerateCount: string; overload;
     function GenerateCreateTable(const ATableName: string): string;
     
     property Params: TDictionary<string, TValue> read FParams;
@@ -801,8 +803,6 @@ begin
   end;
 end;
 
-
-
 function TSQLGenerator<T>.GenerateSelect(const ASpec: ISpecification<T>): string;
 var
   WhereGen: TSQLWhereGenerator;
@@ -955,6 +955,70 @@ begin
   end;
 end;
 
+function TSQLGenerator<T>.GenerateSelect: string;
+var
+  SB: TStringBuilder;
+  Prop: TRttiProperty;
+  ColName: string;
+  Attr: TCustomAttribute;
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  First: Boolean;
+begin
+  FParams.Clear;
+  FParamCount := 0;
+
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('SELECT ');
+
+    // Select all mapped columns
+    Ctx := TRttiContext.Create;
+    Typ := Ctx.GetType(T);
+    First := True;
+
+    for Prop in Typ.GetProperties do
+    begin
+      ColName := Prop.Name;
+      var IsMapped := True;
+
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+
+      if PropMap <> nil then
+      begin
+        if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+      end;
+
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is NotMappedAttribute then IsMapped := False;
+
+        if (PropMap = nil) or (PropMap.ColumnName = '') then
+        begin
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+      end;
+
+      if not IsMapped then Continue;
+
+      if not First then SB.Append(', ');
+      First := False;
+
+      SB.Append(FDialect.QuoteIdentifier(ColName));
+    end;
+
+    SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
 function TSQLGenerator<T>.GenerateCount(const ASpec: ISpecification<T>): string;
 var
   WhereGen: TSQLWhereGenerator;
@@ -965,7 +1029,6 @@ begin
   FParamCount := 0;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
-
     
   try
     WhereSQL := WhereGen.Generate(ASpec.GetExpression);
@@ -990,6 +1053,13 @@ begin
   finally
     SB.Free;
   end;
+end;
+
+function TSQLGenerator<T>.GenerateCount: string;
+begin
+  FParams.Clear;
+  FParamCount := 0;
+  Result := 'SELECT COUNT(*) FROM ' + FDialect.QuoteIdentifier(GetTableName);
 end;
 
 function TSQLGenerator<T>.GenerateCreateTable(const ATableName: string): string;

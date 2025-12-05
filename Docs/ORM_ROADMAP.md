@@ -79,6 +79,7 @@ O objetivo foi permitir consultas complexas de forma tipada e fluente. Concluíd
   - `Select(Properties: array of string): TFluentQuery<T>` (Novo - Partial Load)
   - *Exemplo*: `Context.Entities<TUser>.Select(['Name', 'City']).ToList()`
   - *Status*: ✅ **Implementado e Validado**
+  - *Memory Safety*: Projeções usam automaticamente "No-Tracking" e "OwnsObjects=True" para prevenir leaks de entidades parciais.
 
 - [x] **Agregações**: Funções de agregação tipadas
   - `Sum`, `Average`, `Min`, `Max` (Suporte a Property Name string e TFunc)
@@ -152,6 +153,34 @@ Melhorar como os dados relacionados são carregados e gerenciar ciclo de vida da
 - [ ] **CLI Tools**: Comandos para gerar migrations e atualizar banco.
 - [x] **Scaffolding**: Gerar classes de entidade a partir de banco existente (Db-First).
 
+### 🔑 Melhorias de Primary Keys & Composite Keys
+Suporte robusto a diferentes tipos e combinações de chaves primárias.
+
+- [x] **Composite Key Find**: Busca por chave composta implementada
+  - Suporte a `Find([key1, key2])` e `Find(VarArrayOf([key1, key2]))`
+  - Construção automática de expressões AND para múltiplas PKs
+  - *Status*: ✅ **Implementado**
+  
+- [ ] **Dynamic PK Column Mapping** 🔥 **PRIORITÁRIO**
+  - **Problema**: Código atual assume coluna PK fixa como "Id"
+  - **Solução**: Usar mapeamento real da entidade (via Attributes ou Fluent Mapping)
+  - **Impacto**: Métodos `Find(Variant)` e queries precisam usar PK real
+  - **Exemplo**: `[PK] property OrderId` deve ser usado ao invés de assumir "Id"
+  
+- [ ] **Mixed Type Composite Keys** 🔥 **PRIORITÁRIO**
+  - **Problema**: Implementação atual assume `array of Integer`
+  - **Necessidade**: Suportar combinações variadas de tipos em PKs compostas
+  - **Casos Comuns**:
+    - `Integer + DateTime` (ex: OrderId + OrderDate)
+    - `Integer + String` (ex: CompanyId + DocumentNumber)
+    - `String + String` (ex: CountryCode + StateCode)
+    - `GUID + Integer` (ex: TenantId + RecordId)
+  - **Solução Proposta**:
+    - Criar overload `Find(const AId: array of Variant)`
+    - Usar RTTI para determinar tipo real de cada campo PK
+    - Converter valores de acordo com tipo esperado
+  - **Benefício**: Suporte a sistemas legados com PKs criativas
+
 ### 🚧 Fase 6: Migrations (Em Progresso)
 Sistema completo de evolução de esquema Code-First.
 - [x] **Schema Builder**: API fluente para definição de DDL (`CreateTable`, `AddColumn`).
@@ -180,6 +209,13 @@ Resolução definitiva para memory leaks e gerenciamento de ciclo de vida.
   - Gerenciamento automático de memória (ref-counted ou scope-based).
   - Substituição de `TObjectList<T>` crua nas APIs públicas (`Entities`, `Query.List`).
 - [x] **Expression Support**: Suporte a expressions diretamente nas listas (`List.Where(x => x.Age > 18)`).
+- [ ] **No Tracking Queries** 🔥 **PRIORITÁRIO**: Queries sem tracking para APIs read-only.
+  - **API**: `Context.Entities<TUser>.AsNoTracking.List` 
+  - **Ownership**: Listas com `OwnsObjects=True` (objetos não vão para IdentityMap)
+  - **Performance**: Sem overhead de ChangeTracker e IdentityMap
+  - **Use Cases**: APIs REST, relatórios, bulk reads
+  - **Memory**: Objetos liberados quando lista sai de escopo
+  - **Detach Alternative**: Substituir uso de `Detach()` por queries no-tracking
 
 #### 3. Framework Garbage Collector
 Sistema de limpeza de objetos em background para alta performance em servidores HTTP.

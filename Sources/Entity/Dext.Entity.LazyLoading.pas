@@ -8,6 +8,7 @@ uses
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
+  Dext.Collections,
   Dext.Entity.Core,
   Dext.Entity.Attributes,
   Dext.Types.Lazy,
@@ -46,7 +47,7 @@ type
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
   public
-    constructor Create(AContext: IDbContext; AEntity: TObject; const APropName: string; AIsCollection: Boolean);
+    constructor Create(AContext: IDbContext; AEntity: TObject; const APropName: string; AIsCollection: Boolean; const AExistingValue: TValue);
     destructor Destroy; override;
   end;
 
@@ -128,6 +129,7 @@ begin
     Result := True; // For other types like GUID, assume valid if not empty
 end;
 
+
 { TLazyInjector }
 
 class procedure TLazyInjector.Inject(AContext: IDbContext; AEntity: TObject);
@@ -158,6 +160,9 @@ var
   LazyIntf: ILazy;
   LazyVal: TValue;
   IntfVal: TValue;
+  ExistingInstance: TValue;
+  ExistingValue: TValue;
+  LazyInst: ILazy;
 begin
   // 1. Determine Property Name from Field Name (FAddress -> Address)
   PropName := AField.Name;
@@ -166,7 +171,9 @@ begin
     
   // 2. Determine if Collection
   IsCollection := False;
-  if AField.FieldType.Name.Contains('TList<') or AField.FieldType.Name.Contains('TObjectList<') then
+  if AField.FieldType.Name.Contains('TList<') or 
+     AField.FieldType.Name.Contains('TObjectList<') or
+     AField.FieldType.Name.Contains('IList<') then
     IsCollection := True;
 
   // 3. Get Lazy<T> record structure
@@ -175,17 +182,41 @@ begin
   if InstanceField = nil then 
     Exit;
   
-  // 4. Create Loader
-  Loader := TLazyLoader.Create(AContext, AEntity, PropName, IsCollection);
+  // 4. Capture Existing Value (e.g. List created in constructor)
+  ExistingValue := TValue.Empty;
+  
+  LazyVal := AField.GetValue(AEntity);
+  ExistingInstance := InstanceField.GetValue(LazyVal.GetReferenceToRawData);
+  
+  if not ExistingInstance.IsEmpty then
+  begin
+    if ExistingInstance.Kind = tkInterface then
+    begin
+      // Extract the ILazy interface from the record's FInstance
+      if ExistingInstance.TryAsType<ILazy>(LazyInst) and (LazyInst <> nil) then
+      begin
+         // If it is value created (like TValueLazy from constructor), get the value
+         if LazyInst.IsValueCreated then
+         begin
+           try
+             ExistingValue := LazyInst.Value;
+           except
+             // Ignore errors extracting value
+           end;
+         end;
+      end;
+    end;
+  end;
+
+  // 5. Create Loader passing existing value
+  Loader := TLazyLoader.Create(AContext, AEntity, PropName, IsCollection, ExistingValue);
   LazyIntf := Loader;
 
-  // 5. Assign interface to Lazy<T>.FInstance
-  LazyVal := AField.GetValue(AEntity);
-  
+  // 6. Assign interface to Lazy<T>.FInstance
   // Create TValue with ILazy type
   TValue.Make(@LazyIntf, TypeInfo(ILazy), IntfVal);
   
-  // Set FInstance on the record
+  // Set FInstance on the record - replaces existing one
   InstanceField.SetValue(LazyVal.GetReferenceToRawData, IntfVal);
   
   // Set the record back to the entity
@@ -194,7 +225,7 @@ end;
 
 { TLazyLoader }
 
-constructor TLazyLoader.Create(AContext: IDbContext; AEntity: TObject; const APropName: string; AIsCollection: Boolean);
+constructor TLazyLoader.Create(AContext: IDbContext; AEntity: TObject; const APropName: string; AIsCollection: Boolean; const AExistingValue: TValue);
 begin
   inherited Create;
   FContextPtr := Pointer(AContext);
@@ -202,6 +233,7 @@ begin
   FPropName := APropName;
   FIsCollection := AIsCollection;
   FLoaded := False;
+  FValue := AExistingValue; // Store existing list if any
 end;
 
 destructor TLazyLoader.Destroy;
@@ -209,7 +241,11 @@ begin
   if FIsCollection and FLoaded and (not FValue.IsEmpty) then
   begin
     // If it's a collection, we own the TList/TObjectList created in LoadValue
-    FValue.AsObject.Free;
+    // BUT since we might be using a shared interface list (reference counted), 
+    // simply freeing the object might be dangerous if implicit.
+    // Generally, if it holds an Interface, we do NOT free it.
+    if FValue.Kind = tkClass then
+      FValue.AsObject.Free;
   end;
   inherited;
 end;
@@ -248,7 +284,7 @@ var
   PKVal: string;
   PropHelper: TPropExpression;
   Expr: IExpression;
-  ResList: TList<TObject>;
+  ResList: IList<TObject>;
   ListObj: TObject;
   AddMethod: TRttiMethod;
   Obj: TObject;
@@ -259,6 +295,7 @@ var
   LoadedObj: TObject;
   IntVal: Integer;
   ExpectedClass: TClass;
+  UseExistingInterface: Boolean;
 begin
   try
     Ctx := TRttiContext.Create;
@@ -311,19 +348,56 @@ begin
                        
                     ResList := ChildSet.ListObjects(Expr);
                     try
-                      // Check if it's TObjectList to pass OwnsObjects=True
-                      if TypeName.Contains('TObjectList<') then
-                        ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, [True])
-                      else
-                        ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, []);
+                      // Try to use existing list stored in FValue (passed from constructor)
+                      UseExistingInterface := False;
+                      ListObj := nil;
+                      
+                      if not FValue.IsEmpty then
+                      begin
+                        if FValue.Kind = tkInterface then
+                        begin
+                           // Existing IList<T>
+                           UseExistingInterface := True;
+                           // Note: We don't need to extract the interface pointer, invoke works on TValue wrapping interface
+                        end
+                        else if FValue.IsObject then
+                        begin
+                           // Existing TObjectList
+                           ListObj := FValue.AsObject;
+                        end;
+                      end;
+                      
+                      // If no existing list, create a new one
+                      if not UseExistingInterface and (ListObj = nil) then
+                      begin
+                        // Check if it's TObjectList to pass OwnsObjects=True
+                        if TypeName.Contains('TObjectList<') then
+                          ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, [True])
+                        else if TypeName.Contains('IList<') then
+                        begin
+                          // If IList<T> and not initialized, we try to create an ObjectList<T> that implements it?
+                          // But RTTI for interface type won't give us a metaclass to instantiate.
+                          // Usually users must initialize IList.
+                          // If they didn't, we can try TCollections class if we know T
+                          Exit; // Can't instantiate interface without factory
+                        end
+                        else
+                          ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, []);
 
-                      if ListObj = nil then
-                        Exit;
+                        if ListObj = nil then
+                          Exit;
+                      end;
+                      
+                      // Get Add method
+                      if UseExistingInterface then
+                        AddMethod := Prop.PropertyType.GetMethod('Add')
+                      else
+                        AddMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Add');
                         
-                      AddMethod := Prop.PropertyType.GetMethod('Add');
                       if AddMethod = nil then
                         Exit;
                       
+                      // Populate the list
                       for Obj in ResList do
                       begin
                            if Obj = nil then 
@@ -338,15 +412,21 @@ begin
                                 Continue;
                             end;
                             
-                            AddMethod.Invoke(ListObj, [Obj]);
+                            if UseExistingInterface then
+                               AddMethod.Invoke(FValue, [Obj])
+                            else
+                               AddMethod.Invoke(ListObj, [Obj]);
+                               
                           except
                             // Ignore errors adding individual items
                           end;
                       end;
                       
-                      FValue := TValue.From(ListObj); // Correctly wrap the object
+                      if not UseExistingInterface then
+                        FValue := TValue.From(ListObj);
+                        
                     finally
-                      ResList.Free;
+                      ResList := nil; // Auto-managed
                     end;
                 end;
             end;
@@ -354,7 +434,7 @@ begin
     end
     else
     begin
-        // Load Reference
+        // Load Reference (unchanged logic)
         FKPropName := FPropName + 'Id';
         FKProp := Ctx.GetType(FEntity.ClassType).GetProperty(FKPropName);
         if FKProp <> nil then

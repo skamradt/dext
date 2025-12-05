@@ -9,6 +9,7 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
+  Dext.Collections,
   Dext.Entity.Query;
 
 type
@@ -24,8 +25,19 @@ type
 
   TGrouping<TKey, T> = class(TInterfacedObject, IGrouping<TKey, T>)
   private
+    type
+      TIListEnumeratorWrapper = class(TEnumerator<T>)
+      private
+        FEnumerator: IEnumerator<T>;
+      protected
+        function DoGetCurrent: T; override;
+        function DoMoveNext: Boolean; override;
+      public
+        constructor Create(const AEnumerator: IEnumerator<T>);
+      end;
+  private
     FKey: TKey;
-    FItems: TList<T>;
+    FItems: IList<T>;  // Changed to IList<T>
   public
     constructor Create(const AKey: TKey);
     destructor Destroy; override;
@@ -71,12 +83,13 @@ constructor TGrouping<TKey, T>.Create(const AKey: TKey);
 begin
   inherited Create;
   FKey := AKey;
-  FItems := TList<T>.Create;
+  // Objects are owned by IdentityMap, not by this list
+  FItems := TCollections.CreateList<T>(False);
 end;
 
 destructor TGrouping<TKey, T>.Destroy;
 begin
-  FItems.Free;
+  // FItems is interface, no need to Free
   inherited;
 end;
 
@@ -92,7 +105,25 @@ end;
 
 function TGrouping<TKey, T>.GetEnumerator: TEnumerator<T>;
 begin
-  Result := FItems.GetEnumerator;
+  Result := TIListEnumeratorWrapper.Create(FItems.GetEnumerator);
+end;
+
+{ TGrouping<TKey, T>.TIListEnumeratorWrapper }
+
+constructor TGrouping<TKey, T>.TIListEnumeratorWrapper.Create(const AEnumerator: IEnumerator<T>);
+begin
+  inherited Create;
+  FEnumerator := AEnumerator;
+end;
+
+function TGrouping<TKey, T>.TIListEnumeratorWrapper.DoGetCurrent: T;
+begin
+  Result := FEnumerator.Current;
+end;
+
+function TGrouping<TKey, T>.TIListEnumeratorWrapper.DoMoveNext: Boolean;
+begin
+  Result := FEnumerator.MoveNext;
 end;
 
 { TGroupByIterator<TKey, T> }
