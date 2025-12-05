@@ -153,6 +153,7 @@
         <DCCReference Include="EntityDemo.Tests.FluentMappingSyntax.pas"/>
         <DCCReference Include="EntityDemo.Entities.pas"/>
         <DCCReference Include="EntityDemo.Tests.Migrations.pas"/>
+        <DCCReference Include="EntityDemo.Tests.Collections.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

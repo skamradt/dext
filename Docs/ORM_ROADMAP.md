@@ -176,10 +176,10 @@ Otimização do startup e overhead de runtime.
 
 #### 2. Managed Container Types (Memory Safety)
 Resolução definitiva para memory leaks e gerenciamento de ciclo de vida.
-- [ ] **Smart Lists (`IList<T>`)**: Implementação de listas baseadas em interfaces.
+- [x] **Smart Lists (`IList<T>`)**: Implementação de listas baseadas em interfaces.
   - Gerenciamento automático de memória (ref-counted ou scope-based).
   - Substituição de `TObjectList<T>` crua nas APIs públicas (`Entities`, `Query.List`).
-- [ ] **Expression Support**: Suporte a expressions diretamente nas listas (`List.Where(x => x.Age > 18)`).
+- [x] **Expression Support**: Suporte a expressions diretamente nas listas (`List.Where(x => x.Age > 18)`).
 
 #### 3. Framework Garbage Collector
 Sistema de limpeza de objetos em background para alta performance em servidores HTTP.

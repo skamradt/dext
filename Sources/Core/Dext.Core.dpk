@@ -106,7 +106,6 @@ contains
   Dext in 'Dext.pas',
   Dext.Options.Extensions in 'Dext.Options.Extensions.pas',
   Dext.Core.Memory in 'Dext.Core.Memory.pas',
-  Dext.Collections in 'Dext.Collections.pas',
   Dext.Core.ValueConverters in 'Dext.Core.ValueConverters.pas',
   Dext.Specifications.Base in '..\Specifications\Dext.Specifications.Base.pas',
   Dext.Specifications.Expression in '..\Specifications\Dext.Specifications.Expression.pas',
@@ -143,7 +142,8 @@ contains
   Dext.Entity.Drivers.FireDAC in '..\Entity\Dext.Entity.Drivers.FireDAC.pas',
   Dext.Entity.Drivers.Interfaces in '..\Entity\Dext.Entity.Drivers.Interfaces.pas',
   Dext.Entity.Naming in '..\Entity\Dext.Entity.Naming.pas',
-  Dext.Entity.Attributes in '..\Entity\Dext.Entity.Attributes.pas';
+  Dext.Entity.Attributes in '..\Entity\Dext.Entity.Attributes.pas',
+  Dext.Collections in 'Dext.Collections.pas';
 
 end.
 

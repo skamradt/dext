@@ -190,13 +190,15 @@
         <DCCReference Include="Dext.Types.Lazy.pas"/>
         <DCCReference Include="Dext.Types.Nullable.pas"/>
         <DCCReference Include="..\Hosting\Dext.Hosting.CLI.pas"/>
-        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Runner.pas"/>
-        <DCCReference Include="..\Entity\Dext.Entity.Migrations.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Migrations.Generator.pas"/>
+        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Serializers.Json.pas"/>
+        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Json.pas"/>
+        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Runner.pas"/>
+        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Differ.pas"/>
+        <DCCReference Include="..\Entity\Dext.Entity.Migrations.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Migrations.Builder.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Migrations.Extractor.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Mapping.pas"/>
-        <DCCReference Include="..\Entity\Dext.Entity.Migrations.Differ.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Migrations.Model.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Dialects.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Migrations.Operations.pas"/>
@@ -213,6 +215,7 @@
         <DCCReference Include="..\Entity\Dext.Entity.Drivers.Interfaces.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Naming.pas"/>
         <DCCReference Include="..\Entity\Dext.Entity.Attributes.pas"/>
+        <DCCReference Include="Dext.Collections.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -22,7 +22,8 @@ uses
   EntityDemo.Tests.Scaffolding in 'EntityDemo.Tests.Scaffolding.pas',
   EntityDemo.Tests.FluentMappingSyntax in 'EntityDemo.Tests.FluentMappingSyntax.pas',
   EntityDemo.Entities in 'EntityDemo.Entities.pas',
-  EntityDemo.Tests.Migrations in 'EntityDemo.Tests.Migrations.pas';
+  EntityDemo.Tests.Migrations in 'EntityDemo.Tests.Migrations.pas',
+  EntityDemo.Tests.Collections in 'EntityDemo.Tests.Collections.pas';
 
 procedure ConfigureDatabase(Provider: TDatabaseProvider);
 begin
@@ -49,6 +50,11 @@ begin
 // TODO:
 //    dpMySQL:
 //    dpOracle:
+  end;
+
+  if Provider in [dpSQLite, dpSQLiteMemory] then
+  begin
+    //RegisterExpectedMemoryLeak(Unknown)
   end;
 
   WriteLn('📊 Database Provider: ' + TDbConfig.GetProviderName);
@@ -94,6 +100,8 @@ begin
   RunTest(TScaffoldingTest);
   // 12. Migrations Builder Tests
   RunTest(TMigrationsTest);
+  // 13. Collections Tests
+  RunTest(TCollectionsTest);
 
   WriteLn('');
   WriteLn('✨ All tests completed.');
