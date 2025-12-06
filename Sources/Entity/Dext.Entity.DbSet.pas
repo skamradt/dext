@@ -35,6 +35,9 @@ type
     FColumns: TDictionary<string, string>;      
     FIdentityMap: TObjectDictionary<string, T>; 
     FMap: TEntityMap;
+    // Filters control
+    FIgnoreQueryFilters: Boolean;
+    FOnlyDeleted: Boolean;
 
     function GetFContext: IDbContext;
     property FContext: IDbContext read GetFContext;
@@ -104,6 +107,12 @@ type
     ///   Shortcut for QueryAll.AsNoTracking.
     /// </summary>
     function AsNoTracking: TFluentQuery<T>;
+
+    // Soft Delete Control
+    function IgnoreQueryFilters: IDbSet<T>;
+    function OnlyDeleted: IDbSet<T>;
+    procedure HardDelete(const AEntity: T);
+    procedure Restore(const AEntity: T);
   end;
 
 implementation
@@ -127,6 +136,8 @@ begin
   FPKColumns := TList<string>.Create;
   FRttiContext := TRttiContext.Create;
   FIdentityMap := TObjectDictionary<string, T>.Create([doOwnsValues]);
+  FIgnoreQueryFilters := False;
+  FOnlyDeleted := False;
   MapEntity;
 end;
 
@@ -551,8 +562,11 @@ begin
            PKVal := FContext.Connection.GetLastInsertId;
       end;
     end;
-    if (FPKColumns.Count = 1) and not VarIsNull(PKVal) then
-    begin
+     if FPKColumns.Count = 1 then
+     begin
+       if VarIsNull(PKVal) or VarIsEmpty(PKVal) then
+         raise Exception.Create('Failed to retrieve ID for ' + GetTableName + '. Entity was not added to IdentityMap (possible memory leak).');
+         
        if FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
        begin
          TValueConverter.ConvertAndSet(AEntity, Prop, TValue.FromVariant(PKVal));
@@ -560,7 +574,7 @@ begin
          if not FIdentityMap.ContainsKey(NewId) then
            FIdentityMap.Add(NewId, T(AEntity));
        end;
-    end;
+     end;
   finally
     Generator.Free;
   end;
@@ -671,7 +685,103 @@ var
   Generator: TSqlGenerator<T>;
   Sql: string;
   Cmd: IDbCommand;
+  Ctx: TRttiContext;
+  RType: TRttiType;
+  SoftDeleteAttr: SoftDeleteAttribute;
+  Prop: TRttiProperty;
+  ColumnName: string;
+  IsSoftDelete: Boolean;
 begin
+  IsSoftDelete := False;
+  SoftDeleteAttr := nil;
+  
+  // Check if entity has [SoftDelete] attribute
+  Ctx := TRttiContext.Create;
+  try
+    RType := Ctx.GetType(T);
+    if RType <> nil then
+    begin
+      for var Attr in RType.GetAttributes do
+      begin
+        if Attr is SoftDeleteAttribute then
+        begin
+          SoftDeleteAttr := SoftDeleteAttribute(Attr);
+          IsSoftDelete := True;
+          Break;
+        end;
+      end;
+    end;
+  finally
+    Ctx.Free;
+  end;
+  
+  if IsSoftDelete and (SoftDeleteAttr <> nil) then
+  begin
+    // Soft Delete: UPDATE entity to mark as deleted
+    Ctx := TRttiContext.Create;
+    try
+      RType := Ctx.GetType(T);
+      if RType <> nil then
+      begin
+        // Find the soft delete column property
+        ColumnName := SoftDeleteAttr.ColumnName;
+        Prop := nil;
+        
+        for var P in RType.GetProperties do
+        begin
+          // Check match by Property Name
+          if SameText(P.Name, ColumnName) then
+          begin
+            Prop := P;
+            Break;
+          end;
+
+          // Check match by Column Name
+          for var Attr in P.GetAttributes do
+          begin
+            if Attr is ColumnAttribute then
+            begin
+               if SameText(ColumnAttribute(Attr).Name, ColumnName) then
+               begin
+                 Prop := P;
+                 Break;
+               end;
+            end;
+          end;
+          if Prop <> nil then Break;
+        end;
+        
+        if Prop <> nil then
+        begin
+          // Set the soft delete value
+          var DelVal := SoftDeleteAttr.DeletedValue;
+          var ValToSet: TValue;
+          
+          if Prop.PropertyType.Handle = TypeInfo(Boolean) then
+            ValToSet := TValue.From(Boolean(DelVal))
+          else 
+            ValToSet := TValue.FromVariant(DelVal);
+            
+          Prop.SetValue(AEntity, ValToSet);
+          
+          // Use PersistUpdate to save the change
+          PersistUpdate(AEntity);
+          
+          // Remove from identity map (entity is "deleted" from context perspective)
+          var Key := GetEntityId(T(AEntity));
+          if FIdentityMap.ContainsKey(Key) then
+            FIdentityMap.Remove(Key)
+          else
+            AEntity.Free;
+          Exit;
+        end;
+      end;
+    finally
+      Ctx.Free;
+    end;
+  end;
+  
+  // Hard Delete: Physical DELETE from database
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
   try
     Sql := Generator.GenerateDelete(T(AEntity));
@@ -770,6 +880,8 @@ begin
     Result := TCollections.CreateList<T>;
 
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
+  Generator.OnlyDeleted := FOnlyDeleted;
   try
     if ASpec <> nil then
       Sql := Generator.GenerateSelect(ASpec)
@@ -1059,6 +1171,8 @@ var
   Cmd: IDbCommand;
 begin
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
+  Generator.OnlyDeleted := FOnlyDeleted;
   try
     var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
     Spec.Take(1);
@@ -1081,6 +1195,8 @@ var
   Cmd: IDbCommand;
 begin
   Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
+  Generator.OnlyDeleted := FOnlyDeleted;
   try
     var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
     Sql := Generator.GenerateCount(Spec);
@@ -1090,6 +1206,109 @@ begin
     Result := Val.AsInteger;
   finally
     Generator.Free;
+  end;
+end;
+
+function TDbSet<T>.IgnoreQueryFilters: IDbSet<T>;
+begin
+  FIgnoreQueryFilters := True;
+  Result := Self;
+end;
+
+function TDbSet<T>.OnlyDeleted: IDbSet<T>;
+begin
+  FOnlyDeleted := True;
+  Result := Self;
+end;
+
+procedure TDbSet<T>.HardDelete(const AEntity: T);
+var
+  Generator: TSqlGenerator<T>;
+  Sql: string;
+  Cmd: IDbCommand;
+begin
+  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  try
+    Sql := Generator.GenerateDelete(AEntity);
+    Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
+    for var Pair in Generator.Params do
+      Cmd.AddParam(Pair.Key, Pair.Value);
+    Cmd.ExecuteNonQuery;
+    FIdentityMap.Remove(GetEntityId(AEntity));
+  finally
+    Generator.Free;
+  end;
+end;
+
+procedure TDbSet<T>.Restore(const AEntity: T);
+var
+  Ctx: TRttiContext;
+  RType: TRttiType;
+  SoftDeleteAttr: SoftDeleteAttribute;
+  Prop: TRttiProperty;
+  ColumnName: string;
+begin
+  SoftDeleteAttr := nil;
+  Ctx := TRttiContext.Create;
+  try
+    RType := Ctx.GetType(T);
+    if RType <> nil then
+    begin
+      for var Attr in RType.GetAttributes do
+      begin
+        if Attr is SoftDeleteAttribute then
+        begin
+          SoftDeleteAttr := SoftDeleteAttribute(Attr);
+          Break;
+        end;
+      end;
+      
+      if SoftDeleteAttr <> nil then
+      begin
+        ColumnName := SoftDeleteAttr.ColumnName;
+        Prop := nil;
+        
+        for var P in RType.GetProperties do
+        begin
+          // Check match by Property Name
+          if SameText(P.Name, ColumnName) then
+          begin
+            Prop := P;
+            Break;
+          end;
+
+          // Check match by Column Name
+          for var Attr in P.GetAttributes do
+          begin
+            if Attr is ColumnAttribute then
+            begin
+               if SameText(ColumnAttribute(Attr).Name, ColumnName) then
+               begin
+                 Prop := P;
+                 Break;
+               end;
+            end;
+          end;
+          if Prop <> nil then Break;
+        end;
+        
+        if Prop <> nil then
+        begin
+          var NotDelVal := SoftDeleteAttr.NotDeletedValue;
+          var ValToSet: TValue;
+          
+          if Prop.PropertyType.Handle = TypeInfo(Boolean) then
+            ValToSet := TValue.From(Boolean(NotDelVal))
+          else 
+            ValToSet := TValue.FromVariant(NotDelVal);
+
+          Prop.SetValue(TObject(AEntity), ValToSet);
+          PersistUpdate(AEntity);
+        end;
+      end;
+    end;
+  finally
+    Ctx.Free;
   end;
 end;
 

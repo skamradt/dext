@@ -3,7 +3,8 @@ unit Dext.Entity.Attributes;
 interface
 
 uses
-  System.Rtti;
+  System.Rtti,
+  System.Variants;
 
 type
   TableAttribute = class(TCustomAttribute)
@@ -39,6 +40,33 @@ type
   ///   The property must be of an integer type.
   /// </summary>
   VersionAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Enables soft delete for an entity.
+  ///   Instead of physically deleting records, marks them as deleted.
+  ///   Usage: [SoftDelete('IsDeleted')] or [SoftDelete('DeletedAt')]
+  /// </summary>
+  SoftDeleteAttribute = class(TCustomAttribute)
+  private
+    FColumnName: string;
+    FDeletedValue: Variant;
+    FNotDeletedValue: Variant;
+  public
+    /// <summary>
+    ///   Creates a soft delete attribute with a boolean column (default: 'IsDeleted')
+    /// </summary>
+    constructor Create(const AColumnName: string = 'IsDeleted'); overload;
+    
+    /// <summary>
+    ///   Creates a soft delete attribute with custom deleted/not-deleted values
+    ///   Useful for timestamp-based soft delete (DeletedAt column)
+    /// </summary>
+    constructor Create(const AColumnName: string; const ADeletedValue, ANotDeletedValue: Variant); overload;
+    
+    property ColumnName: string read FColumnName;
+    property DeletedValue: Variant read FDeletedValue;
+    property NotDeletedValue: Variant read FNotDeletedValue;
   end;
 
   /// <summary>
@@ -106,6 +134,23 @@ begin
   FColumnName := AColumnName;
   FOnDelete := AOnDelete;
   FOnUpdate := AOnUpdate;
+end;
+
+{ SoftDeleteAttribute }
+
+constructor SoftDeleteAttribute.Create(const AColumnName: string);
+begin
+  FColumnName := AColumnName;
+  // Default: Boolean soft delete (IsDeleted = 1 means deleted, 0 means not deleted)
+  FDeletedValue := 1;
+  FNotDeletedValue := 0;
+end;
+
+constructor SoftDeleteAttribute.Create(const AColumnName: string; const ADeletedValue, ANotDeletedValue: Variant);
+begin
+  FColumnName := AColumnName;
+  FDeletedValue := ADeletedValue;
+  FNotDeletedValue := ANotDeletedValue;
 end;
 
 end.

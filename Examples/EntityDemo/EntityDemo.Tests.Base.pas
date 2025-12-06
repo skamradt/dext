@@ -164,6 +164,7 @@ begin
   DropTableIfExists('user_profiles');
   DropTableIfExists('documents');
   DropTableIfExists('articles');
+  DropTableIfExists('tasks');
 
   // 2. Initialize Context
   FContext := TDbContext.Create(DbConnection, Dialect);
@@ -179,6 +180,7 @@ begin
   FContext.Entities<TArticle>;
   FContext.Entities<TUserProfile>;
   FContext.Entities<TUserWithProfile>;
+  FContext.Entities<TTask>;
   
   WriteLn('🏗️  Creating schema...');
   FContext.EnsureCreated;

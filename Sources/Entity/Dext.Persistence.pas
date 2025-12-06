@@ -46,6 +46,7 @@ type
   ForeignKeyAttribute = Dext.Entity.Attributes.ForeignKeyAttribute;
   NotMappedAttribute = Dext.Entity.Attributes.NotMappedAttribute;
   VersionAttribute = Dext.Entity.Attributes.VersionAttribute;
+  SoftDeleteAttribute = Dext.Entity.Attributes.SoftDeleteAttribute;
   
   // Enums (Type Aliases)
   TCascadeAction = Dext.Entity.Attributes.TCascadeAction;

@@ -247,6 +247,33 @@ type
     property Profile: TUserProfile read GetProfile write SetProfile;
   end;
 
+  /// <summary>
+  ///   Task entity with soft delete support
+  /// </summary>
+  [Table('tasks'), SoftDelete('IsDeleted')]
+  TTask = class
+  private
+    FId: Integer;
+    FTitle: string;
+    FDescription: string;
+    FIsCompleted: Boolean;
+    FIsDeleted: Boolean;
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    
+    property Title: string read FTitle write FTitle;
+    property Description: string read FDescription write FDescription;
+    
+    [Column('is_completed')]
+    property IsCompleted: Boolean read FIsCompleted write FIsCompleted;
+    
+    [Column('is_deleted')]
+    property IsDeleted: Boolean read FIsDeleted write FIsDeleted;
+  public
+    destructor Destroy; override;
+  end;
+
 
   // 🧬 Metadata Implementation (TypeOf)
   UserEntity = class
@@ -350,6 +377,19 @@ end;
 procedure TUserWithProfile.SetProfile(const Value: TUserProfile);
 begin
   FProfile := Lazy<TUserProfile>.CreateFrom(Value);
+end;
+
+{ TTask - Soft Delete Test Entity }
+
+// No implementation needed for TTask (simple entity)
+
+destructor TTask.Destroy;
+begin
+  if Title <> '' then
+    WriteLn('    🗑️ TTask Destroyed: ' + Title)
+  else
+    WriteLn('    🗑️ TTask Destroyed: (No Title)');
+  inherited;
 end;
 
 end.

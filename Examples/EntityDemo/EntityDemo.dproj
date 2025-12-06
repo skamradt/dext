@@ -155,6 +155,8 @@
         <DCCReference Include="EntityDemo.Tests.Migrations.pas"/>
         <DCCReference Include="EntityDemo.Tests.Collections.pas"/>
         <DCCReference Include="EntityDemo.Tests.NoTracking.pas"/>
+        <DCCReference Include="EntityDemo.Tests.MixedCompositeKeys.pas"/>
+        <DCCReference Include="EntityDemo.Tests.SoftDelete.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

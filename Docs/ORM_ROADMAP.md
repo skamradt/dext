@@ -204,8 +204,8 @@ Foco em otimização extrema, gerenciamento de memória e observabilidade.
 
 ### **Sprint 1: Enterprise Essentials** 🔥 **PRIORITÁRIO** (4 semanas)
 1. **Soft Delete** (1 semana)
-   - Global query filters + `[SoftDelete]` attribute
-   - Exclusão lógica transparente
+   - [x] Global query filters + `[SoftDelete]` attribute
+   - [x] Exclusão lógica transparente
 2. **Multi-Tenancy** (2 semanas)
    - Query filters + Tenant discriminator
    - Isolamento de dados por tenant
@@ -571,7 +571,7 @@ Funcionalidades essenciais para sistemas corporativos complexos.
 - [ ] **Auditing & History**:
   - **Temporal Tables**: Suporte a tabelas temporais do sistema (SQL Server/MariaDB).
   - **Audit Log**: Sistema de log de alterações automático (Quem mudou, Quando, Valor Antigo/Novo).
-- [ ] **Soft Delete**: Suporte nativo a exclusão lógica (`IsDeleted`) transparente nas queries.
+- [x] **Soft Delete**: Suporte nativo a exclusão lógica (`IsDeleted`) transparente nas queries.
 
 #### 5. Async Support (Fluent Tasks API)
 Integração transparente de operações assíncronas.

@@ -111,6 +111,12 @@ type
     ///   Returns a query configured to not track entities (read-only).
     /// </summary>
     function AsNoTracking: TFluentQuery<T>;
+
+    // Soft Delete Control
+    function IgnoreQueryFilters: IDbSet<T>;
+    function OnlyDeleted: IDbSet<T>;
+    procedure HardDelete(const AEntity: T);
+    procedure Restore(const AEntity: T);
   end;
 
   ICollectionEntry = interface

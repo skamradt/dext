@@ -8,6 +8,7 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.TypInfo,
+  System.Variants,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Entity.Dialects,
@@ -73,12 +74,20 @@ type
     FParams: TDictionary<string, TValue>;
     FParamCount: Integer;
     FMap: TEntityMap;
-    
+    // Properties to control filtering
+    FIgnoreQueryFilters: Boolean;
+    FOnlyDeleted: Boolean;
+
     function GetNextParamName: string;
     function GetTableName: string;
+    function GetSoftDeleteFilter: string;
+
   public
     constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
     destructor Destroy; override;
+    
+    property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
+    property OnlyDeleted: Boolean read FOnlyDeleted write FOnlyDeleted;
     
     function GenerateInsert(const AEntity: T): string;
     function GenerateInsertTemplate(out AProps: TList<TPair<TRttiProperty, string>>): string;
@@ -441,6 +450,100 @@ begin
   for Attr in Typ.GetAttributes do
     if Attr is TableAttribute then
       Exit(TableAttribute(Attr).Name);
+end;
+
+function TSQLGenerator<T>.GetSoftDeleteFilter: string;
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Attr: TCustomAttribute;
+  SoftDeleteAttr: SoftDeleteAttribute;
+  Prop: TRttiProperty;
+  ColumnName: string;
+  ParamName: string;
+begin
+  Result := '';
+  SoftDeleteAttr := nil;
+  
+  // Check if entity has [SoftDelete] attribute
+  Ctx := TRttiContext.Create;
+  Typ := Ctx.GetType(T);
+  if Typ = nil then Exit;
+  
+  for Attr in Typ.GetAttributes do
+  begin
+    if Attr is SoftDeleteAttribute then
+    begin
+      SoftDeleteAttr := SoftDeleteAttribute(Attr);
+      Break;
+    end;
+  end;
+  
+  if SoftDeleteAttr = nil then Exit;
+  
+  // Find the actual column name for the soft delete property
+  // SoftDeleteAttr.ColumnName can be either:
+  // 1. The property name (e.g., "IsDeleted")
+  // 2. The actual column name (e.g., "is_deleted")
+  ColumnName := SoftDeleteAttr.ColumnName;
+  
+  // Try to find the property and get its actual column name
+  for Prop in Typ.GetProperties do
+  begin
+    // Check if this property matches by name
+    if SameText(Prop.Name, SoftDeleteAttr.ColumnName) then
+    begin
+      // Found the property, now get its actual column name
+      var PropMap: TPropertyMap := nil;
+      if FMap <> nil then
+        FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+      if PropMap <> nil then
+      begin
+        if PropMap.ColumnName <> '' then
+          ColumnName := PropMap.ColumnName;
+      end;
+      
+      // Check for [Column] attribute
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is ColumnAttribute then
+        begin
+          ColumnName := ColumnAttribute(Attr).Name;
+          Break;
+        end;
+      end;
+      
+      Break;
+    end;
+  end;
+  
+  if FIgnoreQueryFilters then Exit;
+
+  // Generate filter using COALESCE to handle NULL values
+  // COALESCE(is_deleted, 0) = 0 will match both NULL and 0
+  // Use fixed parameter name to avoid conflicts with other parameters
+  ParamName := 'pSoftDelete';
+  
+  if FOnlyDeleted then
+  begin
+     // If OnlyDeleted, we simply check for the deleted value
+     FParams.AddOrSetValue(ParamName, TValue.FromVariant(SoftDeleteAttr.DeletedValue));
+     
+     Result := Format('%s = :%s', 
+        [FDialect.QuoteIdentifier(ColumnName), ParamName]);
+  end
+  else
+  begin
+     // Default: Not Deleted
+     FParams.AddOrSetValue(ParamName, TValue.FromVariant(SoftDeleteAttr.NotDeletedValue));
+  
+     // Use literal value in COALESCE, not parameter
+     Result := Format('COALESCE(%s, %s) = :%s', 
+       [FDialect.QuoteIdentifier(ColumnName), 
+        VarToStr(SoftDeleteAttr.NotDeletedValue), 
+        ParamName]);
+  end;
 end;
 
 function TSQLGenerator<T>.GenerateInsert(const AEntity: T): string;
@@ -893,8 +996,17 @@ begin
     
     SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
     
+    // Add soft delete filter
+    var SoftDeleteFilter := GetSoftDeleteFilter;
+    
     if WhereSQL <> '' then
+    begin
       SB.Append(' WHERE ').Append(WhereSQL);
+      if SoftDeleteFilter <> '' then
+        SB.Append(' AND ').Append(SoftDeleteFilter);
+    end
+    else if SoftDeleteFilter <> '' then
+      SB.Append(' WHERE ').Append(SoftDeleteFilter);
       
     // Order By
     OrderBy := ASpec.GetOrderBy;
@@ -1013,6 +1125,11 @@ begin
 
     SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
 
+    // Add soft delete filter
+    var SoftDeleteFilter := GetSoftDeleteFilter;
+    if SoftDeleteFilter <> '' then
+      SB.Append(' WHERE ').Append(SoftDeleteFilter);
+
     Result := SB.ToString;
   finally
     SB.Free;
@@ -1046,8 +1163,17 @@ begin
   try
     SB.Append('SELECT COUNT(*) FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
     
+    // Add soft delete filter
+    var SoftDeleteFilter := GetSoftDeleteFilter;
+    
     if WhereSQL <> '' then
+    begin
       SB.Append(' WHERE ').Append(WhereSQL);
+      if SoftDeleteFilter <> '' then
+        SB.Append(' AND ').Append(SoftDeleteFilter);
+    end
+    else if SoftDeleteFilter <> '' then
+      SB.Append(' WHERE ').Append(SoftDeleteFilter);
       
     Result := SB.ToString;
   finally
@@ -1056,10 +1182,18 @@ begin
 end;
 
 function TSQLGenerator<T>.GenerateCount: string;
+var
+  SoftDeleteFilter: string;
 begin
   FParams.Clear;
   FParamCount := 0;
+  
   Result := 'SELECT COUNT(*) FROM ' + FDialect.QuoteIdentifier(GetTableName);
+  
+  // Add soft delete filter
+  SoftDeleteFilter := GetSoftDeleteFilter;
+  if SoftDeleteFilter <> '' then
+    Result := Result + ' WHERE ' + SoftDeleteFilter;
 end;
 
 function TSQLGenerator<T>.GenerateCreateTable(const ATableName: string): string;
@@ -1172,6 +1306,23 @@ begin
       ColType := FDialect.GetColumnType(PropTypeHandle, IsAutoInc);
       SB.Append(ColType);
       
+      // Check if this is a soft delete column and add DEFAULT
+      var IsSoftDeleteColumn := False;
+      var SoftDeleteDefaultValue: Variant;
+      for var TypeAttr in Typ.GetAttributes do
+      begin
+        if TypeAttr is SoftDeleteAttribute then
+        begin
+          var SoftDelAttr := SoftDeleteAttribute(TypeAttr);
+          if SameText(ColName, SoftDelAttr.ColumnName) then
+          begin
+            IsSoftDeleteColumn := True;
+            SoftDeleteDefaultValue := SoftDelAttr.NotDeletedValue;
+            Break;
+          end;
+        end;
+      end;
+      
       if IsPK then
       begin
         PKCols.Add(FDialect.QuoteIdentifier(ColName));
@@ -1182,6 +1333,11 @@ begin
         end
         else
            SB.Append(' NOT NULL');
+      end
+      else if IsSoftDeleteColumn then
+      begin
+        // Add DEFAULT for soft delete column
+        SB.Append(' DEFAULT ').Append(VarToStr(SoftDeleteDefaultValue));
       end;
     end;
     
