@@ -132,7 +132,7 @@ begin
 
   Port := GetPortFromUrl(FUrl);
 
-  Result := TIndyWebServer.Create(Port, Pipeline, ServiceProvider);
+  Result := TIndyWebServer.Create(Port, Pipeline, ServiceProvider, AppBuilder);
 end;
 
 end.

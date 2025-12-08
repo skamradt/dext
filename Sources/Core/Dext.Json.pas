@@ -1355,6 +1355,9 @@ begin
     end;
 
     TValue.Make(@DynArray, AType, Result);
+    // The local DynArray pointer holds a reference. TValue.Make creates another (increments refcount).
+    // We must clear the local reference so that only the TValue holds usage.
+    DynArrayClear(DynArray, AType);
   except
     if DynArray <> nil then
       DynArrayClear(DynArray, AType);

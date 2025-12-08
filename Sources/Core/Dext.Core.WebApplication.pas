@@ -190,7 +190,7 @@ begin
   RequestHandler := FAppBuilder.Build;
 
   // Create WebHost
-  WebHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider);
+  WebHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, FAppBuilder);
 
   WriteLn('🚀 Starting Dext HTTP Server on port ', Port);
   WriteLn('📡 Listening for requests...');

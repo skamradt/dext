@@ -39,12 +39,13 @@ type
     FServices: IServiceProvider;
     FPort: Integer;
 
+    FAppBuilder: IApplicationBuilder; // Keep AppBuilder alive
     procedure HandleCommandGet(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
     procedure HandleParseAuthentication(AContext: TIdContext;
       const AAuthType, AAuthData: string; var VUsername, VPassword: string; var Handled: Boolean);
   public
-    constructor Create(APort: Integer; APipeline: TRequestDelegate; const AServices: IServiceProvider);
+    constructor Create(APort: Integer; APipeline: TRequestDelegate; const AServices: IServiceProvider; const AAppBuilder: IApplicationBuilder);
     destructor Destroy; override;
 
     procedure Run;
@@ -54,17 +55,32 @@ type
 implementation
 
 uses
-  Dext.Http.Indy;
+  Dext.Http.Indy, WinApi.Windows;
+
+var
+  GServerStopping: Boolean;
+
+function ConsoleCtrlHandler(dwCtrlType: DWORD): BOOL; stdcall;
+begin
+  if (dwCtrlType = CTRL_C_EVENT) or (dwCtrlType = CTRL_BREAK_EVENT) then
+  begin
+    GServerStopping := True;
+    Result := True;
+  end
+  else
+    Result := False;
+end;
 
 { TIndyWebServer }
 
 constructor TIndyWebServer.Create(APort: Integer; APipeline: TRequestDelegate;
-  const AServices: IServiceProvider);
+  const AServices: IServiceProvider; const AAppBuilder: IApplicationBuilder);
 begin
   inherited Create;
   FPort := APort;
   FPipeline := APipeline;
   FServices := AServices;
+  FAppBuilder := AAppBuilder;
 
   FHTTPServer := TIdHTTPServer.Create(nil);
   FHTTPServer.DefaultPort := FPort;
@@ -89,6 +105,7 @@ begin
   Stop;
   FHTTPServer.Free;
   FPipeline := nil; // Explicitly break cycle/release reference
+  FAppBuilder := nil;
   inherited Destroy;
 end;
 
@@ -123,10 +140,17 @@ begin
     Writeln(Format('Dext server running on http://localhost:%d', [FPort]));
     Writeln('Press Ctrl+C to stop the server...');
 
-    // Manter o servidor rodando atÃ© ser explicitamente parado
-    while FHTTPServer.Active do
-    begin
-      Sleep(100);
+    GServerStopping := False;
+    SetConsoleCtrlHandler(@ConsoleCtrlHandler, True);
+    try
+      while FHTTPServer.Active and (not GServerStopping) do
+      begin
+        Sleep(100);
+        // Also check if any key pressed to exit?
+        // For now, Ctrl+C is the standard way.
+      end;
+    finally
+      SetConsoleCtrlHandler(@ConsoleCtrlHandler, False);
     end;
   end;
 end;

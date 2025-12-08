@@ -45,7 +45,7 @@ type
     FJsonPath: string;
     FGenerator: TOpenAPIGenerator;
     FCachedJson: string;
-    FAppBuilder: IApplicationBuilder; // Store reference to app builder
+    FAppBuilderUnsafe: Pointer; // Weak reference to avoid circular reference
     
     function GetSwaggerUIHtml: string;
     function ShouldHandleRequest(const APath: string): Boolean;
@@ -81,7 +81,7 @@ uses
 constructor TSwaggerMiddleware.Create(AAppBuilder: IApplicationBuilder; const AOptions: TOpenAPIOptions; const ASwaggerPath: string; const AJsonPath: string);
 begin
   inherited Create;
-  FAppBuilder := AAppBuilder;
+  FAppBuilderUnsafe := Pointer(AAppBuilder); // Store as weak reference
   FOptions := AOptions;
   FSwaggerPath := ASwaggerPath;
   FJsonPath := AJsonPath;
@@ -90,7 +90,13 @@ begin
 end;
 
 destructor TSwaggerMiddleware.Destroy;
+var
+  Server: TOpenAPIServer;
 begin
+  // Free servers in Options (as they are owned by this middleware instance now)
+  for Server in FOptions.Servers do
+    Server.Free;
+    
   FGenerator.Free;
   inherited;
 end;
@@ -155,7 +161,7 @@ begin
   // Generate JSON if not cached
   if FCachedJson = '' then
   begin
-    Endpoints := FAppBuilder.GetRoutes;
+    Endpoints := IApplicationBuilder(FAppBuilderUnsafe).GetRoutes;
     FCachedJson := FGenerator.GenerateJson(Endpoints);
   end;
   

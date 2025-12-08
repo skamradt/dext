@@ -67,6 +67,7 @@ type
     // Constructor Injection!
     constructor Create(AService: IGreetingService; Settings: IOptions<TMySettings>);
 
+    [DextGet('/{name}')]
     procedure GetGreeting(Ctx: IHttpContext; [FromRoute] const Name: string); virtual;
     
     [DextGet('/negotiated')]

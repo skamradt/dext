@@ -68,6 +68,7 @@ type
   IServiceScope = interface
     ['{F2E7D3F4-9C6E-4B8A-8D2C-7F5A1B3E8D9F}']
     function GetServiceProvider: IServiceProvider;
+    property ServiceProvider: IServiceProvider read GetServiceProvider;
   end;
 
   IServiceCollection = interface

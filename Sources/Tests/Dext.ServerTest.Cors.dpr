@@ -1,6 +1,7 @@
 ﻿program Dext.ServerTest.Cors;
 
 uses
+  FastMM5,
   System.SysUtils,
   System.Rtti,
   WinApi.Windows,
@@ -54,6 +55,7 @@ begin
 end;
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   try
     TestDextJson;
     TestDextJsonRecords;

@@ -3,6 +3,7 @@
 {$APPTYPE CONSOLE}
 
 uses
+  FastMM5,
   System.SysUtils,
   System.IOUtils,
   Dext.Caching,
@@ -100,6 +101,7 @@ begin
 end;
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   try
     WriteLn('Dext Minimal API - Complete Feature Demo');
     WriteLn('============================================');

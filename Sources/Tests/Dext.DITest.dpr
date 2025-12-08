@@ -1,6 +1,7 @@
 ﻿program Dext.DITest;
 
 uses
+  FastMM5,
   System.SysUtils,
   Dext.DI.Interfaces,
   Dext.DI.Core,
@@ -61,6 +62,7 @@ var
   Logger: ILogger;
   DataService: IDataService;
 begin
+  ReportMemoryLeaksOnShutdown := True;
   try
     // Configurar serviços
     Services := TDextServiceCollection.Create;

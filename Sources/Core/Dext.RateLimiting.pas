@@ -75,6 +75,7 @@ implementation
 constructor TRateLimitMiddleware.Create(APolicy: TRateLimitPolicy);
 begin
   Create(APolicy.Build);
+  APolicy.Free; // Free the builder/policy wrapper
 end;
 
 constructor TRateLimitMiddleware.Create(AConfig: TRateLimitConfig);

@@ -1,6 +1,7 @@
 ﻿program Dext.ServerTest;
 
 uses
+  FastMM5,
   System.SysUtils,
   System.Rtti,
   WinApi.Windows,
@@ -49,6 +50,7 @@ begin
 end;
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   try
     Writeln('=== Starting Dext Web Server ===');
 
@@ -107,12 +109,9 @@ begin
 
     // 🚀 INICIAR SERVIDOR REAL!
     Host.Run;
-
     // Manter servidor rodando até Enter
-    Readln;
-
+    //Readln;
     Host.Stop;
-
   except
     on E: Exception do
       Writeln('Server error: ', E.ClassName, ': ', E.Message);

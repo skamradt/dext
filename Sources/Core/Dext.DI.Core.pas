@@ -41,6 +41,7 @@ type
     constructor Create(const AServiceType: TServiceType;
       AImplementationClass: TClass; ALifetime: TServiceLifetime;
       AFactory: TFunc<IServiceProvider, TObject>);
+    function Clone: TServiceDescriptor;
   end;
 
   TDextServiceScope = class;
@@ -119,6 +120,11 @@ begin
   Factory := AFactory;
 end;
 
+function TServiceDescriptor.Clone: TServiceDescriptor;
+begin
+  Result := TServiceDescriptor.Create(ServiceType, ImplementationClass, Lifetime, Factory);
+end;
+
 { TDextServiceCollection }
 
 constructor TDextServiceCollection.Create;
@@ -163,16 +169,21 @@ end;
 function TDextServiceCollection.BuildServiceProvider: IServiceProvider;
 begin
   Result := TDextServiceProvider.Create(FDescriptors);
-  // Prevenir que os descriptors sejam destruídos quando a collection for destruída
-  FDescriptors.OwnsObjects := False;
+  // Collection retains ownership of its own descriptors
 end;
 
 { TDextServiceProvider }
 
 constructor TDextServiceProvider.Create(const ADescriptors: TObjectList<TServiceDescriptor>);
+var
+  Desc: TServiceDescriptor;
 begin
   inherited Create;
-  FDescriptors := ADescriptors;
+  // Root provider creates its own independent list of descriptors
+  FDescriptors := TObjectList<TServiceDescriptor>.Create(True);
+  for Desc in ADescriptors do
+    FDescriptors.Add(Desc.Clone);
+
   FSingletons := TDictionary<string, TObject>.Create;
   FSingletonInterfaces  := TDictionary<string, IInterface>.Create;
   FScopedInstances := TDictionary<string, TObject>.Create;
@@ -185,7 +196,7 @@ end;
 constructor TDextServiceProvider.CreateScoped(AParent: IServiceProvider; const ADescriptors: TObjectList<TServiceDescriptor>);
 begin
   inherited Create;
-  FDescriptors := ADescriptors;
+  FDescriptors := ADescriptors; // Scoped provider shares descriptors with parent
   FSingletons := nil; // Scoped providers don't create singletons
   FSingletonInterfaces := nil;
   FScopedInstances := TDictionary<string, TObject>.Create;
@@ -229,9 +240,8 @@ begin
 
   FLock.Free;
   
-  // FDescriptors is owned by TDextServiceCollection, do not free it here.
-  // if FIsRootProvider then
-  //   FDescriptors.Free;
+  if FIsRootProvider then
+    FDescriptors.Free;
 
   inherited Destroy;
 end;
