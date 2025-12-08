@@ -181,6 +181,11 @@ Foco em otimização extrema, gerenciamento de memória e observabilidade.
 - [ ] **Pre-Build RTTI Cache**: Scanner de classes que gera cache de metadados.
 - [ ] **Converter Mapping Cache**: Mapeamento otimizado de converters para Load/Save.
 - [ ] **FireDAC Phys API**: Reescrever driver usando `IFDPhysCommand`/`IFDPhysConnection`.
+- [ ] **Managed Type System (TEntityType)** 🔥 **NOVO**: Arquitetura de metadados rica e centralizada.
+  - Substituir lookups RTTI por `TEntityType<T>.Meta.Properties`.
+  - Cachear converters de valor junto com a propriedade (`TPropertyMeta`).
+  - Acessadores compilados (Fast Getters/Setters) para hidratação de alta performance.
+  - Base para validação, mapeamento DTO e geração de Schema.
 
 #### 2. Managed Container Types (Memory Safety)
 - [x] **Smart Lists (`IList<T>`)**: Implementação de listas baseadas em interfaces.

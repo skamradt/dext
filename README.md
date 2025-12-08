@@ -1,471 +1,218 @@
-# Dext Framework - Modern Web API Framework for Delphi
+[ 🇧🇷 Português ](README.pt-br.md)
 
-**Dext** é um framework web moderno para Delphi inspirado em ASP.NET Core Minimal APIs, trazendo recursos avançados como Smart Binding, Dependency Injection, Result Helpers e Validação Automática.
+# Dext Framework - Modern Full-Stack Development for Delphi
 
-## 🚀 Recursos Principais
+> ⚠️ **Status: Active Development**
+> The project is currently implementing version 1.0. The public API, fluent syntax, and method names are subject to breaking changes without prior notice until the first stable release.
 
-### 1. **Minimal API com Smart Binding**
-Crie endpoints de forma fluente e expressiva:
+**Dext** is a complete ecosystem for modern Delphi development, combining a high-performance web framework (inspired by ASP.NET Core) with a robust ORM and advanced infrastructure tooling.
 
-```pascal
-// GET com parâmetro de rota
-App.MapGetR<Integer, IResult>('/api/users/{id}',
-  function(UserId: Integer): IResult
-  begin
-    Result := Results.Json(Format('{"userId":%d}', [UserId]));
-  end);
+The goal of Dext is to bring modern development paradigms—such as Dependency Injection, Asynchronous Programming, Fluent APIs, and Code-First—to the Delphi environment while maintaining native performance.
 
-// POST com body binding automático
-App.MapPostR<TCreateUserRequest, IResult>('/api/users',
-  function(Request: TCreateUserRequest): IResult
-  begin
-    Result := Results.Created('/api/users/1', '{"status":"created"}');
-  end);
-```
+## 🎯 Philosophy and Goals
 
-### 2. **Result Helpers**
-Retorne respostas HTTP de forma elegante:
+*   **Parity with .NET Core**: The primary goal is to reach feature parity with equivalent frameworks in the .NET ecosystem (ASP.NET Core, EF Core), staying up-to-date with platform innovations.
+*   **Native Performance**: After functional stabilization of v1, the focus will shift entirely to **performance optimization**, aiming to compete with high-speed frameworks.
+*   **Innovation**: While inspired by .NET, Dext is not limited to it, seeking to implement solutions that specifically make sense for the Delphi language.
 
-```pascal
-Results.Ok('{"message":"Success"}');           // 200 OK
-Results.Created('/api/users/1', '{}');         // 201 Created
-Results.BadRequest('{"error":"Invalid"}');     // 400 Bad Request
-Results.NotFound();                            // 404 Not Found
-Results.NoContent();                           // 204 No Content
-Results.Json('{}', 200);                       // Custom status
-```
+---
 
-### 3. **Dependency Injection**
-Injete serviços automaticamente nos handlers:
+## 📄 License
 
-```pascal
-// Registrar serviço
-Services.AddSingleton<IUserService, TUserService>;
+This project is licensed under the **Apache License 2.0** (the same used by .NET Core). This allows free use in commercial and open-source projects, with the security of a permissive and modern license.
 
-// Usar no handler
-App.MapPost<TUser, IUserService, IHttpContext>('/api/users',
-  procedure(User: TUser; UserService: IUserService; Ctx: IHttpContext)
-  begin
-    UserService.CreateUser(User);
-    Ctx.Response.Json('{"status":"created"}');
-  end);
-```
+---
 
-### 4. **Validação Automática**
-Valide DTOs usando atributos:
+## 🚀 Main Modules
 
-```pascal
-type
-  TCreateUserRequest = record
-    [Required]
-    [StringLength(3, 50)]
-    Name: string;
-    
-    [Required]
-    [EmailAddress]
-    Email: string;
-    
-    [Range(18, 120)]
-    Age: Integer;
-  end;
+### 🌐 Dext.Web (Web Framework)
+A lightweight and powerful HTTP framework for building REST APIs and microservices.
+- **Minimal APIs**: Concise fluent syntax for route definition.
+- **Controllers**: Traditional class-based support for complex APIs.
+- **Smart Binding**: Automatic JSON serialization and validation for Records/Classes.
+- **Middlewares**: Modular and extensible request pipeline.
 
-// No handler
-var
-  Validator := TValidator<TCreateUserRequest>.Create;
-  ValidationResult := Validator.Validate(Request);
-  
-if not ValidationResult.IsValid then
-  Result := Results.BadRequest(GetErrorsJson(ValidationResult));
-```
+### 🗄️ Dext.Entity (ORM)
+A modern ORM focused on productivity and performance.
+- **Code-First**: Define your database using Delphi classes.
+- **Migrations**: Database schema version control via CLI.
+- **Fluent Query API**: Strongly typed and expressive queries.
+- **Change Tracking**: Automatic change tracking and optimized persistence.
+- **Multi-Database**: Support for SQL Server, PostgreSQL, Firebird, MySQL, Oracle, and SQLite.
 
-**Atributos disponíveis:**
-- `[Required]` - Campo obrigatório
-- `[StringLength(min, max)]` - Tamanho da string
-- `[EmailAddress]` - Validação de email
-- `[Range(min, max)]` - Faixa numérica
+### ⚙️ Dext.Core (Infrastructure)
+The foundation of the framework, usable in any type of application.
+- **Dependency Injection**: Full and fast IOC container.
+- **Configuration**: Flexible configuration system (JSON, Environment Variables).
+- **Logging**: Structured logging abstraction.
+- **Async/Await**: Primitives for real asynchronous programming.
 
-### 5. **Middleware Funcional**
-Crie middlewares inline sem classes:
+---
 
-```pascal
-App.Use(
-  procedure(Context: IHttpContext; Next: TRequestDelegate)
-  begin
-    WriteLn('Request: ' + Context.Request.Path);
-    Next(Context);
-    WriteLn('Response sent');
-  end);
-```
+## 📚 Documentation Index
 
-### 6. **Autenticação JWT** 🔐
-Sistema completo de autenticação com JSON Web Tokens:
+### 🚀 Getting Started
+- [Framework Overview](Docs/Dext%20Web%20Framework.md)
+- [Project Structure](Docs/Project%20Dext.md)
+- [Minimal API - Quick Guide](Docs/Dext%20Minimal%20API.md)
 
-```pascal
-// Configurar middleware de autenticação
-var Options := TJwtAuthenticationOptions.Default('my-secret-key');
-App.UseMiddleware(TJwtAuthenticationMiddleware, TValue.From(Options));
+### 🌐 Web API
+- **Routing & Endpoints**
+  - [Minimal API](Docs/MinimalAPI.md)
+  - [Controllers](Docs/CONTROLLERS_IMPLEMENTATION.md)
+  - [Model Binding](Docs/Dext%20Model%20Binding.md)
+  - [Validation](Docs/ModelBinding.md) # (Includes validation)
+- **Security & Middleware**
+  - [JWT Authentication](Docs/JWT-Authentication.md)
+  - [CORS](Docs/CORS.md)
+  - [Rate Limiting](Docs/Rate-Limiting.md)
+  - [Middlewares](Docs/Dext%20-%20Middlewares.md)
+- **Advanced**
+  - [Background Services](Docs/BackgroundServices.md)
+  - [Action Filters](Docs/ActionFilters.md)
+  - [Swagger / OpenAPI](Docs/SWAGGER.md)
 
-// Endpoint de login (gera token)
-App.MapPostR<TLoginRequest, IResult>('/api/auth/login',
-  function(Request: TLoginRequest): IResult
-  var
-    Claims: TArray<TClaim>;
-    Token: string;
-  begin
-    // Validar credenciais
-    if ValidateUser(Request) then
-    begin
-      // ✅ Criar claims com fluent builder
-      Claims := TClaimsBuilder.Create
-        .WithNameIdentifier('123')
-        .WithName(Request.Username)
-        .WithRole('Admin')
-        .Build;
-      
-      Token := JwtHandler.GenerateToken(Claims);
-      Result := Results.Ok(Format('{"token":"%s"}', [Token]));
-    end
-    else
-      Result := Results.BadRequest('{"error":"Invalid credentials"}');
-  end);
+### 🗄️ Data Access (ORM)
+- [Comparison & Features](Docs/ORM_COMPARISON_2024.md)
+- [Database Configuration](Docs/DATABASE_CONFIG.md)
+- [Fluent Query API](Docs/FLUENT_QUERY_API.md)
+- [Migrations](Docs/MIGRATIONS_GUIDE.md)
+- [Lazy Loading](Docs/LAZY_LOADING_ADVANCED.md)
+- [Bulk Operations](Docs/BULK_OPERATIONS.md)
+- [Soft Delete](Docs/SOFT_DELETE.md)
 
-// Endpoint protegido (requer autenticação)
-App.MapGetR<IHttpContext, IResult>('/api/protected',
-  function(Context: IHttpContext): IResult
-  begin
-    if (Context.User = nil) or not Context.User.Identity.IsAuthenticated then
-      Result := Results.StatusCode(401, '{"error":"Unauthorized"}')
-    else
-      Result := Results.Ok(Format('{"user":"%s"}', [Context.User.Identity.Name]));
-  end);
-```
+### ⚙️ Core & Infrastructure
+- [Dependency Injection & Scopes](Docs/ScopedServices.md)
+- [Configuration & Options Pattern](Docs/OptionsPattern.md)
+- [Async Programming](Docs/ASYNC_API.md)
+- [Caching](Docs/Caching.md)
 
-**Recursos:**
-- Geração e validação de tokens JWT (HMAC-SHA256)
-- Claims-based identity
-- Autorização baseada em roles (`IsInRole`)
-- Middleware automático de autenticação
-- **Claims Builder** com fluent interface para criar claims elegantemente
+---
 
-```pascal
-// Sintaxe fluente para criar claims
-var Claims := TClaimsBuilder.Create
-  .WithNameIdentifier('123')
-  .WithName('john.doe')
-  .WithEmail('john@example.com')
-  .WithRole('Admin')
-  .WithRole('User')  // Múltiplas roles
-  .AddClaim('custom', 'value')  // Claims personalizados
-  .Build;
-```
+## 💻 Requirements
 
-📚 **[Documentação Completa de JWT](docs/JWT-Authentication.md)**
+- **Delphi**: Recommended Delphi 10.4 Sydney or higher (due to extensive use of modern language features).
+- **Indy**: Uses Indy components (already included in Delphi) for the HTTP transport layer (subject to future replacement/optimization).
 
-### 7. **CORS (Cross-Origin Resource Sharing)** 🌐
-Configure CORS de forma simples e segura:
+## 📦 Installation and Configuration
 
-```pascal
-uses
-  Dext.Http.Cors;
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/dext-framework/dext.git
+   ```
 
-// ✅ Desenvolvimento - Permitir qualquer origem
-TApplicationBuilderCorsExtensions.UseCors(Builder,
-  procedure(Cors: TCorsBuilder)
-  begin
-    Cors
-      .AllowAnyOrigin
-      .AllowAnyMethod
-      .AllowAnyHeader;
-  end);
+2. **Configure Library Path in Delphi:**
+   Add the following paths to your project or IDE:
+   - `\Sources\Core`
+   - `\Sources\Core\Drivers`
+   - `\Sources\Entity` (if using the ORM)
 
-// ✅ Produção - Origens específicas
-TApplicationBuilderCorsExtensions.UseCors(Builder,
-  procedure(Cors: TCorsBuilder)
-  begin
-    Cors
-      .WithOrigins(['https://myapp.com', 'https://www.myapp.com'])
-      .WithMethods(['GET', 'POST', 'PUT', 'DELETE'])
-      .WithHeaders(['Content-Type', 'Authorization'])
-      .AllowCredentials
-      .WithMaxAge(3600); // Cache preflight por 1 hora
-  end);
-```
+3. **Dependencies:**
+   - The framework uses `FastMM5` (recommended for memory debugging).
+   - Native database drivers (FireDAC, etc.) are supported.
 
-**Recursos:**
-- Builder fluente para configuração elegante
-- Suporte a preflight requests (OPTIONS)
-- Múltiplas origens ou wildcard (*)
-- Configuração de métodos, headers e credentials
-- Cache de preflight configurável
+---
 
-📚 **[Documentação Completa de CORS](docs/CORS.md)**
-
-### 8. **Rate Limiting** 🚦
-Proteja sua API contra abuso e ataques DDoS:
-
-```pascal
-uses
-  Dext.RateLimiting;
-
-// ✅ Padrão - 100 requisições por minuto
-TApplicationBuilderRateLimitExtensions.UseRateLimiting(Builder);
-
-// ✅ Personalizado
-TApplicationBuilderRateLimitExtensions.UseRateLimiting(Builder,
-  procedure(RateLimit: TRateLimitBuilder)
-  begin
-    RateLimit
-      .WithPermitLimit(50)      // 50 requests
-      .WithWindow(60)            // per 60 seconds
-      .WithRejectionMessage('{"error":"Too many requests"}')
-      .WithRejectionStatusCode(429);
-  end);
-```
-
-**Recursos:**
-- Builder fluente para configuração
-- Thread-safe com `TCriticalSection`
-- Headers informativos (X-RateLimit-*)
-- Limpeza automática de entradas expiradas
-- Baseado em IP do cliente
-
-**Headers retornados:**
-```
-X-RateLimit-Limit: 50
-X-RateLimit-Remaining: 45
-Retry-After: 60 (quando limitado)
-```
-
-📚 **[Documentação Completa de Rate Limiting](docs/Rate-Limiting.md)**
-
-### 9. **Smart Binding Automático**
-O framework detecta automaticamente a origem dos parâmetros:
-
-| Tipo | Origem | Exemplo |
-|------|--------|---------|
-| `Integer`, `String`, etc. | Route ou Query | `/users/{id}` |
-| `Record` | Body (POST/PUT) ou Query (GET) | JSON → Record |
-| `Interface` | DI Container | `IUserService` |
-| `IHttpContext` | Framework | Acesso direto ao contexto |
-
-## 📦 Instalação
-
-1. Clone o repositório:
-```bash
-git clone https://github.com/seu-usuario/dext.git
-cd dext
-```
-
-2. Adicione os paths ao seu projeto:
-```
-Sources\Core
-Sources\Core\Drivers
-```
-
-3. Adicione as units necessárias:
-```pascal
-uses
-  Dext.Core.WebApplication,
-  Dext.Core.ApplicationBuilder.Extensions,
-  Dext.Http.Results,
-  Dext.Validation,
-  Dext.DI.Extensions;
-```
-
-## 🎯 Exemplo Completo
+## ⚡ Quick Example (Minimal API)
 
 ```pascal
 program MyAPI;
 
 uses
   Dext.Core.WebApplication,
-  Dext.Core.ApplicationBuilder.Extensions,
-  Dext.Http.Results,
-  Dext.Validation,
-  Dext.DI.Extensions;
+  Dext.Http.Results;
 
-type
-  TCreateUserRequest = record
-    [Required]
-    [StringLength(3, 50)]
-    Name: string;
-    
-    [Required]
-    [EmailAddress]
-    Email: string;
-    
-    [Range(18, 120)]
-    Age: Integer;
-  end;
-
-  IUserService = interface
-    ['{GUID}']
-    function CreateUser(const Request: TCreateUserRequest): Integer;
-  end;
-
-  TUserService = class(TInterfacedObject, IUserService)
-  public
-    function CreateUser(const Request: TCreateUserRequest): Integer;
-  end;
-
-function TUserService.CreateUser(const Request: TCreateUserRequest): Integer;
 begin
-  // Lógica de criação
-  Result := 1;
-end;
-
-var
-  App: IWebApplication;
-begin
-  App := TDextApplication.Create;
-  
-  // Configurar DI
-  App.Services.AddSingleton<IUserService, TUserService>;
-  
+  var App := TDextApplication.Create;
   var Builder := App.GetApplicationBuilder;
-  
-  // Middleware de logging
-  Builder.Use(
-    procedure(Ctx: IHttpContext; Next: TRequestDelegate)
-    begin
-      WriteLn('Request: ' + Ctx.Request.Path);
-      Next(Ctx);
-    end);
-  
-  // Rotas
-  Builder.MapGetR<IResult>('/',
+
+  // Simple Route
+  Builder.MapGetR<IResult>('/hello', 
     function: IResult
     begin
-      Result := Results.Ok('{"message":"Welcome to Dext API"}');
+      Result := Results.Ok('{"message": "Hello Dext!"}');
     end);
-  
-  Builder.MapPostR<TCreateUserRequest, IUserService, IResult>('/api/users',
-    function(Request: TCreateUserRequest; UserService: IUserService): IResult
-    var
-      Validator: IValidator<TCreateUserRequest>;
-      ValidationResult: TValidationResult;
-      UserId: Integer;
+
+  // Route with parameter and binding
+  Builder.MapGetR<Integer, IResult>('/users/{id}',
+    function(Id: Integer): IResult
     begin
-      // Validar
-      Validator := TValidator<TCreateUserRequest>.Create;
-      ValidationResult := Validator.Validate(Request);
-      
-      if not ValidationResult.IsValid then
-      begin
-        Result := Results.BadRequest('{"error":"Validation failed"}');
-        ValidationResult.Free;
-        Exit;
-      end;
-      
-      ValidationResult.Free;
-      
-      // Criar usuário
-      UserId := UserService.CreateUser(Request);
-      
-      Result := Results.Created(
-        Format('/api/users/%d', [UserId]),
-        Format('{"id":%d,"name":"%s"}', [UserId, Request.Name])
-      );
+      Result := Results.Json(Format('{"userId": %d}', [Id]));
     end);
-  
+
   App.Run(8080);
-  ReadLn;
 end.
 ```
 
-## 🧪 Testando
+## 💎 ORM Example (Fluent Query)
 
-Execute o exemplo `Dext.MinimalAPITest.dpr`:
+Dext ORM allows expressive and strongly typed queries, eliminating magical SQL strings:
 
-```bash
-cd Sources\Tests
-dcc32 -B Dext.MinimalAPITest.dpr
-Dext.MinimalAPITest.exe
-```
-
-Teste com curl:
-
-```bash
-# GET simples
-curl http://localhost:8080/api/users/123
-
-# POST válido
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"John Doe","email":"john@example.com","age":30}'
-
-# POST inválido (falha na validação)
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Jo","email":"invalid","age":15}'
-```
-
-## 📚 Estrutura do Projeto
-
-```
-Dext/
-├── Sources/
-│   ├── Core/
-│   │   ├── Dext.Http.Interfaces.pas       # Interfaces principais
-│   │   ├── Dext.Http.Results.pas          # Result Helpers
-│   │   ├── Dext.Core.HandlerInvoker.pas   # Invocação de handlers
-│   │   ├── Dext.Core.ModelBinding.pas     # Smart Binding
-│   │   ├── Dext.Validation.pas            # Framework de validação
-│   │   ├── Dext.DI.Core.pas               # Dependency Injection
-│   │   └── Drivers/                       # Drivers JSON
-│   ├── Examples/
-│   │   └── TaskFlowAPI/                   # Exemplo completo
-│   └── Tests/
-│       └── Dext.MinimalAPITest.dpr        # Suite de testes
-```
-
-## 🔧 Arquitetura
-
-### Pipeline de Requisição
-
-```
-Request → Middlewares → Routing → Model Binding → Handler → Result → Response
-```
-
-1. **Middlewares**: Processamento antes/depois (logging, auth, etc.)
-2. **Routing**: Encontra o handler correto baseado no path
-3. **Model Binding**: Converte dados da requisição em parâmetros tipados
-4. **Handler**: Sua lógica de negócio
-5. **Result**: Converte o retorno em resposta HTTP
-
-### Convenções de Nomenclatura
-
-- **`Map*`**: Métodos que retornam `void` ou manipulam `IHttpContext` diretamente
-- **`Map*R`**: Métodos que retornam `IResult` (Result Helpers)
-
-Exemplo:
 ```pascal
-// Tradicional
-MapPost<TUser, IHttpContext>(...);
+// Complex Query with Joins and Filters
+// O: TOrder (Alias/Proxy)
+var Orders := DbContext.Orders
+  .Where((O.Status = TOrderStatus.Paid) and (O.Total > 1000))
+  .Include('Customer')       // Eager Loading
+  .Include('Items')
+  .OrderByDescending('Date')
+  .Take(50)
+  .ToList;
 
-// Com Result Helpers
-MapPostR<TUser, IResult>(...);
+// High-Performance Bulk Update
+DbContext.Products
+  .Where(P.Category = 'Outdated') // P: TProduct
+  .Update                         // Starts bulk update
+  .Set('Active', False)           // Set fields
+  .Execute;
 ```
 
-## 🤝 Contribuindo
+## ⚡ Async Example (Fluent Tasks)
 
-Contribuições são bem-vindas! Por favor:
+Forget `TThread` complexity. Use a modern API based on Promises/Tasks:
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+```pascal
+// Asynchronous Task Chaining
+var Task := TAsyncTask.Run<TUserProfile>(
+  function: TUserProfile
+  begin
+    // Runs on background thread
+    Result := ExternalApi.GetUserProfile(UserId);
+  end)
+  .ThenBy<Boolean>( // Transforms result (Map)
+    function(Profile: TUserProfile): Boolean
+    begin
+      Result := Profile.IsVerified and Profile.HasCredit;
+    end)
+  .OnComplete( // Returns to UI Thread automatically
+    procedure(IsVerified: Boolean)
+    begin
+      if IsVerified then
+        ShowSuccess('User Verified!')
+      else
+        ShowError('Verification Failed');
+    end)
+  .Start; // Starts execution
+```
 
-## 📝 Licença
+## 🧪 Examples and Tests
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+The repository contains practical example projects:
 
-## 🙏 Agradecimentos
-
-- Inspirado por ASP.NET Core Minimal APIs
-- Comunidade Delphi
+- **`Examples/TaskFlowAPI`**: A complete REST API demonstrating layered architecture, ORM, Auth, and DI.
+- **`Examples/EntityDemo`**: Demo focused on ORM features (CRUD, Migrations).
+- **`Examples/WebFrameworkTests`**: Integration and stability test suite.
 
 ---
 
-**Desenvolvido com ❤️ usando Delphi**
+## 🗺️ Roadmaps
+
+Follow the project development:
+- [ORM Roadmap](Docs/ORM_ROADMAP.md)
+- [Web Framework Roadmap](Docs/WEB_ROADMAP.md)
+- [Infra & IDE Roadmap](Docs/INFRA_ROADMAP.md)
+
+---
+
+**Dext Framework** - *Native performance, modern productivity.*
+Developed with ❤️ by the Delphi community.
