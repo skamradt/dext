@@ -404,7 +404,7 @@ function TDextServicesHelper.AddControllers: TDextServices;
 var
   Scanner: IControllerScanner;
 begin
-  Scanner := TControllerScanner.Create(nil);
+  Scanner := TControllerScanner.Create;
   Scanner.RegisterServices(Self.Unwrap);
   Result := Self;
 end;

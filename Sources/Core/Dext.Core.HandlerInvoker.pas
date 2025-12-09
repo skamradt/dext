@@ -492,25 +492,8 @@ begin
   // ✅ VERIFICAÇÃO DE SEGURANÇA APRIMORADA
   if not Assigned(AMethod) then
   begin
-    WriteLn('❌ AMethod is nil in InvokeAction');
     FContext.Response.Status(500).Json('{"error": "Internal server error: Method reference lost"}');
     Exit(False);
-  end;
-
-  try
-    // Testar se o método é válido
-    var MethodName := AMethod.Name;
-    var Parameters := AMethod.GetParameters;
-    var ParamCountCheck := Length(Parameters);
-
-    WriteLn('🔍 InvokeAction: ', MethodName, ' (', ParamCountCheck, ' declared params)');
-  except
-    on E: Exception do
-    begin
-      WriteLn('❌ AMethod is invalid in InvokeAction: ', E.ClassName, ': ', E.Message);
-      FContext.Response.Status(500).Json('{"error": "Internal server error: Invalid method reference"}');
-      Exit(False);
-    end;
   end;
 
   // ✅ DYNAMIC BINDING: Use ModelBinder to resolve all parameters
@@ -520,13 +503,10 @@ begin
   except
     on E: Exception do
     begin
-      WriteLn('❌ Parameter binding failed: ', E.Message);
       FContext.Response.Status(400).Json(Format('{"error": "Bad Request: %s"}', [E.Message]));
       Exit(False);
     end;
   end;
-
-  WriteLn('  Bound ', Length(Args), ' arguments successfully');
 
   // ✅ VALIDATION: Validate all record parameters
   for I := 0 to High(Args) do
@@ -534,30 +514,23 @@ begin
     if not Validate(Args[I]) then Exit(False);
   end;
 
-  WriteLn('🚀 Invoking ', AMethod.Name, ' with ', Length(Args), ' args...');
-
   try
     ResultValue := AMethod.Invoke(AInstance, Args);
 
     // ✅ LIDAR COM PROCEDURES (SEM RETORNO)
     if ResultValue.IsEmpty then
     begin
-      WriteLn('✅ Procedure invoked successfully (no return value)');
       // Não faz nada - o controller já setou a resposta via Ctx.Response
     end
     else
     begin
-      WriteLn('✅ Function invoked successfully - Has return value');
-
       // ✅ VERIFICAR SE RETORNOU IResult (APENAS SE NÃO ESTIVER VAZIO)
       if ResultValue.TryAsType<IResult>(ResIntf) then
       begin
-        WriteLn('🔄 Executing IResult...');
         ResIntf.Execute(FContext);
       end
       else
       begin
-        WriteLn('📝 Method returned non-IResult value - Auto-json serialization');
         // ✅ AUTO-SERIALIZATION
         FContext.Response.Json(TDextJson.Serialize(ResultValue));
       end;
@@ -566,7 +539,6 @@ begin
   except
     on E: Exception do
     begin
-      WriteLn('❌ Invoke failed: ', E.ClassName, ': ', E.Message);
       FContext.Response.Status(500).Json(Format('{"error": "Method invocation failed: %s"}', [E.Message]));
       Exit(False);
     end;

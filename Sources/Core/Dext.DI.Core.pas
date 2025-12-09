@@ -42,6 +42,7 @@ type
       AImplementationClass: TClass; ALifetime: TServiceLifetime;
       AFactory: TFunc<IServiceProvider, TObject>);
     function Clone: TServiceDescriptor;
+    destructor Destroy; override;
   end;
 
   TDextServiceScope = class;
@@ -56,6 +57,7 @@ type
     FScopedInstances: TDictionary<string, TObject>;
     FScopedInterfaces: TDictionary<string, IInterface>;
     FLock: TCriticalSection;
+    FOwnsDescriptors: Boolean; // ✅ New Field
 
     function CreateInstance(ADescriptor: TServiceDescriptor): TObject;
     function FindDescriptor(const AServiceType: TServiceType): TServiceDescriptor;
@@ -120,6 +122,14 @@ begin
   Factory := AFactory;
 end;
 
+
+destructor TServiceDescriptor.Destroy;
+begin
+  // WriteLn('🗑️ TServiceDescriptor.Destroy'); // Uncomment if too noisy
+  Factory := nil; // Explicitly release the interface reference
+  inherited;
+end;
+
 function TServiceDescriptor.Clone: TServiceDescriptor;
 begin
   Result := TServiceDescriptor.Create(ServiceType, ImplementationClass, Lifetime, Factory);
@@ -179,12 +189,13 @@ var
   Desc: TServiceDescriptor;
 begin
   inherited Create;
-  // Root provider creates its own independent list of descriptors
-  FDescriptors := TObjectList<TServiceDescriptor>.Create(True);
+  // Create our own list container, but share the items (owned by Collection)
+  FDescriptors := TObjectList<TServiceDescriptor>.Create(False);
   for Desc in ADescriptors do
   begin
-    FDescriptors.Add(Desc.Clone);
+    FDescriptors.Add(Desc);
   end;
+  FOwnsDescriptors := True; // We own the list container, but not the items
 
   FSingletons := TDictionary<string, TObject>.Create;
   FSingletonInterfaces  := TDictionary<string, IInterface>.Create;
@@ -199,9 +210,17 @@ begin
 end;
 
 constructor TDextServiceProvider.CreateScoped(AParent: IServiceProvider; const ADescriptors: TObjectList<TServiceDescriptor>);
+var
+  Desc: TServiceDescriptor;
 begin
   inherited Create;
-  FDescriptors := ADescriptors; // Scoped provider shares descriptors with parent
+  FDescriptors := TObjectList<TServiceDescriptor>.Create(False);
+  for Desc in ADescriptors do
+  begin
+    FDescriptors.Add(Desc);
+  end;
+  FOwnsDescriptors := True;
+
   FSingletons := nil; // Scoped providers don't create singletons
   FSingletonInterfaces := nil;
   FScopedInstances := TDictionary<string, TObject>.Create;
@@ -231,7 +250,10 @@ begin
     end;
     
     if Assigned(FSingletonInterfaces) then
+    begin
+      FSingletonInterfaces.Clear;
       FSingletonInterfaces.Free;
+    end;
   end;
 
   // Liberar instâncias scoped
@@ -244,11 +266,15 @@ begin
   end;
 
   if Assigned(FScopedInterfaces) then
+  begin
+    FScopedInterfaces.Clear;
     FScopedInterfaces.Free;
+  end;
 
   FLock.Free;
   
-  if FIsRootProvider then
+  // ✅ Only Free Descriptors if we own them
+  if FOwnsDescriptors and Assigned(FDescriptors) then
     FDescriptors.Free;
 
   inherited Destroy;

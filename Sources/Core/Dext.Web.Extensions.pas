@@ -89,7 +89,7 @@ end;
 class procedure TWebDIHelpers.AddContentNegotiation(Services: IServiceCollection);
 begin
   // Register Registry & Default Formatter
-  Services.AddSingleton(TServiceType.FromInterface(TypeInfo(IOutputFormatterRegistry)), TOutputFormatterRegistry, 
+  Services.AddSingleton(TServiceType.FromInterface(TypeInfo(IOutputFormatterRegistry)), TOutputFormatterRegistry,
     function(P: IServiceProvider): TObject
     var
       Reg: TOutputFormatterRegistry;

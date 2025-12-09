@@ -205,6 +205,7 @@ destructor TApplicationBuilder.Destroy;
 var
   Route: TRouteDefinition;
 begin
+  FServiceProvider := nil;
   FMiddlewares.Free;
   for Route in FRoutes do
     Route.Free;

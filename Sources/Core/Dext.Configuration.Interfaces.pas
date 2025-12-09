@@ -71,6 +71,7 @@ type
   IConfigurationRoot = interface(IConfiguration)
     ['{C3D4E5F6-A7B8-4901-C3D4-E5F678901234}']
     procedure Reload;
+    function GetSectionChildren(const Path: string): TArray<IConfigurationSection>;
   end;
 
   /// <summary>

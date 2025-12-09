@@ -78,13 +78,13 @@ type
     
     function GetConfiguration(const Key: string): string;
     procedure SetConfiguration(const Key, Value: string);
-    function GetChildrenInternal(const Path: string): TArray<IConfigurationSection>;
 
   public
     constructor Create(const Providers: TList<IConfigurationProvider>);
     destructor Destroy; override;
     
     procedure Reload;
+    function GetSectionChildren(const Path: string): TArray<IConfigurationSection>;
     
     // IConfiguration
     function GetItem(const Key: string): string;
@@ -236,48 +236,8 @@ begin
 end;
 
 function TConfigurationSection.GetChildren: TArray<IConfigurationSection>;
-var
-  Children: TArray<IConfigurationSection>;
 begin
-  Children := FRoot.GetChildren;
-  // This is actually tricky on the root implementation, 
-  // usually GetChildren calls providers.
-  // For a section, we need to filter children that start with our path.
-  // But FRoot.GetChildren returns top level.
-  // We should probably expose a method on Root to get children of a path.
-  
-  // Let's defer to Root implementation logic if possible, but Root interface doesn't have GetChildren(Path).
-  // We can cast Root to TConfigurationRoot or just implement logic here using providers?
-  // No, we only have IConfigurationRoot.
-  
-  // Actually, standard .NET implementation:
-  // IConfiguration.GetChildren() returns the immediate children subsections.
-  
-  // So if we are at "Logging", children might be "LogLevel".
-  // We need to ask providers for child keys given our path.
-  
-  // Since we don't have direct access to providers here, we rely on Root.
-  // Wait, IConfiguration interface has GetChildren.
-  // The Root implementation of GetChildren returns root children.
-  // The Section implementation of GetChildren should return its children.
-  
-  // We need a way to get child keys from root given a path.
-  // But IConfigurationRoot doesn't expose that.
-  // In .NET, IConfigurationSection implements IConfiguration, so it has GetChildren.
-  // The logic usually resides in the Root or is delegated.
-  
-  // Let's implement it by casting Root to TConfigurationRoot for now or assume we can't easily without extending interface.
-  // For simplicity in this iteration, let's assume we can cast or we just return empty.
-  // Ideally, we should add GetChildKeys to IConfigurationRoot or similar.
-  // But we want to stick to standard interfaces.
-  
-  // Let's implement GetChildren in TConfigurationRoot properly, and here we might need a hack or helper.
-  // Actually, TConfigurationRoot can have a helper method that takes a path.
-  
-  if FRoot is TConfigurationRoot then
-    Result := TConfigurationRoot(FRoot).GetChildrenInternal(FPath)
-  else
-    Result := [];
+  Result := FRoot.GetSectionChildren(FPath);
 end;
 
 { TConfigurationRoot }
@@ -294,7 +254,13 @@ end;
 
 destructor TConfigurationRoot.Destroy;
 begin
-  FProviders.Free;
+  WriteLn('🗑️ TConfigurationRoot.Destroy');
+  if FProviders <> nil then
+  begin
+    for var I := 0 to FProviders.Count - 1 do
+      FProviders[I] := nil;
+    FProviders.Free;
+  end;
   inherited;
 end;
 
@@ -342,7 +308,7 @@ begin
 end;
 
 // Helper for internal use
-function TConfigurationRoot.GetChildrenInternal(const Path: string): TArray<IConfigurationSection>;
+function TConfigurationRoot.GetSectionChildren(const Path: string): TArray<IConfigurationSection>;
 var
   Keys: TArray<string>;
   Provider: IConfigurationProvider;
@@ -373,7 +339,7 @@ end;
 
 function TConfigurationRoot.GetChildren: TArray<IConfigurationSection>;
 begin
-  Result := GetChildrenInternal('');
+  Result := GetSectionChildren('');
 end;
 
 { TConfigurationBuilder }
@@ -387,8 +353,17 @@ end;
 
 destructor TConfigurationBuilder.Destroy;
 begin
-  FSources.Free;
-  FProperties.Free;
+  if FSources <> nil then
+  begin
+    for var I := 0 to FSources.Count - 1 do
+      FSources[I] := nil;
+    FSources.Free;
+  end;
+  if FProperties <> nil then
+  begin
+    FProperties.Clear;
+    FProperties.Free;
+  end;
   inherited;
 end;
 

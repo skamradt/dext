@@ -83,8 +83,6 @@ begin
   SetTextCodePage(Output, CP_UTF8);
   {$ENDIF}
 
-  WriteLn('🏗️ TDextApplication.Create');
-  
   // Initialize Configuration
   ConfigBuilder := TConfigurationBuilder.Create;
   
@@ -95,8 +93,6 @@ begin
   var Env := GetEnvironmentVariable('DEXT_ENVIRONMENT');
   if Env = '' then Env := 'Production'; // Default to Production
   
-  WriteLn('🌍 Environment: ' + Env);
-  
   if Env <> '' then
     ConfigBuilder.Add(TJsonConfigurationSource.Create('appsettings.' + Env + '.json', True));
 
@@ -106,7 +102,6 @@ begin
   FConfiguration := ConfigBuilder.Build;
   
   FServices := TDextServiceCollection.Create;
-  
   
   // Register Configuration
   var LConfig := FConfiguration;
@@ -121,11 +116,13 @@ begin
   
   FServiceProvider := FServices.BuildServiceProvider;
   FAppBuilder := TApplicationBuilder.Create(FServiceProvider);
+  ConfigBuilder := nil;
 end;
 
 destructor TDextApplication.Destroy;
 begin
-  WriteLn('💥 TDextApplication.Destroy');
+  FAppBuilder := nil;
+  FServiceProvider := nil;
   inherited Destroy;
 end;
 
@@ -153,21 +150,16 @@ function TDextApplication.MapControllers: IWebApplication;
 var
   RouteCount: Integer;
 begin
-  WriteLn('🔍 Scanning for controllers...');
-
-  // Rebuild ServiceProvider to include controllers registered via AddControllers
-  FServiceProvider := FServices.BuildServiceProvider;
-
-  FScanner := TControllerScanner.Create(FServiceProvider);
+  // No need to rebuild usage provider here, scanning uses RTTI.
+  // FServiceProvider will be rebuilt in Run() to include all services.
+  
+  FScanner := TControllerScanner.Create;
   RouteCount := FScanner.RegisterRoutes(FAppBuilder);
 
   if RouteCount = 0 then
   begin
-    WriteLn('⚠️  No controllers found with routing attributes - using manual fallback');
-    FScanner.RegisterControllerManual(FAppBuilder);
-  end
-  else
-    WriteLn('✅ Auto-mapped ', RouteCount, ' routes from controllers');
+    Writeln('No routes found!')
+  end;
 
   Result := Self;
 end;
@@ -179,12 +171,7 @@ var
   HostedManager: THostedServiceManager;
   Obj: TObject;
 begin
-  // Rebuild provider one last time to ensure all services (including hosted ones) are registered
-  FServiceProvider := FServices.BuildServiceProvider;
-  
-  // ✅ IMPORTANT: Update AppBuilder with new provider so it can resolve late-bound services (like HealthChecks)
-  FAppBuilder.SetServiceProvider(FServiceProvider);
-  
+//  FAppBuilder.SetServiceProvider(FServiceProvider);
   // Start Hosted Services
   HostedManager := nil;
   try
@@ -196,7 +183,7 @@ begin
     end;
   except
     on E: Exception do
-      WriteLn('⚠️ Failed to start hosted services: ' + E.Message);
+      { Failed to start hosted services };
   end;
 
   // Build pipeline
@@ -205,9 +192,6 @@ begin
   // Create WebHost
   WebHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider);
 
-  WriteLn('🚀 Starting Dext HTTP Server on port ', Port);
-  WriteLn('📡 Listening for requests...');
-
   try
     WebHost.Run;
   finally
@@ -215,9 +199,16 @@ begin
     if HostedManager <> nil then
     begin
       HostedManager.StopAsync;
+      // Do NOT Free HostedManager here if it is a Singleton managed by FServiceProvider
+      // It will be freed when FServiceProvider is destroyed.
+      // If it's transient, we might need to free it, but it's registered as singleton usually.
     end;
+    
+    // Explicitly release provider reference to ensure cleanup
+    FServiceProvider := nil;
   end;
-end;
+
+  end;
 
 function TDextApplication.UseMiddleware(Middleware: TClass): IWebApplication;
 begin
