@@ -59,6 +59,9 @@ implementation
 
 uses
   System.SysUtils,
+  {$IF Defined(MSWINDOWS)}
+  Winapi.Windows,
+  {$ENDIF}
   Dext.DI.Core,
   Dext.Http.Core,
   Dext.Http.Indy.Server,
@@ -75,6 +78,11 @@ var
   ConfigBuilder: IConfigurationBuilder;
 begin
   inherited Create;
+  {$IF Defined(MSWINDOWS)}
+  SetConsoleOutputCP(CP_UTF8);
+  SetTextCodePage(Output, CP_UTF8);
+  {$ENDIF}
+
   WriteLn('🏗️ TDextApplication.Create');
   
   // Initialize Configuration
