@@ -28,6 +28,8 @@ unit Dext.Core.Extensions;
 interface
 
 uses
+  System.Generics.Collections,
+  System.SysUtils,
   Dext.DI.Interfaces,
   Dext.HealthChecks,
   Dext.Hosting.BackgroundService;
@@ -44,8 +46,38 @@ implementation
 { TDextServiceCollectionExtensions }
 
 class function TDextServiceCollectionExtensions.AddHealthChecks(Services: IServiceCollection): THealthCheckBuilder;
+var
+  SharedChecks: TList<TClass>;
+  CapturedChecks: TArray<TClass>;
+  UpdateCallback: TProc;
+  Factory: TFunc<IServiceProvider, TObject>;
 begin
-  Result := THealthCheckBuilder.Create(Services);
+  SharedChecks := TList<TClass>.Create;
+  SetLength(CapturedChecks, 0);
+  
+  UpdateCallback := procedure
+    begin
+      CapturedChecks := SharedChecks.ToArray;
+    end;
+  
+  Factory := function(Provider: IServiceProvider): TObject
+    var
+      Service: THealthCheckService;
+      CheckClass: TClass;
+    begin
+      Service := THealthCheckService.Create;
+      for CheckClass in CapturedChecks do
+        Service.RegisterCheck(CheckClass);
+      Result := Service;
+    end;
+  
+  Services.AddSingleton(
+    TServiceType.FromClass(THealthCheckService),
+    THealthCheckService,
+    Factory
+  );
+  
+  Result := THealthCheckBuilder.Create(Services, SharedChecks, UpdateCallback);
 end;
 
 class function TDextServiceCollectionExtensions.AddBackgroundServices(Services: IServiceCollection): TBackgroundServiceBuilder;

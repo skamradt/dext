@@ -114,6 +114,8 @@ begin
     end
   );
   
+  // ✅ Create a temporary provider for ApplicationBuilder
+  // The real provider will be built in Run() after all services are registered
   FServiceProvider := FServices.BuildServiceProvider;
   FAppBuilder := TApplicationBuilder.Create(FServiceProvider);
   ConfigBuilder := nil;
@@ -171,7 +173,13 @@ var
   HostedManager: THostedServiceManager;
   Obj: TObject;
 begin
-//  FAppBuilder.SetServiceProvider(FServiceProvider);
+  // ✅ REBUILD ServiceProvider to include all services registered after Create()
+  WriteLn('🔄 Rebuilding ServiceProvider to include all registered services...');
+  FServiceProvider := nil; // Release old provider
+  FServiceProvider := FServices.BuildServiceProvider;
+  FAppBuilder.SetServiceProvider(FServiceProvider);
+  WriteLn('✅ ServiceProvider rebuilt with all services');
+  
   // Start Hosted Services
   HostedManager := nil;
   try

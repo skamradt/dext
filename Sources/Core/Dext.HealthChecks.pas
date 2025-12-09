@@ -74,8 +74,10 @@ type
   private
     FServices: IServiceCollection;
     FChecks: TList<TClass>;
+    FSharedChecks: TList<TClass>; // ✅ Shared with factory
+    FUpdateCallback: TProc; // ✅ Callback to update captured checks
   public
-    constructor Create(Services: IServiceCollection);
+    constructor Create(Services: IServiceCollection; SharedChecks: TList<TClass>; UpdateCallback: TProc);
     destructor Destroy; override;
     function AddCheck<T: class, constructor>: THealthCheckBuilder;
     procedure Build; // Registers the service
@@ -163,9 +165,12 @@ end;
 constructor THealthCheckMiddleware.Create(Service: THealthCheckService);
 begin
   inherited Create;
+  WriteLn('🏥 THealthCheckMiddleware.Create called');
+  WriteLn('   Service parameter: ', IntToHex(NativeInt(Service), 16));
   if Service = nil then
     raise Exception.Create('THealthCheckMiddleware: Service is nil! Dependency Injection failed.');
   FService := Service;
+  WriteLn('   ✅ THealthCheckMiddleware created successfully with service');
 end;
 
 procedure THealthCheckMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDelegate);
@@ -236,16 +241,23 @@ end;
 
 { THealthCheckBuilder }
 
-constructor THealthCheckBuilder.Create(Services: IServiceCollection);
+constructor THealthCheckBuilder.Create(Services: IServiceCollection; SharedChecks: TList<TClass>; UpdateCallback: TProc);
 begin
   inherited Create;
   FServices := Services;
-  FChecks := TList<TClass>.Create;
+  FSharedChecks := SharedChecks; // Reference to shared list
+  FChecks := FSharedChecks; // Use the same list
+  FUpdateCallback := UpdateCallback; // Store callback
 end;
 
 destructor THealthCheckBuilder.Destroy;
 begin
-  FChecks.Free;
+  // ✅ Free the shared list - we own it
+  if Assigned(FSharedChecks) then
+    FSharedChecks.Free;
+  FChecks := nil;
+  FSharedChecks := nil;
+  FUpdateCallback := nil;
   inherited;
 end;
 
@@ -254,36 +266,20 @@ begin
   // Register the check implementation
   FServices.AddTransient(TServiceType.FromClass(T), T);
   
-  // Add to our list
-  FChecks.Add(T);
+  // Add to our SHARED list (will be visible to the factory)
+  FSharedChecks.Add(T);
   
   Result := Self;
 end;
 
 procedure THealthCheckBuilder.Build;
-var
-  CapturedChecks: TArray<TClass>;
-  Factory: TFunc<IServiceProvider, TObject>;
 begin
-  CapturedChecks := FChecks.ToArray;
+  WriteLn('🔧 THealthCheckBuilder.Build: Finalizing with ', FSharedChecks.Count, ' checks');
   
-  // Create an explicit factory to help the compiler resolve the overload
-  Factory := function(Provider: IServiceProvider): TObject
-    var
-      Service: THealthCheckService;
-      CheckClass: TClass;
-    begin
-      Service := THealthCheckService.Create; // No Provider injected here
-      for CheckClass in CapturedChecks do
-        Service.RegisterCheck(CheckClass);
-      Result := Service;
-    end;
-
-  FServices.AddSingleton(
-    TServiceType.FromClass(THealthCheckService),
-    THealthCheckService,
-    Factory
-  );
+  // ✅ Call the callback to copy checks to the factory's captured array
+  if Assigned(FUpdateCallback) then
+    FUpdateCallback();
+  
   Self.Free;
 end;
 

@@ -148,7 +148,7 @@ begin
   // Create a temporary scanner to find and register controllers
   // Note: We pass nil as ServiceProvider because we are only scanning types here, 
   // not resolving them yet.
-  Scanner := TControllerScanner.Create(nil);
+  Scanner := TControllerScanner.Create;
   Scanner.RegisterServices(ACollection);
   Result := ACollection;
 end;
