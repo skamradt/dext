@@ -27,16 +27,28 @@ unit Dext.Utils;
 
 interface
 
+{$IFDEF MSWINDOWS}
 uses
   WinApi.Windows;
+{$ENDIF}
 
+procedure SetConsoleCharSet(CharSet: UINT = 65001);
 procedure DebugLog(const AMessage: string);
 
 implementation
 
+procedure SetConsoleCharSet(CharSet: UINT);
+begin
+{$IFDEF MSWINDOWS}
+ SetConsoleOutputCP(65001);
+{$ENDIF}
+end;
+
 procedure DebugLog(const AMessage: string);
 begin
+{$IFDEF MSWINDOWS}
   OutputDebugString(PChar(AMessage + sLineBreak));
+{$ENDIF}
   Writeln(AMessage);
 end;
 

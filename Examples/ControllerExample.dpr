@@ -4,7 +4,7 @@
 
 uses
   FastMM5,
-  WinApi.Windows,
+ Dext.Utils,
   System.SysUtils,
   System.Rtti,
   Dext in '..\Sources\Core\Dext.pas',
@@ -15,7 +15,7 @@ uses
   ControllerExample.Services in 'ControllerExample.Services.pas';
 
 begin
-  SetConsoleOutputCP(65001); // Fix console encoding
+  SetConsoleCharSet(65001); // Fix console encoding
   ReportMemoryLeaksOnShutdown := True;
   try
     WriteLn('🚀 Starting Dext Controller Example...');

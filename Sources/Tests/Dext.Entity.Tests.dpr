@@ -7,7 +7,7 @@
 uses
   FastMM5,
   System.SysUtils,
-  WinApi.Windows,
+ Dext.Utils,
   Dext.Entity.Dialects in '..\Entity\Dext.Entity.Dialects.pas',
   Dext.Entity.Dialect.PostgreSQL.Test in 'Dext.Entity.Dialect.PostgreSQL.Test.pas',
   Dext.Entity.Dialect.Firebird.Test in 'Dext.Entity.Dialect.Firebird.Test.pas',
@@ -28,7 +28,7 @@ var
   TestMap: TMappingTest;
 begin
   ReportMemoryLeaksOnShutdown := True;
-  SetConsoleOutputCP(65001);
+  SetConsoleCharSet(65001);
   WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
   

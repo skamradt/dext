@@ -60,7 +60,7 @@ implementation
 uses
   System.SysUtils,
   {$IF Defined(MSWINDOWS)}
-  Winapi.Windows,
+ Dext.Utils,
   {$ENDIF}
   Dext.DI.Core,
   Dext.Http.Core,
@@ -79,7 +79,7 @@ var
 begin
   inherited Create;
   {$IF Defined(MSWINDOWS)}
-  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCharSet(CP_UTF8);
   SetTextCodePage(Output, CP_UTF8);
   {$ENDIF}
 

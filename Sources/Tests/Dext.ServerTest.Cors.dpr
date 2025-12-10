@@ -4,7 +4,7 @@ uses
   FastMM5,
   System.SysUtils,
   System.Rtti,
-  WinApi.Windows,
+  Dext.Utils,
   Dext.DI.Interfaces,
   Dext.DI.Extensions,
   Dext.Http.Interfaces,
@@ -40,12 +40,12 @@ type
 constructor TTimeService.Create;
 begin
   inherited Create;
-  OutputDebugString(PChar('TTimeService.Create' + sLineBreak));
+  DebugLog('TTimeService.Create')
 end;
 
 destructor TTimeService.Destroy;
 begin
-  OutputDebugString(PChar('TTimeService.Destroy' + sLineBreak));
+  DebugLog('TTimeService.Destroy');
   inherited;
 end;
 

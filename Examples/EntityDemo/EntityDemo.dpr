@@ -5,7 +5,7 @@ program EntityDemo;
 
 uses
   FastMM5,
-  WinApi.Windows,
+  Dext.Utils,
   System.SysUtils,
   FireDAC.Comp.Client,
   EntityDemo.DbConfig in 'EntityDemo.DbConfig.pas',
@@ -122,7 +122,7 @@ end;
 
 begin
   ReportMemoryLeaksOnShutdown := True;
-  SetConsoleOutputCP(65001);
+  SetConsoleCharSet(65001);
   try
     WriteLn('🚀 Dext Entity ORM Demo Suite');
     WriteLn('=============================');

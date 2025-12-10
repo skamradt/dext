@@ -13,7 +13,7 @@ program Dext.ServerTest;
 
 uses
   System.SysUtils,
-  WinApi.Windows,
+ Dext.Utils,
   Dext.DI.Interfaces,
   Dext.DI.Extensions,
   Dext.Http.Interfaces,
