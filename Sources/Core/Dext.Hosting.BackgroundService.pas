@@ -32,7 +32,7 @@ uses
   System.Classes,
   System.Generics.Collections,
   Dext.DI.Interfaces,
-  Dext.Core.CancellationToken; // âœ… Added
+  Dext.Core.CancellationToken; // ✅ Added
 
 type
   IHostedService = interface
@@ -119,7 +119,7 @@ begin
     FService.Execute(FToken);
   except
     on E: Exception do
-      WriteLn(Format('âŒ Error in BackgroundService thread: %s', [E.Message]));
+      WriteLn(Format('❌ Error in BackgroundService thread: %s', [E.Message]));
   end;
 end;
 
@@ -180,15 +180,15 @@ procedure THostedServiceManager.StartAsync;
 var
   Service: IHostedService;
 begin
-  WriteLn('ðŸš€ Starting Hosted Services...');
+  WriteLn('🚀 Starting Hosted Services...');
   for Service in FServices do
   begin
     try
       Service.Start;
-      WriteLn(Format('  âœ… Started %s', [(Service as TObject).ClassName]));
+      WriteLn(Format('  ✅ Started %s', [(Service as TObject).ClassName]));
     except
       on E: Exception do
-        WriteLn(Format('  âŒ Failed to start %s: %s', [(Service as TObject).ClassName, E.Message]));
+        WriteLn(Format('  ❌ Failed to start %s: %s', [(Service as TObject).ClassName, E.Message]));
     end;
   end;
 end;
@@ -197,15 +197,15 @@ procedure THostedServiceManager.StopAsync;
 var
   Service: IHostedService;
 begin
-  WriteLn('ðŸ›‘ Stopping Hosted Services...');
+  WriteLn('🛑 Stopping Hosted Services...');
   for Service in FServices do
   begin
     try
       Service.Stop;
-      WriteLn(Format('  âœ… Stopped %s', [(Service as TObject).ClassName]));
+      WriteLn(Format('  ✅ Stopped %s', [(Service as TObject).ClassName]));
     except
       on E: Exception do
-        WriteLn(Format('  âŒ Failed to stop %s: %s', [(Service as TObject).ClassName, E.Message]));
+        WriteLn(Format('  ❌ Failed to stop %s: %s', [(Service as TObject).ClassName, E.Message]));
     end;
   end;
 end;
@@ -266,4 +266,3 @@ begin
 end;
 
 end.
-
