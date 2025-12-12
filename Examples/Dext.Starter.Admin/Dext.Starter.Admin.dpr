@@ -5,7 +5,7 @@
 {$R *.res}
 
 uses
-  FastMM5,
+  // FastMM5, // Removed to unblock CI build
   System.SysUtils,
   Dext,
   Dext.Web,

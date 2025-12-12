@@ -62,6 +62,8 @@ uses
   Dext.Entity.Naming,
   Dext.Entity.Scaffolding,
   Dext.Entity.Drivers.FireDAC,
+  Dext.Entity.Setup, // Add Setup
+  Dext.DI.Interfaces, // Add DI Interfaces
   Dext.Specifications.SQL.Generator;
 
 type
@@ -110,6 +112,10 @@ type
 
   // Mapping
   TModelBuilder = Dext.Entity.Mapping.TModelBuilder;
+
+  // Setup
+  TDbContextOptions = Dext.Entity.Setup.TDbContextOptions;
+  TDbContextOptionsBuilder = Dext.Entity.Setup.TDbContextOptionsBuilder;
   
   // Migrations - Interfaces
   IMigration = Dext.Entity.Migrations.IMigration;
@@ -205,6 +211,17 @@ type
   /// </summary>
   TPropExpression = Dext.Specifications.Types.TPropExpression;
 
+  /// <summary>
+  ///   Persistence Setup Helper
+  /// </summary>
+  TDbContextClass = class of TDbContext;
+  TPersistence = class
+  public
+    /// <summary>
+    ///   Registers a DbContext with the dependency injection container.
+    /// </summary>
+    class procedure AddDbContext<T: TDbContext>(Services: IServiceCollection; Config: TProc<TDbContextOptions>);
+  end;
 
 const
   caNoAction = Dext.Entity.Attributes.TCascadeAction.caNoAction;
@@ -216,7 +233,79 @@ implementation
 
 uses
   System.Rtti,
-  Dext.Specifications.OrderBy;
+  Dext.Specifications.OrderBy,
+  Dext.DI.Core; // Added for IServiceProvider, TServiceType
+
+
+class procedure TPersistence.AddDbContext<T>(Services: IServiceCollection; Config: TProc<TDbContextOptions>);
+begin
+  Services.AddScoped(
+    TServiceType.FromClass(T),
+    T,
+    function(Provider: IServiceProvider): TObject
+    begin
+      var Options := TDbContextOptions.Create;
+      try
+        // Apply user configuration
+        if Assigned(Config) then
+          Config(Options);
+
+        // 1. Connection Creation (Pooled)
+        var Connection: IDbConnection;
+        
+        if Options.CustomConnection <> nil then
+        begin
+          Connection := Options.CustomConnection;
+        end
+        else
+        begin
+          // FireDAC Creation
+          var FDConn := TFDConnection.Create(nil);
+          
+          if Options.DriverName <> '' then
+            FDConn.DriverName := Options.DriverName;
+            
+          if Options.ConnectionString <> '' then
+            FDConn.ConnectionString := Options.ConnectionString;
+            
+          for var Pair in Options.Params do
+             FDConn.Params.Values[Pair.Key] := Pair.Value;
+             
+          // Pooling Setup
+          if Options.Pooling then
+          begin
+            FDConn.Params.Values['Pooled'] := 'True';
+            if Options.PoolMax > 0 then
+              FDConn.Params.Values['Pool_MaximumItems'] := Options.PoolMax.ToString;
+          end;
+          
+          try
+            FDConn.Open; 
+          except
+             FDConn.Free;
+             raise;
+          end;
+
+          Connection := TFireDACConnection.Create(FDConn, True); // Owns FDConn
+        end;
+
+        // 2. Dialect Resolution
+        var Dialect := Options.Dialect;
+        if Dialect = nil then
+          Dialect := TSQLiteDialect.Create;
+
+        // 3. Create Context
+        var Ctx := TDbContextClass(T).Create(Connection, Dialect, nil);
+        Result := Ctx;
+        
+      except
+        Options.Free;
+        raise;
+      end;
+      Options.Free;
+    end
+  );
+end;
 
 { Lazy<T> }
 

@@ -148,6 +148,7 @@
         <DCCReference Include="Data\Dext.Entity.Migrations.Runner.pas"/>
         <DCCReference Include="Data\Dext.Entity.Migrations.Serializers.Json.pas"/>
         <DCCReference Include="Hosting\Dext.Hosting.CLI.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Setup.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

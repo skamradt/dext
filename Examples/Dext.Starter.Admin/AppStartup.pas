@@ -37,22 +37,21 @@ begin
   // 1. Auth Service
   TServiceCollectionExtensions.AddScoped<IAuthService, TAuthService>(Services);
 
-  // 2. Database (SQLite)
-  Services.AddScoped(
-    TServiceType.FromClass(TAppDbContext),
-    TAppDbContext,
-    function(Provider: Dext.DI.Interfaces.IServiceProvider): TObject
+  // 2. Database (SQLite) - Using new AddDbContext helper with Pooling support
+  TPersistence.AddDbContext<TAppDbContext>(Services,
+    procedure(Options: TDbContextOptions)
     begin
-      var FDConn := TFDConnection.Create(nil);
-      FDConn.DriverName := 'SQLite';
-      FDConn.Params.Values['Database'] := 'dext_admin.db';
-      FDConn.Params.Values['LockingMode'] := 'Normal';
-      FDConn.Open; // Open connection!
-
-      var Connection := TFireDACConnection.Create(FDConn, True);
-      var Dialect := TSQLiteDialect.Create;
-
-      Result := TAppDbContext.Create(Connection, Dialect);
+      // Use Helper
+      Options.UseSQLite('dext_admin.db');
+      
+      // Enable Pooling (Safe for real servers, overkill for SQLite file but good practice)
+      // TODO : Configure ConnectionDefs
+      // AUTH: Exception in middleware: EFDException: [FireDAC][Comp][Clnt]-507.
+      // Connection [$04AC7FC0: TFDConnection] cannot be pooled.
+      // Possible reason: connection definition is not in the FDManager.ConnectionDefs list or
+      // TFDConnection.Params has additional parameters
+      Options.Pooling := False;
+      Options.PoolMax := 20;
     end);
 
   // 3. Register DbSeeder (Manual)
