@@ -5,8 +5,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  Dext.Core.ApplicationBuilder.Extensions,
-  Dext.Web.HandlerInvoker, // Added for THandlerProc/Func types
+  Dext.Web.ApplicationBuilder.Extensions,
+  Dext.Web.HandlerInvoker,
   Dext.Web.Interfaces,
   Dext.Web.Results,
   WebFrameworkTests.Tests.Base;
@@ -28,8 +28,8 @@ begin
   inherited;
   Builder.Configure(procedure(App: IApplicationBuilder)
     var
-      GetHandler: THandlerFunc<IResult>;
-      PostHandler: THandlerFunc<IResult>;
+      GetHandler: THandlerResultFunc<IResult>;
+      PostHandler: THandlerResultFunc<IResult>;
       ParamHandler: THandlerProc<string, IHttpContext>;
     begin
       // Define handlers explicitly to help Delphi's compiler with generic resolution
@@ -91,4 +91,3 @@ begin
 end;
 
 end.
-

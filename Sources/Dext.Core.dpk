@@ -75,7 +75,8 @@ contains
   Dext.Specifications.OrderBy in 'Core\Dext.Specifications.OrderBy.pas',
   Dext.Specifications.Types in 'Core\Dext.Specifications.Types.pas',
   Dext.Threading.Async in 'Core\Dext.Threading.Async.pas',
-  Dext.Validation in 'Core\Dext.Validation.pas';
+  Dext.Validation in 'Core\Dext.Validation.pas',
+  Dext.MM in 'Core\Dext.MM.pas';
 
 end.
 

@@ -3,13 +3,14 @@ program Dext.ScopedServicesTest;
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,
   System.SysUtils,
   Dext.DI.Interfaces,
   Dext.DI.Extensions,
   Dext.DI.Middleware,
   Dext.Web.Interfaces,
   Dext.WebHost,
-  Dext.Core.ApplicationBuilder.Extensions,
+  Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.Results;
 
 type

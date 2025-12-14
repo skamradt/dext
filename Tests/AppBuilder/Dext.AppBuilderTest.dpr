@@ -1,7 +1,7 @@
 program Dext.AppBuilderTest;
 
 uses
-  FastMM5,
+  Dext.MM,
   System.Classes,
   System.SysUtils,
   System.Rtti,
@@ -26,7 +26,6 @@ var
   Services: IServiceCollection;
   ServiceProvider: IServiceProvider;
 begin
-  ReportMemoryLeaksOnShutdown := True;
   try
     Writeln('=== Testing ApplicationBuilder ===');
 

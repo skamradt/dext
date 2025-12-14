@@ -4,181 +4,171 @@ interface
 
 uses
   Dext.Web,
-  System.Classes,
-  System.NetEncoding,
-  System.IOUtils,
+  Settings.Dto,
+  Settings.Service,
+  Dext.Web.Results,
   System.SysUtils;
 
 type
   TSettingsEndpoints = class
   public
     class procedure Map(App: TDextAppBuilder);
-  private
-    class function GenerateSuccessNotification(const Message: string): string;
-    class function GenerateErrorNotification(const Message: string): string;
-  private
-    class function CheckAuth(Context: IHttpContext): Boolean;
   end;
 
 implementation
 
 uses
-  AppResponseConsts;
+  AppResponseConsts,
+  Dext.Auth.JWT,
+  Dext.Auth.Identity;
 
-function GetFilePath(const RelativePath: string): string;
+function GenerateSuccessNotification(const Msg: string): string;
 begin
-  // Executable runs from Output\ directory, files are in Dext.Starter.Admin\
-  Result := IncludeTrailingPathDelimiter(GetCurrentDir) + '..\Dext.Starter.Admin\' + RelativePath;
+  Result := Format(HTML_NOTIFICATION_SUCCESS, [Msg]);
+end;
+
+function GenerateErrorNotification(const Msg: string): string;
+begin
+  Result := Format(HTML_NOTIFICATION_ERROR, [Msg]);
+end;
+
+// Helper to get UserId from JWT claims in context
+function GetUserIdFromContext(Context: IHttpContext): Integer;
+var
+  Claim: TClaim;
+begin
+  // Get sub claim from JWT (userId stored as "sub" in our JWT)
+  if Context.User <> nil then
+  begin
+    Claim := Context.User.FindClaim(TClaimTypes.NameIdentifier);
+    Result := StrToIntDef(Claim.Value, 0);
+  end
+  else
+    Result := 0;
 end;
 
 { TSettingsEndpoints }
 
-class function TSettingsEndpoints.CheckAuth(Context: IHttpContext): Boolean;
-begin
-  Result := (Context.User <> nil) and 
-            (Context.User.Identity <> nil) and 
-            (Context.User.Identity.IsAuthenticated);
-            
-  if not Result then
-    Context.Response.StatusCode := 401;
-end;
-
-class function TSettingsEndpoints.GenerateSuccessNotification(const Message: string): string;
-begin
-  Result := Format(HTML_NOTIFICATION_SUCCESS, [Message]);
-end;
-
-class function TSettingsEndpoints.GenerateErrorNotification(const Message: string): string;
-begin
-  Result := Format(HTML_NOTIFICATION_ERROR, [Message]);
-end;
-
 class procedure TSettingsEndpoints.Map(App: TDextAppBuilder);
 begin
-  // GET /settings - Return settings page
-  App.MapGet('/settings',
-    procedure(Context: IHttpContext)
+  // GET /settings - Return settings page with user data
+  App.MapGet<ISettingsService, IHttpContext, IResult>('/settings',
+    function(Service: ISettingsService; Context: IHttpContext): IResult
+    var
+      UserId: Integer;
+      Profile: TUserProfile;
+      AppSettings: TAppSettings;
+      Html: string;
     begin
-      if not CheckAuth(Context) then Exit; // Auth Check
+      UserId := GetUserIdFromContext(Context);
+      Profile := Service.GetProfile(UserId);
+      AppSettings := Service.GetAppSettings(UserId);
       
-      var Html := TFile.ReadAllText(GetFilePath('wwwroot\views\settings.html'));
-      var Res: IResult := TContentResult.Create(Html, 'text/html');
-      Res.Execute(Context);
+      Html := Results.ReadViewFile('settings.html');
+      
+      // Replace profile placeholders
+      Html := Html.Replace('value="Admin User"', Format('value="%s"', [Profile.Name]));
+      Html := Html.Replace('value="admin@dext.com"', Format('value="%s"', [Profile.Email]));
+      Html := Html.Replace('value="Administrator"', Format('value="%s"', [Profile.Role]));
+      
+      // Replace app settings checkboxes
+      if AppSettings.EmailNotifications then
+        Html := Html.Replace('id="emailNotifications"', 'id="emailNotifications" checked')
+      else
+        Html := Html.Replace('id="emailNotifications" checked', 'id="emailNotifications"');
+        
+      if AppSettings.DarkMode then
+        Html := Html.Replace('id="darkMode"', 'id="darkMode" checked')
+      else
+        Html := Html.Replace('id="darkMode" checked', 'id="darkMode"');
+        
+      if AppSettings.AutoSave then
+        Html := Html.Replace('id="autoSave"', 'id="autoSave" checked')
+      else
+        Html := Html.Replace('id="autoSave" checked', 'id="autoSave"');
+      
+      // Hide danger zone for admin
+      if not Service.CanDeleteAccount(UserId) then
+        Html := Html.Replace('id="dangerZone"', 'id="dangerZone" style="display:none"');
+      
+      Result := Results.Html(Html);
     end);
 
   // POST /settings/profile - Update profile
-  App.MapPost('/settings/profile',
-    procedure(Context: IHttpContext)
+  App.MapPost<ISettingsService, TSettingsProfileDto, IHttpContext, IResult>('/settings/profile',
+    function(Service: ISettingsService; Dto: TSettingsProfileDto; Context: IHttpContext): IResult
     var
+      UserId: Integer;
       Notification: string;
-      SettingsHtml: string;
-      Body, Name, Email: string;
-      Reader: TStreamReader;
     begin
-      if not CheckAuth(Context) then Exit; // Auth Check
+      UserId := GetUserIdFromContext(Context);
+      Service.UpdateProfile(UserId, Dto.Name, Dto.Email);
       
-      // Read body stream logic... (Should rely on Form binding ideally, but keeping manual for now or checking if Dext does it)
-      // Dext 2.0 should handle form binding, but to be safe and consistent with previous code structure:
+      Notification := GenerateSuccessNotification(Format('Profile updated for %s!', [Dto.Name]));
       
-      if Context.Request.Body <> nil then
-      begin
-        Context.Request.Body.Position := 0;
-        Reader := TStreamReader.Create(Context.Request.Body, TEncoding.UTF8, False);
-        try
-          Body := Reader.ReadToEnd;
-        finally
-          Reader.Free;
-        end;
-      end
-      else
-        Body := '';
+      Context.Response.AddHeader('HX-Trigger', '{"showToast": {"message": "Profile saved!", "type": "success"}}');
+      Result := Results.Html(Notification);
+    end);
+
+  // POST /settings/app - Update application settings
+  App.MapPost<ISettingsService, TSettingsAppDto, IHttpContext, IResult>('/settings/app',
+    function(Service: ISettingsService; Dto: TSettingsAppDto; Context: IHttpContext): IResult
+    var
+      UserId: Integer;
+      Notification: string;
+    begin
+      UserId := GetUserIdFromContext(Context);
+      Service.UpdateAppSettings(UserId, Dto);
       
-      // Parse URL-encoded form data
-      Name := '';
-      Email := '';
+      Notification := GenerateSuccessNotification('Application settings saved!');
       
-      var Params := Body.Split(['&']);
-      for var Param in Params do
-      begin
-        var Parts := Param.Split(['=']);
-        if Length(Parts) = 2 then
-        begin
-          var Key := TNetEncoding.URL.Decode(Parts[0]);
-          var Value := TNetEncoding.URL.Decode(Parts[1]);
-          
-          if SameText(Key, 'name') then Name := Value
-          else if SameText(Key, 'email') then Email := Value;
-        end;
-      end;
-      
-      // Logic...
-      Notification := GenerateSuccessNotification(Format('Profile updated for %s (%s)!', [Name, Email]));
-      SettingsHtml := TFile.ReadAllText(GetFilePath('wwwroot\views\settings.html'));
-      
-      SettingsHtml := SettingsHtml.Replace('value="Admin User"', Format('value="%s"', [Name]));
-      SettingsHtml := SettingsHtml.Replace('value="admin@dext.com"', Format('value="%s"', [Email]));
-      
-      var Html := Notification + SettingsHtml;
-      var Res: IResult := TContentResult.Create(Html, 'text/html');
-      Res.Execute(Context);
+      Context.Response.AddHeader('HX-Trigger', '{"showToast": {"message": "Settings saved!", "type": "success"}}');
+      Result := Results.Html(Notification);
     end);
 
   // POST /settings/password - Change password
-  App.MapPost('/settings/password',
-    procedure(Context: IHttpContext)
+  App.MapPost<ISettingsService, TSettingsPasswordDto, IHttpContext, IResult>('/settings/password',
+    function(Service: ISettingsService; Dto: TSettingsPasswordDto; Context: IHttpContext): IResult
     var
+      UserId: Integer;
+      Error: string;
       Notification: string;
-      SettingsHtml: string;
-      Body, CurrentPassword, NewPassword, ConfirmPassword: string;
-      Reader: TStreamReader;
     begin
-      if not CheckAuth(Context) then Exit; // Auth Check
+      UserId := GetUserIdFromContext(Context);
       
-      if Context.Request.Body <> nil then
+      if Service.UpdatePassword(UserId, Dto.CurrentPassword, Dto.NewPassword, Dto.ConfirmPassword, Error) then
       begin
-        Context.Request.Body.Position := 0;
-        Reader := TStreamReader.Create(Context.Request.Body, TEncoding.UTF8, False);
-        try
-          Body := Reader.ReadToEnd;
-        finally
-          Reader.Free;
-        end;
+        Notification := GenerateSuccessNotification('Password updated successfully!');
+        Context.Response.AddHeader('HX-Trigger', '{"showToast": {"message": "Password changed!", "type": "success"}}');
       end
       else
-        Body := '';
-      
-      // Parse URL-encoded form data
-      CurrentPassword := '';
-      NewPassword := '';
-      ConfirmPassword := '';
-      
-      var Params := Body.Split(['&']);
-      for var Param in Params do
       begin
-        var Parts := Param.Split(['=']);
-        if Length(Parts) = 2 then
-        begin
-          var Key := TNetEncoding.URL.Decode(Parts[0]);
-          var Value := TNetEncoding.URL.Decode(Parts[1]);
-          
-          if SameText(Key, 'current_password') then CurrentPassword := Value
-          else if SameText(Key, 'new_password') then NewPassword := Value
-          else if SameText(Key, 'confirm_password') then ConfirmPassword := Value;
-        end;
+        Notification := GenerateErrorNotification(Error);
+        Context.Response.AddHeader('HX-Trigger', '{"showToast": {"message": "' + Error + '", "type": "error"}}');
       end;
       
-      if NewPassword <> ConfirmPassword then
-        Notification := GenerateErrorNotification('New passwords do not match')
-      else if Length(NewPassword) < 6 then
-        Notification := GenerateErrorNotification('Password must be at least 6 characters')
-      else
-        Notification := GenerateSuccessNotification('Password updated successfully!');
+      Result := Results.Html(Notification);
+    end);
+    
+  // POST /settings/delete-account - Delete account (non-admin only)
+  App.MapPost<ISettingsService, IHttpContext, IResult>('/settings/delete-account',
+    function(Service: ISettingsService; Context: IHttpContext): IResult
+    var
+      UserId: Integer;
+    begin
+      UserId := GetUserIdFromContext(Context);
       
-      SettingsHtml := TFile.ReadAllText(GetFilePath('wwwroot\views\settings.html'));
+      if not Service.CanDeleteAccount(UserId) then
+      begin
+        Context.Response.AddHeader('HX-Trigger', '{"showToast": {"message": "Admin accounts cannot be deleted", "type": "error"}}');
+        Exit(Results.Html(GenerateErrorNotification('Admin accounts cannot be deleted')));
+      end;
       
-      var Html := Notification + SettingsHtml;
-      var Res: IResult := TContentResult.Create(Html, 'text/html');
-      Res.Execute(Context);
+      Service.DeleteAccount(UserId);
+      
+      // Redirect to login after deletion
+      Context.Response.AddHeader('HX-Redirect', '/auth/login');
+      Result := Results.Ok;
     end);
 end;
 

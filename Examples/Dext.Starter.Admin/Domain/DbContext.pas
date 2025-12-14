@@ -6,6 +6,7 @@ uses
   Dext.Persistence,
   Dext.Entity.Mapping,  // For TModelBuilder
   User,
+  UserSettings,
   Customer,
   Order;
 
@@ -25,6 +26,7 @@ begin
   inherited;
   // Register all entities
   Builder.Entity<TUser>;
+  Builder.Entity<TUserSettings>;
   Builder.Entity<TCustomer>;
   Builder.Entity<TOrder>;
 end;

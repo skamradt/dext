@@ -29,6 +29,7 @@ interface
 
 uses
   System.SysUtils,
+  System.IOUtils,
   System.Rtti,
   Dext.DI.Interfaces,
   Dext.Web.Interfaces,
@@ -93,7 +94,23 @@ type
   end;
 
   Results = class
+  private
+    class var FViewsPath: string;
+    class var FAppPath: string;
+    class function GetFullViewPath(const ARelativePath: string): string;
   public
+    /// <summary>
+    ///   Sets the root directory for view files (relative to app path or absolute).
+    ///   Example: 'wwwroot\views' or 'C:\MyApp\views'
+    /// </summary>
+    class procedure SetViewsPath(const APath: string);
+    
+    /// <summary>
+    ///   Sets the application root path (used for resolving relative paths).
+    ///   If not set, uses the executable's directory.
+    /// </summary>
+    class procedure SetAppPath(const APath: string);
+    
     class function Ok: IResult; overload;
     class function Ok(const AValue: string): IResult; overload;
     class function Ok<T>(const AValue: T): IResult; overload;
@@ -111,6 +128,23 @@ type
     
     class function Json(const AJson: string; AStatusCode: Integer = 200): IResult;
     class function Text(const AContent: string; AStatusCode: Integer = 200): IResult;
+    class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult; // Added
+    class function Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
+    
+    /// <summary>
+    ///   Returns an HTML result by reading the content from a view file.
+    ///   The path is relative to ViewsPath (configured via SetViewsPath).
+    ///   Example: Results.HtmlFromFile('login.html') reads from 'wwwroot\views\login.html'
+    /// </summary>
+    class function HtmlFromFile(const ARelativePath: string; AStatusCode: Integer = 200): IResult;
+    
+    /// <summary>
+    ///   Reads the content of a view file and returns it as a string.
+    ///   Useful when you need to modify the HTML before returning it.
+    ///   Example: var Html := Results.ReadViewFile('settings.html');
+    /// </summary>
+    class function ReadViewFile(const ARelativePath: string): string;
+
     class function StatusCode(ACode: Integer): IResult; overload;
     class function StatusCode(ACode: Integer; const AContent: string): IResult; overload;
   end;
@@ -312,6 +346,16 @@ begin
   Result := TContentResult.Create(AContent, 'text/plain', AStatusCode);
 end;
 
+class function Results.Html(const AHtml: string; AStatusCode: Integer = 200): IResult;
+begin
+  Result := TContentResult.Create(AHtml, 'text/html', AStatusCode);
+end;
+
+class function Results.Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult;
+begin
+  Result := TContentResult.Create(AContent, AContentType, AStatusCode);
+end;
+
 class function Results.StatusCode(ACode: Integer): IResult;
 begin
   Result := TStatusCodeResult.Create(ACode);
@@ -322,5 +366,74 @@ begin
   Result := TJsonResult.Create(AContent, ACode);
 end;
 
-end.
+class procedure Results.SetViewsPath(const APath: string);
+begin
+  FViewsPath := APath;
+end;
 
+class procedure Results.SetAppPath(const APath: string);
+begin
+  FAppPath := APath;
+end;
+
+class function Results.GetFullViewPath(const ARelativePath: string): string;
+var
+  ViewPath: string;
+begin
+  // If ViewsPath is an absolute path, use it directly
+  if (FViewsPath <> '') and TPath.IsPathRooted(FViewsPath) then
+    ViewPath := FViewsPath
+  else
+  begin
+    // Combine with app path or executable directory
+    if FAppPath <> '' then
+      ViewPath := FAppPath
+    else
+      ViewPath := ExtractFilePath(ParamStr(0));
+      
+    // Combine with views path if set
+    if FViewsPath <> '' then
+      ViewPath := TPath.Combine(ViewPath, FViewsPath);
+  end;
+    
+  // Ensure views path ends with path delimiter
+  ViewPath := IncludeTrailingPathDelimiter(ViewPath);
+  
+  // Remove leading path separator from relative path if present
+  if (Length(ARelativePath) > 0) and CharInSet(ARelativePath[1], ['\', '/']) then
+    Result := ViewPath + Copy(ARelativePath, 2, MaxInt)
+  else
+    Result := ViewPath + ARelativePath;
+end;
+
+class function Results.HtmlFromFile(const ARelativePath: string; AStatusCode: Integer): IResult;
+var
+  FullPath: string;
+  Content: string;
+begin
+  FullPath := GetFullViewPath(ARelativePath);
+  
+  if TFile.Exists(FullPath) then
+  begin
+    Content := TFile.ReadAllText(FullPath);
+    Result := TContentResult.Create(Content, 'text/html', AStatusCode);
+  end
+  else
+    Result := TContentResult.Create(
+      Format('<html><body><h1>View Not Found</h1><p>%s</p></body></html>', [FullPath]), 
+      'text/html', 404);
+end;
+
+class function Results.ReadViewFile(const ARelativePath: string): string;
+var
+  FullPath: string;
+begin
+  FullPath := GetFullViewPath(ARelativePath);
+  
+  if TFile.Exists(FullPath) then
+    Result := TFile.ReadAllText(FullPath)
+  else
+    Result := Format('<html><body><h1>View Not Found</h1><p>%s</p></body></html>', [FullPath]);
+end;
+
+end.

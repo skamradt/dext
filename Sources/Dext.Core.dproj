@@ -158,6 +158,7 @@
         <DCCReference Include="Core\Dext.Specifications.Types.pas"/>
         <DCCReference Include="Core\Dext.Threading.Async.pas"/>
         <DCCReference Include="Core\Dext.Validation.pas"/>
+        <DCCReference Include="Core\Dext.MM.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

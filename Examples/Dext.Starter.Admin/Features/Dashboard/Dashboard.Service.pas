@@ -56,8 +56,48 @@ begin
 end;
 
 function TDashboardService.GetChartDataJson: string;
+var
+  Customers: IList<TCustomer>;
+  C: TCustomer;
+  Labels, Data: string;
+  FS: TFormatSettings;
+  IsFirst: Boolean;
 begin
-  Result := JSON_DASHBOARD_CHART;
+  FS := TFormatSettings.Create;
+  FS.DecimalSeparator := '.';
+  
+  Customers := FDb.Entities<TCustomer>.List;
+  
+  Labels := '';
+  Data := '';
+  IsFirst := True;
+  
+  for C in Customers do
+  begin
+    if not IsFirst then
+    begin
+      Labels := Labels + ', ';
+      Data := Data + ', ';
+    end;
+    
+    Labels := Labels + '"' + C.Name + '"';
+    Data := Data + FormatFloat('0.00', C.TotalSpent, FS);
+    IsFirst := False;
+  end;
+  
+  Result := Format(
+    '{' +
+    '"labels": [%s],' +
+    '"datasets": [{' +
+      '"label": "Total Spent",' +
+      '"data": [%s],' +
+      '"borderWidth": 2,' +
+      '"borderColor": "rgb(79, 70, 229)",' +
+      '"backgroundColor": "rgba(79, 70, 229, 0.1)",' +
+      '"fill": true' +
+    '}]' +
+    '}',
+    [Labels, Data]);
 end;
 
 end.

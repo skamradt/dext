@@ -16,6 +16,9 @@ uses
   Settings.Endpoints,
   Settings.Service,
   Dashboard.Service,
+  // Shared
+  Admin.Middleware,
+  Admin.Utils,
   // Domain
   User,
   Customer,
@@ -26,17 +29,12 @@ uses
 type
   TAppStartup = class(TInterfacedObject, IStartup)
   public
-    // IStartup Implementation - Instance methods
     procedure ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
     procedure Configure(const App: IWebApplication);
-    
-    // Static Helper for Seeding (kept static as it's optional)
     class procedure RunSeeder(const App: IWebApplication);
   end;
 
 implementation
-
-{ TAppStartup }
 
 { TAppStartup }
 
@@ -45,7 +43,7 @@ begin
   // 1. Auth Service (Generic)
   Services.AddScoped<IAuthService, TAuthService>;
 
-  // 2. Database (SQLite) - Using new AddDbContext helper with Pooling support
+  // 2. Database (SQLite)
   Services.AddDbContext<TAppDbContext>(
     procedure(Options: TDbContextOptions)
     begin
@@ -59,18 +57,17 @@ begin
   Services.AddScoped<IDashboardService, TDashboardService>;
   Services.AddScoped<ISettingsService, TSettingsService>;
 
-  // 3. Register DbSeeder (Manual -> Implicit Type)
+  // 3. Register DbSeeder
   Services.AddTransient(TDbSeeder, TDbSeeder,
     function(Provider: IServiceProvider): TObject
     begin
        Result := TDbSeeder.Create(Provider);
     end);
 
-  // 4. Register JWT Token Handler (Interface type -> Implicit Type)
+  // 4. Register JWT Token Handler
   Services.AddSingleton<IJwtTokenHandler, TJwtTokenHandler>(
     function(Provider: IServiceProvider): TObject
     begin
-      // TODO: Move secret key to configuration
       Result := TJwtTokenHandler.Create(
         'dext-admin-secret-key-change-in-production-2024',
         'DextAdmin',
@@ -82,7 +79,6 @@ end;
 class procedure TAppStartup.RunSeeder(const App: IWebApplication);
 begin
   Writeln('[*] Preparing to seed database...');
-  // Get the ServiceProvider from the ApplicationBuilder
   var ServiceProvider := App.GetApplicationBuilder.GetServiceProvider;
   if ServiceProvider = nil then
   begin
@@ -108,6 +104,9 @@ procedure TAppStartup.Configure(const App: IWebApplication);
 begin
   var WebApp := App.GetBuilder;
 
+  // 0. Configure Views Path (using Admin.Utils to get correct path)
+  Results.SetViewsPath(GetFilePath('wwwroot\views'));
+  
   // 1. Serve Static Files (from wwwroot)
   WebApp.UseStaticFiles;
 
@@ -117,11 +116,13 @@ begin
     TJwtOptions.Create('dext-admin-secret-key-change-in-production-2024')
   );
 
-  // 3. Generate Swagger Documentation
-  // TSwaggerExtensions.UseSwagger(WebApp); // Not fluent yet
+  // 3. Auth Guard Middleware (Custom)
+  WebApp.UseMiddleware(TAdminAuthMiddleware);
+
+  // 4. Generate Swagger Documentation
   TSwaggerExtensions.UseSwagger(WebApp.Unwrap);
 
-  // 4. Map Features
+  // 5. Map Features
   TAuthEndpoints.Map(WebApp);
   TDashboardEndpoints.Map(WebApp);
   TCustomerEndpoints.Map(WebApp);
