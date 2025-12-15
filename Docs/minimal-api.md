@@ -48,10 +48,8 @@ O **Dext Minimal API** é um framework moderno e minimalista para criação de A
 2. Adicione as units necessárias:
    ```pascal
    uses
-     Dext.WebHost,
-     Dext.Http.Interfaces,
-     Dext.DI.Interfaces,
-     Dext.Core.ApplicationBuilder.Extensions;
+     Dext.Web;
+   ```
    ```
 
 ---
@@ -140,9 +138,7 @@ type
   end;
 
 // POST /api/users
-TApplicationBuilderExtensions.MapPost<TCreateUserRequest, IHttpContext>(
-  App,
-  '/api/users',
+App.Builder.MapPost<TCreateUserRequest, IHttpContext>('/api/users',
   procedure(Request: TCreateUserRequest; Ctx: IHttpContext)
   begin
     // Request é automaticamente deserializado do JSON body
@@ -161,7 +157,7 @@ Suporte nativo a tipos primitivos em route parameters:
 
 ```pascal
 // Integer
-MapGet<Integer, IHttpContext>(App, '/users/{id}',
+App.Builder.MapGet<Integer, IHttpContext>('/users/{id}',
   procedure(UserId: Integer; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"userId":%d}', [UserId]));
@@ -169,7 +165,7 @@ MapGet<Integer, IHttpContext>(App, '/users/{id}',
 );
 
 // String
-MapGet<string, IHttpContext>(App, '/posts/{slug}',
+App.Builder.MapGet<string, IHttpContext>('/posts/{slug}',
   procedure(Slug: string; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"slug":"%s"}', [Slug]));
@@ -177,7 +173,7 @@ MapGet<string, IHttpContext>(App, '/posts/{slug}',
 );
 
 // GUID
-MapGet<TGUID, IHttpContext>(App, '/items/{guid}',
+App.Builder.MapGet<TGUID, IHttpContext>('/items/{guid}',
   procedure(ItemGuid: TGUID; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"guid":"%s"}', [GUIDToString(ItemGuid)]));
@@ -197,7 +193,7 @@ type
   end;
 
 // GET /posts/{year}/{month}
-MapGet<TPostRoute, IHttpContext>(App, '/posts/{year}/{month}',
+App.Builder.MapGet<TPostRoute, IHttpContext>('/posts/{year}/{month}',
   procedure(Route: TPostRoute; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"year":%d,"month":%d}', 
@@ -226,13 +222,13 @@ MapGet<TPostRoute, IHttpContext>(App, '/posts/{year}/{month}',
 .ConfigureServices(procedure(Services: IServiceCollection)
 begin
   // Singleton - uma instância para toda a aplicação
-  TServiceCollectionExtensions.AddSingleton<IUserService, TUserService>(Services);
+  Services.AddSingleton<IUserService, TUserService>;
   
   // Scoped - uma instância por requisição (futuro)
-  // TServiceCollectionExtensions.AddScoped<IDbContext, TDbContext>(Services);
+  // Services.AddScoped<IDbContext, TDbContext>;
   
   // Transient - nova instância sempre (futuro)
-  // TServiceCollectionExtensions.AddTransient<IEmailService, TEmailService>(Services);
+  // Services.AddTransient<IEmailService, TEmailService>;
 end)
 ```
 
@@ -240,9 +236,7 @@ end)
 
 ```pascal
 // Injeção automática de serviço
-MapGet<Integer, IUserService, IHttpContext>(
-  App,
-  '/users/{id}',
+App.Builder.MapGet<Integer, IUserService, IHttpContext>('/users/{id}',
   procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
   begin
     var UserName := UserService.GetUserName(UserId);
@@ -259,7 +253,7 @@ MapGet<Integer, IUserService, IHttpContext>(
 
 ```pascal
 // Simples
-MapGet<IHttpContext>(App, '/api/health',
+App.Builder.MapGet<IHttpContext>('/api/health',
   procedure(Ctx: IHttpContext)
   begin
     Ctx.Response.Json('{"status":"healthy"}');
@@ -267,7 +261,7 @@ MapGet<IHttpContext>(App, '/api/health',
 );
 
 // Com route parameter
-MapGet<Integer, IHttpContext>(App, '/api/users/{id}',
+App.Builder.MapGet<Integer, IHttpContext>('/api/users/{id}',
   procedure(UserId: Integer; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"userId":%d}', [UserId]));
@@ -284,7 +278,7 @@ type
     Email: string;
   end;
 
-MapPost<TCreateUserRequest, IHttpContext>(App, '/api/users',
+App.Builder.MapPost<TCreateUserRequest, IHttpContext>('/api/users',
   procedure(Request: TCreateUserRequest; Ctx: IHttpContext)
   begin
     Ctx.Response.StatusCode := 201;
@@ -303,9 +297,7 @@ type
     Email: string;
   end;
 
-MapPut<Integer, TUpdateUserRequest, IHttpContext>(
-  App, 
-  '/api/users/{id}',
+App.Builder.MapPut<Integer, TUpdateUserRequest, IHttpContext>('/api/users/{id}',
   procedure(UserId: Integer; Request: TUpdateUserRequest; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"userId":%d,"updated":true}', [UserId]));
@@ -316,7 +308,7 @@ MapPut<Integer, TUpdateUserRequest, IHttpContext>(
 ### DELETE
 
 ```pascal
-MapDelete<Integer, IHttpContext>(App, '/api/users/{id}',
+App.Builder.MapDelete<Integer, IHttpContext>('/api/users/{id}',
   procedure(UserId: Integer; Ctx: IHttpContext)
   begin
     Ctx.Response.Json(Format('{"userId":%d,"deleted":true}', [UserId]));
@@ -335,11 +327,7 @@ program UserAPI;
 
 uses
   System.SysUtils,
-  Dext.WebHost,
-  Dext.Http.Interfaces,
-  Dext.DI.Interfaces,
-  Dext.DI.Extensions,
-  Dext.Core.ApplicationBuilder.Extensions;
+  Dext.Web;
 
 type
   TCreateUserRequest = record
@@ -353,7 +341,7 @@ type
   end;
 
   IUserService = interface
-    ['{...}']
+    ['{BFD0C440-E062-4D78-9842-8308E413B6B9}']
     function GetUser(Id: Integer): string;
     function CreateUser(const Name, Email: string): Integer;
     function UpdateUser(Id: Integer; const Name, Email: string): Boolean;
@@ -391,62 +379,58 @@ begin
 end;
 
 begin
-  var Host := TDextWebHost.CreateDefaultBuilder
-    .ConfigureServices(procedure(Services: IServiceCollection)
+  var App := TDextApplication.Create;
+
+  // Register Services
+  App.Services.AddSingleton<IUserService, TUserService>;
+
+  var Builder := App.Builder;
+
+  // GET /api/users/{id}
+  Builder.MapGet<Integer, IUserService, IHttpContext>(
+    '/api/users/{id}',
+    procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
     begin
-      TServiceCollectionExtensions.AddSingleton<IUserService, TUserService>(Services);
-    end)
-    .Configure(procedure(App: IApplicationBuilder)
+      var UserName := UserService.GetUser(UserId);
+      Ctx.Response.Json(Format('{"id":%d,"name":"%s"}', [UserId, UserName]));
+    end
+  );
+
+  // POST /api/users
+  Builder.MapPost<TCreateUserRequest, IUserService, IHttpContext>(
+    '/api/users',
+    procedure(Request: TCreateUserRequest; UserService: IUserService; Ctx: IHttpContext)
     begin
-      // GET /api/users/{id}
-      TApplicationBuilderExtensions.MapGet<Integer, IUserService, IHttpContext>(
-        App, '/api/users/{id}',
-        procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
-        begin
-          var UserName := UserService.GetUser(UserId);
-          Ctx.Response.Json(Format('{"id":%d,"name":"%s"}', [UserId, UserName]));
-        end
-      );
+      var NewId := UserService.CreateUser(Request.Name, Request.Email);
+      Ctx.Response.StatusCode := 201;
+      Ctx.Response.Json(Format('{"id":%d,"name":"%s","email":"%s"}', 
+        [NewId, Request.Name, Request.Email]));
+    end
+  );
 
-      // POST /api/users
-      TApplicationBuilderExtensions.MapPost<TCreateUserRequest, IUserService, IHttpContext>(
-        App, '/api/users',
-        procedure(Request: TCreateUserRequest; UserService: IUserService; Ctx: IHttpContext)
-        begin
-          var NewId := UserService.CreateUser(Request.Name, Request.Email);
-          Ctx.Response.StatusCode := 201;
-          Ctx.Response.Json(Format('{"id":%d,"name":"%s","email":"%s"}', 
-            [NewId, Request.Name, Request.Email]));
-        end
-      );
+  // PUT /api/users/{id}
+  Builder.MapPut<Integer, TUpdateUserRequest, IUserService, IHttpContext>(
+    '/api/users/{id}',
+    procedure(UserId: Integer; Request: TUpdateUserRequest; 
+              UserService: IUserService; Ctx: IHttpContext)
+    begin
+      UserService.UpdateUser(UserId, Request.Name, Request.Email);
+      Ctx.Response.Json(Format('{"id":%d,"updated":true}', [UserId]));
+    end
+  );
 
-      // PUT /api/users/{id}
-      TApplicationBuilderExtensions.MapPut<Integer, TUpdateUserRequest, IUserService, IHttpContext>(
-        App, '/api/users/{id}',
-        procedure(UserId: Integer; Request: TUpdateUserRequest; 
-                  UserService: IUserService; Ctx: IHttpContext)
-        begin
-          UserService.UpdateUser(UserId, Request.Name, Request.Email);
-          Ctx.Response.Json(Format('{"id":%d,"updated":true}', [UserId]));
-        end
-      );
-
-      // DELETE /api/users/{id}
-      TApplicationBuilderExtensions.MapDelete<Integer, IUserService, IHttpContext>(
-        App, '/api/users/{id}',
-        procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
-        begin
-          UserService.DeleteUser(UserId);
-          Ctx.Response.Json(Format('{"id":%d,"deleted":true}', [UserId]));
-        end
-      );
-    end)
-    .Build;
+  // DELETE /api/users/{id}
+  Builder.MapDelete<Integer, IUserService, IHttpContext>(
+    '/api/users/{id}',
+    procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
+    begin
+      UserService.DeleteUser(UserId);
+      Ctx.Response.Json(Format('{"id":%d,"deleted":true}', [UserId]));
+    end
+  );
 
   WriteLn('Server running on http://localhost:8080');
-  Host.Run;
-  Readln;
-  Host.Stop;
+  App.Run(8080);
 end.
 ```
 

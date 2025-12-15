@@ -61,7 +61,7 @@ type
 
 // POST /api/users
 // Body: {"name":"John","email":"john@example.com","age":30,"active":true}
-MapPost<TCreateUserRequest, IHttpContext>(App, '/api/users',
+App.Builder.MapPost<TCreateUserRequest, IHttpContext>('/api/users',
   procedure(Request: TCreateUserRequest; Ctx: IHttpContext)
   begin
     // Request.Name = "John"
@@ -87,7 +87,7 @@ Extrai valores de parâmetros na URL.
 
 ```pascal
 // GET /api/users/123
-MapGet<Integer, IHttpContext>(App, '/api/users/{id}',
+App.Builder.MapGet<Integer, IHttpContext>('/api/users/{id}',
   procedure(UserId: Integer; Ctx: IHttpContext)
   begin
     // UserId = 123
@@ -95,7 +95,7 @@ MapGet<Integer, IHttpContext>(App, '/api/users/{id}',
 );
 
 // GET /api/posts/hello-world
-MapGet<string, IHttpContext>(App, '/api/posts/{slug}',
+App.Builder.MapGet<string, IHttpContext>('/api/posts/{slug}',
   procedure(Slug: string; Ctx: IHttpContext)
   begin
     // Slug = "hello-world"
@@ -114,7 +114,7 @@ type
   end;
 
 // GET /api/posts/2025/11/19
-MapGet<TPostRoute, IHttpContext>(App, '/api/posts/{year}/{month}/{day}',
+App.Builder.MapGet<TPostRoute, IHttpContext>('/api/posts/{year}/{month}/{day}',
   procedure(Route: TPostRoute; Ctx: IHttpContext)
   begin
     // Route.Year = 2025
@@ -149,7 +149,7 @@ type
   end;
 
 // GET /api/users?page=1&pageSize=10&active=true&searchTerm=john
-MapGet<TUserFilter, IHttpContext>(App, '/api/users',
+App.Builder.MapGet<TUserFilter, IHttpContext>('/api/users',
   procedure(Filter: TUserFilter; Ctx: IHttpContext)
   begin
     // Filter.Page = 1
@@ -188,7 +188,7 @@ type
     Language: string;
   end;
 
-MapGet<TAuthHeaders, IHttpContext>(App, '/api/protected',
+App.Builder.MapGet<TAuthHeaders, IHttpContext>('/api/protected',
   procedure(Headers: TAuthHeaders; Ctx: IHttpContext)
   begin
     // Headers.Authorization = "Bearer token123"
@@ -210,8 +210,8 @@ IUserService = interface
   function GetUser(Id: Integer): TUser;
 end;
 
-MapGet<Integer, IUserService, IHttpContext>(
-  App, '/api/users/{id}',
+App.Builder.MapGet<Integer, IUserService, IHttpContext>(
+  '/api/users/{id}',
   procedure(UserId: Integer; UserService: IUserService; Ctx: IHttpContext)
   begin
     var User := UserService.GetUser(UserId);
@@ -366,8 +366,8 @@ type
 
 // PUT /api/users/123?notify=true
 // Body: {"name":"John","email":"john@example.com"}
-MapPut<Integer, TUpdateUserRequest, Boolean, IUserService, IHttpContext>(
-  App, '/api/users/{id}',
+App.Builder.MapPut<Integer, TUpdateUserRequest, Boolean, IUserService, IHttpContext>(
+  '/api/users/{id}',
   procedure(UserId: Integer;           // Route
             Request: TUpdateUserRequest; // Body
             Notify: Boolean;             // Query
@@ -406,7 +406,7 @@ type
 
 // PUT /api/users/123?notify=true
 // Body: {"name":"John","email":"john@example.com"}
-MapPut<TUpdateUserCommand, IHttpContext>(App, '/api/users/{userId}',
+App.Builder.MapPut<TUpdateUserCommand, IHttpContext>('/api/users/{userId}',
   procedure(Command: TUpdateUserCommand; Ctx: IHttpContext)
   begin
     // Command.UserId = 123 (route)
@@ -452,7 +452,7 @@ begin
 end;
 
 // Uso
-MapPost<TCreateUserRequest, IHttpContext>(App, '/api/users',
+App.Builder.MapPost<TCreateUserRequest, IHttpContext>('/api/users',
   procedure(Request: TCreateUserRequest; Ctx: IHttpContext)
   begin
     if not Request.IsValid then
@@ -529,9 +529,9 @@ WriteLn('Bound value: ', Value.AsInteger);
 
 ## 📚 Referências
 
-- [Minimal API Guide](MinimalAPI.md)
-- [JSON Serialization](JSON.md)
-- [Dependency Injection](DependencyInjection.md)
+- [Minimal API Guide](minimal-api.md)
+- [JSON Features](dext-json-features.md)
+- [Dependency Injection](scoped-services.md)
 
 ---
 
