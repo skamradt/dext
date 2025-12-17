@@ -50,6 +50,8 @@ Suporte nativo a padrões abertos de monitoramento para produção.
 ### 4. Real-Time & Eventing (SignalR-like)
 Suporte a comunicação bidirecional em tempo real.
 - [ ] **Dext.Hubs**: Abstração de alto nível para WebSockets (similar ao SignalR Hubs).
+  - *Status*: Planejado para v1.0 (Required for Dext Forum showcase).
+
   - RPC Cliente-Servidor (`Clients.All.SendAsync`).
   - Gerenciamento de Grupos e Conexões.
   - Fallback automático (Long Polling / SSE).

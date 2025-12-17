@@ -262,14 +262,26 @@ end;
 
 function TJwtTokenHandler.CreateSignature(const AHeader, APayload: string): string;
 var
-  HMAC: TIdHMACSHA256;
   Data: string;
-  Hash: TIdBytes;
   Base64Hash: string;
+  {$IFDEF DEXT_HAS_SYSTEM_HASH}
+  Hash: TBytes;
+  {$ELSE}
+  HMAC: TIdHMACSHA256;
+  Hash: TIdBytes;
+  {$ENDIF}
 begin
   Data := AHeader + '.' + APayload;
   
-  // Load OpenSSL if needed
+  {$IFDEF DEXT_HAS_SYSTEM_HASH}
+  // Use native Delphi System.Hash (Delphi XE8+)
+  Hash := THashSHA2.GetHMACAsBytes(
+    TEncoding.UTF8.GetBytes(Data),
+    TEncoding.UTF8.GetBytes(FSecretKey)
+  );
+  Base64Hash := TNetEncoding.Base64.EncodeBytesToString(Hash);
+  {$ELSE}
+  // Fallback to Indy/OpenSSL for older Delphi versions
   if not TIdHashSHA256.IsAvailable then
     LoadOpenSSLLibrary;
   
@@ -277,17 +289,16 @@ begin
   try
     HMAC.Key := IndyTextEncoding_UTF8.GetBytes(FSecretKey);
     Hash := HMAC.HashValue(IndyTextEncoding_UTF8.GetBytes(Data));
-    
-    // Encode hash bytes directly to Base64
     Base64Hash := TNetEncoding.Base64.EncodeBytesToString(Hash);
-    
-    // Convert to Base64URL format
-    Result := Base64Hash.Replace('+', '-', [rfReplaceAll]);
-    Result := Result.Replace('/', '_', [rfReplaceAll]);
-    Result := Result.Replace('=', '', [rfReplaceAll]);
   finally
     HMAC.Free;
   end;
+  {$ENDIF}
+    
+  // Convert to Base64URL format
+  Result := Base64Hash.Replace('+', '-', [rfReplaceAll]);
+  Result := Result.Replace('/', '_', [rfReplaceAll]);
+  Result := Result.Replace('=', '', [rfReplaceAll]);
 end;
 
 destructor TJwtTokenHandler.Destroy;

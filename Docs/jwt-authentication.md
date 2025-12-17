@@ -4,7 +4,7 @@ Sistema completo de autenticação e autorização usando JSON Web Tokens (JWT) 
 
 ## 🔐 Recursos
 
-- **Geração de Tokens JWT** com HMAC-SHA256
+- **Geração de Tokens JWT** com HMAC-SHA256 (Nativo XE8+ / Indy < XE8)
 - **Validação de Tokens** com verificação de assinatura e expiração
 - **Claims-based Identity** para representar usuários autenticados
 - **Middleware de Autenticação** que valida tokens automaticamente
@@ -374,6 +374,8 @@ O framework define constantes para claims comuns em `TClaimTypes`:
 - [ ] Token blacklist/revogação
 - [ ] Atributos `[Authorize]` e `[AllowAnonymous]` automáticos
 - [ ] Integração com Identity providers (OAuth2, OpenID Connect)
+
+
 
 ---
 

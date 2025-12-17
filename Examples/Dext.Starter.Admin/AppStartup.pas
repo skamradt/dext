@@ -32,6 +32,8 @@ type
     procedure ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
     procedure Configure(const App: IWebApplication);
     class procedure RunSeeder(const App: IWebApplication);
+  private
+    procedure ConfigureDatabase(Options: TDbContextOptions);
   end;
 
 implementation
@@ -47,9 +49,7 @@ begin
   Services.AddDbContext<TAppDbContext>(
     procedure(Options: TDbContextOptions)
     begin
-      Options.UseSQLite('dext_admin.db');
-      Options.Pooling := False;
-      Options.PoolMax := 20;
+      ConfigureDatabase(Options);
     end);
 
   // 2.1 Feature Services
@@ -74,6 +74,40 @@ begin
         'DextAdminUI',
         60);
     end);
+end;
+
+procedure TAppStartup.ConfigureDatabase(Options: TDbContextOptions);
+const
+  // EASY SWITCH: Change this constant to switch database provider
+  DB_PROVIDER = 'SQLITE'; // Options: SQLITE, POSTGRES
+begin
+  if DB_PROVIDER = 'POSTGRES' then
+  begin
+    // PostgreSQL Configuration (Production Ready)
+    Options.UseDriver('PG');
+    Options.ConnectionString := 
+      'Server=localhost;' +
+      'Port=5432;' +
+      'Database=dext_admin;' +
+      'User_Name=postgres;' +
+      'Password=postgres;';
+    
+    // Enable Pooling for high concurrency
+    //Options.WithPooling(False, 50);
+  end
+  else // Default to SQLite
+  begin
+    // SQLite Configuration (Development)
+    Options.UseSQLite('dext_admin.db');
+    
+    // SQLite Specific Optimizations for Concurrency
+    Options.Params.AddOrSetValue('LockingMode', 'Normal');
+    Options.Params.AddOrSetValue('JournalMode', 'WAL'); // Critical for concurrent reads/writes
+    Options.Params.AddOrSetValue('Synchronous', 'Normal');
+    
+    // Enable Pooling (Requires WAL mode)
+    ///Options.WithPooling(True, 20);
+  end;
 end;
 
 class procedure TAppStartup.RunSeeder(const App: IWebApplication);
