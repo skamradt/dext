@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Migrations;
+﻿unit EntityDemo.Tests.Migrations;
 
 interface
 
@@ -65,7 +65,7 @@ procedure TMigrationsTest.Run;
 var
   Builder: TSchemaBuilder;
 begin
-  Log('??? Running Migrations Builder Tests...');
+  Log('🏗️ Running Migrations Builder Tests...');
 
   Builder := TSchemaBuilder.Create;
   try
@@ -78,32 +78,32 @@ begin
       T.Column('CreatedAt', 'TIMESTAMP').Default('CURRENT_TIMESTAMP');
     end);
     
-    Log('   ? CreateTable operation defined.');
+    Log('   ✅ CreateTable operation defined.');
     
     // Test Add Column
     Builder.AddColumn('TestUsers', 'Age', 'INTEGER');
-    Log('   ? AddColumn operation defined.');
+    Log('   ✅ AddColumn operation defined.');
     
     // Test Create Index
     Builder.CreateIndex('TestUsers', 'IX_TestUsers_Email', ['Email'], True);
-    Log('   ? CreateIndex operation defined.');
+    Log('   ✅ CreateIndex operation defined.');
     
     // Verify Operations Count
     if Builder.Operations.Count = 3 then
-      Log('   ? Operations count matches (3).')
+      Log('   ✅ Operations count matches (3).')
     else
-      Log('   ? Operations count mismatch: ' + Builder.Operations.Count.ToString);
+      Log('   ❌ Operations count mismatch: ' + Builder.Operations.Count.ToString);
       
     // Inspect first operation
     if Builder.Operations[0] is TCreateTableOperation then
     begin
       var Op := TCreateTableOperation(Builder.Operations[0]);
-      Log('   ? First operation is CreateTable: ' + Op.Name);
+      Log('   ✅ First operation is CreateTable: ' + Op.Name);
       Log('      Columns: ' + Op.Columns.Count.ToString);
     end;
 
     Log('');
-    Log('?? Generating SQL for Dialects...');
+    Log('📝 Generating SQL for Dialects...');
     
     var Dialects: TArray<ISQLDialect>;
     SetLength(Dialects, 5);
@@ -117,7 +117,7 @@ begin
     
     for var i := 0 to High(Dialects) do
     begin
-      Log('   ?? ' + DialectNames[i] + ':');
+      Log('   🔹 ' + DialectNames[i] + ':');
       for var Op in Builder.Operations do
       begin
         var SQL := Dialects[i].GenerateMigration(Op);
@@ -131,7 +131,7 @@ begin
   end;
   
   // --- Model Differ Test ---
-  Log('?? Running Model Differ Tests...');
+  Log('🔍 Running Model Differ Tests...');
   
   var PrevModel := TSnapshotModel.Create;
   var CurrModel := TSnapshotModel.Create;
@@ -160,9 +160,9 @@ begin
     try
       Log('   Diff 1 (Add Table): ' + Ops.Count.ToString + ' operations.');
       if (Ops.Count > 0) and (Ops[0] is TCreateTableOperation) then
-        Log('   ? Detected CreateTable Users')
+        Log('   ✅ Detected CreateTable Users')
       else
-        Log('   ? Failed to detect CreateTable');
+        Log('   ❌ Failed to detect CreateTable');
     finally
       Ops.Free;
     end;
@@ -196,9 +196,9 @@ begin
     try
       Log('   Diff 2 (Add Column): ' + Ops.Count.ToString + ' operations.');
       if (Ops.Count > 0) and (Ops[0] is TAddColumnOperation) then
-        Log('   ? Detected AddColumn Email')
+        Log('   ✅ Detected AddColumn Email')
       else
-        Log('   ? Failed to detect AddColumn');
+        Log('   ❌ Failed to detect AddColumn');
     finally
       Ops.Free;
     end;
@@ -208,9 +208,9 @@ begin
     try
       Log('   Diff 3 (Drop Table): ' + Ops.Count.ToString + ' operations.');
       if (Ops.Count > 0) and (Ops[0] is TDropTableOperation) then
-        Log('   ? Detected DropTable Users')
+        Log('   ✅ Detected DropTable Users')
       else
-        Log('   ? Failed to detect DropTable');
+        Log('   ❌ Failed to detect DropTable');
     finally
       Ops.Free;
     end;
@@ -221,7 +221,7 @@ begin
   end;
   
   // --- Extractor Test ---
-  Log('?? Running Extractor Tests...');
+  Log('🔍 Running Extractor Tests...');
   
   // Create a temporary context with SQLite
   var Conn := TFDConnection.Create(nil);
@@ -246,17 +246,17 @@ begin
         var UserTable := Model.FindTable('Users');
         if UserTable <> nil then
         begin
-          Log('   ? Found Table: Users');
+          Log('   ✅ Found Table: Users');
           Log('      Columns: ' + UserTable.Columns.Count.ToString);
           
           var IdCol := UserTable.FindColumn('Id');
           if IdCol <> nil then
-            Log('      ? Found Column: Id (' + IdCol.ColumnType + ')')
+            Log('      ✅ Found Column: Id (' + IdCol.ColumnType + ')')
           else
-            Log('      ? Column Id not found');
+            Log('      ❌ Column Id not found');
         end
         else
-          Log('   ? Table Users not found');
+          Log('   ❌ Table Users not found');
           
       finally
         Model.Free;
@@ -270,7 +270,7 @@ begin
   end;
 
   // --- Generator Test ---
-  Log('?? Running Generator Tests...');
+  Log('📝 Running Generator Tests...');
   
   // Reuse the Builder from the first test (we need to recreate it or use a new one)
   // Let's create a new simple builder for generation test
@@ -299,16 +299,16 @@ begin
     if UnitCode.Contains('Builder.CreateTable(''Products''') and
        UnitCode.Contains('T.Column(''Name'', ''VARCHAR'', 200).NotNull;') and
        UnitCode.Contains('Builder.AddColumn(''Products'', ''Stock'', ''INTEGER'', 0, False);') then
-      Log('   ? Generated code contains expected instructions.')
+      Log('   ✅ Generated code contains expected instructions.')
     else
-      Log('   ? Generated code missing expected instructions.');
+      Log('   ❌ Generated code missing expected instructions.');
       
   finally
     GenBuilder.Free;
   end;
 
   // --- Runner Test ---
-  Log('?? Running Migration Runner Tests...');
+  Log('🏃 Running Migration Runner Tests...');
   
   // Register Test Migration
   RegisterMigration(TTestMigration.Create);
@@ -332,16 +332,16 @@ begin
     var Migrator := TMigrator.Create(RunnerContext);
     try
       Migrator.Migrate;
-      Log('   ? Migration executed.');
+      Log('   ✅ Migration executed.');
       
       // Verify Table Exists
       var Tables := TStringList.Create;
       try
         RunnerConn.GetTableNames('', '', '', Tables);
         if Tables.IndexOf('TestMigratedTable') >= 0 then
-          Log('   ? Table TestMigratedTable created.')
+          Log('   ✅ Table TestMigratedTable created.')
         else
-          Log('   ? Table TestMigratedTable NOT created.');
+          Log('   ❌ Table TestMigratedTable NOT created.');
       finally
         Tables.Free;
       end;
@@ -349,9 +349,9 @@ begin
       // Verify History
       var Qry := RunnerConn.ExecSQLScalar('SELECT COUNT(*) FROM __DextMigrations WHERE Id = ''20231001_TestMigration''');
       if Integer(Qry) > 0 then
-        Log('   ? Migration recorded in history.')
+        Log('   ✅ Migration recorded in history.')
       else
-        Log('   ? Migration NOT recorded in history.');
+        Log('   ❌ Migration NOT recorded in history.');
         
     finally
       Migrator.Free;
@@ -363,7 +363,7 @@ begin
   end;
 
   // --- CLI Test ---
-  Log('?? Running CLI Tests...');
+  Log('💻 Running CLI Tests...');
   
   // Create a factory for the context
   var ContextFactory: TFunc<IDbContext> := function: IDbContext
@@ -384,12 +384,12 @@ begin
     Log('   Testing migrate:list command logic...');
     var ListCmd: IConsoleCommand := TMigrateListCommand.Create(ContextFactory);
     ListCmd.Execute([]);
-    Log('   ? migrate:list executed.');
+    Log('   ✅ migrate:list executed.');
     
     Log('   Testing migrate:up command logic...');
     var UpCmd: IConsoleCommand := TMigrateUpCommand.Create(ContextFactory);
     UpCmd.Execute([]);
-    Log('   ? migrate:up executed.');
+    Log('   ✅ migrate:up executed.');
     
   finally
     CLI.Free;

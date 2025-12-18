@@ -1,4 +1,4 @@
-program Dext.Entity.Tests;
+﻿program Dext.Entity.Tests;
 
 {$APPTYPE CONSOLE}
 
@@ -29,7 +29,7 @@ var
   TestMap: TMappingTest;
 begin
   SetConsoleCharSet(65001);
-  WriteLn('?? Running Dext Entity Unit Tests...');
+  WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
   
   // Fluent Mapping
@@ -95,7 +95,7 @@ begin
   end;
   
   WriteLn('');
-  WriteLn('? All unit tests completed.');
+  WriteLn('✨ All unit tests completed.');
 end;
 
 begin

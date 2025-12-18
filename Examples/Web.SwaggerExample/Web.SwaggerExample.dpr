@@ -1,9 +1,10 @@
-program Web.SwaggerExample;
+﻿program Web.SwaggerExample;
 
 {$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   Dext.DI.Interfaces,
   Dext.DI.Extensions,
@@ -24,11 +25,11 @@ type
     [SwaggerProperty('Unique identifier for the user')]
     [SwaggerExample('1')]
     Id: Integer;
-    
+
     [SwaggerProperty('Full name of the user')]
     [SwaggerExample('John Doe')]
     Name: string;
-    
+
     [SwaggerProperty('Email address')]
     [SwaggerFormat('email')]
     [SwaggerExample('john@example.com')]
@@ -40,12 +41,12 @@ type
     [SwaggerProperty('Full name of the user')]
     [SwaggerRequired]
     Name: string;
-    
+
     [SwaggerProperty('Email address')]
     [SwaggerFormat('email')]
     [SwaggerRequired]
     Email: string;
-    
+
     [SwaggerProperty('User password')]
     [SwaggerFormat('password')]
     [SwaggerRequired]
@@ -57,14 +58,14 @@ type
   TProduct = record
     [SwaggerProperty('Unique identifier for the product')]
     Id: Integer;
-    
+
     [SwaggerProperty('Product name')]
     Name: string;
-    
+
     [SwaggerProperty('Product price in USD')]
     [SwaggerExample('99.99')]
     Price: Double;
-    
+
     [SwaggerProperty('Whether the product is in stock')]
     InStock: Boolean;
   end;
@@ -78,19 +79,20 @@ begin
   Users[0].Id := 1;
   Users[0].Name := 'John Doe';
   Users[0].Email := 'john@example.com';
-  
+
   Users[1].Id := 2;
   Users[1].Name := 'Jane Smith';
   Users[1].Email := 'jane@example.com';
 end;
 
 begin
+  SetConsoleCharSet;
   try
-    Writeln('?? Starting Dext Swagger Example...');
+    Writeln('🚀 Starting Dext Swagger Example...');
     Writeln('');
-    
+
     InitializeSampleData;
-    
+
     var Options := TOpenAPIOptions.Default;
     Options.Title := 'Dext Example API';
     Options.Description := 'A sample API demonstrating Dext Framework with Swagger/OpenAPI integration';
@@ -99,38 +101,38 @@ begin
     Options.ContactEmail := 'contact@dext.dev';
     Options.LicenseName := 'MIT';
     Options.LicenseUrl := 'https://opensource.org/licenses/MIT';
-    
+
     // Configure servers (fluent API)
     Options := Options.WithServer('http://localhost:8080', 'Development server');
     // You can add more servers:
     // Options := Options.WithServer('https://staging.example.com', 'Staging server');
     // Options := Options.WithServer('https://api.example.com', 'Production server');
-    
+
     // Configure Security Schemes
     Options := Options.WithBearerAuth('JWT', 'Enter JWT token in format: Bearer {token}');
     Options := Options.WithApiKeyAuth('X-API-Key', aklHeader, 'API Key for administrative access');
-    
+
     var Host := TDextWebHost.CreateDefaultBuilder
       .ConfigureServices(procedure(Services: IServiceCollection)
       begin
-        Writeln('?? Configuring services...');
+        Writeln('📚 Configuring services...');
         // Register IApplicationBuilder in services for Swagger middleware
         // This will be done automatically by the framework
       end)
       .Configure(procedure(App: IApplicationBuilder)
       begin
-        Writeln('?? Configuring Swagger...');
-        
+        Writeln('📚 Configuring Swagger...');
+
         // Add Swagger middleware
         TSwaggerExtensions.UseSwagger(App, Options);
-        
-        Writeln('?? Configuring routes...');
+
+        Writeln('📚 Configuring routes...');
         Writeln('');
-        
+
         // ========================================
         // User Endpoints
         // ========================================
-        
+
         // GET /api/users - Get all users
         Writeln('1. GET /api/users');
         TEndpointMetadataExtensions.WithMetadata(
@@ -145,7 +147,7 @@ begin
           'Get all users',
           'Retrieves a list of all registered users in the system',
           ['Users']);
-        
+
         // GET /api/users/{id} - Get user by ID
         Writeln('2. GET /api/users/{id}');
         TEndpointMetadataExtensions.WithMetadata(
@@ -165,7 +167,7 @@ begin
                   Break;
                 end;
               end;
-              
+
               if not Found then
               begin
                 Ctx.Response.StatusCode := 404;
@@ -175,7 +177,7 @@ begin
           'Get user by ID',
           'Retrieves detailed information about a specific user by their unique identifier. Returns 404 if the user is not found.',
           ['Users']);
-        
+
         // POST /api/users - Create new user
         Writeln('3. POST /api/users');
         TEndpointMetadataExtensions.WithMetadata(
@@ -191,15 +193,15 @@ begin
                 Ctx.Response.Json('{"error": "Name, email, and password are required"}');
                 Exit;
               end;
-              
+
               // Create new user
               NewUser.Id := Length(Users) + 1;
               NewUser.Name := Req.Name;
               NewUser.Email := Req.Email;
-              
+
               SetLength(Users, Length(Users) + 1);
               Users[High(Users)] := NewUser;
-              
+
               Ctx.Response.StatusCode := 201;
               Ctx.Response.Json(TDextJson.Serialize<TUser>(NewUser));
             end),
@@ -310,12 +312,12 @@ begin
       .Build;
 
     Writeln('');
-    Writeln('? Server configured successfully!');
+    Writeln('✅ Server configured successfully!');
     Writeln('');
-    Writeln('?? Swagger UI available at: http://localhost:8080/swagger');
-    Writeln('?? OpenAPI JSON available at: http://localhost:8080/swagger.json');
+    Writeln('📖 Swagger UI available at: http://localhost:8080/swagger');
+    Writeln('📄 OpenAPI JSON available at: http://localhost:8080/swagger.json');
     Writeln('');
-    Writeln('?? Available endpoints:');
+    Writeln('🔗 Available endpoints:');
     Writeln('   GET    /api/users');
     Writeln('   GET    /api/users/{id}');
     Writeln('   POST   /api/users');
@@ -337,7 +339,7 @@ begin
   except
     on E: Exception do
     begin
-      Writeln('? Error: ', E.Message);
+      Writeln('❌ Error: ', E.Message);
       Writeln('Press Enter to exit...');
       Readln;
     end;

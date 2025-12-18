@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.NoTracking;
+﻿unit EntityDemo.Tests.NoTracking;
 
 interface
 
@@ -25,7 +25,7 @@ implementation
 
 procedure TNoTrackingTest.Run;
 begin
-  Log('?? Running NoTracking Tests...');
+  Log('🧪 Running NoTracking Tests...');
   TestAsNoTrackingSpec;
   TestAsNoTrackingFluent;
   Log('');

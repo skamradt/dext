@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.AdvancedQuery;
+﻿unit EntityDemo.Tests.AdvancedQuery;
 
 interface
 
@@ -31,7 +31,7 @@ implementation
 
 procedure TAdvancedQueryTest.Run;
 begin
-  Log('?? Running Advanced Query Tests...');
+  Log('🧪 Running Advanced Query Tests...');
   TestAggregations;
   TestDistinct;
   TestPagination;

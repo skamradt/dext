@@ -1,4 +1,4 @@
-program Web.JwtAuthDemo;
+﻿program Web.JwtAuthDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -33,7 +33,7 @@ var
 begin
 
   try
-    WriteLn('Dext JWT Authentication Demo');
+    WriteLn('🔐 Dext JWT Authentication Demo');
     WriteLn('================================');
     WriteLn;
 
@@ -46,26 +46,26 @@ begin
     App := TDextApplication.Create;
     var Builder := App.GetApplicationBuilder;
 
-    // 1. JWT Authentication Middleware
-    WriteLn('[*] Configuring JWT Authentication Middleware...');
+    // ✅ 1. Middleware de Autenticação JWT
+    WriteLn('📦 Configuring JWT Authentication Middleware...');
     TApplicationBuilderJwtExtensions.UseJwtAuthentication(Builder, TJwtOptions.Create(SecretKey));
-    WriteLn('   [OK] JWT middleware registered');
+    WriteLn('   ✅ JWT middleware registered');
     WriteLn;
 
-    // 2. Login Endpoint (public - generates token)
-    WriteLn('[*] Registering public endpoints...');
+    // ✅ 2. Endpoint de Login (público - gera token)
+    WriteLn('🔓 Registering public endpoints...');
     TApplicationBuilderExtensions.MapPostR<TLoginRequest, IResult>(Builder, '/api/auth/login',
       function(Request: TLoginRequest): IResult
       var
         Claims: TArray<TClaim>;
         Token: string;
       begin
-        WriteLn(Format('[*] Login attempt: %s', [Request.Username]));
+        WriteLn(Format('🔑 Login attempt: %s', [Request.Username]));
 
         // Simple validation (in production, validate against database)
         if (Request.Username = 'admin') and (Request.Password = 'password') then
         begin
-          // Create claims using fluent builder
+          // ✅ Criar claims usando fluent builder
           Claims := TClaimsBuilder.Create
             .WithNameIdentifier('123')
             .WithName(Request.Username)
@@ -76,18 +76,18 @@ begin
           // Generate token
           Token := JwtHandler.GenerateToken(Claims);
 
-          WriteLn('   [OK] Login successful');
+          WriteLn('   ✅ Login successful');
           Result := Results.Ok(Format('{"token":"%s","expiresIn":3600}', [Token]));
         end
         else
         begin
-          WriteLn('   [ERROR] Invalid credentials');
+          WriteLn('   ❌ Invalid credentials');
           Result := Results.BadRequest('{"error":"Invalid username or password"}');
         end;
       end);
 
-    // 3. Protected Endpoint (requires authentication)
-    WriteLn('[*] Registering protected endpoints...');
+    // ✅ 3. Endpoint Protegido (requer autenticação)
+    WriteLn('🔒 Registering protected endpoints...');
     TApplicationBuilderExtensions.MapGetR<IHttpContext, IResult>(Builder, '/api/protected',
       function(Context: IHttpContext): IResult
       var
@@ -100,7 +100,7 @@ begin
         // Check if authenticated
         if (User = nil) or not User.Identity.IsAuthenticated then
         begin
-          WriteLn('   [ERROR] Unauthorized access attempt');
+          WriteLn('   ❌ Unauthorized access attempt');
           Result := Results.StatusCode(401, '{"error":"Unauthorized"}');
           Exit;
         end;
@@ -109,7 +109,7 @@ begin
         UserName := User.Identity.Name;
         UserId := User.FindClaim(TClaimTypes.NameIdentifier).Value;
 
-        WriteLn(Format('   [OK] Authorized access: %s (ID: %s)', [UserName, UserId]));
+        WriteLn(Format('   ✅ Authorized access: %s (ID: %s)', [UserName, UserId]));
 
         Result := Results.Ok(Format(
           '{"message":"This is protected data","userId":"%s","username":"%s","timestamp":"%s"}',
@@ -117,7 +117,7 @@ begin
         ));
       end);
 
-    // 4. Admin Endpoint (requires specific role)
+    // ✅ 4. Endpoint Admin (requer role específica)
     TApplicationBuilderExtensions.MapGetR<IHttpContext, IResult>(Builder, '/api/admin',
       function(Context: IHttpContext): IResult
       var
@@ -135,31 +135,31 @@ begin
         // Check role
         if not User.IsInRole('Admin') then
         begin
-          WriteLn(Format('   [ERROR] Forbidden: %s is not an Admin', [User.Identity.Name]));
+          WriteLn(Format('   ❌ Forbidden: %s is not an Admin', [User.Identity.Name]));
           Result := Results.StatusCode(403, '{"error":"Forbidden - Admin role required"}');
           Exit;
         end;
 
-        WriteLn(Format('   [OK] Admin access granted: %s', [User.Identity.Name]));
+        WriteLn(Format('   ✅ Admin access granted: %s', [User.Identity.Name]));
         Result := Results.Ok('{"message":"Welcome, Admin!"}');
       end);
 
-    // 5. Public Endpoint (no authentication)
+    // ✅ 5. Endpoint Público (sem autenticação)
     TApplicationBuilderExtensions.MapGetR<IResult>(Builder, '/api/public',
       function: IResult
       begin
-        WriteLn('   [*] Public endpoint accessed');
+        WriteLn('   📖 Public endpoint accessed');
         Result := Results.Ok('{"message":"This is public data, no authentication required"}');
       end);
 
     WriteLn;
-    WriteLn('[OK] All endpoints configured');
+    WriteLn('✅ All endpoints configured');
     WriteLn;
-    WriteLn('=========================================');
-    WriteLn('Server running on http://localhost:8080');
-    WriteLn('=========================================');
+    WriteLn('═══════════════════════════════════════════');
+    WriteLn('🌐 Server running on http://localhost:8080');
+    WriteLn('═══════════════════════════════════════════');
     WriteLn;
-    WriteLn('Test Commands:');
+    WriteLn('📝 Test Commands:');
     WriteLn;
     WriteLn('# 1. Login (get JWT token)');
     WriteLn('curl -X POST http://localhost:8080/api/auth/login ^');
@@ -181,7 +181,7 @@ begin
     WriteLn('# 5. Try accessing protected without token (should fail)');
     WriteLn('curl http://localhost:8080/api/protected');
     WriteLn;
-    WriteLn('=========================================');
+    WriteLn('═══════════════════════════════════════════');
     WriteLn('Press Enter to stop the server...');
     WriteLn;
 
@@ -191,12 +191,12 @@ begin
     JwtHandler.Free;
 
     WriteLn;
-    WriteLn('[OK] Server stopped successfully');
+    WriteLn('✅ Server stopped successfully');
 
   except
     on E: Exception do
     begin
-      WriteLn('[ERROR] ', E.Message);
+      WriteLn('❌ Error: ', E.Message);
       WriteLn('Press Enter to exit...');
       ReadLn;
     end;

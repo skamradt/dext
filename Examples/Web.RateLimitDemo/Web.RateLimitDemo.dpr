@@ -1,4 +1,4 @@
-program Web.RateLimitDemo;
+﻿program Web.RateLimitDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -19,15 +19,15 @@ var
 begin
 
   try
-    WriteLn('Dext Rate Limiting Demo');
+    WriteLn('🚦 Dext Rate Limiting Demo');
     WriteLn('===========================');
     WriteLn;
 
     App := TDextApplication.Create;
     var Builder := App.GetApplicationBuilder;
 
-    // Configure Rate Limiting
-    WriteLn('[*] Configuring Rate Limiting...');
+    // ✅ Configurar Rate Limiting
+    WriteLn('📦 Configuring Rate Limiting...');
     
     var Policy := TRateLimitPolicy.FixedWindow(10, 60)
       .WithRejectionMessage('{"error":"Too many requests! Please slow down."}')
@@ -35,10 +35,10 @@ begin
       
     TApplicationBuilderRateLimitExtensions.UseRateLimiting(Builder, Policy);
 
-    WriteLn('   [OK] Rate limiting configured: 10 requests per minute');
+    WriteLn('   ✅ Rate limiting configured: 10 requests per minute');
     WriteLn;
 
-    // Test endpoint using MapGetR
+    // ✅ Endpoint de teste
     TApplicationBuilderExtensions.MapGetR<IResult>(Builder, '/api/test',
       function: IResult
       begin
@@ -52,13 +52,13 @@ begin
         Result := Results.Ok('{"message":"Rate Limiting Demo - Try /api/test"}');
       end);
 
-    WriteLn('[OK] Endpoints configured');
+    WriteLn('✅ Endpoints configured');
     WriteLn;
-    WriteLn('=========================================');
-    WriteLn('Server running on http://localhost:8080');
-    WriteLn('=========================================');
+    WriteLn('═══════════════════════════════════════════');
+    WriteLn('🌐 Server running on http://localhost:8080');
+    WriteLn('═══════════════════════════════════════════');
     WriteLn;
-    WriteLn('Test Commands:');
+    WriteLn('📝 Test Commands:');
     WriteLn;
     WriteLn('# Test single request');
     WriteLn('curl http://localhost:8080/api/test -v');
@@ -79,7 +79,7 @@ begin
     WriteLn('  X-RateLimit-Remaining: 9, 8, 7...');
     WriteLn('  Retry-After: 60 (when rate limited)');
     WriteLn;
-    WriteLn('=========================================');
+    WriteLn('═══════════════════════════════════════════');
     WriteLn('Press Enter to stop the server...');
     WriteLn;
 
@@ -87,12 +87,12 @@ begin
     ReadLn;
 
     WriteLn;
-    WriteLn('[OK] Server stopped successfully');
+    WriteLn('✅ Server stopped successfully');
 
   except
     on E: Exception do
     begin
-      WriteLn('[ERROR] ', E.Message);
+      WriteLn('❌ Error: ', E.Message);
       WriteLn('Press Enter to exit...');
       ReadLn;
     end;

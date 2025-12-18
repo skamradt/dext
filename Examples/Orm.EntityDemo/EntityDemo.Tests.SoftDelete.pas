@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.SoftDelete;
+﻿unit EntityDemo.Tests.SoftDelete;
 
 interface
 
@@ -54,7 +54,7 @@ end;
 
 procedure TSoftDeleteTest.Run;
 begin
-  Log('??? Running Soft Delete Tests...');
+  Log('🗑️ Running Soft Delete Tests...');
   
   ResetData;
   TestSoftDelete;
@@ -94,7 +94,7 @@ procedure TSoftDeleteTest.TestFluentMapping;
     LoadedEntity: TFluentSoftDelete;
     SavedId: Integer;
   begin
-    Log('?? Test 9: Fluent Mapping Soft Delete');
+    Log('🔧 Test 9: Fluent Mapping Soft Delete');
     
     // 1. Configure Mapping (Runtime)
     Context := TDbContext(TObject(FContext)); // Cast to access concrete methods
@@ -151,7 +151,7 @@ var
   SavedTaskId: Integer;
   LoadedTask: TTask;
 begin
-  Log('??? Test 1: Basic Soft Delete');
+  Log('🗑️ Test 1: Basic Soft Delete');
   
   // Create task
   Task := TTask.Create;
@@ -200,7 +200,7 @@ var
   Task: TTask; // Declared for the loop
   HasTask1, HasTask2, HasTask3: Boolean; // Declared for the checks
 begin
-  Log('?? Test 2: Soft Deleted Tasks Not in List');
+  Log('📋 Test 2: Soft Deleted Tasks Not in List');
   
   // Create 3 tasks
   Task1 := TTask.Create;
@@ -263,7 +263,7 @@ var
   Task1, Task2: TTask;
   Count: Integer;
 begin
-  Log('?? Test 3: Count Excludes Soft Deleted');
+  Log('🔢 Test 3: Count Excludes Soft Deleted');
   
   // Create 2 tasks
   Task1 := TTask.Create;
@@ -306,7 +306,7 @@ var
   Title: string;
   HasTask1, HasTask2, HasTask3, HasTask4, HasTask5: Boolean;
 begin
-  Log('??? Test 4: Multiple Soft Deletes');
+  Log('🗑️ Test 4: Multiple Soft Deletes');
   
   // Create 5 tasks
   for i := 1 to 5 do
@@ -377,7 +377,7 @@ var
   LoadedTask: TTask;
   SavedId: Integer;
 begin
-  Log('?? Test 5: Ignore Query Filters');
+  Log('👀 Test 5: Ignore Query Filters');
   
   Task := TTask.Create;
   Task.Title := 'Hidden Task';
@@ -408,7 +408,7 @@ var
   TaskActive, TaskDeleted: TTask;
   List: IList<TTask>;
 begin
-  Log('??? Test 6: Only Deleted');
+  Log('🕵️ Test 6: Only Deleted');
   
   TaskActive := TTask.Create;
   TaskActive.Title := 'Active';
@@ -439,7 +439,7 @@ var
   SavedId: Integer;
   LoadedTask: TTask;
 begin
-  Log('?? Test 7: Restore');
+  Log('♻️ Test 7: Restore');
   
   Task := TTask.Create;
   Task.Title := 'To Restore';
@@ -480,7 +480,7 @@ var
   SavedId: Integer;
   LoadedTask: TTask;
 begin
-  Log('?? Test 8: Hard Delete');
+  Log('💥 Test 8: Hard Delete');
   
   Task := TTask.Create;
   Task.Title := 'To Hard Delete';

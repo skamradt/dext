@@ -1,4 +1,4 @@
-unit EntityDemo.Entities;
+﻿unit EntityDemo.Entities;
 
 interface
 
@@ -120,7 +120,7 @@ type
     property Value: string read FValue write FValue;
   end;
 
-  // ?? Lazy Loading Test Entities
+  // 🔬 Lazy Loading Test Entities
 
   /// <summary>
   ///   Entity for testing lazy loading of BLOB data (TBytes)
@@ -296,7 +296,7 @@ type
 
 
 
-  // ?? Metadata Implementation (TypeOf)
+  // 🧬 Metadata Implementation (TypeOf)
   UserEntity = class
   public
     class var Id: TPropExpression;
@@ -419,9 +419,9 @@ end;
 destructor TTask.Destroy;
 begin
   if Title <> '' then
-    WriteLn('    ??? TTask Destroyed: ' + Title)
+    WriteLn('    🗑️ TTask Destroyed: ' + Title)
   else
-    WriteLn('    ??? TTask Destroyed: (No Title)');
+    WriteLn('    🗑️ TTask Destroyed: (No Title)');
   inherited;
 end;
 

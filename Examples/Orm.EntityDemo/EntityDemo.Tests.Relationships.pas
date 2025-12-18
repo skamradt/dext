@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Relationships;
+﻿unit EntityDemo.Tests.Relationships;
 
 interface
 
@@ -19,11 +19,11 @@ implementation
 
 procedure TRelationshipTest.Run;
 begin
-  Log('?? Running Relationship Tests...');
+  Log('🔗 Running Relationship Tests...');
   Log('==============================');
 
   // 1. Cascade Delete
-  Log('?? Testing Cascade Delete...');
+  Log('🧨 Testing Cascade Delete...');
   
   var Address := TAddress.Create;
   Address.Street := '999 Cascade Blvd';

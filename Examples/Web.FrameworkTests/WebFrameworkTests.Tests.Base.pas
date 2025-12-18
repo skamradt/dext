@@ -1,4 +1,4 @@
-unit WebFrameworkTests.Tests.Base;
+﻿unit WebFrameworkTests.Tests.Base;
 
 interface
 
@@ -65,7 +65,7 @@ var
   Builder: IWebHostBuilder;
   HostRef: IWebHost; // Explicitly capture FHost for thread safety
 begin
-  WriteLn('?? Setting up test...');
+  WriteLn('🔧 Setting up test...');
   Builder := TDextWebHost.CreateDefaultBuilder
     .UseUrls('http://localhost:' + FPort.ToString);
     
@@ -128,12 +128,12 @@ end;
 
 procedure TBaseTest.LogSuccess(const Msg: string);
 begin
-  WriteLn('   ? ' + Msg);
+  WriteLn('   ✅ ' + Msg);
 end;
 
 procedure TBaseTest.LogError(const Msg: string);
 begin
-  WriteLn('   ? ' + Msg);
+  WriteLn('   ❌ ' + Msg);
 end;
 
 procedure TBaseTest.AssertTrue(Condition: Boolean; const SuccessMsg, FailMsg: string);

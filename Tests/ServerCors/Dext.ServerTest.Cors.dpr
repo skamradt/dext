@@ -1,4 +1,4 @@
-program Dext.ServerTest.Cors;
+Ôªøprogram Dext.ServerTest.Cors;
 
 uses
   Dext.MM,
@@ -74,7 +74,7 @@ begin
     TestAllFeaturesCombined;
     TestEdgeCases;
     TestLocalization;
-    TestProviders; // ? Adicionado teste de drivers
+    TestProviders; // ‚úÖ Adicionado teste de drivers
     Readln;
     Exit;
     TestBindingAttributes;
@@ -109,14 +109,14 @@ begin
     var Host := TDextWebHost.CreateDefaultBuilder
       .ConfigureServices(procedure(Services: IServiceCollection)
       begin
-        // Registrar serviÁos
+        // Registrar servi√ßos
         TServiceCollectionExtensions.AddSingleton<ITimeService, TTimeService>(Services);
         TServiceCollectionExtensions.AddSingleton<ILogger, TConsoleLogger>(Services);
       end)
       .Configure(procedure(App: IApplicationBuilder)
       begin
-        // ? CORRE«√O: Usar TApplicationBuilderCorsExtensions.UseCors
-        TApplicationBuilderCorsExtensions.UseCors(App,  // ? CORRETO!
+        // ‚úÖ CORRE√á√ÉO: Usar TApplicationBuilderCorsExtensions.UseCors
+        TApplicationBuilderCorsExtensions.UseCors(App,  // ‚Üê CORRETO!
           procedure(CorsBuilder: TCorsBuilder)
           begin
             CorsBuilder
@@ -126,7 +126,7 @@ begin
               .AllowCredentials;
           end);
 
-        // Configurar pipeline (agora App j· tem CORS configurado)
+        // Configurar pipeline (agora App j√° tem CORS configurado)
         var ExceptionOptions := TExceptionHandlerOptions.Development;
         App.UseMiddleware(TExceptionHandlerMiddleware, TValue.From(ExceptionOptions));
         
@@ -168,7 +168,7 @@ begin
                Month := Ctx.Request.RouteParams['month'];
                Ctx.Response.Write(Format('Posts from %s/%s', [Year, Month]));
              end)
-           // ? NOVA ROTA: EspecÌfica para testar CORS
+           // ‚úÖ NOVA ROTA: Espec√≠fica para testar CORS
            .Map('/cors-test',
              procedure(Ctx: IHttpContext)
              begin
@@ -177,14 +177,14 @@ begin
             .Map('/cors-demo',
               procedure(Ctx: IHttpContext)
               begin
-                // ? CORRE«√O: Usar SetContentType ANTES de Write
+                // ‚úÖ CORRE√á√ÉO: Usar SetContentType ANTES de Write
                 Ctx.Response.SetContentType('text/html; charset=utf-8');
                 Ctx.Response.Write(TextCorsHtml);
               end)
             .Map('/cors-test-page',
               procedure(Ctx: IHttpContext)
               begin
-                // ? Simular que esta p·gina vem de http://localhost:3000
+                // ‚úÖ Simular que esta p√°gina vem de http://localhost:3000
                 Ctx.Response.AddHeader('Access-Control-Allow-Origin', 'http://localhost:8080');
                 Ctx.Response.SetContentType('text/html; charset=utf-8');
                 Ctx.Response.Write(TextCorsHtmlTestPage);
@@ -192,10 +192,10 @@ begin
       end)
       .Build;
 
-    // ?? INICIAR SERVIDOR REAL!
+    // üöÄ INICIAR SERVIDOR REAL!
     Host.Run;
 
-    // Manter servidor rodando atÈ Enter
+    // Manter servidor rodando at√© Enter
     Readln;
 
     Host.Stop;

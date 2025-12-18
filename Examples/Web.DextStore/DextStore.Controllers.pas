@@ -1,4 +1,4 @@
-unit DextStore.Controllers;
+﻿unit DextStore.Controllers;
 
 interface
 
@@ -13,7 +13,7 @@ uses
 
 type
   // ===========================================================================
-  // ?? Auth Controller
+  // 🔐 Auth Controller
   // ===========================================================================
   [DextController('/api/auth')]
   TAuthController = class
@@ -29,7 +29,7 @@ type
   end;
 
   // ===========================================================================
-  // ?? Products Controller
+  // 🛒 Products Controller
   // ===========================================================================
   [DextController('/api/products')]
   TProductsController = class
@@ -51,7 +51,7 @@ type
   end;
 
   // ===========================================================================
-  // ??? Cart Controller
+  // 🛍️ Cart Controller
   // ===========================================================================
   [DextController('/api/cart')]
   [SwaggerAuthorize('Bearer')]
@@ -72,7 +72,7 @@ type
   end;
 
   // ===========================================================================
-  // ?? Orders Controller
+  // 📦 Orders Controller
   // ===========================================================================
   [DextController('/api/orders')]
   [SwaggerAuthorize('Bearer')]

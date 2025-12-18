@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Async;
+﻿unit EntityDemo.Tests.Async;
 
 interface
 
@@ -27,7 +27,7 @@ implementation
 
 procedure TAsyncTest.Run;
 begin
-  Log('?? Running Fluent Async Tests...');
+  Log('🚀 Running Fluent Async Tests...');
   
   TestSimpleAsync;
   TestChainedAsync;

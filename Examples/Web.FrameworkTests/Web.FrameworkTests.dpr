@@ -1,4 +1,4 @@
-program Web.FrameworkTests;
+﻿program Web.FrameworkTests;
 
 {$APPTYPE CONSOLE}
 
@@ -26,14 +26,14 @@ begin
     end;
   except
     on E: Exception do
-      WriteLn('? Critical Error running test: ' + E.Message);
+      WriteLn('❌ Critical Error running test: ' + E.Message);
   end;
 end;
 
 begin
   
   try
-    WriteLn('?? Dext Web Framework Stability Tests');
+    WriteLn('🌐 Dext Web Framework Stability Tests');
     WriteLn('=====================================');
     
     // Execute Tests
@@ -41,10 +41,10 @@ begin
     RunTest(TAsyncTest);
     
     WriteLn('');
-    WriteLn('? All tests completed.');
+    WriteLn('✨ All tests completed.');
   except
     on E: Exception do
-      Writeln('? Critical Error: ', E.ClassName, ': ', E.Message);
+      Writeln('❌ Critical Error: ', E.ClassName, ': ', E.Message);
   end;
 
   WriteLn('Press Enter to exit...');

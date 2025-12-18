@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.CompositeKeys;
+﻿unit EntityDemo.Tests.CompositeKeys;
 
 interface
 
@@ -20,7 +20,7 @@ implementation
 
 procedure TCompositeKeyTest.Run;
 begin
-  Log('?? Running Composite Key Tests...');
+  Log('🔑 Running Composite Key Tests...');
   Log('===============================');
 
   var OrderItem := TOrderItem.Create;

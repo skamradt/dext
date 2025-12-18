@@ -1,4 +1,4 @@
-
+﻿
 program Orm.EntityDemo;
 
 {$APPTYPE CONSOLE}
@@ -63,7 +63,7 @@ begin
     //RegisterExpectedMemoryLeak(Unknown)
   end;
 
-  WriteLn('?? Database Provider: ' + TDbConfig.GetProviderName);
+  WriteLn('📊 Database Provider: ' + TDbConfig.GetProviderName);
   WriteLn('');
 end;
 
@@ -120,20 +120,20 @@ begin
   RunTest(TTypeSystemTest);
 
   WriteLn('');
-  WriteLn('? All tests completed.');
+  WriteLn('✨ All tests completed.');
 end;
 
 begin
   SetConsoleCharSet(65001);
   try
-    WriteLn('?? Dext Entity ORM Demo Suite');
+    WriteLn('🚀 Dext Entity ORM Demo Suite');
     WriteLn('=============================');
     WriteLn('');
     ConfigureDatabase(dpSQLiteMemory);
     RunAllTests;
   except
     on E: Exception do
-      Writeln('? Critical Error: ', E.ClassName, ': ', E.Message);
+      Writeln('❌ Critical Error: ', E.ClassName, ': ', E.Message);
   end;
 
   ReadLn;

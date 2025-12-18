@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.MixedCompositeKeys;
+﻿unit EntityDemo.Tests.MixedCompositeKeys;
 
 interface
 
@@ -18,7 +18,7 @@ implementation
 
 procedure TMixedCompositeKeyTest.Run;
 begin
-  Log('?? Running Mixed Composite Key Tests...');
+  Log('🔑 Running Mixed Composite Key Tests...');
   var Entity := TMixedKeyEntity.Create;
   Entity.Key1 := 10;
   Entity.Key2 := 'ABC';

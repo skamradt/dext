@@ -31,7 +31,6 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  Dext.Entity,
   Dext.Entity.Core,
   Dext.Entity.Migrations,
   Dext.Entity.Migrations.Builder,

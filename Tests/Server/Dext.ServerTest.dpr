@@ -1,4 +1,4 @@
-program Dext.ServerTest;
+﻿program Dext.ServerTest;
 
 uses
   Dext.MM,
@@ -56,7 +56,7 @@ begin
     var Host := TDextWebHost.CreateDefaultBuilder
       .ConfigureServices(procedure(Services: IServiceCollection)
       begin
-        // Registrar servi�os
+        // Registrar serviços
         TServiceCollectionExtensions.AddSingleton<ITimeService, TTimeService>(Services);
         TServiceCollectionExtensions.AddSingleton<ILogger, TConsoleLogger>(Services);
       end)
@@ -106,9 +106,9 @@ begin
       end)
       .Build;
 
-    // ?? INICIAR SERVIDOR REAL!
+    // 🚀 INICIAR SERVIDOR REAL!
     Host.Run;
-    // Manter servidor rodando at� Enter
+    // Manter servidor rodando até Enter
     //Readln;
     Host.Stop;
   except

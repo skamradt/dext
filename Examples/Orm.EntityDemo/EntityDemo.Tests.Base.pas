@@ -1,4 +1,4 @@
-unit EntityDemo.Tests.Base;
+﻿unit EntityDemo.Tests.Base;
 
 interface
 
@@ -124,7 +124,7 @@ var
             begin
               // Use the exact name from the list (with quotes)
               FConn.ExecSQL('DROP TABLE ' + Tables[idx]);
-              WriteLn('  ???  Dropped table: ' + ATableName);
+              WriteLn('  🗑️  Dropped table: ' + ATableName);
             end;
           finally
             Tables.Free;
@@ -139,12 +139,12 @@ var
       end;
     except
       on E: Exception do
-        WriteLn('  ??  Warning dropping ' + ATableName + ': ' + E.Message);
+        WriteLn('  ⚠️  Warning dropping ' + ATableName + ': ' + E.Message);
     end;
   end;
   
 begin
-  WriteLn('?? Setting up test with: ' + TDbConfig.GetProviderName);
+  WriteLn('🔧 Setting up test with: ' + TDbConfig.GetProviderName);
   
   // 1. Create connection using TDbConfig
   DbConnection := TDbConfig.CreateConnection;
@@ -154,7 +154,7 @@ begin
   FConn := (DbConnection as TFireDACConnection).Connection;
 
   // Drop tables to ensure clean state
-  WriteLn('???  Dropping existing tables...');
+  WriteLn('🗑️  Dropping existing tables...');
   // Order matters due to FKs - drop child tables first
   DropTableIfExists('order_items');
   DropTableIfExists('products');
@@ -171,7 +171,7 @@ begin
   FContext := TDbContext.Create(DbConnection, Dialect);
   
   // 3. Register Entities & Create Schema
-  WriteLn('?? Registering entities...');
+  WriteLn('📦 Registering entities...');
   FContext.Entities<TAddress>;
   FContext.Entities<TUser>;
   FContext.Entities<TOrderItem>;
@@ -183,9 +183,9 @@ begin
   FContext.Entities<TUserWithProfile>;
   FContext.Entities<TTask>;
   
-  WriteLn('???  Creating schema...');
+  WriteLn('🏗️  Creating schema...');
   FContext.EnsureCreated;
-  WriteLn('? Setup complete!');
+  WriteLn('✅ Setup complete!');
   WriteLn('');
 end;
 
@@ -202,12 +202,12 @@ end;
 
 procedure TBaseTest.LogSuccess(const Msg: string);
 begin
-  WriteLn('   ? ' + Msg);
+  WriteLn('   ✅ ' + Msg);
 end;
 
 procedure TBaseTest.LogError(const Msg: string);
 begin
-  WriteLn('   ? ' + Msg);
+  WriteLn('   ❌ ' + Msg);
 end;
 
 procedure TBaseTest.AssertTrue(Condition: Boolean; const SuccessMsg, FailMsg: string);
