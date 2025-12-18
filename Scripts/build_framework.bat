@@ -12,10 +12,10 @@ echo.
 
 set BUILD_CONFIG=Debug
 set PLATFORM=Win32
-set OUTPUT_PATH=%~dp0\Output
+set OUTPUT_PATH=%~dp0..\Output
 
 if not exist "%OUTPUT_PATH%" mkdir "%OUTPUT_PATH%"
-cd "%~dp0\Sources"
+cd "%~dp0..\Sources"
 
 echo Building Dext.Core...
 msbuild "Dext.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_DcpOutput="%OUTPUT_PATH%" /v:minimal
