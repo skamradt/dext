@@ -52,6 +52,32 @@ type
     Email: string;
   end;
 
+  // Class-based DTOs for object serialization testing
+  TAddress = class
+  private
+    FCity: string;
+    FStreet: string;
+    FZipCode: string;
+  public
+    property Street: string read FStreet write FStreet;
+    property City: string read FCity write FCity;
+    property ZipCode: string read FZipCode write FZipCode;
+  end;
+
+  TPersonWithAddress = class
+  private
+    FAddress: TAddress;
+    FEmail: string;
+    FId: Integer;
+    FName: string;
+  public
+    property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
+    property Email: string read FEmail write FEmail;
+    property Address: TAddress read FAddress write FAddress;
+    destructor Destroy; override;
+  end;
+
   // Service Interface
   IGreetingService = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
@@ -78,7 +104,7 @@ type
 
     [DextGet('/{name}')]
     procedure GetGreeting(Ctx: IHttpContext; [FromRoute] const Name: string); virtual;
-    
+
     [DextGet('/negotiated')]
     [AllowAnonymous]
     procedure GetNegotiated(Ctx: IHttpContext); virtual;
@@ -88,7 +114,7 @@ type
 
     [DextGet('/search')]
     procedure SearchGreeting(Ctx: IHttpContext; const Filter: TGreetingFilter); virtual;
-    
+
     [DextGet('/config')]
     procedure GetConfig(Ctx: IHttpContext); virtual;
   end;
@@ -105,7 +131,7 @@ type
   // ============================================================================
   // 🎯 ACTION FILTERS DEMONSTRATION
   // ============================================================================
-  
+
   /// <summary>
   ///   Custom filter that validates admin role
   /// </summary>
@@ -167,10 +193,35 @@ type
     procedure GetPeople(Ctx: IHttpContext);
   end;
 
+  [DextController('/api/object')]
+  TObjectTestController = class
+  public
+    [DextGet('')]
+    [AllowAnonymous]
+    procedure GetPerson(Ctx: IHttpContext);
+
+    [DextGet('/nested')]
+    [AllowAnonymous]
+    procedure GetPersonWithAddress(Ctx: IHttpContext);
+    
+    [DextGet('/list')]
+    [AllowAnonymous]
+    procedure GetPeopleList(Ctx: IHttpContext);
+  end;
+
 implementation
 
 uses
   System.DateUtils;
+
+{ TPersonClass }
+
+destructor TPersonWithAddress.Destroy;
+begin
+  if Assigned(Address) then
+    Address.Free;
+  inherited;
+end;
 
 { TGreetingService }
 
@@ -201,7 +252,7 @@ var
 begin
   Data.Name := 'Dext User';
   Data.Title := 'Developer';
-  
+
   // This will use the registered IOutputFormatterSelector to choose between JSON (default)
   // or others if Accept header dictates and more formatters are registered.
   Results.Ok<TGreetingRequest>(Data).Execute(Ctx);
@@ -232,7 +283,7 @@ begin
   Msg := FSettings.Value.Message;
   Secret := FSettings.Value.SecretKey;
   Retries := FSettings.Value.MaxRetries;
-  
+
   Ctx.Response.Json(Format('{"message": "%s", "secret": "%s", "retries": %d}', [Msg, Secret, Retries]));
 end;
 
@@ -259,10 +310,10 @@ begin
       Claims[0] := TClaim.Create('sub', Request.Username);
       Claims[1] := TClaim.Create('name', Request.Username);
       Claims[2] := TClaim.Create('role', 'admin');
-      
+
       // Generate token
       Token := TokenHandler.GenerateToken(Claims);
-      
+
       Ctx.Response.Json(Format('{"token": "%s", "username": "%s"}', [Token, Request.Username]));
     finally
       TokenHandler.Free;
@@ -286,7 +337,7 @@ begin
   end;
 
   // Check if user is authenticated and has admin role
-  if (AContext.HttpContext.User = nil) or 
+  if (AContext.HttpContext.User = nil) or
      (AContext.HttpContext.User.Identity = nil) or
      (not AContext.HttpContext.User.Identity.IsAuthenticated) then
   begin
@@ -308,7 +359,7 @@ end;
 procedure TimingFilterAttribute.OnActionExecuting(AContext: IActionExecutingContext);
 begin
   FStartTime := Now;
-  WriteLn(Format('⏱️  TimingFilter: Starting %s.%s', 
+  WriteLn(Format('⏱️  TimingFilter: Starting %s.%s',
     [AContext.ActionDescriptor.ControllerName, AContext.ActionDescriptor.ActionName]));
 end;
 
@@ -318,7 +369,7 @@ var
 begin
   ElapsedMs := MilliSecondsBetween(Now, FStartTime);
   WriteLn(Format('⏱️  TimingFilter: Completed in %d ms', [ElapsedMs]));
-  
+
   // Add timing header to response
   AContext.HttpContext.Response.AddHeader('X-Execution-Time-Ms', IntToStr(ElapsedMs));
 end;
@@ -335,7 +386,7 @@ procedure TFiltersController.CachedEndpoint(Ctx: IHttpContext);
 begin
   // This response will be cached for 60 seconds
   // Check response headers for Cache-Control and X-Custom-Header
-  Ctx.Response.Json(Format('{"message":"Cached response","timestamp":"%s"}', 
+  Ctx.Response.Json(Format('{"message":"Cached response","timestamp":"%s"}',
     [DateTimeToStr(Now)]));
 end;
 
@@ -355,7 +406,7 @@ begin
   // 1. User is authenticated (RequireAdminRole)
   // 2. User has admin role (RequireAdminRole)
   // 3. Execution time is being tracked (TimingFilter)
-  Ctx.Response.Json('{"message":"Admin endpoint","user":"' + 
+  Ctx.Response.Json('{"message":"Admin endpoint","user":"' +
     Ctx.User.Identity.Name + '"}');
 end;
 
@@ -373,19 +424,114 @@ var
   Person: TPerson;
 begin
   People := TCollections.CreateList<TPerson>;
-  
+
   Person.Id := 1;
   Person.Name := 'Cesar Romero';
   Person.Email := 'cesar@dext.com';
   People.Add(Person);
-  
+
   Person.Id := 2;
   Person.Name := 'Dext User';
   Person.Email := 'user@dext.com';
   People.Add(Person);
-  
+
   // Reported issue: This generates empty JSON if IList is not understood
   Results.Ok<IList<TPerson>>(People).Execute(Ctx);
+end;
+
+{ TObjectTestController }
+
+procedure TObjectTestController.GetPerson(Ctx: IHttpContext);
+var
+  Person: TPersonWithAddress;
+  Json: string;
+begin
+  Person := TPersonWithAddress.Create;
+  try
+    Person.Id := 1;
+    Person.Name := 'John Doe';
+    Person.Email := 'john@example.com';
+    Person.Address := nil; // Test null object
+    
+    // Serialize to JSON before freeing
+    Json := TDextJson.Serialize(Person);
+  finally
+    Person.Free;
+  end;
+  
+  // Return JSON string
+  Ctx.Response.Json(Json);
+end;
+
+procedure TObjectTestController.GetPersonWithAddress(Ctx: IHttpContext);
+var
+  Person: TPersonWithAddress;
+  Json: string;
+begin
+  Person := TPersonWithAddress.Create;
+  try
+    Person.Id := 2;
+    Person.Name := 'Jane Smith';
+    Person.Email := 'jane@example.com';
+    
+    Person.Address := TAddress.Create;
+    Person.Address.Street := '123 Main St';
+    Person.Address.City := 'New York';
+    Person.Address.ZipCode := '10001';
+    
+    // Use Results.Ok for automatic serialization
+    Results.Ok<TPersonWithAddress>(Person).Execute(Ctx);
+  finally
+    Person.Free;
+  end;
+end;
+
+procedure TObjectTestController.GetPeopleList(Ctx: IHttpContext);
+var
+  People: IList<TPersonWithAddress>;
+  Person: TPersonWithAddress;
+  Json: string;
+  I: Integer;
+begin
+  People := TCollections.CreateList<TPersonWithAddress>;
+  try
+    // Person 1 - with address
+    Person := TPersonWithAddress.Create;
+    Person.Id := 1;
+    Person.Name := 'John Doe';
+    Person.Email := 'john@example.com';
+    Person.Address := TAddress.Create;
+    Person.Address.Street := '456 Oak Ave';
+    Person.Address.City := 'Los Angeles';
+    Person.Address.ZipCode := '90001';
+    People.Add(Person);
+    
+    // Person 2 - with address
+    Person := TPersonWithAddress.Create;
+    Person.Id := 2;
+    Person.Name := 'Jane Smith';
+    Person.Email := 'jane@example.com';
+    Person.Address := TAddress.Create;
+    Person.Address.Street := '123 Main St';
+    Person.Address.City := 'New York';
+    Person.Address.ZipCode := '10001';
+    People.Add(Person);
+    
+    // Person 3 - without address (null)
+    Person := TPersonWithAddress.Create;
+    Person.Id := 3;
+    Person.Name := 'Bob Johnson';
+    Person.Email := 'bob@example.com';
+    Person.Address := nil;
+    People.Add(Person);
+    
+    // Use Results.Ok for automatic serialization
+    Results.Ok<IList<TPersonWithAddress>>(People).Execute(Ctx);
+  finally
+    // Free all objects
+    for I := 0 to People.Count - 1 do
+      People[I].Free;
+  end;
 end;
 
 
@@ -395,5 +541,6 @@ initialization
   TAuthController.ClassName;
   TFiltersController.ClassName;
   TListTestController.ClassName;
+  TObjectTestController.ClassName;
 
 end.

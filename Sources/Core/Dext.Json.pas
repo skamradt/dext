@@ -286,6 +286,7 @@ type
     function GetFieldName(AField: TRttiField): string;
     function GetRecordName(ARttiType: TRttiType): string;
     function SerializeRecord(const AValue: TValue): IDextJsonObject;
+    function SerializeObject(const AValue: TValue): IDextJsonObject;
     function ShouldSkipField(AField: TRttiField; const AValue: TValue): Boolean;
 
     function JsonToValue(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
@@ -1240,6 +1241,111 @@ begin
   end;
 end;
 
+function TDextSerializer.SerializeObject(const AValue: TValue): IDextJsonObject;
+var
+  Context: TRttiContext;
+  Prop: TRttiProperty;
+  PropName: string;
+  PropValue: TValue;
+  RttiType: TRttiType;
+  Obj: TObject;
+begin
+  Result := TDextJson.Provider.CreateObject;
+
+  if AValue.IsEmpty then
+    Exit;
+
+  Obj := AValue.AsObject;
+  if Obj = nil then
+    Exit;
+
+  Context := TRttiContext.Create;
+  try
+    RttiType := Context.GetType(Obj.ClassType);
+    
+    for Prop in RttiType.GetProperties do
+    begin
+      // Skip non-public properties
+      if Prop.Visibility <> mvPublic then
+        Continue;
+        
+      // Skip if has JsonIgnore attribute
+      var ShouldSkip := False;
+      for var Attr in Prop.GetAttributes do
+        if Attr is JsonIgnoreAttribute then
+        begin
+          ShouldSkip := True;
+          Break;
+        end;
+      
+      if ShouldSkip then
+        Continue;
+
+      PropName := ApplyCaseStyle(Prop.Name);
+      
+      // Check for JsonName attribute
+      for var Attr in Prop.GetAttributes do
+        if Attr is JsonNameAttribute then
+        begin
+          PropName := JsonNameAttribute(Attr).Name;
+          Break;
+        end;
+
+      PropValue := Prop.GetValue(Obj);
+
+      // Handle null/empty values
+      if FSettings.IgnoreNullValues and PropValue.IsEmpty then
+        Continue;
+
+      // Serialize based on property type
+      case PropValue.TypeInfo.Kind of
+        tkInteger, tkInt64:
+          Result.SetInt64(PropName, PropValue.AsInt64);
+
+        tkFloat:
+          begin
+            if PropValue.TypeInfo = TypeInfo(TDateTime) then
+              Result.SetString(PropName, FormatDateTime(FSettings.DateFormat, PropValue.AsExtended))
+            else
+              Result.SetDouble(PropName, PropValue.AsExtended);
+          end;
+
+        tkString, tkLString, tkWString, tkUString:
+          Result.SetString(PropName, PropValue.AsString);
+
+        tkEnumeration:
+          begin
+            if PropValue.TypeInfo = TypeInfo(Boolean) then
+              Result.SetBoolean(PropName, PropValue.AsBoolean)
+            else
+              Result.SetString(PropName, GetEnumName(PropValue.TypeInfo, PropValue.AsOrdinal));
+          end;
+
+        tkRecord:
+          begin
+            var NestedRecord := SerializeRecord(PropValue);
+            Result.SetObject(PropName, NestedRecord);
+          end;
+
+        tkClass:
+          begin
+            if PropValue.AsObject = nil then
+              Result.SetNull(PropName)
+            else if IsListType(PropValue.TypeInfo) then
+              Result.SetArray(PropName, SerializeList(PropValue))
+            else
+              Result.SetObject(PropName, SerializeObject(PropValue));
+          end;
+
+        tkDynArray:
+          Result.SetArray(PropName, SerializeArray(PropValue));
+      end;
+    end;
+  finally
+    Context.Free;
+  end;
+end;
+
 function TDextSerializer.ShouldSkipField(AField: TRttiField; const AValue: TValue): Boolean;
 var
   Attribute: TCustomAttribute;
@@ -1328,10 +1434,13 @@ begin
         Result.SetArray(ValueField, SerializeArray(AValue));
       end;
 
-    else
-      if IsListType(AValue.TypeInfo) then
+    tkClass:
       begin
-        Result.SetArray(ValueField, SerializeList(AValue));
+        // Distinguish between lists and regular objects
+        if IsListType(AValue.TypeInfo) then
+          Result.SetArray(ValueField, SerializeList(AValue))
+        else
+          Result := SerializeObject(AValue);
       end;
   end;
 end;
@@ -1599,6 +1708,13 @@ begin
         case ElementValue.TypeInfo.Kind of
           tkRecord:
             Result.Add(SerializeRecord(ElementValue));
+          tkClass:
+            begin
+              if ElementValue.AsObject = nil then
+                Result.AddNull
+              else
+                Result.Add(SerializeObject(ElementValue));
+            end;
           tkInteger, tkInt64:
             Result.Add(ElementValue.AsInt64);
           tkFloat:
@@ -1639,6 +1755,13 @@ begin
           case ElementValue.TypeInfo.Kind of
             tkRecord:
               Result.Add(SerializeRecord(ElementValue));
+            tkClass:
+              begin
+                if ElementValue.AsObject = nil then
+                  Result.AddNull
+                else
+                  Result.Add(SerializeObject(ElementValue));
+              end;
             tkInteger, tkInt64:
               Result.Add(ElementValue.AsInt64);
             tkFloat:

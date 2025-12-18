@@ -364,13 +364,60 @@ begin
 end;
 
 procedure TJsonDataObjectAdapter.SetObject(const Name: string; Value: IDextJsonObject);
+var
+  NewObj: TJsonObject;
+  I: Integer;
+  PropName: string;
+  Node: IDextJsonNode;
+  NestedObjAdapter: TJsonDataObjectAdapter;
+  NestedArrAdapter: TJsonDataArrayAdapter;
 begin
   if Value = nil then
     FObj.O[Name] := nil
   else if Value is TJsonDataObjectAdapter then
   begin
-    // Don't clone - use direct reference so child modifications are reflected
-    FObj.O[Name] := (Value as TJsonDataObjectAdapter).FObj;
+    // Clone to avoid shared ownership issues
+    FObj.O[Name] := (Value as TJsonDataObjectAdapter).FObj.Clone as TJsonObject;
+  end
+  else
+  begin
+    // Handle other IDextJsonObject implementations by copying properties
+    NewObj := TJsonObject.Create;
+    for I := 0 to Value.GetCount - 1 do
+    begin
+      PropName := Value.GetName(I);
+      Node := Value.GetNode(PropName);
+      if Node <> nil then
+      begin
+        case Node.GetNodeType of
+          jntString: NewObj.S[PropName] := Node.AsString;
+          jntNumber: NewObj.F[PropName] := Node.AsDouble;
+          jntBoolean: NewObj.B[PropName] := Node.AsBoolean;
+          jntNull: ; // Skip or set null
+          jntObject: 
+            begin
+              var NestedObj := Value.GetObject(PropName);
+              if (NestedObj <> nil) and (NestedObj is TJsonDataObjectAdapter) then
+              begin
+                NestedObjAdapter := NestedObj as TJsonDataObjectAdapter;
+                // Clone to avoid double-free
+                NewObj.O[PropName] := NestedObjAdapter.FObj.Clone as TJsonObject;
+              end;
+            end;
+          jntArray:
+            begin
+              var NestedArr := Value.GetArray(PropName);
+              if (NestedArr <> nil) and (NestedArr is TJsonDataArrayAdapter) then
+              begin
+                NestedArrAdapter := NestedArr as TJsonDataArrayAdapter;
+                // Clone to avoid double-free
+                NewObj.A[PropName] := NestedArrAdapter.FArr.Clone as TJsonArray;
+              end;
+            end;
+        end;
+      end;
+    end;
+    FObj.O[Name] := NewObj;
   end;
 end;
 
