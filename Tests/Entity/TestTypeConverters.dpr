@@ -132,41 +132,38 @@ end;
 
 procedure TestTypeConverterRegistry;
 var
-  Registry: TTypeConverterRegistry;
   Converter: ITypeConverter;
-  CustomConverter: TEnumConverter;
+  CustomConverter: ITypeConverter;
 begin
   WriteLn('► Testing Type Converter Registry...');
   
-  Registry := TTypeConverterRegistry.Create;
-  try
-    // Test getting GUID converter (built-in)
-    Converter := Registry.GetConverter(TypeInfo(TGUID));
-    if Converter = nil then
-      raise Exception.Create('Failed to get GUID converter');
-    WriteLn('  ✓ Got GUID converter');
-    
-    // Test registering custom converter
-    CustomConverter := TEnumConverter.Create(True);
-    Registry.RegisterConverterForType(TypeInfo(TUserRole), CustomConverter);
-    
-    Converter := Registry.GetConverter(TypeInfo(TUserRole));
-    if Converter = nil then
-      raise Exception.Create('Failed to get custom enum converter');
-    WriteLn('  ✓ Registered and retrieved custom converter');
-    
-    // Test clearing custom converters
-    Registry.ClearCustomConverters;
-    Converter := Registry.GetConverter(TypeInfo(TUserRole));
-    if Converter <> nil then
-      raise Exception.Create('Custom converter not cleared');
-    WriteLn('  ✓ Cleared custom converters');
-    
-    WriteLn('✓ Type Converter Registry tests passed');
-    WriteLn('');
-  finally
-    Registry.Free;
-  end;
+  // Use the global singleton instance instead of creating a new one
+  // This avoids memory management issues with multiple registry instances
+  
+  // Test getting GUID converter (built-in)
+  Converter := TTypeConverterRegistry.Instance.GetConverter(TypeInfo(TGUID));
+  if Converter = nil then
+    raise Exception.Create('Failed to get GUID converter');
+  WriteLn('  ✓ Got GUID converter');
+  
+  // Test registering custom converter
+  CustomConverter := TEnumConverter.Create(True);
+  TTypeConverterRegistry.Instance.RegisterConverterForType(TypeInfo(TUserRole), CustomConverter);
+  
+  Converter := TTypeConverterRegistry.Instance.GetConverter(TypeInfo(TUserRole));
+  if Converter = nil then
+    raise Exception.Create('Failed to get custom enum converter');
+  WriteLn('  ✓ Registered and retrieved custom converter');
+  
+  // Test clearing custom converters
+  TTypeConverterRegistry.Instance.ClearCustomConverters;
+  Converter := TTypeConverterRegistry.Instance.GetConverter(TypeInfo(TUserRole));
+  if Converter <> nil then
+    raise Exception.Create('Custom converter not cleared');
+  WriteLn('  ✓ Cleared custom converters');
+  
+  WriteLn('✓ Type Converter Registry tests passed');
+  WriteLn('');
 end;
 
 procedure TestJsonConverter;
@@ -251,7 +248,7 @@ begin
     TestTypeConverterRegistry;
     TestJsonConverter;
     TestArrayConverter;
-    
+
     WriteLn('');
     WriteLn('✅ All tests passed!');
     WriteLn('');

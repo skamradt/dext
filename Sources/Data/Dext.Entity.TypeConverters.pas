@@ -457,6 +457,11 @@ end;
 
 destructor TTypeConverterRegistry.Destroy;
 begin
+  // Clear the lists first to release interface references properly
+  // before destroying the container objects
+  FCustomConverters.Clear;
+  FConverters.Clear;
+  
   FCustomConverters.Free;
   FConverters.Free;
   inherited;
