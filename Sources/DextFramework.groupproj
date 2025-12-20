@@ -12,7 +12,7 @@
         <Projects Include="Dext.Web.Core.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Tests\ServerCors\Dext.ServerTest.Cors.dproj">
+        <Projects Include="..\Tests\Entity\TestFireDACPhysDriver.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -50,23 +50,23 @@
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="Dext.Web.Core.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Dext_ServerTest_Cors">
-        <MSBuild Projects="..\Tests\ServerCors\Dext.ServerTest.Cors.dproj"/>
+    <Target Name="TestFireDACPhysDriver">
+        <MSBuild Projects="..\Tests\Entity\TestFireDACPhysDriver.dproj"/>
     </Target>
-    <Target Name="Dext_ServerTest_Cors:Clean">
-        <MSBuild Projects="..\Tests\ServerCors\Dext.ServerTest.Cors.dproj" Targets="Clean"/>
+    <Target Name="TestFireDACPhysDriver:Clean">
+        <MSBuild Projects="..\Tests\Entity\TestFireDACPhysDriver.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Dext_ServerTest_Cors:Make">
-        <MSBuild Projects="..\Tests\ServerCors\Dext.ServerTest.Cors.dproj" Targets="Make"/>
+    <Target Name="TestFireDACPhysDriver:Make">
+        <MSBuild Projects="..\Tests\Entity\TestFireDACPhysDriver.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_ServerTest_Cors"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;TestFireDACPhysDriver"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_ServerTest_Cors:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;TestFireDACPhysDriver:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_ServerTest_Cors:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;TestFireDACPhysDriver:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

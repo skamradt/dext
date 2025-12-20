@@ -4,6 +4,10 @@ setlocal enabledelayedexpansion
 echo ==========================================
 echo Building Dext Examples
 echo ==========================================
+
+echo Setting up Delphi environment...
+call "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
+
 echo.
 
 set FAILED_PROJECTS=
@@ -53,13 +57,13 @@ if not "%FAILED_PROJECTS%"=="" (
     echo ==========================================
     echo BUILD COMPLETED WITH ERRORS
     echo ==========================================
-    pause
+    if not "%1"=="--no-wait" pause
     exit /b 1
 ) else (
     echo.
     echo ==========================================
     echo ALL EXAMPLES BUILT SUCCESSFULLY!
     echo ==========================================
-    pause
+    if not "%1"=="--no-wait" pause
     exit /b 0
 )

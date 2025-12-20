@@ -69,6 +69,7 @@ contains
   Dext.Entity.TypeSystem in 'Data\Dext.Entity.TypeSystem.pas',
   Dext.Hosting.CLI in 'Hosting\Dext.Hosting.CLI.pas',
   Dext.Specifications.SQL.Generator in 'Data\Dext.Specifications.SQL.Generator.pas',
-  Dext.Entity.TypeConverters in 'Data\Dext.Entity.TypeConverters.pas';
+  Dext.Entity.TypeConverters in 'Data\Dext.Entity.TypeConverters.pas',
+  Dext.Entity.Drivers.FireDAC.Phys in 'Data\Dext.Entity.Drivers.FireDAC.Phys.pas';
 
 end.

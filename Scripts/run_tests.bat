@@ -26,7 +26,7 @@ for /r "%~dp0..\Examples" %%f in (*.dproj) do (
         
         REM Try to find the executable in common output locations
         set "EXE_FOUND="
-        for %%d in ("!PROJECT_DIR!Win32\Release" "!PROJECT_DIR!Win32\Debug" "!PROJECT_DIR!Release" "!PROJECT_DIR!Debug") do (
+        for %%d in ("!PROJECT_DIR!..\Output" "!PROJECT_DIR!Win32\Release" "!PROJECT_DIR!Win32\Debug" "!PROJECT_DIR!Release" "!PROJECT_DIR!Debug") do (
             if exist "%%~d\!PROJECT_NAME!.exe" (
                 set "EXE_PATH=%%~d\!PROJECT_NAME!.exe"
                 set "EXE_FOUND=1"

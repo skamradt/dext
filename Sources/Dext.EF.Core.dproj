@@ -152,6 +152,7 @@
         <DCCReference Include="Hosting\Dext.Hosting.CLI.pas"/>
         <DCCReference Include="Data\Dext.Specifications.SQL.Generator.pas"/>
         <DCCReference Include="Data\Dext.Entity.TypeConverters.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Drivers.FireDAC.Phys.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -201,9 +202,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\Output\Win32\Debug\Dext.EF.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\Output\Win32\Debug\Dext.EF.Core.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>Dext.EF.bpl</RemoteName>
+                        <RemoteName>Dext.EF.Core.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
