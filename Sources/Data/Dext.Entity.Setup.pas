@@ -4,9 +4,13 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
   System.Generics.Collections,
   Dext.Entity.Drivers.Interfaces,
-  Dext.Entity.Dialects;
+  Dext.Entity.Dialects,
+  Dext.Entity.Drivers.FireDAC,
+  Dext.Entity.Drivers.FireDAC.Manager,
+  FireDAC.Comp.Client;
 
 type
   /// <summary>
@@ -36,6 +40,9 @@ type
     property PoolMax: Integer read FPoolMax write FPoolMax;
     property Dialect: ISQLDialect read FDialect write FDialect;
     property CustomConnection: IDbConnection read FCustomConnection write FCustomConnection;
+
+    function BuildConnection: IDbConnection;
+    function BuildDialect: ISQLDialect;
 
     // Fluent Helpers
     function UseSQLite(const DatabaseFile: string): TDbContextOptions;
@@ -105,6 +112,75 @@ begin
   FPooling := Enable;
   FPoolMax := MaxSize;
   Result := Self;
+end;
+
+function TDbContextOptions.BuildConnection: IDbConnection;
+var
+  FDConn: TFDConnection;
+  DefName: string;
+begin
+  if FCustomConnection <> nil then
+    Exit(FCustomConnection);
+
+  FDConn := TFDConnection.Create(nil);
+  try
+    if FConnectionDefName <> '' then
+    begin
+      FDConn.ConnectionDefName := FConnectionDefName;
+    end
+    else if FDriverName <> '' then
+    begin
+      if FPooling then
+      begin
+        var SL := TStringList.Create;
+        try
+          for var Pair in FParams do
+            SL.Values[Pair.Key] := Pair.Value;
+          
+          DefName := TDextFireDACManager.Instance.RegisterConnectionDef(FDriverName, TStrings(SL), FPoolMax);
+          FDConn.ConnectionDefName := DefName;
+        finally
+          SL.Free;
+        end;
+      end
+      else
+      begin
+        FDConn.DriverName := FDriverName;
+        for var Pair in FParams do
+          FDConn.Params.Values[Pair.Key] := Pair.Value;
+      end;
+    end;
+    
+    // Resource options
+    if FPooling then
+      TDextFireDACManager.Instance.ApplyResourceOptions(FDConn);
+
+    Result := TFireDACConnection.Create(FDConn, True);
+  except
+    FDConn.Free;
+    raise;
+  end;
+end;
+
+function TDbContextOptions.BuildDialect: ISQLDialect;
+var
+  LDriver: string;
+begin
+  if FDialect <> nil then
+    Exit(FDialect);
+
+  LDriver := FDriverName.ToLower;
+
+  if LDriver.Contains('sqlite') then
+    Result := Dext.Entity.Dialects.TSQLiteDialect.Create
+  else if LDriver.Contains('pg') or LDriver.Contains('post') then
+    Result := Dext.Entity.Dialects.TPostgreSQLDialect.Create
+  else if LDriver.Contains('mssql') or LDriver.Contains('sqlserver') then
+    Result := Dext.Entity.Dialects.TSQLServerDialect.Create
+  else if LDriver.Contains('fb') or LDriver.Contains('firebird') then
+    Result := Dext.Entity.Dialects.TFirebirdDialect.Create
+  else
+    Result := Dext.Entity.Dialects.TSQLiteDialect.Create; // Default
 end;
 
 { TDbContextOptionsBuilder }

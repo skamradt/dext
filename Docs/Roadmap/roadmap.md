@@ -264,11 +264,15 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
     - ✅ **Database-based**: Conexão dinâmica por `ConnectionString`.
     - ✅ **Automatic Creation**: `EnsureCreated` cria schemas automaticamente.
   - 📚 Documentação: [ORM Type System Guide](../ORM-Type-System-Guide.md)
-- [ ] **Migrations**: Sistema de migração de schema (Prioridade Alta - Dext Forum).
+- [x] **Migrations**: Sistema de migração de schema (✅ Core Completo).
+  - ✅ **Dext CLI**: Ferramenta `dext.exe` para gerenciamento de migrations.
+  - ✅ **Registry**: Sistema de registro de migrações (`IMigration`).
+  - ✅ **Runner**: Executor transacional (`TMigrator`) com verificação de histórico.
+  - ✅ **Builder**: API fluente para definição de schema (`CreateTable`, `AddColumn`, etc.).
+  - [ ] **Scaffolding**: Geração automática de classes (Próximo passo).
 - [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
 
 ### 6. Ecossistema & Tooling (📅 Planejado para v1.1)
-- [ ] **CLI**: Ferramenta de linha de comando (`dext new webapi`).
 - [ ] **Templates**: Templates de projeto para Delphi (IDE Wizards).
 - [ ] **Web Stencils**: Integração com engine de renderização server-side.
 - [ ] **Docker**: Imagens oficiais e exemplos de deploy.

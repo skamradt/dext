@@ -15,6 +15,9 @@ uses
   Dext.Entity.Migrations,
   Dext.Entity.Migrations.Runner,
   Dext.Hosting.CLI,
+  Dext.Hosting.CLI.Args,
+  Dext.Hosting.CLI.Commands.MigrateList,
+  Dext.Hosting.CLI.Commands.MigrateUp,
   System.Math,
   Dext.Entity.Dialects,
   Dext.Entity.Core,
@@ -381,15 +384,20 @@ begin
     // However, we can test the Command classes directly or overload Run to accept args.
     // For now, let's just instantiate the commands manually to verify they compile and run logic.
     
-    Log('   Testing migrate:list command logic...');
-    var ListCmd: IConsoleCommand := TMigrateListCommand.Create(ContextFactory);
-    ListCmd.Execute([]);
-    Log('   ✅ migrate:list executed.');
-    
-    Log('   Testing migrate:up command logic...');
-    var UpCmd: IConsoleCommand := TMigrateUpCommand.Create(ContextFactory);
-    UpCmd.Execute([]);
-    Log('   ✅ migrate:up executed.');
+    var Args := TCommandLineArgs.Create;
+    try
+      Log('   Testing migrate:list command logic...');
+      var ListCmd: IConsoleCommand := TMigrateListCommand.Create(ContextFactory);
+      ListCmd.Execute(Args);
+      Log('   ✅ migrate:list executed.');
+      
+      Log('   Testing migrate:up command logic...');
+      var UpCmd: IConsoleCommand := TMigrateUpCommand.Create(ContextFactory);
+      UpCmd.Execute(Args);
+      Log('   ✅ migrate:up executed.');
+    finally
+      Args.Free;
+    end;
     
   finally
     CLI.Free;

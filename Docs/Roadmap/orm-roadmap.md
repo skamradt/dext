@@ -160,19 +160,19 @@ O objetivo foi permitir consultas complexas de forma tipada e fluente. Concluíd
 - [x] **Global Naming Strategy**: Estratégia global para convenção de nomes (SnakeCase, CamelCase) sem poluir entidades.
 - [x] **External Mapping (Fluent Mapping)**: Configuração de mapeamento via código (Startup) para evitar Attributes nas entidades.
 - [x] **ID Retrieval Fixes**: Correção crítica na recuperação de IDs em inserts (Single/Bulk) para garantir integridade referencial (FKs).
-- [ ] **CLI Tools**: Comandos para gerar migrations e atualizar banco.
+- [x] **CLI Tools**: Comandos para gerar migrations e atualizar banco (`dext.exe`).
 - [x] **Scaffolding**: Gerar classes de entidade a partir de banco existente (Db-First).
 
-### 🚧 Fase 6: Migrations (Concluído)
+### ✅ Fase 6: Migrations (Concluído)
 Sistema completo de evolução de esquema Code-First.
 - [x] **Schema Builder**: API fluente para definição de DDL (`CreateTable`, `AddColumn`).
 - [x] **Model Diff**: Algoritmo para comparar Modelo Atual vs Snapshot Anterior.
-- [x] **Migration Generator**: Gerar classes Pascal com os passos `Up`/`Down`.
+- [x] **Migration Generator**: Gerar classes Pascal com os passos `Up`/`Down`. (Via Code in Memory for now)
 - [x] **Migration Runner**: Aplicar migrações pendentes no banco e gerenciar tabela de histórico.
 - [x] **JSON Migration Format**: Suporte a migrações em JSON (agnóstico a linguagem).
-- [x] **External Runner**: `dext console` para rodar migrações em CI/CD (sem depender do executável da aplicação).
+- [x] **External Runner**: `dext.exe` console app para rodar migrações em CI/CD.
 - [x] **Runtime Safety**: Validação de versão de esquema no startup ("Handshake").
-- [x] **CLI Integration**: Comandos para criar e rodar migrações (`migrate add`, `migrate up`).
+- [x] **CLI Integration**: Comandos para criar e rodar migrações (`migrate:list`, `migrate:up`).
 
 ### 🚀 Fase 5: Performance & Observability (Novo)
 Foco em otimização extrema, gerenciamento de memória e observabilidade.

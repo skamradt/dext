@@ -81,7 +81,9 @@ uses
   Dext.Web.WebApplication,
   Dext.Web.Indy.SSL.Interfaces,
   Dext.Web.Indy.SSL.OpenSSL,
-  Dext.DI.Interfaces; // Added this unit
+  Dext.DI.Interfaces,
+  Dext.Hosting.CLI.Commands.MigrateList,
+  Dext.Hosting.CLI.Commands.MigrateUp;
 
 type
   // ===========================================================================
@@ -195,8 +197,8 @@ type
   // CLI
   IConsoleCommand = Dext.Hosting.CLI.IConsoleCommand;
   TDextCLI = Dext.Hosting.CLI.TDextCLI;
-  TMigrateUpCommand = Dext.Hosting.CLI.TMigrateUpCommand;
-  TMigrateListCommand = Dext.Hosting.CLI.TMigrateListCommand;
+  TMigrateUpCommand = Dext.Hosting.CLI.Commands.MigrateUp.TMigrateUpCommand;
+  TMigrateListCommand = Dext.Hosting.CLI.Commands.MigrateList.TMigrateListCommand;
 
   // Rate Limiting
   IRateLimiter = Dext.RateLimiting.Core.IRateLimiter;

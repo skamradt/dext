@@ -95,7 +95,7 @@ A fundação do framework, utilizável em qualquer tipo de aplicação.
 ### 🗄️ Acesso a Dados (ORM)
 - [Configuração de Banco de Dados](Docs/database-config.md)
 - [Fluent Query API](Docs/fluent-query-api.md)
-- [Migrations](Docs/migrations-guide.md)
+- [Migrations](Docs/migrations.md)
 - [Lazy Loading](Docs/lazy-loading-advanced.md)
 - [Bulk Operations](Docs/bulk-operations.md)
 - [Soft Delete](Docs/soft-delete.md)

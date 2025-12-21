@@ -222,7 +222,6 @@ type
     
     function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
   end;
-  end;
 
 implementation
 

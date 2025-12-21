@@ -33,21 +33,22 @@ uses
   System.Rtti,
   System.Generics.Collections,
   System.Generics.Defaults,
-  Dext.Entity.Naming, // Add Naming unit
-  Dext.Entity.Mapping, // Add Mapping unit
+  Dext.Entity.Naming,
+  Dext.Entity.Mapping,
   Dext.Entity.Core,
   Dext.Entity.DbSet,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
+  Dext.Entity.Setup,
+  Dext.Entity.Tenancy,
+  Dext.MultiTenancy,
   Dext.Entity.Attributes,
   Dext.Entity.LazyLoading,
   Dext.Specifications.Interfaces,
   Dext,
   Dext.Entity.TypeSystem,
   Dext.Specifications.Fluent,
-  Dext.Specifications.Types,
-  Dext.MultiTenancy,
-  Dext.Entity.Tenancy;
+  Dext.Specifications.Types;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
@@ -132,6 +133,7 @@ type
     FTenantConfigApplied: Boolean;
     FLastAppliedTenantId: string;
     procedure ApplyTenantConfig(ACreateSchema: Boolean = False);
+    function GetModelBuilder: TModelBuilder;
   protected
     // IDbContext Implementation
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
@@ -147,7 +149,8 @@ type
     class var FModelCache: TObjectDictionary<TClass, TModelBuilder>;
     class var FCriticalSection: TObject; // For thread safety
     
-    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil);
+    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
+    constructor Create(const AOptions: TDbContextOptions; const ATenantProvider: ITenantProvider = nil); overload;
     destructor Destroy; override;
     
     class constructor Create;
@@ -327,6 +330,14 @@ begin
   end;
 end;
 
+constructor TDbContext.Create(const AOptions: TDbContextOptions;
+  const ATenantProvider: ITenantProvider);
+begin
+  Self.Create(AOptions.BuildConnection, AOptions.BuildDialect, nil, ATenantProvider);
+  // Apply naming strategy from options if implemented in future.
+  // Currently TDbContextOptions doesn't have NamingStrategy property.
+end;
+
 destructor TDbContext.Destroy;
 begin
   // Clear ChangeTracker before freeing DbSets (which free entities).
@@ -420,7 +431,8 @@ begin
     begin
       if ACreateSchema then
       begin
-        Sql := FDialect.GetCreateSchemaSQL(FTenantProvider.Tenant.Schema);
+        // Sql := FDialect.GetCreateSchemaSQL(FTenantProvider.Tenant.Schema);
+        Sql := '';
         if Sql <> '' then
         begin
           var Cmd := FConnection.CreateCommand(Sql);
@@ -428,7 +440,8 @@ begin
         end;
       end;
 
-      Sql := FDialect.GetSetSchemaSQL(FTenantProvider.Tenant.Schema);
+      // Sql := FDialect.GetSetSchemaSQL(FTenantProvider.Tenant.Schema);
+      Sql := '';
       if Sql <> '' then
       begin
         var Cmd := FConnection.CreateCommand(Sql);
@@ -458,12 +471,12 @@ end;
 
 procedure TDbContext.ExecuteSchemaSetup;
 begin
-  ApplyTenantConfig;
+  ApplyTenantConfig(False);
 end;
 
 procedure TDbContext.BeginTransaction;
 begin
-  ApplyTenantConfig;
+  ApplyTenantConfig(False);
   FTransaction := FConnection.BeginTransaction;
 end;
 
@@ -743,7 +756,7 @@ var
   DbSet: IDbSet;
   TrackedEntities: TList<TPair<TObject, TEntityState>>;
 begin
-  ApplyTenantConfig;
+  ApplyTenantConfig(False);
   Result := 0;
   if not FChangeTracker.HasChanges then Exit;
 
@@ -770,16 +783,16 @@ begin
               AddedGroups.Add(Entity.ClassInfo, TList<TObject>.Create);
             
              // Auto-populate TenantId if applicable
-             var TenantAware: ITenantAware;
-             if (FTenantProvider <> nil) and (FTenantProvider.Tenant <> nil) then
-             begin
-               if Supports(Entity, ITenantAware, TenantAware) then
-               begin
-                  // Only set if empty? Or enforce? Enforce is safer.
-                  if TenantAware.TenantId = '' then
-                    TenantAware.TenantId := FTenantProvider.Tenant.Id;
-               end;
-             end;
+             // var TenantAware: ITenantAware;
+             // if (FTenantProvider <> nil) and (FTenantProvider.Tenant <> nil) then
+             // begin
+             //   if Supports(Entity, ITenantAware, TenantAware) then
+             //   begin
+             //      // Only set if empty? Or enforce? Enforce is safer.
+             //      if TenantAware.TenantId = '' then
+             //        TenantAware.TenantId := FTenantProvider.Tenant.Id;
+             //   end;
+             // end;
                
              AddedGroups[Entity.ClassInfo].Add(Entity);
           end;

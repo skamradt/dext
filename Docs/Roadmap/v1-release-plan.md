@@ -59,13 +59,14 @@ Features required for a modern, production-grade API.
 -   [ ] **Response Compression**
     -   Implement Middleware for `Gzip` and `Brotli` compression.
     -   Respect `Accept-Encoding` headers.
--   [ ] **HTTPS / SSL Support**
+-   [x] **HTTPS / SSL Support**
     -   Simplify SSL configuration in `TIndyWebServer` (via `UseHttps`).
     -   Support loading certificates from file/store.
--   [ ] **Content Negotiation**
+-   [x] **Content Negotiation**
     -   Implement `IOutputFormatter` architecture.
     -   Respect `Accept` headers (prioritize JSON, but allow extensibility for XML, Protobuf, etc.).
--   [ ] **Global Exception Handling**
+    -   (Partial implementation: JSON is default, mechanism exists).
+-   [x] **Global Exception Handling**
     -   Implement `UseExceptionHandler` middleware.
     -   Standardize error responses using **RFC 7807 (Problem Details)**.
 
