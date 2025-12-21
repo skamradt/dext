@@ -76,6 +76,7 @@ type
     procedure ExtractForeignKeys(const AEntities: IList<T>; PropertyToCheck: string;
       out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
     procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
+    function CreateGenerator: TSqlGenerator<T>;
   protected
     function GetEntityId(const AEntity: T): string; overload;
     function GetEntityId(const AEntity: TObject): string; overload;
@@ -277,9 +278,25 @@ begin
   end;
 end;
 
+function TDbSet<T>.CreateGenerator: TSqlGenerator<T>;
+begin
+  Result := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Result.IgnoreQueryFilters := FIgnoreQueryFilters;
+  Result.OnlyDeleted := FOnlyDeleted;
+  
+  if (FContext.GetTenantProvider <> nil) and (FContext.GetTenantProvider.Tenant <> nil) then
+    Result.Schema := FContext.GetTenantProvider.Tenant.Schema;
+end;
+
 function TDbSet<T>.GetTableName: string;
 begin
   Result := FContext.Dialect.QuoteIdentifier(FTableName);
+  if (FContext.GetTenantProvider <> nil) and (FContext.GetTenantProvider.Tenant <> nil) then
+  begin
+    var Schema := FContext.GetTenantProvider.Tenant.Schema;
+    if (Schema <> '') and FContext.Dialect.UseSchemaPrefix then
+       Result := FContext.Dialect.QuoteIdentifier(Schema) + '.' + Result;
+  end;
 end;
 
 function TDbSet<T>.GetPKColumns: TArray<string>;
@@ -418,7 +435,18 @@ begin
   end;
   
   // Create new instance
-  Result := TActivator.CreateInstance<T>;
+  if (FMap <> nil) and (FMap.InheritanceStrategy = TInheritanceStrategy.TablePerHierarchy) and 
+     (FMap.DiscriminatorColumn <> '') then
+  begin
+     var DiscVal := Reader.GetValue(FMap.DiscriminatorColumn).AsVariant;
+     var SubMap := FContext.ModelBuilder.FindMapByDiscriminator(TypeInfo(T), DiscVal);
+     if (SubMap <> nil) and (SubMap.EntityType <> TypeInfo(T)) then
+       Result := T(TActivator.CreateInstance(GetTypeData(SubMap.EntityType)^.ClassType, []))
+     else
+       Result := TActivator.CreateInstance<T>;
+  end
+  else
+    Result := TActivator.CreateInstance<T>;
   if Tracking and (PKVal <> '') then
     FIdentityMap.Add(PKVal, Result);
     
@@ -582,7 +610,7 @@ var
   UseReturning: Boolean;
   RetVal: TValue;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     try
         Sql := Generator.GenerateInsert(T(AEntity));
@@ -671,7 +699,7 @@ begin
   SetLength(EntitiesT, Length(AEntities));
   for i := 0 to High(AEntities) do
     EntitiesT[i] := T(AEntities[i]);
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     Sql := Generator.GenerateInsertTemplate(Props);
     try
@@ -721,7 +749,7 @@ var
   Val: TValue;
   NewVer: Integer;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     Sql := Generator.GenerateUpdate(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql);
@@ -869,7 +897,7 @@ begin
   end;
   
   // Hard Delete: Physical DELETE from database
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     Sql := Generator.GenerateDelete(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql);
@@ -886,7 +914,7 @@ function TDbSet<T>.GenerateCreateTableScript: string;
 var
   Generator: TSqlGenerator<T>;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     Result := Generator.GenerateCreateTable(GetTableName);
   finally
@@ -970,9 +998,7 @@ begin
   else
     Result := TCollections.CreateList<T>;
 
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
-  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
-  Generator.OnlyDeleted := FOnlyDeleted;
+  Generator := CreateGenerator;
   try
     if LSpec <> nil then
       Sql := Generator.GenerateSelect(LSpec)
@@ -1289,9 +1315,7 @@ var
   Sql: string;
   Cmd: IDbCommand;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
-  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
-  Generator.OnlyDeleted := FOnlyDeleted;
+  Generator := CreateGenerator;
   try
     var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
     ApplyTenantFilter(Spec);
@@ -1314,9 +1338,7 @@ var
   Sql: string;
   Cmd: IDbCommand;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
-  Generator.IgnoreQueryFilters := FIgnoreQueryFilters;
-  Generator.OnlyDeleted := FOnlyDeleted;
+  Generator := CreateGenerator;
   try
     var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
     ApplyTenantFilter(Spec);
@@ -1348,7 +1370,7 @@ var
   Sql: string;
   Cmd: IDbCommand;
 begin
-  Generator := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Generator := CreateGenerator;
   try
     Sql := Generator.GenerateDelete(AEntity);
     Cmd := FContext.Connection.CreateCommand(Sql);

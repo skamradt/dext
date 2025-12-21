@@ -43,6 +43,15 @@ A modern ORM focused on productivity and performance.
 - **Fluent Query API**: Strongly typed and expressive queries.
 - **Change Tracking**: Automatic change tracking and optimized persistence.
 - **Advanced Types**: Native support for **UUID v7** (Time-Ordered), JSON/JSONB, and Arrays.
+- **Multi-Tenancy**:
+  - **Shared Database**: Automatic filtering by `TenantId`.
+  - **Schema-based Isolation**: High-performance isolation via schemas (PostgreSQL `search_path`, SQL Server prefixing).
+  - **Tenant per Database**: Dynamic connection string resolution based on tenant.
+  - **Automatic Schema Creation**: `EnsureCreated` automatically sets up per-tenant schemas.
+- **Inheritance Mapping**:
+  - **Table-Per-Hierarchy (TPH)**: Full support for base classes and subclasses in a single table.
+  - **Polymorphic Hydration**: Automatic instantiation of the correct subclass during data retrieval.
+  - **Attribute-based Mapping**: Use `[Inheritance]`, `[DiscriminatorColumn]`, and `[DiscriminatorValue]`.
 - **Multi-Database**: Support for SQL Server, PostgreSQL, Firebird, MySQL, Oracle, and SQLite.
 - **High-Performance Drivers**:
   - **Standard FireDAC Driver**: Full-featured with TDataSet compatibility

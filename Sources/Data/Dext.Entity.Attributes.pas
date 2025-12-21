@@ -32,6 +32,9 @@ uses
   System.Variants;
 
 type
+  TInheritanceStrategy = (None, TablePerHierarchy, TablePerType);
+
+type
   TableAttribute = class(TCustomAttribute)
   private
     FName: string;
@@ -133,6 +136,39 @@ type
     property OnUpdate: TCascadeAction read FOnUpdate;
   end;
 
+  /// <summary>
+  ///   Defines the inheritance strategy for the entity hierarchy.
+  /// </summary>
+  InheritanceAttribute = class(TCustomAttribute)
+  private
+    FStrategy: TInheritanceStrategy;
+  public
+    constructor Create(AStrategy: TInheritanceStrategy);
+    property Strategy: TInheritanceStrategy read FStrategy;
+  end;
+
+  /// <summary>
+  ///   Specifies the column used as a discriminator in TPH inheritance.
+  /// </summary>
+  DiscriminatorColumnAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
+
+  /// <summary>
+  ///   Specifies the discriminator value for this specific class in the hierarchy.
+  /// </summary>
+  DiscriminatorValueAttribute = class(TCustomAttribute)
+  private
+    FValue: Variant;
+  public
+    constructor Create(const AValue: Variant);
+    property Value: Variant read FValue;
+  end;
+
 implementation
 
 { TableAttribute }
@@ -178,6 +214,27 @@ begin
   FColumnName := AColumnName;
   FOnDelete := AOnDelete;
   FOnUpdate := AOnUpdate;
+end;
+
+{ InheritanceAttribute }
+
+constructor InheritanceAttribute.Create(AStrategy: TInheritanceStrategy);
+begin
+  FStrategy := AStrategy;
+end;
+
+{ DiscriminatorColumnAttribute }
+
+constructor DiscriminatorColumnAttribute.Create(const AName: string);
+begin
+  FName := AName;
+end;
+
+{ DiscriminatorValueAttribute }
+
+constructor DiscriminatorValueAttribute.Create(const AValue: Variant);
+begin
+  FValue := AValue;
 end;
 
 { SoftDeleteAttribute }

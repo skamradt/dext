@@ -103,6 +103,7 @@ type
     // Properties to control filtering
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
+    FSchema: string;
 
     function GetNextParamName: string;
     function GetTableName: string;
@@ -117,6 +118,7 @@ type
     
     property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
     property OnlyDeleted: Boolean read FOnlyDeleted write FOnlyDeleted;
+    property Schema: string read FSchema write FSchema;
     
     function GenerateInsert(const AEntity: T): string;
     function GenerateInsertTemplate(out AProps: TList<TPair<TRttiProperty, string>>): string;
@@ -503,7 +505,12 @@ begin
   
   for Attr in Typ.GetAttributes do
     if Attr is TableAttribute then
-      Exit(TableAttribute(Attr).Name);
+      Result := TableAttribute(Attr).Name;
+
+  Result := FDialect.QuoteIdentifier(Result);
+  
+  if (FSchema <> '') and FDialect.UseSchemaPrefix then
+    Result := FDialect.QuoteIdentifier(FSchema) + '.' + Result;
 end;
 
 function TSQLGenerator<T>.GetSoftDeleteFilter: string;
@@ -819,7 +826,7 @@ begin
     end;
 
     Result := Format('INSERT INTO %s (%s) VALUES (%s)', 
-      [FDialect.QuoteIdentifier(GetTableName), SBCols.ToString, SBVals.ToString]);
+      [GetTableName, SBCols.ToString, SBVals.ToString]);
       
   finally
     SBCols.Free;
@@ -896,7 +903,7 @@ begin
     end;
     
     Result := Format('INSERT INTO %s (%s) VALUES (%s)', 
-      [FDialect.QuoteIdentifier(GetTableName), SBCols.ToString, SBVals.ToString]);
+      [GetTableName, SBCols.ToString, SBVals.ToString]);
       
   finally
     SBCols.Free;
@@ -1035,7 +1042,7 @@ begin
       raise Exception.Create('Cannot generate UPDATE: No Primary Key defined.');
       
     Result := Format('UPDATE %s SET %s WHERE %s', 
-      [FDialect.QuoteIdentifier(GetTableName), SBSet.ToString, SBWhere.ToString]);
+      [GetTableName, SBSet.ToString, SBWhere.ToString]);
       
   finally
     SBSet.Free;
@@ -1104,7 +1111,7 @@ begin
       raise Exception.Create('Cannot generate DELETE: No Primary Key defined.');
       
     Result := Format('DELETE FROM %s WHERE %s', 
-      [FDialect.QuoteIdentifier(GetTableName), SBWhere.ToString]);
+      [GetTableName, SBWhere.ToString]);
       
   finally
     SBWhere.Free;
@@ -1205,7 +1212,7 @@ begin
       end;
     end;
     
-    SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+    SB.Append(' FROM ').Append(GetTableName);
     
     // Add soft delete filter
     SoftDeleteFilter := GetSoftDeleteFilter;
@@ -1346,7 +1353,7 @@ begin
       SB.Append(FDialect.QuoteIdentifier(ColName));
     end;
 
-    SB.Append(' FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+    SB.Append(' FROM ').Append(GetTableName);
 
     // Add soft delete filter
     SoftDeleteFilter := GetSoftDeleteFilter;
@@ -1397,7 +1404,7 @@ begin
   
   SB := TStringBuilder.Create;
   try
-    SB.Append('SELECT COUNT(*) FROM ').Append(FDialect.QuoteIdentifier(GetTableName));
+    SB.Append('SELECT COUNT(*) FROM ').Append(GetTableName);
     
     // Add soft delete filter
     SoftDeleteFilter := GetSoftDeleteFilter;
@@ -1433,7 +1440,7 @@ begin
   FParams.Clear;
   FParamCount := 0;
   
-  Result := 'SELECT COUNT(*) FROM ' + FDialect.QuoteIdentifier(GetTableName);
+  Result := 'SELECT COUNT(*) FROM ' + GetTableName;
   
   // Add soft delete filter
   SoftDeleteFilter := GetSoftDeleteFilter;

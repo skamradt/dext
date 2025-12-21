@@ -32,10 +32,11 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Rtti,
-  System.Variants;
+  System.Variants,
+  Dext.Entity.Attributes;
 
 type
-  TInheritanceStrategy = (None, TablePerHierarchy, TablePerType);
+
 
   // Forward declarations
   IPropertyBuilder<T: class> = interface;
@@ -124,6 +125,7 @@ type
     property DiscriminatorColumn: string read FDiscriminatorColumn write FDiscriminatorColumn;
     property DiscriminatorValue: Variant read FDiscriminatorValue write FDiscriminatorValue;
 
+    procedure DiscoverAttributes;
     function GetOrAddProperty(const APropName: string): TPropertyMap;
   end;
 
@@ -217,6 +219,9 @@ type
     function GetMap(AType: PTypeInfo): TEntityMap;
     function HasMap(AType: PTypeInfo): Boolean;
     function GetMaps: TEnumerable<TEntityMap>;
+    
+    function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
+  end;
   end;
 
 implementation
@@ -232,11 +237,61 @@ begin
   FSoftDeleteProp := '';
   FSoftDeleteDeletedValue := 1;  // Default (1 = Deleted)
   FSoftDeleteNotDeletedValue := 0; // Default (0 = Not Deleted)
-  FInheritanceStrategy := TInheritanceStrategy.None;
   FDiscriminatorColumn := '';
   FDiscriminatorValue := Null;
 
+  DiscoverAttributes;
+end;
 
+procedure TEntityMap.DiscoverAttributes;
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Attr: TCustomAttribute;
+  Prop: TRttiProperty;
+  PropMap: TPropertyMap;
+begin
+  Ctx := TRttiContext.Create;
+  Typ := Ctx.GetType(FEntityType);
+  if Typ = nil then Exit;
+
+  for Attr in Typ.GetAttributes do
+  begin
+    if Attr is TableAttribute then FTableName := TableAttribute(Attr).Name;
+    if Attr is SoftDeleteAttribute then
+    begin
+      FIsSoftDelete := True;
+      FSoftDeleteProp := SoftDeleteAttribute(Attr).ColumnName;
+      FSoftDeleteDeletedValue := SoftDeleteAttribute(Attr).DeletedValue;
+      FSoftDeleteNotDeletedValue := SoftDeleteAttribute(Attr).NotDeletedValue;
+    end;
+    if Attr is InheritanceAttribute then FInheritanceStrategy := InheritanceAttribute(Attr).Strategy;
+    if Attr is DiscriminatorColumnAttribute then FDiscriminatorColumn := DiscriminatorColumnAttribute(Attr).Name;
+    if Attr is DiscriminatorValueAttribute then FDiscriminatorValue := DiscriminatorValueAttribute(Attr).Value;
+  end;
+
+  for Prop in Typ.GetProperties do
+  begin
+    PropMap := nil;
+    for Attr in Prop.GetAttributes do
+    begin
+       if (Attr is ColumnAttribute) or (Attr is PKAttribute) or (Attr is AutoIncAttribute) or 
+          (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) then
+       begin
+         if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
+         
+         if Attr is ColumnAttribute then PropMap.ColumnName := ColumnAttribute(Attr).Name;
+         if Attr is PKAttribute then 
+         begin
+           PropMap.IsPK := True;
+           if not FKeys.Contains(Prop.Name) then FKeys.Add(Prop.Name);
+         end;
+         if Attr is AutoIncAttribute then PropMap.IsAutoInc := True;
+         if Attr is NotMappedAttribute then PropMap.IsIgnored := True;
+         if Attr is ForeignKeyAttribute then PropMap.ForeignKeyColumn := ForeignKeyAttribute(Attr).ColumnName;
+       end;
+    end;
+  end;
 end;
 
 destructor TEntityMap.Destroy;
@@ -542,6 +597,31 @@ end;
 function TModelBuilder.GetMaps: TEnumerable<TEntityMap>;
 begin
   Result := FMaps.Values;
+end;
+
+function TModelBuilder.FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
+var
+  Map: TEntityMap;
+  Ctx: TRttiContext;
+  Typ, BaseTyp: TRttiType;
+begin
+  Result := nil;
+  Ctx := TRttiContext.Create;
+  BaseTyp := Ctx.GetType(ABaseType);
+  if BaseTyp = nil then Exit;
+  
+  for Map in FMaps.Values do
+  begin
+    if (Map.DiscriminatorValue <> Null) and (Map.DiscriminatorValue = AValue) then
+    begin
+       Typ := Ctx.GetType(Map.EntityType);
+       if (Typ <> nil) and (Typ is TRttiInstanceType) and (BaseTyp is TRttiInstanceType) then
+       begin
+         if TRttiInstanceType(Typ).MetaclassType.InheritsFrom(TRttiInstanceType(BaseTyp).MetaclassType) then
+           Exit(Map);
+       end;
+    end;
+  end;
 end;
 
 end.

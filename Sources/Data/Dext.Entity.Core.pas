@@ -40,7 +40,8 @@ uses
   Dext.Entity.Query,
   Dext.Specifications.Base,
   Dext.Specifications.Interfaces,
-  Dext.MultiTenancy;
+  Dext.MultiTenancy,
+  Dext.Entity.Mapping;
 
 type
   EOptimisticConcurrencyException = class(Exception);
@@ -230,6 +231,9 @@ type
     // Tenancy
     function GetTenantProvider: ITenantProvider;
     property TenantProvider: ITenantProvider read GetTenantProvider;
+
+    function GetModelBuilder: TModelBuilder;
+    property ModelBuilder: TModelBuilder read GetModelBuilder;
   end;
 
 /// <summary>

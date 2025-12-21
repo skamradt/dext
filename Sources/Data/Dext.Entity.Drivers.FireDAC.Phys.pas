@@ -135,9 +135,13 @@ type
     function IsConnected: Boolean;
     
     function BeginTransaction: IDbTransaction;
-    function CreateCommand(const ASQL: string): IInterface;
+    function CreateCommand(const ASQL: string): IDbCommand;
     function GetLastInsertId: Variant;
     function TableExists(const ATableName: string): Boolean;
+    
+    function GetConnectionString: string;
+    procedure SetConnectionString(const AValue: string);
+    property ConnectionString: string read GetConnectionString write SetConnectionString;
     
     property PhysConnection: IFDPhysConnection read FConnection;
   end;
@@ -494,7 +498,7 @@ begin
   Result := TFireDACPhysTransaction.Create(Tx);
 end;
 
-function TFireDACPhysConnection.CreateCommand(const ASQL: string): IInterface;
+function TFireDACPhysConnection.CreateCommand(const ASQL: string): IDbCommand;
 var
   Cmd: TFireDACPhysCommand;
 begin
@@ -689,4 +693,15 @@ begin
     end;
   end;
 end;
+function TFireDACPhysConnection.GetConnectionString: string;
+begin
+  Result := ''; // Not easily supported via Phys interface directly without re-creating connection
+end;
+
+procedure TFireDACPhysConnection.SetConnectionString(const AValue: string);
+begin
+  // For Phys connection, usually params are set before creation.
+  // We don't support late-binding connection strings here yet.
+end;
+
 end.

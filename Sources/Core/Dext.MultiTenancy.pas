@@ -12,11 +12,13 @@ type
     function GetId: string;
     function GetName: string;
     function GetConnectionString: string;
+    function GetSchema: string;
     function GetProperties: TDictionary<string, string>;
     
     property Id: string read GetId;
     property Name: string read GetName;
     property ConnectionString: string read GetConnectionString;
+    property Schema: string read GetSchema;
     property Properties: TDictionary<string, string> read GetProperties;
   end;
 
@@ -32,14 +34,16 @@ type
     FId: string;
     FName: string;
     FConnectionString: string;
+    FSchema: string;
     FProperties: TDictionary<string, string>;
   public
-    constructor Create(const AId, AName, AConnectionString: string);
+    constructor Create(const AId, AName, AConnectionString: string; const ASchema: string = '');
     destructor Destroy; override;
     
     function GetId: string;
     function GetName: string;
     function GetConnectionString: string;
+    function GetSchema: string;
     function GetProperties: TDictionary<string, string>;
   end;
 
@@ -55,12 +59,13 @@ implementation
 
 { TTenant }
 
-constructor TTenant.Create(const AId, AName, AConnectionString: string);
+constructor TTenant.Create(const AId, AName, AConnectionString, ASchema: string);
 begin
   inherited Create;
   FId := AId;
   FName := AName;
   FConnectionString := AConnectionString;
+  FSchema := ASchema;
   FProperties := TDictionary<string, string>.Create;
 end;
 
@@ -83,6 +88,11 @@ end;
 function TTenant.GetName: string;
 begin
   Result := FName;
+end;
+
+function TTenant.GetSchema: string;
+begin
+  Result := FSchema;
 end;
 
 function TTenant.GetProperties: TDictionary<string, string>;

@@ -236,7 +236,9 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
   - Tipos: `Nullable<Integer>`, `Nullable<String>`, `Nullable<TGUID>`, etc.
   - Compatibilidade: Spring4D e Delphi nativo
   - Funcionalidades: Persist, Hydrate, Foreign Key loading
-- [ ] **Polymorphism**: Relacionamentos polimórficos e herança (Dext Forum).
+- [x] **Polymorphism**: Relacionamentos polimórficos e herança completa (TPH).
+  - [x] **Polymorphic Hydration**: Instanciação automática da subclasse correta.
+  - [x] **Attributes**: `[Inheritance]`, `[DiscriminatorColumn]`, `[DiscriminatorValue]`.
 
 - [x] **Optimistic Concurrency**: Controle de concorrência via `[Version]`.
 - [x] **Database Support**:
@@ -247,15 +249,20 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
   - `TDbConfig` helper class
   - Suporte a múltiplos providers
   - Configuração via código ou environment variables
-- [x] **Type Converters**: Sistema de conversão de tipos database-specific (v1.0)
+- [x] **Type Converters**: Sistema de conversão de tipos database-specific (✅ Concluído)
   - ✅ **GUID/UUID**: Suporte completo a `TGUID` com casts específicos por dialeto
     - PostgreSQL: `::uuid`
-    - SQL Server: `CAST AS UNIQUEIDENTIFIER`
+    - SQL Server: `UNIQUEIDENTIFIER`
     - MySQL/SQLite: string
   - ✅ **Enum**: Suporte a enums como integer (padrão) ou string (`[EnumAsString]`)
   - ✅ **JSON/JSONB**: Serialização automática de objetos (PostgreSQL `::jsonb`)
   - ✅ **Arrays**: Suporte a `TArray<T>` (PostgreSQL native arrays)
   - ✅ **Custom Converters**: API extensível para tipos customizados
+  - ✅ **Multi-Tenancy**: Suporte nativo a isolamento de dados
+    - ✅ **Column-based**: Filtros globais por `TenantId`.
+    - ✅ **Schema-based**: Isolamento por schemas (PostgreSQL/SQL Server).
+    - ✅ **Database-based**: Conexão dinâmica por `ConnectionString`.
+    - ✅ **Automatic Creation**: `EnsureCreated` cria schemas automaticamente.
   - 📚 Documentação: [ORM Type System Guide](../ORM-Type-System-Guide.md)
 - [ ] **Migrations**: Sistema de migração de schema (Prioridade Alta - Dext Forum).
 - [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
@@ -293,7 +300,7 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
 3. **Performance**: Benchmarks e otimizações.
 4. **Estabilidade**: Testes de carga e stress.
 5. **API Review & Cleanup**: Revisar todas as extensions, sintaxe fluent e nomes de métodos para consistência e 'clean code'.
-6. **Background Services**: Debugar e estabilizar implementação de IHostedService/TBackgroundService para threads (Access Violations detectados no Beta).
+6. **Background Services**: Estabilização concluída. (Access Violations e memory leaks em TypeSystem e DI resolvidos).
 
 ---
 

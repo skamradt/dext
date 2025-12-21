@@ -20,7 +20,8 @@ uses
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.Dialects,
-  Dext.Entity.Setup;
+  Dext.Entity.Setup,
+  Dext.Specifications.SQL.Generator;
 
 type
   [Table('Products')]
@@ -163,7 +164,46 @@ begin
       raise Exception.CreateFmt('Error: Expected 2 products (A and B), got %d', [ProductList.Count]);
       
     WriteLn('IgnoreQueryFilters verified.');
-    WriteLn('SUCCESS: All Multi-Tenancy tests passed.');
+    
+    // 6. Schema Tenancy Test
+    WriteLn('--- Case 6: Schema Tenancy (PostgreSQL Mock) ---');
+    Provider.Tenant := TTenant.Create('TENANT-S', 'Tenant S', 'schema_s');
+    
+    // We can't easily test Postgres logic with SQLite connection,
+    // but we can test if ApplyTenantConfig generates the right SQL.
+    // Let's use a mock Dialect and check the ExecuteSchemaSetup.
+    
+    var PGDialect: ISQLDialect := TPostgreSQLDialect.Create;
+    var SQL := PGDialect.GetSetSchemaSQL('schema_s');
+    WriteLn('Postgres SetSchema SQL: ', SQL);
+    if SQL <> 'SET search_path TO "schema_s", public;' then
+      raise Exception.Create('Unexpected Postgres SetSchema SQL!');
+      
+    SQL := PGDialect.GetCreateSchemaSQL('schema_s');
+    WriteLn('Postgres CreateSchema SQL: ', SQL);
+    if SQL <> 'CREATE SCHEMA IF NOT EXISTS "schema_s";' then
+      raise Exception.Create('Unexpected Postgres CreateSchema SQL!');
+    
+    WriteLn('--- Case 7: Schema Tenancy (SQL Server Mock) ---');
+    var SSDialect: ISQLDialect := TSQLServerDialect.Create;
+    SQL := SSDialect.GetCreateSchemaSQL('schema_s');
+    WriteLn('SQL Server CreateSchema SQL: ', SQL);
+    if not SQL.Contains('CREATE SCHEMA [schema_s]') then
+      raise Exception.Create('Unexpected SQL Server CreateSchema SQL!');
+      
+    // Test prefixing in Generator
+    var Generator := TSqlGenerator<TProduct>.Create(SSDialect);
+    try
+      Generator.Schema := 'schema_s';
+      SQL := Generator.GenerateSelect;
+      WriteLn('SQL Server Select with Schema: ', SQL);
+      if not SQL.Contains('FROM [schema_s].[Products]') then
+        raise Exception.Create('SQL Server table prefixing failed!');
+    finally
+      Generator.Free;
+    end;
+
+    WriteLn('SUCCESS: All Multi-Tenancy tests (including Schema-based) passed.');
     
   finally
     Context.Free;

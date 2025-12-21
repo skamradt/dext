@@ -4,7 +4,17 @@ This document describes the architecture and implementation details of the Multi
 
 ## 1. Overview
 
-Dext implements a **"Tenant by Identification Field"** strategy (also known as Shared Database, Shared Schema). Every tenant-aware table contains a `TenantId` column that identifies which tenant owns the record.
+Dext supports multiple multi-tenancy strategies to suit different architectural needs:
+
+1.  **Shared Database / Shared Schema**: Records are isolated by a `TenantId` column. 
+2.  **Schema-based Isolation**: Records are isolated in different database schemas (namespaces).
+3.  **Database Isolation**: Each tenant has its own separate database.
+
+---
+
+## 2. Shared Database Strategy (Identification Field)
+
+Every tenant-aware table contains a `TenantId` column that identifies which tenant owns the record.
 
 The framework provides automatic:
 - **Tenant ID Population**: Automatic assignment of the current `TenantId` during `SaveChanges`.
@@ -13,7 +23,32 @@ The framework provides automatic:
 
 ---
 
-## 2. Core Components (`Dext.MultiTenancy.pas`)
+## 3. Schema-based Strategy (Namespaces)
+
+In this strategy, data is isolated by database schemas (e.g., `tenant1`, `tenant2`).
+
+- **PostgreSQL**: The framework executes `SET search_path TO tenant_schema, public;` at the beginning of the connection session.
+- **SQL Server**: The framework automatically prefixes table names with the schema name (e.g., `[tenant1].[Products]`).
+
+#### Automatic Schema Creation
+When using `DbContext.EnsureCreated`, the framework will automatically attempt to create the tenant schema if it does not exist, using idempotent commands like `CREATE SCHEMA IF NOT EXISTS` (PostgreSQL) or existence checks (SQL Server).
+
+---
+
+## 4. Database Isolation Strategy (Tenant per Database)
+
+This strategy provides the highest level of isolation by pointing the `TDbContext` to a different physical database for each tenant.
+
+- **Dynamic Connection**: The `ITenant` interface provides a `ConnectionString` property.
+- **Automatic Reconnection**: When `TDbContext` is initialized, or during `ApplyTenantConfig`, the framework checks if the tenant has a custom connection string. If it does, and it differs from the current one, the framework automatically:
+  1. Disconnects the current connection.
+  2. Updates the connection string.
+  3. Reconnects to the new database.
+- **Infrastructure**: Supported by both standard and physical FireDAC drivers through the `IDbConnection` interface.
+
+---
+
+## 5. Core Components (`Dext.MultiTenancy.pas`)
 
 ### ITenant
 Represents a tenant in the system.
@@ -22,9 +57,11 @@ ITenant = interface
   property Id: string read GetId;
   property Name: string read GetName;
   property ConnectionString: string read GetConnectionString;
+  property Schema: string read GetSchema;
   property Properties: TDictionary<string, string> read GetProperties;
 end;
 ```
+
 
 ### ITenantProvider
 A scoped service that holds the "Current Tenant" for the duration of a request or execution context.
@@ -36,7 +73,7 @@ end;
 
 ---
 
-## 3. Data Layer Implementation
+## 5. Data Layer Implementation
 
 ### ITenantAware (`Dext.Entity.Tenancy.pas`)
 An interface that marks an entity as tenant-aware.
@@ -77,7 +114,7 @@ end;
 
 ---
 
-## 4. Web Integration (`Dext.Web.MultiTenancy.pas`)
+## 6. Web Integration (`Dext.Web.MultiTenancy.pas`)
 
 ### TMultiTenancyMiddleware
 This middleware is responsible for:
@@ -89,7 +126,7 @@ The `ITenantProvider` is then automatically injected into the `TDbContext` durin
 
 ---
 
-## 5. Usage Example
+## 7. Usage Example
 
 ### Entity Definition
 ```pascal
@@ -117,7 +154,7 @@ AllProducts := Context.Products.IgnoreQueryFilters.List;
 
 ---
 
-## 6. Implementation Notes
+## 8. Implementation Notes
 
 - **Reference Counting**: Entities should generally not be reference-counted when managed by an ORM that uses its own identity maps and life-cycle management. `TTenantEntity` effectively disables ref-counting.
 - **Thread Safety**: `ITenantProvider` is registered as a **Scoped** service, meaning each web request has its own instance.

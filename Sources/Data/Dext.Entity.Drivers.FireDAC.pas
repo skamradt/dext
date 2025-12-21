@@ -132,6 +132,10 @@ type
     function CreateCommand(const ASQL: string): IDbCommand;
     function GetLastInsertId: Variant;
     function TableExists(const ATableName: string): Boolean;
+
+    function GetConnectionString: string;
+    procedure SetConnectionString(const AValue: string);
+    property ConnectionString: string read GetConnectionString write SetConnectionString;
     
     property Connection: TFDConnection read FConnection;
   end;
@@ -822,6 +826,18 @@ begin
   finally
     List.Free;
   end;
+end;
+
+function TFireDACConnection.GetConnectionString: string;
+begin
+  Result := FConnection.ConnectionString;
+end;
+
+procedure TFireDACConnection.SetConnectionString(const AValue: string);
+begin
+  if FConnection.Connected then
+    FConnection.Connected := False;
+  FConnection.ConnectionString := AValue;
 end;
 
 end.

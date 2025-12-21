@@ -129,6 +129,9 @@ type
     FCache: TDictionary<PTypeInfo, IInterface>; // Cache for DbSets
     FChangeTracker: IChangeTracker;
     FTenantProvider: ITenantProvider;
+    FTenantConfigApplied: Boolean;
+    FLastAppliedTenantId: string;
+    procedure ApplyTenantConfig(ACreateSchema: Boolean = False);
   protected
     // IDbContext Implementation
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
@@ -166,6 +169,7 @@ type
     /// </summary>
     function DataSet(AEntityType: PTypeInfo): IDbSet;
     procedure EnsureCreated;
+    procedure ExecuteSchemaSetup;
     
     function SaveChanges: Integer;
     procedure Clear;
@@ -303,6 +307,7 @@ begin
   FCache := TDictionary<PTypeInfo, IInterface>.Create;
   FChangeTracker := TChangeTracker.Create;
   FTenantProvider := ATenantProvider;
+  FTenantConfigApplied := False;
   
   // Model Caching Logic
   System.TMonitor.Enter(FCriticalSection);
@@ -368,6 +373,11 @@ begin
   Result := FNamingStrategy;
 end;
 
+function TDbContext.GetModelBuilder: TModelBuilder;
+begin
+  Result := FModelBuilder;
+end;
+
 function TDbContext.ModelBuilder: TModelBuilder;
 begin
   Result := FModelBuilder;
@@ -392,8 +402,68 @@ begin
     Result := nil;
 end;
 
+procedure TDbContext.ApplyTenantConfig(ACreateSchema: Boolean);
+var
+  Sql: string;
+  CurrentTenantId: string;
+begin
+  CurrentTenantId := '';
+  if (FTenantProvider <> nil) and (FTenantProvider.Tenant <> nil) then
+    CurrentTenantId := FTenantProvider.Tenant.Id;
+
+  if (FLastAppliedTenantId = CurrentTenantId) and FTenantConfigApplied and (not ACreateSchema) then Exit;
+  
+  if (FTenantProvider <> nil) and (FTenantProvider.Tenant <> nil) then
+  begin
+    // 1. Handle Schema-based tenancy
+    if FTenantProvider.Tenant.Schema <> '' then
+    begin
+      if ACreateSchema then
+      begin
+        Sql := FDialect.GetCreateSchemaSQL(FTenantProvider.Tenant.Schema);
+        if Sql <> '' then
+        begin
+          var Cmd := FConnection.CreateCommand(Sql);
+          Cmd.ExecuteNonQuery;
+        end;
+      end;
+
+      Sql := FDialect.GetSetSchemaSQL(FTenantProvider.Tenant.Schema);
+      if Sql <> '' then
+      begin
+        var Cmd := FConnection.CreateCommand(Sql);
+        Cmd.ExecuteNonQuery;
+      end;
+    end;
+
+    // 2. Handle Connection-based tenancy (Tenant per Database)
+    if FTenantProvider.Tenant.ConnectionString <> '' then
+    begin
+      if FConnection.ConnectionString <> FTenantProvider.Tenant.ConnectionString then
+      begin
+        FConnection.ConnectionString := FTenantProvider.Tenant.ConnectionString;
+        // If we are already connected, we need to reconnect with the new string
+        if FConnection.IsConnected then
+        begin
+          FConnection.Disconnect;
+          FConnection.Connect;
+        end;
+      end;
+    end;
+  end;
+  
+  FLastAppliedTenantId := CurrentTenantId;
+  FTenantConfigApplied := True;
+end;
+
+procedure TDbContext.ExecuteSchemaSetup;
+begin
+  ApplyTenantConfig;
+end;
+
 procedure TDbContext.BeginTransaction;
 begin
+  ApplyTenantConfig;
   FTransaction := FConnection.BeginTransaction;
 end;
 
@@ -422,10 +492,9 @@ end;
 
 function TDbContext.DataSet(AEntityType: PTypeInfo): IDbSet;
 var
-  //Method: TRttiMethod;
   Ctx: TRttiContext;
-  //Typ: TRttiType;
 begin
+  ApplyTenantConfig;
   if FCache.ContainsKey(AEntityType) then
     Exit(IDbSet(FCache[AEntityType]));
 
@@ -496,6 +565,7 @@ var
   HasProgress, CanCreate: Boolean;
   i: Integer;
 begin
+  ApplyTenantConfig(True);
   Nodes := TObjectList<TEntityNode>.Create;
   Created := TList<PTypeInfo>.Create;
   Ctx := TRttiContext.Create;
@@ -673,6 +743,7 @@ var
   DbSet: IDbSet;
   TrackedEntities: TList<TPair<TObject, TEntityState>>;
 begin
+  ApplyTenantConfig;
   Result := 0;
   if not FChangeTracker.HasChanges then Exit;
 

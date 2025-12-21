@@ -55,6 +55,10 @@ type
     
     function GetLastInsertId: Variant;
     
+    function GetConnectionString: string;
+    procedure SetConnectionString(const AValue: string);
+    property ConnectionString: string read GetConnectionString write SetConnectionString;
+
     function TableExists(const ATableName: string): Boolean;
   end;
 

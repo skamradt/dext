@@ -75,6 +75,11 @@ type
     // Migration Support
     function GenerateMigration(AOperation: TMigrationOperation): string;
     function GenerateColumnDefinition(AColumn: TColumnDefinition): string;
+
+    // Multi-Tenancy Support
+    function GetSetSchemaSQL(const ASchemaName: string): string;
+    function GetCreateSchemaSQL(const ASchemaName: string): string;
+    function UseSchemaPrefix: Boolean;
   end;
 
   /// <summary>
@@ -92,6 +97,9 @@ type
     function GenerateCreateIndex(AOp: TCreateIndexOperation): string; virtual;
     function GenerateDropIndex(AOp: TDropIndexOperation): string; virtual;
   public
+    function GetSetSchemaSQL(const ASchemaName: string): string; virtual;
+    function GetCreateSchemaSQL(const ASchemaName: string): string; virtual;
+    function UseSchemaPrefix: Boolean; virtual;
     function QuoteIdentifier(const AName: string): string; virtual;
     function GetParamPrefix: string; virtual;
     function GeneratePaging(ASkip, ATake: Integer): string; virtual; abstract;
@@ -138,6 +146,8 @@ type
     
     function SupportsInsertReturning: Boolean; override;
     function GetReturningSQL(const AColumnName: string): string; override;
+    function GetSetSchemaSQL(const ASchemaName: string): string; override;
+    function GetCreateSchemaSQL(const ASchemaName: string): string; override;
   end;
 
   /// <summary>
@@ -172,6 +182,8 @@ type
     function GetReturningSQL(const AColumnName: string): string; override;
     function GetReturningPosition: TReturningPosition; override;
     function RequiresOrderByForPaging: Boolean; override;
+    function UseSchemaPrefix: Boolean; override;
+    function GetCreateSchemaSQL(const ASchemaName: string): string; override;
   end;
 
   /// <summary>
@@ -208,6 +220,21 @@ type
 implementation
 
 { TBaseDialect }
+
+function TBaseDialect.GetSetSchemaSQL(const ASchemaName: string): string;
+begin
+  Result := '';
+end;
+
+function TBaseDialect.GetCreateSchemaSQL(const ASchemaName: string): string;
+begin
+  Result := '';
+end;
+
+function TBaseDialect.UseSchemaPrefix: Boolean;
+begin
+  Result := False;
+end;
 
 function TBaseDialect.BooleanToSQL(AValue: Boolean): string;
 begin
@@ -737,6 +764,17 @@ begin
   Result := True;
 end;
 
+function TSQLServerDialect.UseSchemaPrefix: Boolean;
+begin
+  Result := True;
+end;
+
+function TSQLServerDialect.GetCreateSchemaSQL(const ASchemaName: string): string;
+begin
+  Result := Format('IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = %s) ' +
+                   'EXEC(''CREATE SCHEMA %s'')', [QuotedStr(ASchemaName), QuoteIdentifier(ASchemaName)]);
+end;
+
 { TMySQLDialect }
 
 function TMySQLDialect.BooleanToSQL(AValue: Boolean): string;
@@ -929,6 +967,19 @@ end;
 function TPostgreSQLDialect.GetReturningSQL(const AColumnName: string): string;
 begin
   Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
+end;
+
+function TPostgreSQLDialect.GetSetSchemaSQL(const ASchemaName: string): string;
+begin
+  if ASchemaName <> '' then
+    Result := Format('SET search_path TO %s, public;', [QuoteIdentifier(ASchemaName)])
+  else
+    Result := 'SET search_path TO public;';
+end;
+
+function TPostgreSQLDialect.GetCreateSchemaSQL(const ASchemaName: string): string;
+begin
+  Result := Format('CREATE SCHEMA IF NOT EXISTS %s;', [QuoteIdentifier(ASchemaName)]);
 end;
 
 { TFirebirdDialect }
