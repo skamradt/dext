@@ -112,6 +112,7 @@ O foco agora é criar **um exemplo para cada funcionalidade** e unificar a docum
 
 ## 🛠️ 3. Qualidade de Código & Manutenção
 
+- [ ] **Automação de Instalação**: Automatizar a instalação/setup do framework (possivelmente explorando Boss e TMS Smart Setup).
 - [ ] **Otimização de Generics**: Revisar uso intensivo de Generics para evitar "code bloat" e melhorar tempo de compilação.
 - [ ] **Code Review Geral**: Revisão focada em consistência, vazamento de memória e exceções não tratadas.
 - [ ] **Formatação & Estilo**: Padronizar alinhamento e formatação (Object Pascal Style Guide).

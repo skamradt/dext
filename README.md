@@ -123,6 +123,8 @@ The foundation of the framework, usable in any type of application.
 
 ## 📦 Installation and Configuration
 
+> 📖 **Detailed Guide**: For a complete step-by-step walkthrough, please read the [Installation Guide](Docs/Installation.md).
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/dext-framework/dext.git
