@@ -25,6 +25,8 @@ Este documento consolida o plano de trabalho para a fase **Beta V1.0**. O objeti
 | **API Versioning** | ✅ Pronto | Via URL, Header ou Query String |
 | **OpenAPI / Swagger** | ✅ Pronto | Geração automática de documentação |
 | **Stream Responses** | ✅ Pronto | `Response.Write(TStream)` |
+| **Response Caching** | ✅ Pronto | `[ResponseCache]` header control |
+| **Filters Pipeline** | ✅ Pronto | Action & Result Filters (`LogAction`, `RequireHeader`) |
 
 ### 🗄️ Dext.Entity (ORM)
 | Feature | Status | Notas |
@@ -38,6 +40,11 @@ Este documento consolida o plano de trabalho para a fase **Beta V1.0**. O objeti
 | **Advanced Types** (UUID, JSON, Arrays) | ✅ Pronto | Serialização automática |
 | **Bulk Operations** | ✅ Pronto | Update/Delete em massa |
 | **Inheritance Mapping** (TPH) | ✅ Pronto | Discriminator column suportado |
+| **Lazy Loading** | ✅ Pronto | `Lazy<T>`, `IList<T>` e `ILazy<T>` wrapper |
+| **Scaffolding** (DB First) | ✅ Pronto | Geração de Entities via Schema do Banco |
+| **Soft Delete** | ✅ Pronto | Atributo `[SoftDelete]` |
+| **Optimistic Concurrency** | ✅ Pronto | Atributo `[Version]` |
+
 
 ### ⚙️ Infraestrutura & CLI
 | Feature | Status | Notas |
@@ -124,9 +131,9 @@ Funcionalidades movidas para v1.1 ou v2.0:
 - **View Engine**: Integração com **WebStencils** (novo engine do Delphi) ou criação de sintaxe Razor-like.
 - **Server Adapters**: Suportar deployment em **WebBroker** (ISAPI/Apache/IIS) além do Indy.
 - **Native Integration**: Explorar integração opcional com **LiveBindings** para cenários RAD e adapters para **DataSnap**.
-- **Lazy Loading de Headers/Query** (Refinamento de performance).
+- **JSON Columns (JSONB Support)**: Implementação do suporte real no ORM para o atributo `[JsonColumn]`.
 - **Suporte a NoSQL** (MongoDB no ORM).
-- **Distributed Caching** (Redis implementation).
+- **Distributed Caching** (Redis implementation - Em Progresso).
 
 ---
 
