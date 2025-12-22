@@ -105,7 +105,7 @@ var
 begin
   // Find settings for this user
   Settings := nil;
-  AllSettings := FDb.Entities<TUserSettings>.List;
+  AllSettings := FDb.Entities<TUserSettings>.ToList;
   for S in AllSettings do
   begin
     if S.UserId = UserId then
@@ -138,7 +138,7 @@ var
 begin
   // Find existing settings
   ExistingSettings := nil;
-  AllSettings := FDb.Entities<TUserSettings>.List;
+  AllSettings := FDb.Entities<TUserSettings>.ToList;
   for S in AllSettings do
   begin
     if S.UserId = UserId then

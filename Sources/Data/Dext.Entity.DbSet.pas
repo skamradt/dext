@@ -124,10 +124,10 @@ type
     procedure RemoveRange(const AEntities: TArray<T>); overload;
     procedure RemoveRange(const AEntities: TEnumerable<T>); overload;
 
-    function List: IList<T>; overload;
-    function List(const ASpec: ISpecification<T>): IList<T>; overload;
+    function ToList: IList<T>; overload;
+    function ToList(const ASpec: ISpecification<T>): IList<T>; overload;
 
-    function List(const AExpression: IExpression): IList<T>; overload;
+    function ToList(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
@@ -514,7 +514,7 @@ end;
 
 function TDbSet<T>.GetItem(Index: Integer): T;
 begin
-  Result := List[Index];
+  Result := ToList[Index];
 end;
 
 function TDbSet<T>.Add(const AEntity: T): IDbSet<T>;
@@ -944,7 +944,7 @@ var
   Obj: TObject;
 begin
   Result := TCollections.CreateList<TObject>;
-  TypedList := List(AExpression);
+  TypedList := ToList(AExpression);
   for Item in TypedList do
   begin
     Obj := TObject(Item);
@@ -953,20 +953,20 @@ begin
 end;
 
 
-function TDbSet<T>.List: IList<T>;
+function TDbSet<T>.ToList: IList<T>;
 begin
-  Result := List(ISpecification<T>(nil));
+  Result := ToList(ISpecification<T>(nil));
 end;
 
-function TDbSet<T>.List(const AExpression: IExpression): IList<T>;
+function TDbSet<T>.ToList(const AExpression: IExpression): IList<T>;
 var
   Spec: ISpecification<T>;
 begin
   Spec := TSpecification<T>.Create(AExpression);
-  Result := List(Spec);
+  Result := ToList(Spec);
 end;
 
-function TDbSet<T>.List(const ASpec: ISpecification<T>): IList<T>;
+function TDbSet<T>.ToList(const ASpec: ISpecification<T>): IList<T>;
 var
   Generator: TSqlGenerator<T>;
   Sql: string;
@@ -1018,7 +1018,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('ERROR in TDbSet.List during fetch: ' + E.Message);
+        WriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
         raise;
       end;
     end;
@@ -1177,7 +1177,7 @@ begin
   // TODO : Get real mapping id column name
   var Expr: IExpression := TPropExpression.Create('Id') = TValue.FromVariant(AId);
   var Spec: ISpecification<T> := TSpecification<T>.Create(Expr);
-  L := List(Spec);
+  L := ToList(Spec);
   if L.Count > 0 then
   begin
     Result := L[0];
@@ -1235,7 +1235,7 @@ begin
 
   // Execute the query
   var Spec: ISpecification<T> := TSpecification<T>.Create(Expr);
-  L := List(Spec);
+  L := ToList(Spec);
   
   if L.Count > 0 then
     Result := L[0]
@@ -1267,7 +1267,7 @@ begin
       Result := TSpecificationQueryIterator<T>.Create(
         function: IList<T>
         begin
-          Result := LSelf.List(LSpec);
+          Result := LSelf.ToList(LSpec);
         end);
     end,
     LSpec); // Pass the spec reference to allow mutation via Fluent API
@@ -1302,7 +1302,7 @@ var
 begin
   Spec := TSpecification<T>.Create(AExpression);
   Spec.Take(1);
-  L := List(Spec);
+  L := ToList(Spec);
   if L.Count > 0 then
     Result := L[0]
   else

@@ -121,11 +121,11 @@ type
     function Find(const AId: array of Integer): T; overload;
     function Find(const AId: array of Variant): T; overload;
 
-    function List: IList<T>; overload;
-    function List(const ASpec: ISpecification<T>): IList<T>;  overload;
+    function ToList: IList<T>; overload;
+    function ToList(const ASpec: ISpecification<T>): IList<T>;  overload;
 
     // Inline Queries (aceita IExpression diretamente)
-    function List(const AExpression: IExpression): IList<T>; overload;
+    function ToList(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;

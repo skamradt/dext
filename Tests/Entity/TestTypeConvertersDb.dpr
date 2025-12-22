@@ -298,7 +298,7 @@ begin
   Db.Clear; 
   
   WriteLn('  Step 4: List');
-  List := Db.GuidEntities.List;
+  List := Db.GuidEntities.ToList;
   
   WriteLn('  Step 5: Loaded count: ', List.Count);
   if List.Count > 0 then
@@ -409,7 +409,7 @@ begin
   Db.EnumEntities.Add(Entity);
   Db.SaveChanges;
   Db.Clear;
-  List := Db.EnumEntities.List;
+  List := Db.EnumEntities.ToList;
   if List.Count > 0 then
   begin
     Loaded := List[0];
@@ -434,7 +434,7 @@ begin
   Db.JsonEntities.Add(Entity);
   Db.SaveChanges;
   Db.Clear;
-  List := Db.JsonEntities.List;
+  List := Db.JsonEntities.ToList;
   if List.Count > 0 then
   begin
     Loaded := List[0];

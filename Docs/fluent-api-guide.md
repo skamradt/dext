@@ -103,7 +103,7 @@ end;
 ```pascal
 var Spec := TAdultUsersSpec.Create;
 try
-  var Adults := Context.Entities<TUser>.List(Spec);
+  var Adults := Context.Entities<TUser>.ToList(Spec);
   // Processar resultados
 finally
   Spec.Free;
@@ -184,7 +184,7 @@ Spec.Distinct;
 
 ```pascal
 // Proposta: Queries somente leitura sem Identity Map
-Context.Entities<TUser>.AsNoTracking.List(Spec);
+Context.Entities<TUser>.AsNoTracking.ToList(Spec);
 ```
 
 ## Vantagens da Fluent API

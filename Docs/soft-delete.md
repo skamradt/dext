@@ -68,24 +68,24 @@ Context.Entities<TTask>.HardDelete(MyTask);
 
 ### Querying
 
-By default, **Soft Deleted entities are excluded** from all queries (`Find`, `List`, `Query`, `Count`, `Any`).
+By default, **Soft Deleted entities are excluded** from all queries (`Find`, `ToList`, `Query`, `Count`, `Any`).
 
 ```pascal
 // Returns only active tasks (IsDeleted = 0)
-var Tasks := Context.Entities<TTask>.List;
+var Tasks := Context.Entities<TTask>.ToList;
 ```
 
 To include deleted entities (e.g., for an admin generic view), use `IgnoreQueryFilters`:
 
 ```pascal
 // Returns ALL tasks (Active + Deleted)
-var AllTasks := Context.Entities<TTask>.IgnoreQueryFilters.List;
+var AllTasks := Context.Entities<TTask>.IgnoreQueryFilters.ToList;
 ```
 
 To fetch **only** deleted entities (e.g., Recyle Bin):
 
 ```pascal
-var DeletedTasks := Context.Entities<TTask>.OnlyDeleted.List;
+var DeletedTasks := Context.Entities<TTask>.OnlyDeleted.ToList;
 ```
 
 ### Restoring

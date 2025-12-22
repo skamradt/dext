@@ -50,13 +50,13 @@ O núcleo do ORM está funcional, suportando operações CRUD, mapeamento básic
 O objetivo foi permitir consultas complexas de forma tipada e fluente. Concluído com sucesso na versão Alpha 0.6.
 
 - [x] **Fluent Query API**: Builder para consultas (`Where`, `OrderBy`, `Skip`, `Take`).
-  - *Exemplo:* `Context.Entities<TUser>.List(UserEntity.Age >= 18)`
+  - *Exemplo:* `Context.Entities<TUser>.ToList(UserEntity.Age >= 18)`
   - *Exemplo:* `Specification.Where<TUser>(UserEntity.Age >= 18).OrderBy(UserEntity.Name.Asc).Take(10)`
   - *Melhoria:* Overloads simplificados para `Where(IExpression)` e `Select(string)`.
 - [x] **Metadados Tipados (TypeOf)**: Geração de metadados para evitar strings mágicas nas queries.
   - *Exemplo:* `UserEntity.Age >= 18`, `UserEntity.Name.StartsWith('John')`
 - [x] **Specifications Pattern**: Integração completa com o padrão Specification.
-  - Suporte a inline queries: `List(IExpression)`
+  - Suporte a inline queries: `ToList(IExpression)`
   - Suporte a specifications reutilizáveis: `TAdultUsersSpec`
   - Fluent builder: `Specification.Where<T>(...).OrderBy(...).Take(...)`
 - [x] **Operadores Fluentes**: 

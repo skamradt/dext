@@ -63,7 +63,7 @@ begin
     Writeln('[OK] Database schema created/verified.');
     
     // Seed Data
-    if Db.Entities<TUser>.List.Count = 0 then
+    if Db.Entities<TUser>.ToList.Count = 0 then
     begin
       var Admin := TUser.Create;
       Admin.Username := 'admin';

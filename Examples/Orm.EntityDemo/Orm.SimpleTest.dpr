@@ -61,7 +61,7 @@ begin
       WriteLn('User saved with ID: ', U.Id);
       
       WriteLn('Fetching users...');
-      Users := Ctx.Entities<TUser>.List;
+      Users := Ctx.Entities<TUser>.ToList;
       WriteLn('Found ', Users.Count, ' user(s)');
       
       if Users.Count > 0 then

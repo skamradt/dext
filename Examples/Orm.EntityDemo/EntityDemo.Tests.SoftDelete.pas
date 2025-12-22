@@ -223,7 +223,7 @@ begin
   LogSuccess('3 tasks created');
   
   // List all tasks - should have 3
-  Tasks := FContext.Entities<TTask>.List;
+  Tasks := FContext.Entities<TTask>.ToList;
   AssertTrue(Tasks.Count = 3, '3 tasks in list', Format('Expected 3, got %d', [Tasks.Count]));
   
   // Soft delete Task2
@@ -234,7 +234,7 @@ begin
   
   // Clear and list again - should have only 2
   FContext.Clear;
-  Tasks := FContext.Entities<TTask>.List;
+  Tasks := FContext.Entities<TTask>.ToList;
   AssertTrue(Tasks.Count = 2, '2 tasks in list after soft delete', Format('Expected 2, got %d', [Tasks.Count]));
   
   // Verify it's Task1 and Task3
@@ -337,7 +337,7 @@ begin
   AssertTrue(Count = 3, '3 tasks remaining', Format('Expected 3, got %d', [Count]));
   
   // List and verify
-  TaskList := FContext.Entities<TTask>.List;
+  TaskList := FContext.Entities<TTask>.ToList;
   AssertTrue(TaskList.Count = 3, '3 tasks in list', Format('Expected 3, got %d', [TaskList.Count]));
   
   // Verify it's tasks 1, 3, and 5
@@ -425,7 +425,7 @@ begin
   FContext.Clear;
   
   // Test OnlyDeleted
-  List := FContext.Entities<TTask>.OnlyDeleted.List;
+  List := FContext.Entities<TTask>.OnlyDeleted.ToList;
   AssertTrue(List.Count = 1, 'Only 1 deleted task found', Format('Expected 1, got %d', [List.Count]));
   if List.Count > 0 then
     AssertTrue(List[0].Title = 'Deleted', 'Correct task found', 'Wrong task found: ' + List[0].Title);

@@ -41,7 +41,7 @@ end;
 
 function TCustomerService.GetAll: IList<TCustomer>;
 begin
-  Result := FDb.Entities<TCustomer>.List;
+  Result := FDb.Entities<TCustomer>.ToList;
 end;
 
 function TCustomerService.GetById(const Id: Integer): TCustomer;

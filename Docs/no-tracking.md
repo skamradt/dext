@@ -14,7 +14,7 @@
 ### ❌ **Tracking (Padrão) - Quando usar:**
 ```pascal
 // Cenário: Vou modificar os dados
-var Users := Context.Entities<TUser>.List;
+var Users := Context.Entities<TUser>.ToList;
 for var User in Users do
 begin
   User.Age := User.Age + 1;  // Modificação
@@ -28,7 +28,7 @@ Context.SaveChanges;
 // Cenário 1: API Read-Only
 function TUserController.GetAll: TJSONArray;
 var
-  Users := FContext.Entities<TUser>.AsNoTracking.List;
+  Users := FContext.Entities<TUser>.AsNoTracking.ToList;
 begin
   Result := UsersToJSON(Users);  // Apenas leitura
   // Users liberado automaticamente ao sair de escopo
@@ -117,10 +117,10 @@ begin
 end;
 ```
 
-### **4. Modificar List**
+### **4. Modificar ToList**
 
 ```pascal
-function TDbSet<T>.List(const ASpec: ISpecification<T>): IList<T>;
+function TDbSet<T>.ToList(const ASpec: ISpecification<T>): IList<T>;
 begin
   if PTypeInfo(TypeInfo(T)).Kind = tkClass then
   begin
@@ -162,7 +162,7 @@ begin
   
   Context.Clear;  // Limpa IdentityMap
   
-  var Users := Context.Entities<TUser>.AsNoTracking.List;
+  var Users := Context.Entities<TUser>.AsNoTracking.ToList;
   AssertTrue(Users.Count = 1);
   
   // Buscar novamente COM tracking
@@ -184,7 +184,7 @@ begin
   // Criar muitos objetos no tracking
   for i := 1 to 10000 do
   begin
-    var Users := Context.Entities<TUser>.AsNoTracking.List;
+    var Users := Context.Entities<TUser>.AsNoTracking.ToList;
     // Users sai de escopo e libera objetos
   end;
   
@@ -204,13 +204,13 @@ begin
   // Tracking
   StartTime := Now;
   for i := 1 to 1000 do
-    var Users := Context.Entities<TUser>.List;
+    var Users := Context.Entities<TUser>.ToList;
   var TrackingTime := MillisecondsBetween(Now, StartTime);
   
   // No Tracking
   StartTime := Now;
   for i := 1 to 1000 do
-    var Users := Context.Entities<TUser>.AsNoTracking.List;
+    var Users := Context.Entities<TUser>.AsNoTracking.ToList;
   var NoTrackingTime := MillisecondsBetween(Now, StartTime);
   
   WriteLn(Format('Tracking: %dms, No Tracking: %dms (%.1f%% faster)', 
@@ -233,10 +233,10 @@ var users = context.Users.AsNoTracking().ToList();
 ### **Dext ORM (proposto):**
 ```pascal
 // Tracking (padrão)
-var Users := Context.Entities<TUser>.List;
+var Users := Context.Entities<TUser>.ToList;
 
 // No Tracking
-var Users := Context.Entities<TUser>.AsNoTracking.List;
+var Users := Context.Entities<TUser>.AsNoTracking.ToList;
 ```
 
 ## ⚠️ Considerações
@@ -245,7 +245,7 @@ var Users := Context.Entities<TUser>.AsNoTracking.List;
 No tracking **desabilita** lazy loading, pois não há contexto para carregar relacionamentos.
 
 ```pascal
-var Users := Context.Entities<TUser>.AsNoTracking.List;
+var Users := Context.Entities<TUser>.AsNoTracking.ToList;
 // Users[0].Address será NIL mesmo se houver FK
 ```
 
@@ -253,7 +253,7 @@ var Users := Context.Entities<TUser>.AsNoTracking.List;
 ```pascal
 var Users := Context.Entities<TUser>
   .AsNoTracking
-  .List(Specification.All<TUser>.Include('Address'));
+  .ToList(Specification.All<TUser>.Include('Address'));
 ```
 
 ### **2. Detach vs No Tracking**
@@ -294,7 +294,7 @@ No tracking é **thread-safe** por design, pois não compartilha estado (Identit
 - [ ] Adicionar `FNoTracking: Boolean` em `TDbSet<T>`
 - [ ] Implementar `AsNoTracking: IDbSet<T>`
 - [ ] Modificar `Hydrate` para respeitar flag
-- [ ] Modificar `List` para ownership condicional
+- [ ] Modificar `ToList` para ownership condicional
 - [ ] Modificar `Find` para ownership condicional
 - [ ] Adicionar testes unitários
 - [ ] Adicionar benchmark de performance

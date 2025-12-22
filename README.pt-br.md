@@ -5,7 +5,7 @@
 > ⚠️ **Status: Beta (v1.0 Preview)**
 > O projeto alcançou o marco Beta. As APIs principais estão estáveis, mas pequenas alterações (breaking changes) ainda podem ocorrer antes do lançamento final v1.0.
 >
-> 📌 **Confira o [Roadmap & Plano V1.0 Beta](Docs/Releases/v1-beta-roadmap.md)** para a lista detalhada de funcionalidades, tarefas pendentes e planos futuros.
+> 📌 **Confira o [Roadmap & Plano V1.0 Beta](Docs/Releases/v1-beta-roadmap.pt-br.md)** para a lista detalhada de funcionalidades, tarefas pendentes e planos futuros.
 
 **Dext** é um ecossistema completo para desenvolvimento moderno em Delphi, combinando um framework web de alta performance (inspirado em ASP.NET Core) com um ORM robusto e ferramentas de infraestrutura avançadas.
 

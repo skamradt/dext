@@ -62,7 +62,7 @@ begin
   Log('📊 Test: Using Specification with Fluent API');
   Log('---------------------------------------------');
   var AdultSpec := TAdultUsersSpec.Create;
-  var Adults := FContext.Entities<TUser>.List(AdultSpec);
+  var Adults := FContext.Entities<TUser>.ToList(AdultSpec);
   LogSuccess(Format('✓ Found %d adult user(s) using: UserEntity.Age >= 18', [Adults.Count]));
   AssertTrue(Adults.Count = 2, 'Adult users spec', 'Expected 2 adult users');
   AdultSpec.Free;
@@ -72,7 +72,7 @@ begin
   Log('------------------------------------------------');
   
   // Inline query - muito mais simples!
-  var InlineAdults := FContext.Entities<TUser>.List(UserEntity.Age >= 18);
+  var InlineAdults := FContext.Entities<TUser>.ToList(UserEntity.Age >= 18);
   LogSuccess(Format('✓ Inline query: Found %d adult(s)', [InlineAdults.Count]));
   AssertTrue(InlineAdults.Count = 2, 'Inline adults', 'Expected 2 adults');
   
@@ -95,7 +95,7 @@ begin
     LogError('Any: No minor users found');
   
   // Complex inline query
-  var ComplexResult := FContext.Entities<TUser>.List(
+  var ComplexResult := FContext.Entities<TUser>.ToList(
     (UserEntity.Age >= 18) and UserEntity.Name.Contains('o')
   );
   LogSuccess(Format('✓ Complex inline: Found %d user(s) with Age >= 18 AND Name contains "o"', [ComplexResult.Count]));
@@ -105,14 +105,14 @@ begin
   Log('--------------------------------------');
   
   // Managed Specification with automatic cleanup
-  var FluentAdults := FContext.Entities<TUser>.List(
+  var FluentAdults := FContext.Entities<TUser>.ToList(
     Specification.Where<TUser>(UserEntity.Age >= 18)
   );
   LogSuccess(Format('✓ Fluent Spec: Found %d adult(s)', [FluentAdults.Count]));
   AssertTrue(FluentAdults.Count = 2, 'Fluent spec adults', 'Expected 2 adults');
   
   // Complex fluent with chaining
-  var FluentComplex := FContext.Entities<TUser>.List(
+  var FluentComplex := FContext.Entities<TUser>.ToList(
     Specification.Where<TUser>((UserEntity.Age >= 18) and UserEntity.Name.Contains('o'))
       .Take(10)
       .Skip(0)
@@ -124,7 +124,7 @@ begin
   Log('------------------------');
   
   // OrderBy with Asc
-  var OrderedAsc := FContext.Entities<TUser>.List(
+  var OrderedAsc := FContext.Entities<TUser>.ToList(
     Specification.Where<TUser>(UserEntity.Age >= 18)
       .OrderBy(UserEntity.Name.Asc)
   );
@@ -133,7 +133,7 @@ begin
     LogSuccess(Format('  First: %s', [OrderedAsc[0].Name]));
   
   // OrderBy with Desc
-  var OrderedDesc := FContext.Entities<TUser>.List(
+  var OrderedDesc := FContext.Entities<TUser>.ToList(
     Specification.Where<TUser>(UserEntity.Age >= 18)
       .OrderBy(UserEntity.Age.Desc)
   );
@@ -162,7 +162,7 @@ begin
   LogSuccess(Format('Inserted user with address ID: %d', [UWithAddr.AddressId.GetValueOrDefault]));
 
   // Fetch with Include
-  var UsersWithAddr := FContext.Entities<TUser>.List(
+  var UsersWithAddr := FContext.Entities<TUser>.ToList(
     Specification.Where<TUser>(UserEntity.Id = UWithAddr.Id)
       .Include('Address')
   );

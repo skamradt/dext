@@ -130,7 +130,7 @@ begin
     
     // 3. Query Tenant B (Current)
     WriteLn('--- Case 3: Query Tenant B (Current) ---');
-    ProductList := Context.Products.List;
+    ProductList := Context.Products.ToList;
     WriteLn('Listing done. Count: ', ProductList.Count);
     
     if ProductList.Count <> 1 then
@@ -146,7 +146,7 @@ begin
     Provider.Tenant := TenantA;
     Context.Clear; 
     
-    ProductList := Context.Products.List;
+    ProductList := Context.Products.ToList;
     if ProductList.Count <> 1 then
       raise Exception.CreateFmt('Error: Expected 1 product for Tenant A, got %d', [ProductList.Count]);
       
@@ -157,7 +157,7 @@ begin
     
     // 5. Ignore Query Filters
     WriteLn('--- Case 5: Ignore Query Filters ---');
-    ProductList := Context.Products.IgnoreQueryFilters.List;
+    ProductList := Context.Products.IgnoreQueryFilters.ToList;
     WriteLn('Global listing done. Count: ', ProductList.Count);
     
     if ProductList.Count <> 2 then

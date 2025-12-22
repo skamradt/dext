@@ -105,8 +105,8 @@ begin
   Spec := Specification.All<TUser>;
   Spec.AsNoTracking;
   
-  // 3. List(Spec)
-  Users := FContext.Entities<TUser>.List(Spec);
+  // 3. ToList(Spec)
+  Users := FContext.Entities<TUser>.ToList(Spec);
   
   AssertTrue(Users.Count = 1, 'Should find 1 user', Format('Found %d', [Users.Count]));
   

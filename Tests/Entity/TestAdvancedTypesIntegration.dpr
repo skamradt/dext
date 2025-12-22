@@ -128,7 +128,7 @@ begin
   
   WriteLn('  Step 2: Clear and Reload');
   Db.Clear;
-  List := Db.AdvancedEntities.List;
+  List := Db.AdvancedEntities.ToList;
   
   if List.Count = 0 then
     raise Exception.Create('Entity was not saved');

@@ -47,7 +47,7 @@ var
   Customers: IList<TCustomer>;
   C: TCustomer;
 begin
-  Customers := FDb.Entities<TCustomer>.List;
+  Customers := FDb.Entities<TCustomer>.ToList;
   Result.TotalCustomers := Customers.Count;
   
   Result.TotalSales := 0;
@@ -66,7 +66,7 @@ begin
   FS := TFormatSettings.Create;
   FS.DecimalSeparator := '.';
   
-  Customers := FDb.Entities<TCustomer>.List;
+  Customers := FDb.Entities<TCustomer>.ToList;
   
   Labels := '';
   Data := '';

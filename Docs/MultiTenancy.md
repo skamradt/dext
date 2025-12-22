@@ -143,13 +143,13 @@ end;
 Queries automatically filtered:
 ```pascal
 // Only returns products for the current tenant
-Products := Context.Products.List; 
+Products := Context.Products.ToList; 
 ```
 
 Bypassing filters (e.g., for admin tasks):
 ```pascal
 // Returns products for ALL tenants
-AllProducts := Context.Products.IgnoreQueryFilters.List;
+AllProducts := Context.Products.IgnoreQueryFilters.ToList;
 ```
 
 ---

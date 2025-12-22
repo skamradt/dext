@@ -39,7 +39,7 @@ end;
 ```pascal
 var
   Spec := TExpensiveProductsSpec.Create(100.00);
-  Products := Repository.List(Spec);
+  Products := Repository.ToList(Spec);
 ```
 
 ## 🛠️ Como Funciona (Under the Hood)

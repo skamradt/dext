@@ -72,7 +72,7 @@ Business logic is decoupled from Endpoints using Services (`ICustomerService`, `
 ```delphi
 function TCustomerService.GetAll: IList<TCustomer>;
 begin
-  Result := FDb.Entities<TCustomer>.List;
+  Result := FDb.Entities<TCustomer>.ToList;
 end;
 ```
 

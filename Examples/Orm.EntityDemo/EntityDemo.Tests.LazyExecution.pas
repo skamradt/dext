@@ -106,14 +106,14 @@ begin
   Log('');
   
   // Test 5: Demonstrate difference between List() and Query()
-  Log('⚡ Test 5: List() vs Query() - Execution Timing');
+  Log('⚡ Test 5: ToList() vs Query() - Execution Timing');
   Log('------------------------------------------------');
-  Log('  List():  Executes IMMEDIATELY and returns IList<T>');
+  Log('  ToList():  Executes IMMEDIATELY and returns IList<T>');
   Log('  Query(): Defers execution until enumerated (IEnumerable<T>)');
   Log('');
   
-  var EagerList := FContext.Entities<TUser>.List(UserEntity.Age >= 18);
-  LogSuccess(Format('✓ List() executed immediately: %d results', [EagerList.Count]));
+  var EagerList := FContext.Entities<TUser>.ToList(UserEntity.Age >= 18);
+  LogSuccess(Format('✓ ToList() executed immediately: %d results', [EagerList.Count]));
   // EagerList.Free; // REMOVED: Managed by ARC (IList<T>)
   
   var LazyEnum := FContext.Entities<TUser>.Query(UserEntity.Age >= 18);
@@ -196,9 +196,9 @@ begin
   Log('  • Select<TResult>() projects results to a new type');
   Log('  • Where() filters results in memory (lazy)');
   Log('  • Skip() and Take() enable pagination');
-  Log('  • List() returns IList<T> with immediate execution and ARC memory management');
+  Log('  • ToList() returns IList<T> with immediate execution and ARC memory management');
   Log('  • Use Query() when you might not need all results');
-  Log('  • Use List() when you need to materialize results immediately');
+  Log('  • Use ToList() when you need to materialize results immediately');
   Log('');
 end;
 
