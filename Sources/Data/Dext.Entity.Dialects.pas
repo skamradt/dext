@@ -45,6 +45,7 @@ type
     ddMySQL,
     ddSQLServer,
     ddFirebird,
+    ddInterbase,
     ddOracle
   );
 
@@ -215,6 +216,15 @@ type
     
     function SupportsInsertReturning: Boolean; override;
     function GetReturningSQL(const AColumnName: string): string; override;
+  end;
+
+  /// <summary>
+  ///   InterBase (2020+) Dialect implementation.
+  /// </summary>
+  TInterBaseDialect = class(TFirebirdDialect)
+  public
+    function BooleanToSQL(AValue: Boolean): string; override;
+    function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
   end;
 
 implementation
@@ -597,6 +607,23 @@ function TPostgreSQLDialect.GetCreateTableSQL(const ATableName, ABody: string): 
 begin
   // PostgreSQL supports IF NOT EXISTS
   Result := Format('CREATE TABLE IF NOT EXISTS %s (%s);', [ATableName, ABody]);
+end;
+
+{ TInterBaseDialect }
+
+function TInterBaseDialect.BooleanToSQL(AValue: Boolean): string;
+begin
+  // InterBase uses 0/1 for boolean (SMALLINT)
+  if AValue then Result := '1' else Result := '0';
+end;
+
+function TInterBaseDialect.GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean): string;
+begin
+  if (not AIsAutoInc) and (ATypeInfo.Kind = tkEnumeration) and (ATypeInfo = TypeInfo(Boolean)) then
+    Exit('SMALLINT');
+    
+  // Delegate other types to Firebird dialect (compatible for most parts)
+  Result := inherited GetColumnType(ATypeInfo, AIsAutoInc);
 end;
 
 { TFirebirdDialect }

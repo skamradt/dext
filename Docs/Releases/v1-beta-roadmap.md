@@ -129,6 +129,7 @@ Implementar testes de integração rodando a suite de testes do ORM contra conta
 | **Firebird** | ✅ Sim | ✅ Sim | 🟢 Estável |
 | **MySQL / MariaDB** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
 | **Oracle** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
+| **InterBase** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
 
 > **Ação Imediata**: Criar `Docker-Compose` environment para subir todos os bancos e script de teste unificado.
 
