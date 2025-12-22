@@ -107,7 +107,16 @@ O foco agora é criar **um exemplo para cada funcionalidade** e unificar a docum
 
 ---
 
-## 🧪 3. Estratégia de Testes
+## 🛠️ 3. Qualidade de Código & Manutenção
+
+- [ ] **Otimização de Generics**: Revisar uso intensivo de Generics para evitar "code bloat" e melhorar tempo de compilação.
+- [ ] **Code Review Geral**: Revisão focada em consistência, vazamento de memória e exceções não tratadas.
+- [ ] **Formatação & Estilo**: Padronizar alinhamento e formatação (Object Pascal Style Guide).
+- [ ] **Guia do Agente (Agent Guidelines)**: Criar documentação técnica (`.agent/rules.md` ou `CONTRIBUTING_AI.md`) detalhando padrões de projeto, regras de arquitetura e instruções para configurar/orientar agentes de IA no desenvolvimento do Dext.
+
+---
+
+## 🧪 4. Estratégia de Testes
 
 ### Matriz de Suporte a Bancos de Dados
 Implementar testes de integração rodando a suite de testes do ORM contra containers Docker de cada banco.
@@ -132,7 +141,7 @@ Implementar testes de integração rodando a suite de testes do ORM contra conta
 
 ---
 
-## 🚀 4. Benchmarks
+## 🚀 5. Benchmarks
 
 Estabelecer uma baseline de performance para a V1.
 
@@ -150,7 +159,7 @@ Estabelecer uma baseline de performance para a V1.
 
 ---
 
-## 🔮 5. Roadmap Futuro (Pós-V1)
+## 🔮 6. Roadmap Futuro (Pós-V1)
 
 Funcionalidades movidas para v1.1 ou v2.0:
 - **WebSockets**: Suporte nativo para comunicação bidirecional em tempo real (necessário para Dext Forum).
@@ -170,13 +179,4 @@ Funcionalidades movidas para v1.1 ou v2.0:
 - **Suporte a NoSQL** (MongoDB no ORM).
 - **Distributed Caching** (Redis implementation - Em Progresso).
 
----
 
-## 🛠️ 6. Qualidade de Código & Manutenção
-
-- [ ] **Otimização de Generics**: Revisar uso intensivo de Generics para evitar "code bloat" e melhorar tempo de compilação.
-- [ ] **Code Review Geral**: Revisão focada em consistência, vazamento de memória e exceções não tratadas.
-- [ ] **Formatação & Estilo**: Padronizar alinhamento e formatação (Object Pascal Style Guide).
-- [ ] **Guia do Agente (Agent Guidelines)**: Criar documentação técnica (`.agent/rules.md` ou `CONTRIBUTING_AI.md`) detalhando padrões de projeto, regras de arquitetura e instruções para configurar/orientar agentes de IA no desenvolvimento do Dext.
-
----
