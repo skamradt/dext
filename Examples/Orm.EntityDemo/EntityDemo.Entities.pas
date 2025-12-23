@@ -294,22 +294,6 @@ type
     property IsRemoved: Boolean read FIsRemoved write FIsRemoved;
   end;
 
-
-
-  // 🧬 Metadata Implementation (TypeOf)
-  UserEntity = class
-  public
-    class var Id: TPropExpression;
-    class var Name: TPropExpression;
-    class var Age: TPropExpression;
-    class var Email: TPropExpression;
-    class var City: TPropExpression;
-    class var AddressId: TPropExpression;
-    class var Address: TPropExpression;
-
-    class constructor Create;
-  end;
-
   // Specification using Metadata
   TAdultUsersSpec = class(TSpecification<TUser>)
   public
@@ -317,6 +301,9 @@ type
   end;
 
 implementation
+
+uses
+  EntityDemo.Entities.Info;
 
 { TAddress }
 
@@ -379,25 +366,12 @@ begin
   inherited;
 end;
 
-{ UserEntity }
-
-class constructor UserEntity.Create;
-begin
-  Id := TPropExpression.Create('Id');
-  Name := TPropExpression.Create('full_name');
-  Age := TPropExpression.Create('Age');
-  Email := TPropExpression.Create('Email');
-  City := TPropExpression.Create('City');
-  AddressId := TPropExpression.Create('AddressId');
-  Address := TPropExpression.Create('Address');
-end;
-
 { TAdultUsersSpec }
 
 constructor TAdultUsersSpec.Create;
 begin
   inherited Create;
-  Where(UserEntity.Age >= 18);
+  Where(TUserType.Age >= 18);
 end;
 
 { TUserWithProfile }

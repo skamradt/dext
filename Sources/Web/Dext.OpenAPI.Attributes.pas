@@ -28,7 +28,8 @@ unit Dext.OpenAPI.Attributes;
 interface
 
 uses
-  System.SysUtils;
+  System.SysUtils,
+  Dext.Auth.Attributes;
 
 type
   /// <summary>
@@ -159,13 +160,12 @@ type
   /// <summary>
   ///   Marks an endpoint as requiring authentication.
   /// </summary>
-  SwaggerAuthorizeAttribute = class(TCustomAttribute)
-  private
-    FScheme: string;
+  AuthorizeAttribute = class(Dext.Auth.Attributes.AuthorizeAttribute)
   public
     constructor Create(const AScheme: string = '');
-    property Scheme: string read FScheme;
   end;
+
+  SwaggerAuthorizeAttribute = AuthorizeAttribute;
 
 implementation
 
@@ -256,12 +256,11 @@ begin
   FTag := ATag;
 end;
 
-{ SwaggerAuthorizeAttribute }
+{ AuthorizeAttribute }
 
-constructor SwaggerAuthorizeAttribute.Create(const AScheme: string);
+constructor AuthorizeAttribute.Create(const AScheme: string);
 begin
-  inherited Create;
-  FScheme := AScheme;
+  inherited Create('', AScheme);
 end;
 
 end.

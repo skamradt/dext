@@ -168,7 +168,7 @@ type
   FromServicesAttribute = Dext.Web.ModelBinding.FromServicesAttribute;
 
   // OpenAPI
-  SwaggerAuthorizeAttribute = Dext.OpenAPI.Attributes.SwaggerAuthorizeAttribute;
+  AuthorizeAttribute = Dext.OpenAPI.Attributes.AuthorizeAttribute;
   
   // Auth
   AllowAnonymousAttribute = Dext.Auth.Attributes.AllowAnonymousAttribute;

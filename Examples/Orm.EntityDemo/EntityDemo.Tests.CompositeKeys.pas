@@ -31,8 +31,6 @@ begin
 
   FContext.Entities<TOrderItem>.Add(OrderItem);
   FContext.SaveChanges;
-  FContext.SaveChanges;
-  OrderItem.Free; // Free the object after adding it, as Add copies the values or we need to manage lifecycle if not owned
   LogSuccess('OrderItem (100, 50) added.');
 
   // Find using Composite Key

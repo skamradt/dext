@@ -26,7 +26,7 @@ Uma aplicação web moderna que demonstra todas as features do Dext Framework Co
 - Binding de múltiplos parâmetros
 
 ### 5. **Authorization Enforcement**
-- Controller protegido com `[SwaggerAuthorize]`
+- Controller protegido com `[Authorize]`
 - Retorna 401 se não autenticado
 - Middleware JWT validando tokens
 

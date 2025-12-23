@@ -159,7 +159,7 @@ procedure Login(Ctx: IHttpContext; const Request: TLoginRequest);
 ### 6. **JWT Authentication**
 Centralized configuration with DI:
 ```pascal
-[SwaggerAuthorize('Bearer')]
+[Authorize('Bearer')]
 TCartController = class
   // All methods require authentication
 end;

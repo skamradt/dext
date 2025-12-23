@@ -131,6 +131,10 @@ type
     
     class operator LogicalNot(const Value: TFluentExpression): TFluentExpression;
     
+    // Explicit comparison with Boolean for "and (Prop = True)" style
+    class operator LogicalAnd(const Left: TFluentExpression; const Right: Boolean): TFluentExpression;
+    class operator LogicalAnd(const Left: Boolean; const Right: TFluentExpression): TFluentExpression;
+
     property Expression: IExpression read FExpression;
   end;
 
@@ -152,6 +156,7 @@ type
     class operator LessThanOrEqual(const Left: TPropExpression; const Right: TValue): TFluentExpression;
     
     class operator Implicit(const Value: TPropExpression): string;
+    class operator Implicit(const Value: string): TPropExpression;
 
     // Special Methods (Like, In, etc)
     function Like(const Pattern: string): TFluentExpression;
@@ -176,6 +181,8 @@ type
     function Desc: IOrderBy;
     property Name: string read FName;
   end;
+
+  function Prop(const AName: string): TPropExpression;
 
 implementation
 
@@ -313,6 +320,21 @@ begin
   Result.FExpression := TUnaryExpression.Create(Value.FExpression);
 end;
 
+class operator TFluentExpression.LogicalAnd(const Left: TFluentExpression; const Right: Boolean): TFluentExpression;
+begin
+  Result.FExpression := TLogicalExpression.Create(Left.FExpression, TConstantExpression.Create(Right), loAnd);
+end;
+
+class operator TFluentExpression.LogicalAnd(const Left: Boolean; const Right: TFluentExpression): TFluentExpression;
+begin
+  Result.FExpression := TLogicalExpression.Create(TConstantExpression.Create(Left), Right.FExpression, loAnd);
+end;
+
+function Prop(const AName: string): TPropExpression;
+begin
+  Result := TPropExpression.Create(AName);
+end;
+
 { TPropExpression }
 
 constructor TPropExpression.Create(const AName: string);
@@ -386,6 +408,11 @@ end;
 class operator TPropExpression.Implicit(const Value: TPropExpression): string;
 begin
   Result := Value.Name;
+end;
+
+class operator TPropExpression.Implicit(const Value: string): TPropExpression;
+begin
+  Result := TPropExpression.Create(Value);
 end;
 
 function TPropExpression.&In(const Values: TArray<Integer>): TFluentExpression;

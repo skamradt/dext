@@ -12,15 +12,6 @@
         <Projects Include="Dext.Web.Core.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Tests\Entity\TestTypeConvertersDb.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Examples\Web.UUIDExample\WebUUIDExample.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Examples\Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj">
-            <Dependencies/>
-        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -56,41 +47,14 @@
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="Dext.Web.Core.dproj" Targets="Make"/>
     </Target>
-    <Target Name="TestTypeConvertersDb">
-        <MSBuild Projects="..\Tests\Entity\TestTypeConvertersDb.dproj"/>
-    </Target>
-    <Target Name="TestTypeConvertersDb:Clean">
-        <MSBuild Projects="..\Tests\Entity\TestTypeConvertersDb.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="TestTypeConvertersDb:Make">
-        <MSBuild Projects="..\Tests\Entity\TestTypeConvertersDb.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="WebUUIDExample">
-        <MSBuild Projects="..\Examples\Web.UUIDExample\WebUUIDExample.dproj"/>
-    </Target>
-    <Target Name="WebUUIDExample:Clean">
-        <MSBuild Projects="..\Examples\Web.UUIDExample\WebUUIDExample.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="WebUUIDExample:Make">
-        <MSBuild Projects="..\Examples\Web.UUIDExample\WebUUIDExample.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="WebTUUIDBindingExample">
-        <MSBuild Projects="..\Examples\Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj"/>
-    </Target>
-    <Target Name="WebTUUIDBindingExample:Clean">
-        <MSBuild Projects="..\Examples\Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="WebTUUIDBindingExample:Make">
-        <MSBuild Projects="..\Examples\Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;TestTypeConvertersDb;WebUUIDExample;WebTUUIDBindingExample"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;TestTypeConvertersDb:Clean;WebUUIDExample:Clean;WebTUUIDBindingExample:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;TestTypeConvertersDb:Make;WebUUIDExample:Make;WebTUUIDBindingExample:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -45,7 +45,7 @@ type
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Integer);
     
     [DextPost('/')]
-    [SwaggerAuthorize('Bearer')]
+    [Authorize('Bearer')]
     [ValidateModel] // Validates [Required], [StringLength] etc.
     procedure CreateProduct(Ctx: IHttpContext; const Request: TCreateProductRequest);
   end;
@@ -54,7 +54,7 @@ type
   // 🛍️ Cart Controller
   // ===========================================================================
   [DextController('/api/cart')]
-  [SwaggerAuthorize('Bearer')]
+  [Authorize('Bearer')]
   TCartController = class
   private
     FService: ICartService;
@@ -75,7 +75,7 @@ type
   // 📦 Orders Controller
   // ===========================================================================
   [DextController('/api/orders')]
-  [SwaggerAuthorize('Bearer')]
+  [Authorize('Bearer')]
   TOrdersController = class
   private
     FService: IOrderService;

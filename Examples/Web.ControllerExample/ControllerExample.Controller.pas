@@ -4,7 +4,7 @@
 1. Binding: Body, Query, Route, Header, Services.
 2. Auto-Serialização: Retorno direto de objetos/records.
 3. Validação: Atributos [Required], [StringLength].
-4. Autorização: Atributo [SwaggerAuthorize].
+4. Autorização: Atributo [Authorize].
 5. Controllers Funcionais: Records com métodos estáticos.
 }
 
@@ -93,7 +93,7 @@ type
   // Controller Class (Instance-based with DI)
   [DextController('/api/greet')]
   // TODO : Rename Attribute
-  [SwaggerAuthorize('Bearer')] // ✅ Protect entire controller
+  [Authorize('Bearer')] // ? Protect entire controller
   TGreetingController = class
   private
     FService: IGreetingService;
@@ -123,7 +123,7 @@ type
   TAuthController = class
   public
     [DextPost('/login')]
-    [SwaggerAuthorize('Bearer')] // Just to show it appears in Swagger, but AllowAnonymous overrides
+    [Authorize('Bearer')] // Just to show it appears in Swagger, but AllowAnonymous overrides
     [AllowAnonymous]
     procedure Login(Ctx: IHttpContext; const Request: TLoginRequest);
   end;

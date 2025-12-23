@@ -30,7 +30,8 @@ uses
   EntityDemo.Tests.MixedCompositeKeys in 'EntityDemo.Tests.MixedCompositeKeys.pas',
   EntityDemo.Tests.SoftDelete in 'EntityDemo.Tests.SoftDelete.pas',
   EntityDemo.Tests.Async in 'EntityDemo.Tests.Async.pas',
-  EntityDemo.Tests.TypeSystem in 'EntityDemo.Tests.TypeSystem.pas';
+  EntityDemo.Tests.TypeSystem in 'EntityDemo.Tests.TypeSystem.pas',
+  EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas';
 
 procedure ConfigureDatabase(Provider: TDatabaseProvider);
 begin
@@ -72,6 +73,7 @@ var
   Test: TBaseTest;
 begin
   WriteLn('Running Test: ', TestClass.ClassName);
+  TBaseTest.CurrentTestName := TestClass.ClassName;
   Test := TestClass.Create;
   try
     Test.Run;
@@ -92,7 +94,7 @@ begin
   RunTest(TCompositeKeyTest);
   // 5. Explicit Loading Tests
   RunTest(TExplicitLoadingTest);
-  // 6. Lazy Loading Tests -
+  // 6. Lazy Loading Tests
   RunTest(TLazyLoadingTest);
   // 7. Fluent API Tests
   RunTest(TFluentAPITest);
@@ -119,8 +121,8 @@ begin
   // 18. TypeSystem Tests
   RunTest(TTypeSystemTest);
 
-  WriteLn('');
-  WriteLn('✨ All tests completed.');
+  // Print summary at the end
+  TBaseTest.PrintSummary;
 end;
 
 begin

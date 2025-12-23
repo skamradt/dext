@@ -3,6 +3,7 @@
 interface
 
 uses
+  System.Generics.Collections,
   System.Classes,
   System.SysUtils,
   Data.DB,
@@ -41,6 +42,11 @@ type
   end;
 
   TBaseTest = class
+  private
+    class var FTotalPassed: Integer;
+    class var FTotalFailed: Integer;
+    class var FFailedTests: TList<string>;
+    class var FCurrentTestName: string;
   protected
     FConn: TFDConnection;
     FContext: TDbContext;
@@ -54,6 +60,14 @@ type
     procedure Setup; virtual;
     procedure TearDown; virtual;
   public
+    class constructor Create;
+    class destructor Destroy;
+    class procedure ResetCounters;
+    class procedure PrintSummary;
+    class property TotalPassed: Integer read FTotalPassed;
+    class property TotalFailed: Integer read FTotalFailed;
+    class property CurrentTestName: string read FCurrentTestName write FCurrentTestName;
+    
     constructor Create;
     destructor Destroy; override;
     procedure Run; virtual; abstract;
@@ -213,14 +227,65 @@ end;
 procedure TBaseTest.AssertTrue(Condition: Boolean; const SuccessMsg, FailMsg: string);
 begin
   if Condition then
-    LogSuccess(SuccessMsg)
+  begin
+    LogSuccess(SuccessMsg);
+    Inc(FTotalPassed);
+  end
   else
+  begin
     LogError(FailMsg);
+    Inc(FTotalFailed);
+    if FFailedTests.IndexOf(FCurrentTestName + ': ' + FailMsg) < 0 then
+      FFailedTests.Add(FCurrentTestName + ': ' + FailMsg);
+  end;
 end;
 
 procedure TBaseTest.AssertTrue(Condition: Boolean; const Msg: string);
 begin
   AssertTrue(Condition, Msg, Msg);
+end;
+
+class constructor TBaseTest.Create;
+begin
+  FFailedTests := TList<string>.Create;
+  FTotalPassed := 0;
+  FTotalFailed := 0;
+end;
+
+class destructor TBaseTest.Destroy;
+begin
+  FFailedTests.Free;
+end;
+
+class procedure TBaseTest.ResetCounters;
+begin
+  FTotalPassed := 0;
+  FTotalFailed := 0;
+  FFailedTests.Clear;
+end;
+
+class procedure TBaseTest.PrintSummary;
+var
+  FailMsg: string;
+begin
+  WriteLn('');
+  WriteLn('╔════════════════════════════════════════════════════════════╗');
+  WriteLn('║                    TEST SUMMARY                            ║');
+  WriteLn('╠════════════════════════════════════════════════════════════╣');
+  WriteLn(Format('║  ✅ Passed: %-5d                                          ║', [FTotalPassed]));
+  WriteLn(Format('║  ❌ Failed: %-5d                                          ║', [FTotalFailed]));
+  WriteLn('╠════════════════════════════════════════════════════════════╣');
+  
+  if FTotalFailed > 0 then
+  begin
+    WriteLn('║  FAILED TESTS:                                           ║');
+    for FailMsg in FFailedTests do
+      WriteLn(Format('║  • %-56s║', [Copy(FailMsg, 1, 56)]));
+  end
+  else
+    WriteLn('║  🎉 ALL TESTS PASSED!                                      ║');
+
+  WriteLn('╚════════════════════════════════════════════════════════════╝');
 end;
 
 end.

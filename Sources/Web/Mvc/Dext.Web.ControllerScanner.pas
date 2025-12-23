@@ -266,7 +266,7 @@ begin
       // ✅ CHECK AUTH ATTRIBUTES (Controller or Method level)
       CachedMethod.RequiresAuth := False;
       for var Attr in Controller.RttiType.GetAttributes do
-        if Attr is SwaggerAuthorizeAttribute then
+        if Attr is AuthorizeAttribute then
         begin
           CachedMethod.RequiresAuth := True;
           Break;
@@ -278,7 +278,7 @@ begin
         var HasAllowAnonymousAttribute := False;
         for var Attr in ControllerMethod.Method.GetAttributes do
         begin
-          if Attr is SwaggerAuthorizeAttribute then
+          if Attr is AuthorizeAttribute then
             HasAuthorizeAttribute := True;
 
           if Attr is AllowAnonymousAttribute then
@@ -303,14 +303,14 @@ begin
         // 1. Atributos do Controller
         var TypeAttrs := Controller.RttiType.GetAttributes;
         for var Attr in TypeAttrs do
-          if Attr is SwaggerAuthorizeAttribute then
-            SecuritySchemes.Add(SwaggerAuthorizeAttribute(Attr).Scheme);
+          if Attr is AuthorizeAttribute then
+            SecuritySchemes.Add(AuthorizeAttribute(Attr).Scheme);
 
         // 2. Atributos do Método
         var MethodAttrs := ControllerMethod.Method.GetAttributes;
         for var Attr in MethodAttrs do
-          if Attr is SwaggerAuthorizeAttribute then
-            SecuritySchemes.Add(SwaggerAuthorizeAttribute(Attr).Scheme);
+          if Attr is AuthorizeAttribute then
+            SecuritySchemes.Add(AuthorizeAttribute(Attr).Scheme);
 
         // 3. Atualizar Metadados da Rota
         if SecuritySchemes.Count > 0 then

@@ -1,4 +1,4 @@
-unit Dext.Hosting.CLI.Commands.MigrateGenerate;
+﻿unit Dext.Hosting.CLI.Commands.MigrateGenerate;
 
 interface
 

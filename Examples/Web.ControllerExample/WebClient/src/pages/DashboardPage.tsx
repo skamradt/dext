@@ -407,7 +407,7 @@ export function DashboardPage({ onLogout }: DashboardPageProps) {
                     {[
                         { title: 'Smart Binding', desc: 'Body, Query, Route, Services', color: 'from-purple-500 to-pink-500' },
                         { title: 'Auto Validation', desc: '[Required], [StringLength]', color: 'from-blue-500 to-cyan-500' },
-                        { title: 'JWT Security', desc: '[SwaggerAuthorize] enforcement', color: 'from-green-500 to-emerald-500' },
+                        { title: 'JWT Security', desc: '[Authorize] enforcement', color: 'from-green-500 to-emerald-500' },
                     ].map((feature, i) => (
                         <div key={i} className="glass rounded-xl p-4">
                             <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-3`}>

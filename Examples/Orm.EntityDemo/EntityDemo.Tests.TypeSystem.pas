@@ -43,13 +43,13 @@ begin
     
     // TUserType.Name is TProp<string>, and Meta is TPropertyInfo
     Meta := TUserType.Name.Info;
-    AssertTrue(Meta.GetValue(U).AsString = 'Test User', 'RTTI GetValue(Name) failed');
+    AssertTrue(Meta.GetValue(U).AsString = 'Test User', 'RTTI GetValue(Name) working');
     
     Meta := TUserType.Age.Info;
-    AssertTrue(Meta.GetValue(U).AsInteger = 42, 'RTTI GetValue(Age) failed');
+    AssertTrue(Meta.GetValue(U).AsInteger = 42, 'RTTI GetValue(Age) working');
     
     Meta.SetValue(U, 50);
-    AssertTrue(U.Age = 50, 'RTTI SetValue(Age) failed');
+    AssertTrue(U.Age = 50, 'RTTI SetValue(Age) working');
   finally
     U.Free;
   end;

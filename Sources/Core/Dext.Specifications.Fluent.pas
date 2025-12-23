@@ -53,8 +53,8 @@ type
     function OrderBy(const AOrderBy: IOrderBy): TSpecificationBuilder<T>; overload;
     function Skip(ACount: Integer): TSpecificationBuilder<T>;
     function Take(ACount: Integer): TSpecificationBuilder<T>;
-    function Include(const APath: string): TSpecificationBuilder<T>;
-    function Select(const AColumn: string): TSpecificationBuilder<T>; overload;
+    function Include(const AProp: TPropExpression): TSpecificationBuilder<T>;
+    function Select(const AProp: TPropExpression): TSpecificationBuilder<T>; overload;
     function Select(const AColumns: TArray<string>): TSpecificationBuilder<T>; overload;
     
     property Spec: ISpecification<T> read GetSpec;
@@ -129,15 +129,15 @@ begin
   Result := Self;
 end;
 
-function TSpecificationBuilder<T>.Include(const APath: string): TSpecificationBuilder<T>;
+function TSpecificationBuilder<T>.Include(const AProp: TPropExpression): TSpecificationBuilder<T>;
 begin
-  SpecObj.Include(APath);
+  SpecObj.Include(AProp.Name);
   Result := Self;
 end;
 
-function TSpecificationBuilder<T>.Select(const AColumn: string): TSpecificationBuilder<T>;
+function TSpecificationBuilder<T>.Select(const AProp: TPropExpression): TSpecificationBuilder<T>;
 begin
-  SpecObj.Select(AColumn);
+  SpecObj.Select(AProp.Name);
   Result := Self;
 end;
 

@@ -48,6 +48,7 @@ type
   public
     // Implicit conversion to "Old" TPropExpression for backward compatibility
     class operator Implicit(const Value: TProp<T>): TPropExpression;
+    class operator Implicit(const Value: TProp<T>): string;
     
     // Implicit from TPropertyInfo (used by the scaffold/init)
     class operator Implicit(const Value: TPropertyInfo): TProp<T>;
@@ -180,6 +181,14 @@ begin
 end;
 
 { TProp<T> }
+
+class operator TProp<T>.Implicit(const Value: TProp<T>): string;
+begin
+  if Value.FInfo = nil then
+    Result := ''
+  else
+    Result := Value.FInfo.Name;
+end;
 
 class operator TProp<T>.Implicit(const Value: TProp<T>): TPropExpression;
 begin

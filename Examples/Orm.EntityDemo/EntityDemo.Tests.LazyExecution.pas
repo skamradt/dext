@@ -18,7 +18,8 @@ uses
   EntityDemo.Entities,
   System.Generics.Collections,
   Dext.Collections, // Add Collections
-  Dext.Entity.Query;
+  Dext.Entity.Query,
+  EntityDemo.Entities.Info;
 
 { TLazyExecutionTest }
 
@@ -60,7 +61,7 @@ begin
   // Test 1: Lazy Query - Query is NOT executed yet!
   Log('📋 Test 1: Lazy Query Creation');
   Log('------------------------------');
-  LazyQuery := FContext.Entities<TUser>.Query(UserEntity.Age >= 18);
+  LazyQuery := FContext.Entities<TUser>.Query(TUserType.Age >= 18);
   LogSuccess('✓ Query created (NOT executed yet!)');
   Log('  The query will only execute when we enumerate it.');
   Log('');
@@ -112,11 +113,11 @@ begin
   Log('  Query(): Defers execution until enumerated (IEnumerable<T>)');
   Log('');
   
-  var EagerList := FContext.Entities<TUser>.ToList(UserEntity.Age >= 18);
+  var EagerList := FContext.Entities<TUser>.ToList(TUserType.Age >= 18);
   LogSuccess(Format('✓ ToList() executed immediately: %d results', [EagerList.Count]));
   // EagerList.Free; // REMOVED: Managed by ARC (IList<T>)
   
-  var LazyEnum := FContext.Entities<TUser>.Query(UserEntity.Age >= 18);
+  var LazyEnum := FContext.Entities<TUser>.Query(TUserType.Age >= 18);
   LogSuccess('✓ Query() created (deferred execution)');
   Log(Format('  → Execution happens when we enumerate it (Query object: %p)', [Pointer(@LazyEnum)]));
   Log('');
@@ -126,7 +127,7 @@ begin
   Log('------------------------------');
   var NamesQuery: TFluentQuery<string>;
   NamesQuery := FContext.Entities<TUser>
-    .Query(UserEntity.Age >= 18)
+    .Query(TUserType.Age >= 18)
     .Select<string>(function(U: TUser): string
       begin
         Result := U.Name;

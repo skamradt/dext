@@ -1197,11 +1197,42 @@ begin
     SelectedCols := ASpec.GetSelectedColumns;
     if Length(SelectedCols) > 0 then
     begin
-      // Custom projection
+      // Custom projection - translate property names to column names
+      Ctx := TRttiContext.Create;
+      Typ := Ctx.GetType(T);
+      
       for i := 0 to High(SelectedCols) do
       begin
         if i > 0 then SB.Append(', ');
-        SB.Append(FDialect.QuoteIdentifier(SelectedCols[i]));
+        
+        ColName := SelectedCols[i]; // Default to property name
+        
+        // Try to find the property and get its mapped column name
+        Prop := Typ.GetProperty(SelectedCols[i]);
+        if Prop <> nil then
+        begin
+          // Check Fluent mapping first
+          PropMap := nil;
+          if FMap <> nil then
+            FMap.Properties.TryGetValue(Prop.Name, PropMap);
+            
+          if (PropMap <> nil) and (PropMap.ColumnName <> '') then
+            ColName := PropMap.ColumnName
+          else
+          begin
+            // Check attributes
+            for Attr in Prop.GetAttributes do
+            begin
+              if Attr is ColumnAttribute then
+              begin
+                ColName := ColumnAttribute(Attr).Name;
+                Break;
+              end;
+            end;
+          end;
+        end;
+        
+        SB.Append(FDialect.QuoteIdentifier(ColName));
       end;
     end
     else

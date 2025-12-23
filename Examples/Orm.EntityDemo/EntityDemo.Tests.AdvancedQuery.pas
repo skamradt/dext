@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Generics.Collections, Dext.Entity, Dext.Entity.Query,
   Dext.Collections, // Add Collections unit
   Dext.Entity.Grouping, Dext.Entity.Joining,
-  Dext.Specifications.Interfaces, Dext.Specifications.Fluent,
+  Dext.Specifications.Interfaces, Dext.Specifications.Fluent, Dext.Specifications.Types,
   EntityDemo.Entities, EntityDemo.Tests.Base,
   // NEW:
   Dext.Entity.TypeSystem,
@@ -25,6 +25,7 @@ type
     procedure TestSelectOptimized;
     procedure TestFluentSyntax;
     procedure TestTypeSafeQuery; // New Test
+    procedure TestStringExpressions; // Even Newer Test
   end;
 
 implementation
@@ -40,6 +41,7 @@ begin
   TestInclude;
   TestSelectOptimized;
   TestTypeSafeQuery;
+  TestStringExpressions;
 
   Log('');
 end;
@@ -75,7 +77,7 @@ begin
   // Select only Name
   Builder := Specification.All<TUser>;
   // Usa class operator TPropExpression.Implicit(const Value: TPropExpression): string
-  Spec := Builder.Select(UserEntity.Name);
+  Spec := Builder.Select(TUserType.Name);
 
   Users := FContext.Entities<TUser>.ToList(Spec);
   // No try..finally needed for Users, it's ARC managed
@@ -129,32 +131,32 @@ begin
 
   // Sum
   SumAge := UsersQuery
-    .Sum(function(U: TUser): Double
+    .Sum(TFunc<TUser, Double>(function(U: TUser): Double
      begin
        Result := U.Age;
-     end);
+     end));
   AssertTrue(Abs(SumAge - 60) < 0.001, 'Sum Age should be 60', Format('Sum was %f', [SumAge]));
 
   // Average
   AvgAge := UsersQuery.Average(
-    function(U: TUser): Double
+    TFunc<TUser, Double>(function(U: TUser): Double
     begin
       Result := U.Age;
-    end);
+    end));
   AssertTrue(Abs(AvgAge - 20) < 0.001, 'Avg Age should be 20', Format('Avg was %f', [AvgAge]));
 
   // Min/Max
   MinAge := UsersQuery.Min(
-    function(U: TUser): Double
+    TFunc<TUser, Double>(function(U: TUser): Double
     begin
       Result := U.Age;
-    end);
+    end));
 
   MaxAge := UsersQuery.Max(
-    function(U: TUser): Double
+    TFunc<TUser, Double>(function(U: TUser): Double
     begin
       Result := U.Age;
-    end);
+    end));
 
   AssertTrue(Abs(MinAge - 10) < 0.001, 'Min Age should be 10', Format('Min was %f', [MinAge]));
   AssertTrue(Abs(MaxAge - 30) < 0.001, 'Max Age should be 30', Format('Max was %f', [MaxAge]));
@@ -162,17 +164,17 @@ begin
   // Any
   AssertTrue(UsersQuery.Any, 'Any should be true', 'Any was false');
   AssertTrue(UsersQuery.Any(
-    function(U: TUser): Boolean
+    TPredicate<TUser>(function(U: TUser): Boolean
     begin
       Result := U.Age > 25;
-    end),
+    end)),
     'Any(Age > 25) should be true', 'Any(...) was false');
 
   AssertTrue(not UsersQuery.Any(
-    function(U: TUser): Boolean
+    TPredicate<TUser>(function(U: TUser): Boolean
     begin
       Result := U.Age > 100;
-    end),
+    end)),
     'Any(Age > 100) should be false', 'Any(...) was true');
 end;
 
@@ -217,14 +219,14 @@ begin
   // Note: Users is passed as parent to the fluent chain, so it will be freed when Cities is freed.
 
   CitiesQuery := UsersQuery
-    .Where(function(U: TUser): Boolean
+    .Where(TPredicate<TUser>(function(U: TUser): Boolean
       begin
         Result := U.City <> '';
-      end)
-    .Select<string>(function(U: TUser): string
+      end))
+    .Select<string>(TFunc<TUser, string>(function(U: TUser): string
       begin
         Result := U.City;
-      end)
+      end))
     .Distinct;
 
   DistinctCities := CitiesQuery.ToList;
@@ -295,14 +297,14 @@ begin
 
   // Use the TQuery.GroupBy function
   Grouped := TQuery.GroupBy<TUser, string>(UsersQuery.Where(
-    function(U: TUser): Boolean
+    TPredicate<TUser>(function(U: TUser): Boolean
     begin
       Result := U.City <> '';
-    end),
-    function(U: TUser): string
+    end)),
+    TFunc<TUser, string>(function(U: TUser): string
     begin
       Result := U.City;
-    end);
+    end));
 
   GroupsList := Grouped.ToList;
   // No try..finally
@@ -377,7 +379,7 @@ begin
 
   // Test: Load users with Include('Address')
   Builder := Specification.All<TUser>;
-  Spec := Builder.Include(UserEntity.Address.Name);
+  Spec := Builder.Include(TUserType.Address);
   Users := FContext.Entities<TUser>.ToList(Spec);
 
   // No try..finally
@@ -441,6 +443,52 @@ begin
   
   AssertTrue(Users.Count = 1, 'Should find 1 user', Format('Found %d', [Users.Count]));
   AssertTrue(Users[0].Age = 25, 'Age should be 25', Format('Found %d', [Users[0].Age]));
+end;
+
+procedure TAdvancedQueryTest.TestStringExpressions;
+var
+  Users: IList<TUser>;
+begin
+  Log('   Testing String-Based Expressions (".Where(''Age'' > 18)")...');
+  // NOTE: This uses the new TPropExpression.Implicit(string) operator
+  
+  TearDown;
+  Setup;
+
+  FContext.Entities<TUser>
+    .Add(TUser.Create('Kid', 10))
+    .Add(TUser.Create('Adult', 25));
+  FContext.SaveChanges;
+  
+  // Test 1: Basic string literal comparison
+  Users := FContext.Entities<TUser>.QueryAll
+    .Where(Prop('Age') > 18)
+    .ToList;
+    
+  AssertTrue(Users.Count = 1, 'String expression Age > 18 passed', Format('Found %d', [Users.Count]));
+  AssertTrue(Users[0].Name = 'Adult', 'Expected Adult', Users[0].Name);
+  
+  // Test 2: Complex string literal comparison
+  Users := FContext.Entities<TUser>.QueryAll
+    .Where((Prop('Age') > 10) and (Prop('Name') = 'Adult'))
+    .ToList;
+    
+  AssertTrue(Users.Count = 1, 'Complex string expression passed', Format('Found %d', [Users.Count]));
+
+  // Test 3: String literal with LIKE
+  Users := FContext.Entities<TUser>.QueryAll
+    .Where(Prop('Name').StartsWith('Ad'))
+    .ToList;
+  AssertTrue(Users.Count = 1, 'TPropExpression.Create passed', Format('Found %d', [Users.Count]));
+
+  // Test 4: Implicit string with property name verification
+  // The framework should map 'Name' to 'full_name' column automatically because of RTTI
+  Users := FContext.Entities<TUser>.QueryAll
+    .Where(Prop('Name') = 'Kid')
+    .ToList;
+  AssertTrue(Users.Count = 1, 'Mapping "Name" string to "full_name" column passed', Format('Found %d', [Users.Count]));
+  
+  LogSuccess('   ✓ String-based expressions working correctly!');
 end;
 
 end.

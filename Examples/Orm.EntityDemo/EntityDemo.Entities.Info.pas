@@ -18,7 +18,7 @@ type
     class var City: TProp<string>;
     class var AddressId: TProp<Nullable<Integer>>;
     // Navigation property
-    // class var Address: TProp<TAddress>; 
+    class var Address: TProp<TAddress>; 
     class constructor Create;
     class destructor Destroy;
   end;
@@ -60,6 +60,7 @@ begin
   Email := TPropertyInfo.Create('Email', GetPropInfo(TypeInfo(TUser), 'Email'), TypeInfo(string));
   City := TPropertyInfo.Create('City', GetPropInfo(TypeInfo(TUser), 'City'), TypeInfo(string));
   AddressId := TPropertyInfo.Create('AddressId', GetPropInfo(TypeInfo(TUser), 'AddressId'), TypeInfo(Nullable<Integer>));
+  Address := TPropertyInfo.Create('Address', GetPropInfo(TypeInfo(TUser), 'Address'), TypeInfo(TAddress));
 end;
 
 class destructor TUserType.Destroy;
@@ -70,6 +71,7 @@ begin
   Email.Info.Free;
   City.Info.Free;
   AddressId.Info.Free;
+  Address.Info.Free;
 end;
 
 { TAddressType }

@@ -37,8 +37,9 @@ uses
   System.Generics.Collections,
   System.Generics.Defaults,
   Dext.Collections,
-  Dext.Specifications.Base, // Added for TSpecification cast
-  Dext.Specifications.Interfaces;
+  Dext.Specifications.Base,
+  Dext.Specifications.Interfaces,
+  Dext.Specifications.Types;
 
 type
   IPagedResult<T> = interface
@@ -114,7 +115,7 @@ type
     ///   Projects each element of a sequence into a new form.
     /// </summary>
     function Select<TResult>(const ASelector: TFunc<T, TResult>): TFluentQuery<TResult>; overload;
-    function Select<TResult>(const APropertyName: string): TFluentQuery<TResult>; overload;
+    function Select<TResult>(const AProp: TPropExpression): TFluentQuery<TResult>; overload;
     function Select(const AProperties: array of string): TFluentQuery<T>; overload;
 
     /// <summary>
@@ -429,12 +430,14 @@ begin
     end);
 end;
 
-function TFluentQuery<T>.Select<TResult>(const APropertyName: string): TFluentQuery<TResult>;
+function TFluentQuery<T>.Select<TResult>(const AProp: TPropExpression): TFluentQuery<TResult>;
 var
   LSource: TFluentQuery<T>;
   Selector: TFunc<T, TResult>;
+  LPropName: string;
 begin
   LSource := Self;
+  LPropName := AProp.Name;
   Selector := TFunc<T, TResult>(function(const Item: T): TResult
     var
       Ctx: TRttiContext;
@@ -448,9 +451,9 @@ begin
       
       Ctx := TRttiContext.Create;
       Typ := Ctx.GetType(Obj.ClassType);
-      Prop := Typ.GetProperty(APropertyName);
+      Prop := Typ.GetProperty(LPropName);
       if Prop = nil then
-        raise Exception.CreateFmt('Property "%s" not found on class "%s"', [APropertyName, Obj.ClassName]);
+        raise Exception.CreateFmt('Property "%s" not found on class "%s"', [LPropName, Obj.ClassName]);
       Val := Prop.GetValue(Obj);
       Result := Val.AsType<TResult>;
     end);

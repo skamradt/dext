@@ -165,6 +165,8 @@ begin
   LargeText := '';
   for i := 1 to 1000 do
     LargeText := LargeText + Format('This is paragraph %d of a very long article. ', [i]);
+  // Trim trailing space to avoid SQLite/FireDAC trailing space handling issues
+  LargeText := TrimRight(LargeText);
   
   // Create article
   Article := TArticle.Create;

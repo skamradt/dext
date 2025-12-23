@@ -129,7 +129,7 @@ curl "http://localhost:8080/api/greet/search?q=test&limit=5" \
 - Secret key: `dext-secret-key-must-be-very-long-and-secure-at-least-32-chars`
 
 ### ✅ 2. Authorization
-- Controller protegido com `[SwaggerAuthorize('Bearer')]`
+- Controller protegido com `[Authorize('Bearer')]`
 - Retorna **401 Unauthorized** sem token
 - Middleware valida token automaticamente
 

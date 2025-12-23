@@ -38,11 +38,14 @@ type
   AuthorizeAttribute = class(TCustomAttribute)
   private
     FRoles: string;
+    FScheme: string;
   public
     constructor Create; overload;
     constructor Create(const ARoles: string); overload;
+    constructor Create(const ARoles, AScheme: string); overload;
     
     property Roles: string read FRoles;
+    property Scheme: string read FScheme;
   end;
 
   /// <summary>
@@ -59,12 +62,21 @@ constructor AuthorizeAttribute.Create;
 begin
   inherited Create;
   FRoles := '';
+  FScheme := '';
 end;
 
 constructor AuthorizeAttribute.Create(const ARoles: string);
 begin
   inherited Create;
   FRoles := ARoles;
+  FScheme := '';
+end;
+
+constructor AuthorizeAttribute.Create(const ARoles, AScheme: string);
+begin
+  inherited Create;
+  FRoles := ARoles;
+  FScheme := AScheme;
 end;
 
 end.

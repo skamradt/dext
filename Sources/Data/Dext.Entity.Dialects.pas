@@ -502,6 +502,8 @@ begin
     Exit('INTEGER'); // SQLite AutoInc must be INTEGER PRIMARY KEY
 
   case ATypeInfo.Kind of
+    tkInteger: Result := 'INTEGER';
+    tkInt64: Result := 'INTEGER';
     tkFloat: 
       begin
         if ATypeInfo = TypeInfo(TDateTime) then Result := 'REAL'

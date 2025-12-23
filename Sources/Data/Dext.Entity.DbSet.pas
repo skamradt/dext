@@ -82,6 +82,7 @@ type
       out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
     procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
     function CreateGenerator: TSqlGenerator<T>;
+    procedure ResetQueryFlags;
   protected
     function GetEntityId(const AEntity: T): string; overload;
     function GetEntityId(const AEntity: TObject): string; overload;
@@ -1097,6 +1098,7 @@ begin
       Sql := Generator.GenerateSelect(LSpec)
     else
       Sql := Generator.GenerateSelect;
+      
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
       Cmd.AddParam(Pair.Key, Pair.Value);
@@ -1120,6 +1122,7 @@ begin
       DoLoadIncludes(Result, LSpec.GetIncludes);
   finally
     Generator.Free;
+    ResetQueryFlags;
   end;
 end;
 
@@ -1437,6 +1440,7 @@ begin
     Spec.Take(1);
     
     Sql := Generator.GenerateSelect(Spec); 
+    
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
     for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
     
@@ -1444,6 +1448,7 @@ begin
     Result := Reader.Next;
   finally
     Generator.Free;
+    ResetQueryFlags;
   end;
 end;
 
@@ -1458,14 +1463,17 @@ begin
     var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
     ApplyTenantFilter(Spec);
     Sql := Generator.GenerateCount(Spec);
+    
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
     var Val := Cmd.ExecuteScalar;
     Result := Val.AsInteger;
   finally
     Generator.Free;
+    ResetQueryFlags;
   end;
 end;
+
 
 function TDbSet<T>.IgnoreQueryFilters: IDbSet<T>;
 begin
@@ -1478,6 +1486,13 @@ begin
   FOnlyDeleted := True;
   Result := Self;
 end;
+
+procedure TDbSet<T>.ResetQueryFlags;
+begin
+  FIgnoreQueryFilters := False;
+  FOnlyDeleted := False;
+end;
+
 
 function TDbSet<T>.HardDelete(const AEntity: T): IDbSet<T>;
 var

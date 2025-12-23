@@ -8,7 +8,7 @@ Este é um **showcase completo** demonstrando todas as capacidades do **Dext Fra
 
 ### 🔐 1. **JWT Authentication & Authorization**
 - Middleware de autenticação JWT
-- Atributo `[SwaggerAuthorize]` para proteção de controllers
+- Atributo `[Authorize]` para proteção de controllers
 - Validação automática de tokens
 - Retorno 401 Unauthorized para requisições não autenticadas
 
@@ -112,7 +112,7 @@ end.
 
 ```pascal
 [DextController('/api/greet')]
-[SwaggerAuthorize('Bearer')]
+[Authorize('Bearer')]
 TGreetingController = class
 private
   FService: IGreetingService;
@@ -251,3 +251,4 @@ Desenvolvido com ❤️ usando Delphi e React
 ---
 
 **Dext Framework** - Modern Web Development for Delphi
+
