@@ -746,12 +746,19 @@ begin
        if VarIsNull(PKVal) or VarIsEmpty(PKVal) then
          raise Exception.Create('Failed to retrieve AutoInc ID for ' + GetTableName + '.');
        
-       // Special handling for TUUID type - convert string to TUUID
-       if AutoIncProp.PropertyType.Handle = TypeInfo(TUUID) then
+       // Use registered converter if available for proper type conversion
+       var Converter := TTypeConverterRegistry.Instance.GetConverter(AutoIncProp.PropertyType.Handle);
+       if Converter <> nil then
        begin
+         // Use converter's FromDatabase for proper endianness handling
+         var ConvertedVal := Converter.FromDatabase(TValue.FromVariant(PKVal), AutoIncProp.PropertyType.Handle);
+         AutoIncProp.SetValue(TObject(AEntity), ConvertedVal);
+       end
+       else if AutoIncProp.PropertyType.Handle = TypeInfo(TUUID) then
+       begin
+         // Fallback for TUUID without registered converter
          var UuidVal: TUUID;
          var StrVal := VarToStr(PKVal);
-         // Remove braces if present
          if StrVal.StartsWith('{') then
            StrVal := Copy(StrVal, 2, Length(StrVal) - 2);
          UuidVal := TUUID.FromString(StrVal);
@@ -759,8 +766,12 @@ begin
        end
        else if AutoIncProp.PropertyType.Handle = TypeInfo(TGUID) then
        begin
+         // Fallback for TGUID without registered converter - use StringToGUID
          var GuidVal: TGUID;
-         GuidVal := StringToGUID(VarToStr(PKVal));
+         var StrVal := VarToStr(PKVal);
+         if not StrVal.StartsWith('{') then
+           StrVal := '{' + StrVal + '}';
+         GuidVal := StringToGUID(StrVal);
          AutoIncProp.SetValue(TObject(AEntity), TValue.From<TGUID>(GuidVal));
        end
        else
