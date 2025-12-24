@@ -146,7 +146,6 @@ type
     property ExceptionHandled: Boolean read GetExceptionHandled write SetExceptionHandled;
   end;
 
-
 implementation
 
 { ActionFilterAttribute }

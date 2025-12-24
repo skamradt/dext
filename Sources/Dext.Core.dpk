@@ -81,7 +81,10 @@ contains
   Dext.Hosting.AppState in 'Core\Dext.Hosting.AppState.pas',
   Dext.Hosting.BackgroundService in 'Core\Dext.Hosting.BackgroundService.pas',
   Dext.Hosting.ApplicationLifetime in 'Core\Dext.Hosting.ApplicationLifetime.pas',
-  Dext.MM in 'Core\Dext.MM.pas';
+  Dext.MM in 'Core\Dext.MM.pas',
+  Dext.Core.Span in 'Core\Base\Dext.Core.Span.pas',
+  Dext.Json.Utf8 in 'Core\Json\Dext.Json.Utf8.pas',
+  Dext.Json.Utf8.Serializer in 'Core\Json\Dext.Json.Utf8.Serializer.pas';
 
 end.
 

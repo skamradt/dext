@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{07BF3EB8-4844-4ABD-82D4-7E990846BA8D}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="..\Apps\CLI\DextTool.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DextFacadeGenerator\DextFacadeGenerator.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DextTool">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj"/>
+    </Target>
+    <Target Name="DextTool:Clean">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextTool:Make">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DextFacadeGenerator">
+        <MSBuild Projects="DextFacadeGenerator\DextFacadeGenerator.dproj"/>
+    </Target>
+    <Target Name="DextFacadeGenerator:Clean">
+        <MSBuild Projects="DextFacadeGenerator\DextFacadeGenerator.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextFacadeGenerator:Make">
+        <MSBuild Projects="DextFacadeGenerator\DextFacadeGenerator.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DextTool;DextFacadeGenerator"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DextTool:Clean;DextFacadeGenerator:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DextTool:Make;DextFacadeGenerator:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -30,6 +30,7 @@ type
     procedure SetContentLength(const AValue: Int64);
     procedure Write(const AContent: string); overload;
     procedure Write(const ABuffer: TBytes); overload;
+    procedure Write(const AStream: TStream); overload;
     procedure Json(const AJson: string);
     procedure AddHeader(const AName, AValue: string);
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
@@ -81,6 +82,15 @@ begin
     FBuffer.WriteBuffer(ABuffer[0], Length(ABuffer));
 end;
 
+procedure TBufferedResponse.Write(const AStream: TStream);
+begin
+  if (AStream <> nil) and (AStream.Size > 0) then
+  begin
+    AStream.Position := 0;
+    FBuffer.CopyFrom(AStream, AStream.Size);
+  end;
+end;
+
 { TCompressionMiddleware }
 
 procedure TCompressionMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDelegate);
@@ -111,7 +121,7 @@ begin
     begin
       CompressedStream := TMemoryStream.Create;
       try
-        ZStream := TZCompressionStream.Create(clDefault, CompressedStream, 31); // 31 = GZIP header
+        ZStream := TZCompressionStream.Create(CompressedStream, TZCompressionLevel.zcDefault, 15 + 16); // 15+16 = GZIP mode
         try
           BufferedResponse.Buffer.Position := 0;
           ZStream.CopyFrom(BufferedResponse.Buffer, BufferedResponse.Buffer.Size);

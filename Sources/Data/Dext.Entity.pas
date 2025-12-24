@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -35,156 +35,20 @@ uses
   FireDAC.Comp.Client,
   System.SysUtils,
   System.Classes,
-  Dext.Entity.Context,
-  Dext.Entity.Core,
-  Dext.Entity.DbSet,
-  Dext.Entity.Attributes,
-  Dext.Entity.Query,
-  Dext.Specifications.Interfaces,
-  Dext.Specifications.Fluent,
-  Dext.Entity.Grouping,
-  Dext.Entity.Joining,
+  Dext,
   Dext.Types.Lazy,
-  Dext.Specifications.Types,
-  // New Units
-  Dext.Entity.Dialects,
-  Dext.Entity.Drivers.Interfaces,
-  Dext.Entity.LazyLoading,
-  Dext.Entity.Mapping,
-  Dext.Entity.Migrations,
-  Dext.Entity.Migrations.Builder,
-  Dext.Entity.Migrations.Differ,
-  Dext.Entity.Migrations.Extractor,
-  Dext.Entity.Migrations.Generator,
-  Dext.Entity.Migrations.Json,
-  Dext.Entity.Migrations.Model,
-  Dext.Entity.Migrations.Operations,
-  Dext.Entity.Migrations.Runner,
-  Dext.Entity.Naming,
-  Dext.Entity.Scaffolding,
-  Dext.Entity.Drivers.FireDAC,
-  Dext.Entity.Drivers.FireDAC.Manager, // Add Manager
-  Dext.Entity.Setup, // Add Setup
-  Dext.DI.Interfaces, // Add DI Interfaces
-  Dext.Entity.TypeSystem,
-  Dext.Specifications.SQL.Generator;
+  {$I Dext.Entity.Uses.inc};
 
 type
+  // External Aliases
   TFDConnection = FireDAC.Comp.Client.TFDConnection;
-  TFireDACConnection = Dext.Entity.Drivers.FireDAC.TFireDACConnection;
-  TFireDACTransaction = Dext.Entity.Drivers.FireDAC.TFireDACTransaction;
-  TFireDACReader = Dext.Entity.Drivers.FireDAC.TFireDACReader;
-  TFireDACCommand = Dext.Entity.Drivers.FireDAC.TFireDACCommand;
 
-  // Core Interfaces
-  IDbContext = Dext.Entity.Core.IDbContext;
-  IDbSet = Dext.Entity.Core.IDbSet;
-  TDbContext = Dext.Entity.Context.TDbContext;
-  
-  // Exceptions
-  EOptimisticConcurrencyException = Dext.Entity.Core.EOptimisticConcurrencyException;
+  {$I Dext.Entity.Aliases.inc}
 
-  Specification = Dext.Specifications.Fluent.Specification;
-  IExpression = Dext.Specifications.Interfaces.IExpression;
-  TFluentExpression = Dext.Specifications.Types.TFluentExpression;
-  
-  // TypeSystem
-
-  // Query Helpers
-  TQueryGrouping = Dext.Entity.Grouping.TQuery;
-  TQueryJoin = Dext.Entity.Joining.TJoining;
-
-  // Driver Interfaces
-  IDbConnection = Dext.Entity.Drivers.Interfaces.IDbConnection;
-  IDbTransaction = Dext.Entity.Drivers.Interfaces.IDbTransaction;
-  IDbCommand = Dext.Entity.Drivers.Interfaces.IDbCommand;
-  IDbReader = Dext.Entity.Drivers.Interfaces.IDbReader;
-  ISQLDialect = Dext.Entity.Dialects.ISQLDialect;
-
-  // Dialects
-  TBaseDialect = Dext.Entity.Dialects.TBaseDialect;
-  TSQLiteDialect = Dext.Entity.Dialects.TSQLiteDialect;
-  TPostgreSQLDialect = Dext.Entity.Dialects.TPostgreSQLDialect;
-  TFirebirdDialect = Dext.Entity.Dialects.TFirebirdDialect;
-  TSQLServerDialect = Dext.Entity.Dialects.TSQLServerDialect;
-  TMySQLDialect = Dext.Entity.Dialects.TMySQLDialect;
-  TOracleDialect = Dext.Entity.Dialects.TOracleDialect;
-
-  // Mapping
-  TModelBuilder = Dext.Entity.Mapping.TModelBuilder;
-
-  // Setup
-  TDbContextOptions = Dext.Entity.Setup.TDbContextOptions;
-  TDbContextOptionsBuilder = Dext.Entity.Setup.TDbContextOptionsBuilder;
-  
-  // Migrations - Interfaces
-  IMigration = Dext.Entity.Migrations.IMigration;
-  IColumnBuilder = Dext.Entity.Migrations.Builder.IColumnBuilder;
-
-  // Migrations - Core Classes
-  TMigrationRegistry = Dext.Entity.Migrations.TMigrationRegistry;
-  TMigrator = Dext.Entity.Migrations.Runner.TMigrator;
-  
-  // Migrations - Builders & Generators
-  TSchemaBuilder = Dext.Entity.Migrations.Builder.TSchemaBuilder;
-  TTableBuilder = Dext.Entity.Migrations.Builder.TTableBuilder;
-  TColumnBuilder = Dext.Entity.Migrations.Builder.TColumnBuilder;
-  TMigrationGenerator = Dext.Entity.Migrations.Generator.TMigrationGenerator;
-  TJsonMigration = Dext.Entity.Migrations.Json.TJsonMigration;
-  TJsonMigrationLoader = Dext.Entity.Migrations.Json.TJsonMigrationLoader;
-
-  // Migrations - Model Extractors & Differs
-  TModelDiffer = Dext.Entity.Migrations.Differ.TModelDiffer;
-  TDbContextModelExtractor = Dext.Entity.Migrations.Extractor.TDbContextModelExtractor;
-  
-  // Migrations - Operations
-  TMigrationOperation = Dext.Entity.Migrations.Operations.TMigrationOperation;
-  TCreateTableOperation = Dext.Entity.Migrations.Operations.TCreateTableOperation;
-  TDropTableOperation = Dext.Entity.Migrations.Operations.TDropTableOperation;
-  TAddColumnOperation = Dext.Entity.Migrations.Operations.TAddColumnOperation;
-  TDropColumnOperation = Dext.Entity.Migrations.Operations.TDropColumnOperation;
-  TAlterColumnOperation = Dext.Entity.Migrations.Operations.TAlterColumnOperation;
-  TAddForeignKeyOperation = Dext.Entity.Migrations.Operations.TAddForeignKeyOperation;
-  TDropForeignKeyOperation = Dext.Entity.Migrations.Operations.TDropForeignKeyOperation;
-  TCreateIndexOperation = Dext.Entity.Migrations.Operations.TCreateIndexOperation;
-  TDropIndexOperation = Dext.Entity.Migrations.Operations.TDropIndexOperation;
-  TSqlOperation = Dext.Entity.Migrations.Operations.TSqlOperation;
-
-  // Migrations - Snapshot Model
-  TSnapshotModel = Dext.Entity.Migrations.Model.TSnapshotModel;
-  TSnapshotTable = Dext.Entity.Migrations.Model.TSnapshotTable;
-  TSnapshotColumn = Dext.Entity.Migrations.Model.TSnapshotColumn;
-  TSnapshotForeignKey = Dext.Entity.Migrations.Model.TSnapshotForeignKey;
-
-  // Naming
-  INamingStrategy = Dext.Entity.Naming.INamingStrategy;
-  TDefaultNamingStrategy = Dext.Entity.Naming.TDefaultNamingStrategy;
-  TSnakeCaseNamingStrategy = Dext.Entity.Naming.TSnakeCaseNamingStrategy;
-  TLowerCaseNamingStrategy = Dext.Entity.Naming.TLowerCaseNamingStrategy;
-  TUppercaseNamingStrategy = Dext.Entity.Naming.TUppercaseNamingStrategy;
-
-  // Scaffolding
-  ISchemaProvider = Dext.Entity.Scaffolding.ISchemaProvider;
-  IEntityGenerator = Dext.Entity.Scaffolding.IEntityGenerator;
-  TFireDACSchemaProvider = Dext.Entity.Scaffolding.TFireDACSchemaProvider;
-  TDelphiEntityGenerator = Dext.Entity.Scaffolding.TDelphiEntityGenerator;
-
-  // SQL Generation
-  ISQLColumnMapper = Dext.Specifications.SQL.Generator.ISQLColumnMapper;
-
-  // Atributes
-  TableAttribute = Dext.Entity.Attributes.TableAttribute;
-  ColumnAttribute = Dext.Entity.Attributes.ColumnAttribute;
-  PKAttribute = Dext.Entity.Attributes.PKAttribute;
-  AutoIncAttribute = Dext.Entity.Attributes.AutoIncAttribute;
-  ForeignKeyAttribute = Dext.Entity.Attributes.ForeignKeyAttribute;
-  NotMappedAttribute = Dext.Entity.Attributes.NotMappedAttribute;
-  VersionAttribute = Dext.Entity.Attributes.VersionAttribute;
-  SoftDeleteAttribute = Dext.Entity.Attributes.SoftDeleteAttribute;
-  
-  // Enums (Type Aliases)
-  TCascadeAction = Dext.Entity.Attributes.TCascadeAction;
-
+  // ===========================================================================
+  // 🧩 Local Types & Helpers
+  // ===========================================================================
+type
   Lazy<T> = record
   private
     FInstance: ILazy;
@@ -202,14 +66,6 @@ type
     property IsValueCreated: Boolean read GetIsValueCreated;
     property Value: T read GetValue;
   end;
-
-
-
-  /// <summary>
-  ///   Helper record to build expressions fluently.
-  ///   Usage: PropExpression('Age') > 18
-  /// </summary>
-  TPropExpression = Dext.Specifications.Types.TPropExpression;
 
   /// <summary>
   ///   Persistence Setup Helper
@@ -236,6 +92,9 @@ type
   end;
 
 const
+  // Cascade Action Aliases (if not already in inc, but safe to keep or remove if duplicate)
+  // Checking aliases inc content previously... they might be there as TCascadeAction.caNoAction
+  // Let's keep them manually if they map enum values directly for convenience.
   caNoAction = Dext.Entity.Attributes.TCascadeAction.caNoAction;
   caCascade = Dext.Entity.Attributes.TCascadeAction.caCascade;
   caSetNull = Dext.Entity.Attributes.TCascadeAction.caSetNull;

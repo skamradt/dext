@@ -85,14 +85,12 @@ contains
   Dext.Swagger.Middleware in 'Web\Dext.Swagger.Middleware.pas',
   Dext.Web.ApplicationBuilder.Extensions in 'Web\Hosting\Dext.Web.ApplicationBuilder.Extensions.pas',
   Dext.Web.WebApplication in 'Web\Hosting\Dext.Web.WebApplication.pas',
-  Dext.Core.Span in 'Core\Base\Dext.Core.Span.pas',
-  Dext.Json.Utf8.Serializer in 'Core\Json\Dext.Json.Utf8.Serializer.pas',
-  Dext.Json.Utf8 in 'Core\Json\Dext.Json.Utf8.pas',
   Dext.Web.Indy.Server in 'Web\Dext.Web.Indy.Server.pas',
   Dext.Web.Indy.SSL.Interfaces in 'Web\Indy\Dext.Web.Indy.SSL.Interfaces.pas',
   Dext.Web.Indy.SSL.OpenSSL in 'Web\Indy\Dext.Web.Indy.SSL.OpenSSL.pas',
   Dext.Web.Indy.SSL.Taurus in 'Web\Indy\Dext.Web.Indy.SSL.Taurus.pas',
   Dext.Web.MultiTenancy in 'Web\Dext.Web.MultiTenancy.pas',
-  Dext.Web.Middleware.StartupLock in 'Web\Middleware\Dext.Web.Middleware.StartupLock.pas';
+  Dext.Web.Middleware.StartupLock in 'Web\Middleware\Dext.Web.Middleware.StartupLock.pas',
+  Dext.Web.Middleware.Compression in 'Web\Middleware\Dext.Web.Middleware.Compression.pas';
 
 end.

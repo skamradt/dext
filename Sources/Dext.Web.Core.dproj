@@ -167,15 +167,13 @@
         <DCCReference Include="Web\Dext.Swagger.Middleware.pas"/>
         <DCCReference Include="Web\Hosting\Dext.Web.ApplicationBuilder.Extensions.pas"/>
         <DCCReference Include="Web\Hosting\Dext.Web.WebApplication.pas"/>
-        <DCCReference Include="Core\Base\Dext.Core.Span.pas"/>
-        <DCCReference Include="Core\Json\Dext.Json.Utf8.Serializer.pas"/>
-        <DCCReference Include="Core\Json\Dext.Json.Utf8.pas"/>
         <DCCReference Include="Web\Dext.Web.Indy.Server.pas"/>
         <DCCReference Include="Web\Indy\Dext.Web.Indy.SSL.Interfaces.pas"/>
         <DCCReference Include="Web\Indy\Dext.Web.Indy.SSL.OpenSSL.pas"/>
         <DCCReference Include="Web\Indy\Dext.Web.Indy.SSL.Taurus.pas"/>
         <DCCReference Include="Web\Dext.Web.MultiTenancy.pas"/>
         <DCCReference Include="Web\Middleware\Dext.Web.Middleware.StartupLock.pas"/>
+        <DCCReference Include="Web\Middleware\Dext.Web.Middleware.Compression.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
