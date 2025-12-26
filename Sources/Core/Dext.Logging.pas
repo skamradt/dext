@@ -123,6 +123,7 @@ type
 
   /// <summary>
   ///   Default implementation of ILoggerFactory.
+  ///   Uses TInterfacedObject for ARC-based lifecycle management.
   /// </summary>
   TLoggerFactory = class(TInterfacedObject, ILoggerFactory)
   private

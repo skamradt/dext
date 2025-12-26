@@ -81,7 +81,11 @@ type
 
     function AddSingleton(const AServiceType: TServiceType;
                          const AImplementationClass: TClass;
-                         const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
+                         const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection; overload;
+    
+    // Instance registration - register pre-created singleton instance
+    function AddSingleton(const AServiceType: TServiceType;
+                         AInstance: TObject): IServiceCollection; overload;
 
     function AddTransient(const AServiceType: TServiceType;
                           const AImplementationClass: TClass;
@@ -136,7 +140,8 @@ type
 
 implementation
 
-{ TServiceType }
+uses
+  Dext.DI.Core;
 
 { TServiceType }
 
@@ -335,7 +340,9 @@ end;
 
 class function TDextDIFactory.CreateServiceCollection: IServiceCollection;
 begin
-  Result := nil;
+  // Create and return a new TDextServiceCollection instance
+  // This was returning nil, causing all the memory leak issues!
+  Result := TDextServiceCollection.Create;
 end;
 
 end.

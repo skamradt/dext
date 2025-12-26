@@ -181,6 +181,7 @@ Features moved to v1.1 or v2.0:
 - **Telemetry & Observability**: Support for OpenTelemetry (Tracing/Metrics) and native dashboards.
 - **Testing Ecosystem**: `Dext.Mock` framework and Fluent Assertions (`Expect(X).Should.Be(Y)`).
 - **Advanced Resilience**: Retry, Circuit Breaker, and Timeout patterns in Async API.
+- **CancellationToken Timeout**: Automatic timeout support in `CancellationToken` for async operations (`CancellationToken.WithTimeout(Duration)`).
 - **Immutable Data Structures**: `ImmutableList<T>`, `ImmutableDictionary<K,V>`, and `Nullable<T>` (ReadOnly) for thread-safe concurrency (Scalability).
 - **Kestrel NativeAOT**: High-performance driver via bridge with .NET (Experimental).
 - **View Engine**: Integration with **WebStencils** (new Delphi engine) or creation of Razor-like syntax.

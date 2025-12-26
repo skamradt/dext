@@ -50,6 +50,7 @@ type
 implementation
 
 uses
+  System.TypInfo,
   Dext.DI.Extensions,
   Dext.Logging.Console;
 
@@ -138,40 +139,33 @@ begin
     AConfigure(LBuilderIntf);
     
   LProvidersList := LBuilderObj.ExtractProviders;
-  LProvidersArray := LProvidersList.ToArray; // Copy to array
-  LProvidersList.Free; // Free list immediately - array holds references
+  LProvidersArray := LProvidersList.ToArray;
+  LProvidersList.Free;
   LMinLevel := LBuilderObj.GetMinLevel;
   
-  // Register TLoggerFactory (Class) - Holds the configuration and providers
-  AServices.AddSingleton(TServiceType.FromClass(TypeInfo(TLoggerFactory)), nil,
-    function(Provider: IServiceProvider): TObject
-    var
-      Factory: TLoggerFactory;
-      P: ILoggerProvider;
-    begin
-      Factory := TLoggerFactory.Create;
-      Factory.SetMinimumLevel(LMinLevel);
-      
-      for P in LProvidersArray do // Use array instead of list
-        Factory.AddProvider(P);
-      
-      Result := Factory;
-    end);
-
-  // Register ILoggerFactory (Interface) - Delegates to TLoggerFactory
-  AServices.AddSingleton(TServiceType.FromInterface(ILoggerFactory), nil,
-    function(Provider: IServiceProvider): TObject
-    begin
-      Result := TServiceProviderExtensions.GetRequiredServiceObject<TLoggerFactory>(Provider);
-    end);
+  // Create TLoggerFactory instance
+  var Factory := TLoggerFactory.Create;
+  Factory.SetMinimumLevel(LMinLevel);
+  for var P in LProvidersArray do
+    Factory.AddProvider(P);
+  
+  // Register using instance registration (no closure capture!)
+  AServices.AddSingleton(
+    TServiceType.FromInterface(ILoggerFactory),
+    Factory
+  );
     
-  // Register generic ILogger (default) - Uses CreateLoggerInstance to get TObject
+  // Register generic ILogger (default) - Resolve from ILoggerFactory
   AServices.AddSingleton(TServiceType.FromInterface(ILogger), nil,
     function(Provider: IServiceProvider): TObject
     var
+      FactoryObj: TObject;
       Factory: TLoggerFactory;
     begin
-      Factory := TServiceProviderExtensions.GetRequiredServiceObject<TLoggerFactory>(Provider);
+      // Get factory as object (will be TLoggerFactory instance)
+      FactoryObj := Provider.GetService(TServiceType.FromInterface(ILoggerFactory));
+      Factory := FactoryObj as TLoggerFactory;
+      // Call CreateLoggerInstance which returns TAggregateLogger (TObject)
       Result := Factory.CreateLoggerInstance('App');
     end);
 

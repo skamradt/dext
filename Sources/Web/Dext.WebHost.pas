@@ -151,7 +151,8 @@ begin
     FServicesConfig(Host.Services.Unwrap);
 
   // Register services collected in the builder
-  Host.Services.AddRange(FServices); 
+  // Use Unwrap to get IServiceCollection directly (avoid record copy issues)
+  Host.Services.Unwrap.AddRange(FServices.Unwrap); 
 
   // Manual copy for now as AddRange might not exist
   // Ideally, FServices should be passed to Host constructor or Builder

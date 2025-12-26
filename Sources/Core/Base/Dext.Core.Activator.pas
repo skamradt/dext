@@ -59,7 +59,7 @@ implementation
 
 { TActivator }
 
-// 1. Manual Instantiation
+// 1. Manual Instantiation with Hybrid DI Support
 class function TActivator.CreateInstance(AClass: TClass; const AArgs: array of TValue): TObject;
 var
   Context: TRttiContext;
@@ -82,48 +82,67 @@ begin
       if Method.IsConstructor then
       begin
         Params := Method.GetParameters;
-        if Length(Params) = Length(AArgs) then
+        
+        // Hybrid Injection: Constructor must have AT LEAST as many params as provided
+        if Length(Params) < Length(AArgs) then
+          Continue; // Not enough parameters
+        
+        Matched := True;
+        SetLength(Args, Length(Params));
+        
+        // Step 1: Match explicit parameters (first N)
+        for I := 0 to High(AArgs) do
         begin
-          Matched := True;
-          for I := 0 to High(Params) do
+          // Skip check if argument is empty/nil (TValue.Empty)
+          if AArgs[I].IsEmpty then Continue;
+
+          // Check for type compatibility
+          if AArgs[I].Kind <> Params[I].ParamType.TypeKind then
           begin
-            // Skip check if argument is empty/nil (TValue.Empty)
-            if AArgs[I].IsEmpty then Continue;
-
-            // Check for type compatibility
-            if AArgs[I].Kind <> Params[I].ParamType.TypeKind then
+            // Allow Interface <-> Interface
+            if (AArgs[I].Kind = tkInterface) and (Params[I].ParamType.TypeKind = tkInterface) then
             begin
-              // Allow Interface <-> Interface
-              if (AArgs[I].Kind = tkInterface) and (Params[I].ParamType.TypeKind = tkInterface) then
-                Continue;
-              
-              // Allow Class <-> Class
-              if (AArgs[I].Kind = tkClass) and (Params[I].ParamType.TypeKind = tkClass) then
-                Continue;
-
-              Matched := False;
-              Break;
+              Args[I] := AArgs[I];
+              Continue;
             end;
             
-            // For records and other exact types, check TypeInfo
-            if (AArgs[I].Kind = tkRecord) and (AArgs[I].TypeInfo <> Params[I].ParamType.Handle) then
+            // Allow Class <-> Class
+            if (AArgs[I].Kind = tkClass) and (Params[I].ParamType.TypeKind = tkClass) then
             begin
-               Matched := False;
-               Break;
-            end;
-          end;
-
-          if Matched then
-          begin
-            SetLength(Args, Length(AArgs));
-            for I := 0 to High(AArgs) do
               Args[I] := AArgs[I];
+              Continue;
+            end;
 
-            // Invoke constructor on the class reference
-            Result := Method.Invoke(AClass, Args).AsObject;
-            Exit;
+            Matched := False;
+            Break;
           end;
+          
+          // For records and other exact types, check TypeInfo
+          if (AArgs[I].Kind = tkRecord) and (AArgs[I].TypeInfo <> Params[I].ParamType.Handle) then
+          begin
+             Matched := False;
+             Break;
+          end;
+          
+          Args[I] := AArgs[I];
         end;
+
+        if not Matched then
+          Continue; // Type mismatch in explicit params
+        
+        // Step 2: If constructor has MORE parameters, try to resolve from DI
+        // (This is the Hybrid Injection part - only happens if we have a Provider)
+        // For now, if no provider is available, we can't resolve extra params
+        // This will be handled by the overload that accepts AProvider
+        
+        if Length(Params) = Length(AArgs) then
+        begin
+          // Exact match - use this constructor
+          Result := Method.Invoke(AClass, Args).AsObject;
+          Exit;
+        end;
+        // If Length(Params) > Length(AArgs), we need DI to resolve remaining
+        // Fall through to try next constructor
       end;
     end;
 

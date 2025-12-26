@@ -123,7 +123,7 @@ begin
       begin
         WriteLn('Registering services...');
 
-        TServiceCollectionExtensions.AddSingleton<ILoggerFactory, TLoggerFactory>(Services);
+        // ILoggerFactory is registered by AddLogging below with instance registration
         TServiceCollectionExtensions.AddSingleton<IUserService, TUserService>(Services);
         TServiceCollectionExtensions.AddScoped<IRequestContext, TRequestContext>(Services);
 

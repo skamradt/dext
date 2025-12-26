@@ -45,6 +45,7 @@ type
     ImplementationClass: TClass;
     Lifetime: TServiceLifetime;
     Factory: TFunc<IServiceProvider, TObject>;
+    Instance: TObject;  // Pre-created instance for instance registration
     /// <summary>
     ///   Indicates if this service was registered as an interface type.
     ///   Interface services are managed by ARC (TInterfacedObject).
@@ -114,7 +115,10 @@ type
 
     function AddSingleton(const AServiceType: TServiceType;
                          const AImplementationClass: TClass;
-                         const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
+                         const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection; overload;
+    
+    function AddSingleton(const AServiceType: TServiceType;
+                         AInstance: TObject): IServiceCollection; overload;
 
     function AddTransient(const AServiceType: TServiceType;
                           const AImplementationClass: TClass;
@@ -146,6 +150,7 @@ begin
   ImplementationClass := AImplementationClass;
   Lifetime := ALifetime;
   Factory := AFactory;
+  Instance := nil;  // Initialize as nil (will be set for instance registration)
   // Determine ownership model based on how the service was registered
   IsInterfaceService := AServiceType.IsInterface;
 end;
@@ -160,6 +165,7 @@ function TServiceDescriptor.Clone: TServiceDescriptor;
 begin
   Result := TServiceDescriptor.Create(ServiceType, ImplementationClass, Lifetime, Factory);
   Result.IsInterfaceService := IsInterfaceService;
+  Result.Instance := Instance;  // Copy instance reference (for instance registration)
 end;
 
 { TDextServiceCollection }
@@ -184,6 +190,19 @@ var
 begin
   Descriptor := TServiceDescriptor.Create(
     AServiceType, AImplementationClass, TServiceLifetime.Singleton, AFactory);
+  FDescriptors.Add(Descriptor);
+  Result := Self;
+end;
+
+// Instance registration overload - register pre-created singleton
+function TDextServiceCollection.AddSingleton(const AServiceType: TServiceType;
+  AInstance: TObject): IServiceCollection;
+var
+  Descriptor: TServiceDescriptor;
+begin
+  Descriptor := TServiceDescriptor.Create(
+    AServiceType, nil, TServiceLifetime.Singleton, nil);
+  Descriptor.Instance := AInstance;  // Set the pre-created instance
   FDescriptors.Add(Descriptor);
   Result := Self;
 end;
@@ -290,17 +309,13 @@ begin
   if FIsRootProvider then
   begin
     // 1. Free class-based singletons (non-TInterfacedObject)
-    //    TInterfacedObject instances will be freed by ARC when FSingletonInterfaces is cleared
+    //    TInterfacedObject instances are in FSingletonInterfaces and managed by ARC
     if Assigned(FSingletons) then
     begin
       for Key in FSingletons.Keys do
       begin
         if FSingletons.TryGetValue(Key, SingletonObj) then
-        begin
-          // Only free if NOT a TInterfacedObject (ARC will handle those)
-          if not (SingletonObj is TInterfacedObject) then
-            SingletonObj.Free;
-        end;
+          SingletonObj.Free;  // Safe to free - not TInterfacedObject
       end;
       FSingletons.Free;
     end;
@@ -365,7 +380,10 @@ end;
 
 function TDextServiceProvider.CreateInstance(ADescriptor: TServiceDescriptor): TObject;
 begin
-  if Assigned(ADescriptor.Factory) then
+  // Check if descriptor has pre-created instance (instance registration)
+  if Assigned(ADescriptor.Instance) then
+    Result := ADescriptor.Instance
+  else if Assigned(ADescriptor.Factory) then
     Result := ADescriptor.Factory(Self)
   else
     Result := TActivator.CreateInstance(Self, ADescriptor.ImplementationClass);
@@ -376,6 +394,7 @@ var
   Descriptor: TServiceDescriptor;
   Key: string;
   Instance: TObject;
+  Intf: IInterface;
 begin
   Descriptor := FindDescriptor(AServiceType);
   if not Assigned(Descriptor) then
@@ -390,12 +409,24 @@ begin
       begin
         if FIsRootProvider then
         begin
-          if not FSingletons.TryGetValue(Key, Instance) then
+          // Check both dictionaries for existing instance
+          if FSingletonInterfaces.TryGetValue(Key, Intf) then
+            Result := TObject(Intf)
+          else if FSingletons.TryGetValue(Key, Instance) then
+            Result := Instance
+          else
           begin
+            // Create new instance
             Instance := CreateInstance(Descriptor);
-            FSingletons.Add(Key, Instance);
+            
+            // Store in appropriate dictionary based on type
+            if Instance is TInterfacedObject then
+              FSingletonInterfaces.Add(Key, Instance as TInterfacedObject)
+            else
+              FSingletons.Add(Key, Instance);
+            
+            Result := Instance;
           end;
-          Result := Instance;
         end
         else
           Result := FParentProvider.GetService(AServiceType);

@@ -153,10 +153,10 @@ begin
     end
   );
   
-  // ? Create a temporary provider for ApplicationBuilder
-  // The real provider will be built in Run() after all services are registered
-  FServiceProvider := FServices.BuildServiceProvider;
-  FAppBuilder := TApplicationBuilder.Create(FServiceProvider);
+  // Don't build ServiceProvider yet - will be built lazily after all services registered
+  // This ensures services added via WebHostBuilder.AddRange are included
+  FServiceProvider := nil;
+  FAppBuilder := nil; // Will be created lazily when GetApplicationBuilder is called
   ConfigBuilder := nil;
 end;
 
@@ -169,6 +169,13 @@ end;
 
 function TDextApplication.GetApplicationBuilder: IApplicationBuilder;
 begin
+  // Lazy initialization: build ServiceProvider and ApplicationBuilder if not already done
+  if FAppBuilder = nil then
+  begin
+    if FServiceProvider = nil then
+      FServiceProvider := FServices.BuildServiceProvider;
+    FAppBuilder := TApplicationBuilder.Create(FServiceProvider);
+  end;
   Result := FAppBuilder;
 end;
 
@@ -229,8 +236,11 @@ var
   StateControl: IAppStateControl;
 begin
   FDefaultPort := Port;
-  // ServiceProvider already created in Create() with access to FServices
-  // No need to rebuild - singletons are preserved
+  
+  // Build ServiceProvider now if not already built (lazy initialization)
+  // This ensures all services registered via AddRange are included
+  if FServiceProvider = nil then
+    FServiceProvider := FServices.BuildServiceProvider;
   
   // Get Lifetime & State Service
   var LifetimeIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));
