@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils,
   System.JSON,
-  REST.Json,
+  JsonDataObjects,
   Dext,
   Dext.Web,
   DextStore.Models,

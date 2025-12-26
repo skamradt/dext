@@ -64,6 +64,19 @@ type
   end;
 
   /// <summary>
+  ///   Specifies the backing field to be used for a property during hydration.
+  ///   This avoids triggering property setters during object loading.
+  /// </summary>
+  FieldAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create; overload;
+    constructor Create(const AName: string); overload;
+    property Name: string read FName;
+  end;
+
+  /// <summary>
   ///   Marks a property as JSON/JSONB column (PostgreSQL).
   /// </summary>
   JsonColumnAttribute = class(TCustomAttribute)
@@ -181,6 +194,18 @@ end;
 { ColumnAttribute }
 
 constructor ColumnAttribute.Create(const AName: string);
+begin
+  FName := AName;
+end;
+
+{ FieldAttribute }
+
+constructor FieldAttribute.Create;
+begin
+  FName := '';
+end;
+
+constructor FieldAttribute.Create(const AName: string);
 begin
   FName := AName;
 end;

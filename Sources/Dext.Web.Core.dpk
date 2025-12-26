@@ -68,7 +68,6 @@ contains
   Dext.WebHost in 'Web\Dext.WebHost.pas',
   Dext.Auth.Identity in 'Web\Dext.Auth.Identity.pas',
   Dext.Auth.Attributes in 'Web\Dext.Auth.Attributes.pas',
-  Dext.Auth.Middleware in 'Web\Dext.Auth.Middleware.pas',
   Dext.Auth.JWT in 'Web\Dext.Auth.JWT.pas',
   Dext.DI.Middleware in 'Web\Dext.DI.Middleware.pas',
   Dext.HealthChecks in 'Web\Dext.HealthChecks.pas',
@@ -91,6 +90,7 @@ contains
   Dext.Web.Indy.SSL.Taurus in 'Web\Indy\Dext.Web.Indy.SSL.Taurus.pas',
   Dext.Web.MultiTenancy in 'Web\Dext.Web.MultiTenancy.pas',
   Dext.Web.Middleware.StartupLock in 'Web\Middleware\Dext.Web.Middleware.StartupLock.pas',
-  Dext.Web.Middleware.Compression in 'Web\Middleware\Dext.Web.Middleware.Compression.pas';
+  Dext.Web.Middleware.Compression in 'Web\Middleware\Dext.Web.Middleware.Compression.pas',
+  Dext.Auth.Middleware in 'Web\Dext.Auth.Middleware.pas';
 
 end.

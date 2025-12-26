@@ -44,12 +44,13 @@ type
   /// <summary>
   ///   Base class for all Dext JSON attributes.
   /// </summary>
-  DextAttribute = class abstract(TCustomAttribute);
+  DextJsonAttribute = class abstract(TCustomAttribute)
+  end;
 
   /// <summary>
   ///   Specifies a custom name for a field in the JSON output.
   /// </summary>
-  JsonNameAttribute = class(DextAttribute)
+  JsonNameAttribute = class(DextJsonAttribute)
   private
     FName: string;
   public
@@ -66,12 +67,12 @@ type
   /// <summary>
   ///   Indicates that a field should be ignored during serialization and deserialization.
   /// </summary>
-  JsonIgnoreAttribute = class(DextAttribute);
+  JsonIgnoreAttribute = class(DextJsonAttribute);
 
   /// <summary>
   ///   Specifies a custom format string for date/time fields.
   /// </summary>
-  JsonFormatAttribute = class(DextAttribute)
+  JsonFormatAttribute = class(DextJsonAttribute)
   private
     FFormat: string;
   public
@@ -88,17 +89,17 @@ type
   /// <summary>
   ///   Forces a numeric field to be serialized as a string.
   /// </summary>
-  JsonStringAttribute = class(DextAttribute);
-  
+  JsonStringAttribute = class(DextJsonAttribute);
+
   /// <summary>
   ///   Forces a string field to be serialized as a number (if possible).
   /// </summary>
-  JsonNumberAttribute = class(DextAttribute);
-  
+  JsonNumberAttribute = class(DextJsonAttribute);
+
   /// <summary>
   ///   Forces a field to be serialized as a boolean.
   /// </summary>
-  JsonBooleanAttribute = class(DextAttribute);
+  JsonBooleanAttribute = class(DextJsonAttribute);
 
   /// <summary>
   ///   Defines the casing style for JSON property names.

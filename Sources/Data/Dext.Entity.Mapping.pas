@@ -61,6 +61,8 @@ type
   IPropertyBuilder<T: class> = interface
     ['{50000000-0000-0000-0000-000000000002}']
     function HasColumnName(const AName: string): IPropertyBuilder<T>;
+    function HasFieldName(const AName: string): IPropertyBuilder<T>;
+    function UseField: IPropertyBuilder<T>;
     function IsRequired(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsAutoInc(AValue: Boolean = True): IPropertyBuilder<T>;
     function HasMaxLength(ALength: Integer): IPropertyBuilder<T>;
@@ -82,6 +84,7 @@ type
   public
     PropertyName: string;
     ColumnName: string;
+    FieldName: string;
     ForeignKeyColumn: string; // Added for FK support
     IsPK: Boolean;
     IsAutoInc: Boolean;
@@ -193,6 +196,8 @@ type
     function IsRequired(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsAutoInc(AValue: Boolean = True): IPropertyBuilder<T>;
     function HasMaxLength(ALength: Integer): IPropertyBuilder<T>;
+    function HasFieldName(const AName: string): IPropertyBuilder<T>;
+    function UseField: IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -275,11 +280,18 @@ begin
     for Attr in Prop.GetAttributes do
     begin
        if (Attr is ColumnAttribute) or (Attr is PKAttribute) or (Attr is AutoIncAttribute) or 
-          (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) then
+          (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) then
        begin
          if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
          
          if Attr is ColumnAttribute then PropMap.ColumnName := ColumnAttribute(Attr).Name;
+         if Attr is FieldAttribute then 
+         begin
+           if FieldAttribute(Attr).Name <> '' then
+             PropMap.FieldName := FieldAttribute(Attr).Name
+           else
+             PropMap.FieldName := 'F' + Prop.Name;
+         end;
          if Attr is PKAttribute then 
          begin
            PropMap.IsPK := True;
@@ -521,6 +533,18 @@ end;
 function TPropertyBuilder<T>.HasColumnName(const AName: string): IPropertyBuilder<T>;
 begin
   FPropMap.ColumnName := AName;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasFieldName(const AName: string): IPropertyBuilder<T>;
+begin
+  FPropMap.FieldName := AName;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.UseField: IPropertyBuilder<T>;
+begin
+  FPropMap.FieldName := 'F' + FPropMap.PropertyName;
   Result := Self;
 end;
 

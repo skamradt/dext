@@ -150,7 +150,6 @@
         <DCCReference Include="Web\Dext.WebHost.pas"/>
         <DCCReference Include="Web\Dext.Auth.Identity.pas"/>
         <DCCReference Include="Web\Dext.Auth.Attributes.pas"/>
-        <DCCReference Include="Web\Dext.Auth.Middleware.pas"/>
         <DCCReference Include="Web\Dext.Auth.JWT.pas"/>
         <DCCReference Include="Web\Dext.DI.Middleware.pas"/>
         <DCCReference Include="Web\Dext.HealthChecks.pas"/>
@@ -174,6 +173,7 @@
         <DCCReference Include="Web\Dext.Web.MultiTenancy.pas"/>
         <DCCReference Include="Web\Middleware\Dext.Web.Middleware.StartupLock.pas"/>
         <DCCReference Include="Web\Middleware\Dext.Web.Middleware.Compression.pas"/>
+        <DCCReference Include="Web\Dext.Auth.Middleware.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

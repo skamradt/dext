@@ -70,7 +70,7 @@ For technical details and granular status of each module, check:
 | **Soft Delete** | ✅ Ready | `[SoftDelete]` attribute |
 | **Optimistic Concurrency** | ✅ Ready | `[Version]` attribute |
 | **FireDAC Phys Driver** | ✅ Ready | Physical driver for transparent integration with FireDAC |
-| **Field Mapping** | 🟡 In Progress | Field-based mapping (in addition to properties) to avoid triggering setters when loading from database |
+| **Field Mapping** | ✅ Ready | Field-based mapping (in addition to properties) to avoid triggering setters when loading from database |
 
 
 ### ⚙️ Infrastructure & CLI

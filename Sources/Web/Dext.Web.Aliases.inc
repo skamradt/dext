@@ -16,6 +16,11 @@
   // Dext.Auth.Identity
   IIdentity = Dext.Auth.Identity.IIdentity;
   IClaimsPrincipal = Dext.Auth.Identity.IClaimsPrincipal;
+  TClaimsIdentity = Dext.Auth.Identity.TClaimsIdentity;
+  TClaimsPrincipal = Dext.Auth.Identity.TClaimsPrincipal;
+  TClaimTypes = Dext.Auth.Identity.TClaimTypes;
+  IClaimsBuilder = Dext.Auth.Identity.IClaimsBuilder;
+  TClaimsBuilder = Dext.Auth.Identity.TClaimsBuilder;
 
   // Dext.Auth.Middleware
   TJwtAuthenticationMiddleware = Dext.Auth.Middleware.TJwtAuthenticationMiddleware;
@@ -301,6 +306,11 @@
 
   // Dext.Web.Results
   TResult = Dext.Web.Results.TResult;
+  TOutputFormatterContext = Dext.Web.Results.TOutputFormatterContext;
+  TJsonResult = Dext.Web.Results.TJsonResult;
+  TStatusCodeResult = Dext.Web.Results.TStatusCodeResult;
+  TContentResult = Dext.Web.Results.TContentResult;
+  Results = Dext.Web.Results.Results;
 
   // Dext.Web.Routing
   TRoutePattern = Dext.Web.Routing.TRoutePattern;

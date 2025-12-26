@@ -60,6 +60,7 @@ type
     class function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; overload;
     class function Convert<T>(const AValue: TValue): T; overload;
     class procedure ConvertAndSet(Instance: TObject; Prop: TRttiProperty; const Value: TValue);
+    class procedure ConvertAndSetField(Instance: TObject; Field: TRttiField; const Value: TValue);
   end;
 
   // Base Converter
@@ -319,6 +320,16 @@ begin
   
   Converted := Convert(Value, Prop.PropertyType.Handle);
   Prop.SetValue(Instance, Converted);
+end;
+
+class procedure TValueConverter.ConvertAndSetField(Instance: TObject; Field: TRttiField; const Value: TValue);
+var
+  Converted: TValue;
+begin
+  if Field = nil then Exit;
+  
+  Converted := Convert(Value, Field.FieldType.Handle);
+  Field.SetValue(Instance, Converted);
 end;
 
 { TVariantToIntegerConverter }

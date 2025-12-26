@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -66,6 +66,7 @@ type
     FTableName: string;
     FPKColumns: TList<string>; 
     FProps: TDictionary<string, TRttiProperty>; 
+    FFields: TDictionary<string, TRttiField>; // Added for field mapping support
     FColumns: TDictionary<string, string>;      
     FIdentityMap: TObjectDictionary<string, T>; 
     FMap: TEntityMap;
@@ -200,6 +201,7 @@ begin
   inherited Create;
   FContextPtr := Pointer(AContext);
   FProps := TDictionary<string, TRttiProperty>.Create;
+  FFields := TDictionary<string, TRttiField>.Create; // Added for field mapping
   FColumns := TDictionary<string, string>.Create;
   FPKColumns := TList<string>.Create;
   FRttiContext := TRttiContext.Create;
@@ -214,6 +216,7 @@ begin
   FRttiContext.Free;
   FIdentityMap.Free;
   FProps.Free;
+  FFields.Free; // Free field mapping dictionary
   FColumns.Free;
   FPKColumns.Free;
   inherited;
@@ -227,6 +230,7 @@ var
   Prop: TRttiProperty;
   PropMap: TPropertyMap;
   Typ: TRttiType;
+  Field: TRttiField; // Added for field mapping discovery
 begin
   Typ := FRttiContext.GetType(T);
   FMap := TEntityMap(FContext.GetMapping(TypeInfo(T)));
@@ -289,6 +293,14 @@ begin
     end;
     FProps.Add(ColName.ToLower, Prop);
     FColumns.Add(Prop.Name, ColName);
+    
+    // Check for backing field mapping
+    if (PropMap <> nil) and (PropMap.FieldName <> '') then
+    begin
+      Field := Typ.GetField(PropMap.FieldName);
+      if Field <> nil then
+        FFields.Add(ColName.ToLower, Field);
+    end;
   end;
   if FPKColumns.Count = 0 then
   begin
@@ -411,6 +423,7 @@ var
   ColName: string;
   Val: TValue;
   Prop: TRttiProperty;
+  Field: TRttiField; // Added for field mapping hydration
   PKVal: string;
   PKValues: TDictionary<string, string>;
 begin
@@ -509,7 +522,11 @@ begin
           Val := Converter.FromDatabase(Val, Prop.PropertyType.Handle);
         end;
         
-        TValueConverter.ConvertAndSet(Result, Prop, Val);
+        // Use field mapping if available to avoid triggering setters
+        if FFields.TryGetValue(ColName.ToLower, Field) then
+          TValueConverter.ConvertAndSetField(Result, Field, Val)
+        else
+          TValueConverter.ConvertAndSet(Result, Prop, Val);
       except
         on E: Exception do
           WriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
@@ -1387,19 +1404,19 @@ function TDbSet<T>.Query(const ASpec: ISpecification<T>): TFluentQuery<T>;
 var
   LSelf: IDbSet<T>; 
   LSpec: ISpecification<T>;
+  LFactory: TFunc<TQueryIterator<T>>;
 begin
   LSpec := ASpec;
   LSelf := Self; 
-  Result := TFluentQuery<T>.Create(
-    function: TQueryIterator<T>
+  LFactory := function: TQueryIterator<T>
     begin
       Result := TSpecificationQueryIterator<T>.Create(
         function: IList<T>
         begin
           Result := LSelf.ToList(LSpec);
         end);
-    end,
-    LSpec); // Pass the spec reference to allow mutation via Fluent API
+    end;
+  Result := TFluentQuery<T>.Create(LFactory, LSpec);
 end;
 
 function TDbSet<T>.Query(const AExpression: IExpression): TFluentQuery<T>;
@@ -1468,12 +1485,13 @@ var
   Generator: TSqlGenerator<T>;
   Sql: string;
   Cmd: IDbCommand;
+  LSpec: ISpecification<T>;
 begin
   Generator := CreateGenerator;
   try
-    var Spec: ISpecification<T> := TSpecification<T>.Create(AExpression);
-    ApplyTenantFilter(Spec);
-    Sql := Generator.GenerateCount(Spec);
+    LSpec := TSpecification<T>.Create(AExpression);
+    ApplyTenantFilter(LSpec);
+    Sql := Generator.GenerateCount(LSpec);
     
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);

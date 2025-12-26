@@ -102,7 +102,7 @@
 
   // Dext.Json
   EDextJsonException = Dext.Json.EDextJsonException;
-  DextAttribute = Dext.Json.DextAttribute;
+  DextJsonAttribute = Dext.Json.DextJsonAttribute;
   JsonNameAttribute = Dext.Json.JsonNameAttribute;
   JsonIgnoreAttribute = Dext.Json.JsonIgnoreAttribute;
   JsonFormatAttribute = Dext.Json.JsonFormatAttribute;
