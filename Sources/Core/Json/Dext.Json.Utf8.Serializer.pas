@@ -32,7 +32,8 @@ uses
   System.Rtti,
   System.TypInfo,
   Dext.Core.Span,
-  Dext.Json.Utf8;
+  Dext.Json.Utf8,
+  Dext.Types.UUID;
 
 type
   EUtf8SerializationException = class(Exception);
@@ -146,18 +147,43 @@ begin
         
     tkRecord:
       begin
-        // Recursive call
-        // We need GetReference to the field in the struct
-        // Field.GetValue returns TValue copy for records usually? 
-        // No, we need to deserialize INTO the field location.
-        // RTTI SetValue overwrites.
-        // We need an address.
-        // Not straightforward with basic RTTI for nested records without copying.
-        // Workaround: Deserialize to temp, then SetValue.
-        
-        // This is complex for a quick implementation without advanced RTTI pointers.
-        // Skipping nested records for this first iteration to keep it compiling/working for flat records.
-         AReader.Skip;
+        // Special handling for TGUID and TUUID
+        if Field.FieldType.Handle = TypeInfo(TGUID) then
+        begin
+          var GuidStr := AReader.GetString;
+          var G: TGUID;
+          
+          if GuidStr.Trim = '' then
+            G := TGUID.Empty
+          else if GuidStr.StartsWith('{') and GuidStr.EndsWith('}') then
+            G := StringToGUID(GuidStr)
+          else if GuidStr.Length = 36 then
+            G := StringToGUID('{' + GuidStr + '}')
+          else
+            G := StringToGUID(GuidStr);
+            
+          Field.SetValue(Instance, TValue.From<TGUID>(G));
+        end
+        else if Field.FieldType.Handle = TypeInfo(TUUID) then
+        begin
+          var GuidStr := AReader.GetString;
+          var U: TUUID;
+          
+          if GuidStr.Trim = '' then
+            U := TUUID.Null
+          else
+            U := TUUID.FromString(GuidStr);  // Handles all formats (with/without braces, hyphens)
+            
+          var Val: TValue;
+          TValue.Make(@U, TypeInfo(TUUID), Val);
+          Field.SetValue(Instance, Val);
+        end
+        else
+        begin
+          // Other nested records - skip for now
+          // TODO: Support nested record deserialization
+          AReader.Skip;
+        end;
       end;
       
     else
