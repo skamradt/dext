@@ -100,7 +100,7 @@ type
     ///   Map a source object to a new destination object.
     /// </summary>
     class function Map<TSource: class; TDest: class>(const Source: TSource): TDest; overload;
-    
+
     /// <summary>
     ///   Map a source object to an existing destination object.
     /// </summary>
@@ -110,6 +110,12 @@ type
     ///   Map a list of source objects to a list of destination objects.
     /// </summary>
     class function MapList<TSource: class; TDest: class>(const SourceList: TEnumerable<TSource>): TList<TDest>;
+
+    /// <summary>
+    ///   Copies values from Source to Destination properties/fields only if the source value is not default.
+    ///   Source (S) can be a record or class. Destination (D) must be a class.
+    /// </summary>
+    class procedure Patch<S: record; D: class>(const ASource: S; var ADestination: D);
   end;
 
 implementation
@@ -293,6 +299,102 @@ begin
   except
     Result.Free;
     raise;
+  end;
+end;
+
+class procedure TMapper.Patch<S, D>(const ASource: S; var ADestination: D);
+var
+  Context: TRttiContext;
+  SrcType, DstType: TRttiType;
+  SrcProp, DstProp: TRttiProperty;
+  SrcField, DstField: TRttiField;
+  SrcValue: TValue;
+  IsDefault: Boolean;
+begin
+  if not Assigned(ADestination) then
+    Exit;
+
+  Context := TRttiContext.Create;
+  try
+    SrcType := Context.GetType(TypeInfo(S));
+    DstType := Context.GetType(ADestination.ClassType);
+
+    // Iterate through Destination Properties
+    for DstProp in DstType.GetProperties do
+    begin
+      if not DstProp.IsWritable then
+        Continue;
+
+      // Find match in Source Properties
+      SrcProp := SrcType.GetProperty(DstProp.Name);
+      if Assigned(SrcProp) then
+      begin
+        SrcValue := SrcProp.GetValue(@ASource);
+      end
+      else
+      begin
+        // If not a property, try Source Fields
+        SrcField := SrcType.GetField(DstProp.Name);
+        if Assigned(SrcField) then
+          SrcValue := SrcField.GetValue(@ASource)
+        else
+          Continue;
+      end;
+
+      // Check for default values (0, '', 0.0, etc.)
+      IsDefault := False;
+      case SrcValue.Kind of
+        tkInteger, tkInt64: IsDefault := SrcValue.AsOrdinal = 0;
+        tkFloat: IsDefault := SrcValue.AsExtended = 0;
+        tkUString, tkString, tkWString, tkLString: IsDefault := SrcValue.AsString = '';
+        tkEnumeration:
+          if SrcValue.TypeInfo = TypeInfo(Boolean) then
+            IsDefault := False // Boolean defaults are usually meaningful (False), so we don't treat them as "empty" for patch unless specific logic required
+          else
+            IsDefault := SrcValue.AsOrdinal = 0;
+      end;
+
+      if not IsDefault then
+        DstProp.SetValue(Pointer(ADestination), SrcValue);
+    end;
+
+    // Also try to match Destination Fields if they are not exposed via properties (less common for entities)
+    for DstField in DstType.GetFields do
+    begin
+      // Skip if already handled by property (many properties wrap fields with same name starting with F)
+      var PropName := DstField.Name;
+      if PropName.StartsWith('F', True) then
+        PropName := PropName.Substring(1);
+
+      if DstType.GetProperty(PropName) <> nil then
+        Continue;
+
+      SrcProp := SrcType.GetProperty(PropName);
+      if Assigned(SrcProp) then
+        SrcValue := SrcProp.GetValue(@ASource)
+      else
+      begin
+        SrcField := SrcType.GetField(PropName);
+        if Assigned(SrcField) then
+          SrcValue := SrcField.GetValue(@ASource)
+        else
+          Continue;
+      end;
+
+      // Repeat default check
+      IsDefault := False;
+      case SrcValue.Kind of
+        tkInteger, tkInt64: IsDefault := SrcValue.AsOrdinal = 0;
+        tkFloat: IsDefault := SrcValue.AsExtended = 0;
+        tkUString, tkString, tkWString, tkLString: IsDefault := SrcValue.AsString = '';
+      end;
+
+      if not IsDefault then
+        DstField.SetValue(Pointer(ADestination), SrcValue);
+    end;
+
+  finally
+    Context.Free;
   end;
 end;
 

@@ -7,7 +7,8 @@ uses
   System.Rtti,
   System.SysUtils,
   System.Generics.Collections,
-  Dext.Mapper;
+  Dext.Mapper,
+  DUnitX.TestFramework;
 
 type
   // Domain Entity
@@ -40,6 +41,16 @@ type
     property FullName: string read FFullName write FFullName;
     property Email: string read FEmail write FEmail;
     property Age: Integer read FAge write FAge;
+  end;
+
+  // DTO - Record
+  TUserDTORec = record
+    Id: Integer;
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    PasswordHash: string;
+    Age: Integer;
   end;
 
 procedure TestBasicMapping;
@@ -154,6 +165,69 @@ begin
   WriteLn;
 end;
 
+procedure TestPatchPartialUpdate;
+var
+  Request: TUserDTORec;
+  User: TUser;
+begin
+  WriteLn('=== Test 4: Patch Partial Update ===');
+
+  User := TUser.Create;
+  try
+    User.Id := 1;
+    User.FirstName := 'User';
+    User.LastName := 'Test';
+    User.Email := 'user@test.com';
+    User.Age := 20;
+
+    // Request with ONLY name changed
+    FillChar(Request, SizeOf(Request), 0);
+    Request.LastName := 'Updated LastName';
+
+    TMapper.Patch<TUserDTORec, TUser>(Request, User);
+
+    Assert.AreEqual('Updated LastName', User.LastName);
+
+    Assert.AreEqual('User', User.FirstName); // Should not change
+    Assert.AreEqual('user@test.com', User.Email); // Should not change
+    Assert.AreEqual(20, User.Age); // Should not change
+
+    WriteLn('✓ Patch Partial Update OK');
+  finally
+    User.Free;
+  end;
+end;
+
+procedure TestPatchPersonRequestToModel;
+var
+  Request: TUserDTORec;
+  User: TUser;
+begin
+  WriteLn('=== Test 5: Patch Person Request To Model ===');
+
+  Request.FirstName := 'User';
+  Request.LastName := 'Test';
+  Request.Email := 'user@test.com';
+  Request.PasswordHash := '123';
+  Request.Age := 20;
+
+  User := TUser.Create;
+  try
+    TMapper.Patch<TUserDTORec, TUser>(Request, User);
+
+    Assert.AreEqual(Request.FirstName, User.FirstName);
+    Assert.AreEqual(Request.LastName, User.LastName);
+    Assert.AreEqual(Request.Email, User.Email);
+    Assert.AreEqual(Request.PasswordHash, User.PasswordHash);
+    Assert.AreEqual(Request.Age, User.Age);
+
+    WriteLn('✓ Patch Person Request To Model OK');
+  finally
+    User.Free;
+  end;
+
+end;
+
 begin
   try
     WriteLn('Dext AutoMapper Tests');
@@ -163,6 +237,8 @@ begin
     TestBasicMapping;
     TestCustomMapping;
     TestListMapping;
+    TestPatchPartialUpdate;
+    TestPatchPersonRequestToModel;
     
     WriteLn('=====================');
     WriteLn('All tests passed!');
