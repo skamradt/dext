@@ -55,6 +55,10 @@ type
     destructor Destroy; override;
     procedure Execute; virtual;
     procedure GenerateArtifacts(const OutputPath: string; const BaseName: string); virtual;
+  private
+    FSkippedUnits: TList<string>;
+    FProcessedUnits: Integer;
+    function IsFieldName(const AName: string): Boolean;
   end;
 
 implementation
@@ -100,6 +104,8 @@ begin
     FExcludedUnits.Add(S);
     
   FParsedUnits := TObjectList<TExtractedUnit>.Create(True);
+  FSkippedUnits := TList<string>.Create;
+  FProcessedUnits := 0;
   FProject := TASTDelphiProject.Create('DextFacade');
   // Optional: Set Target to define pointer sizes etc. if needed for parsing directives
   // FProject.Target := TWINX64_Target; 
@@ -110,9 +116,19 @@ end;
 destructor TFacadeGenerator.Destroy;
 begin
   FParsedUnits.Free;
+  FSkippedUnits.Free;
   FExcludedUnits.Free;
   // FProject is ref counted
   inherited;
+end;
+
+function TFacadeGenerator.IsFieldName(const AName: string): Boolean;
+begin
+  // Filter private field names like FValue, FItems, FData, etc.
+  // Pattern: starts with 'F' followed by uppercase letter
+  Result := (Length(AName) >= 2) and 
+            (AName[1] = 'F') and 
+            (AName[2] in ['A'..'Z']);
 end;
 
 procedure TFacadeGenerator.Execute;
@@ -152,6 +168,7 @@ begin
   if TPath.GetFileName(FileName).StartsWith('.') then Exit;
   
   Writeln('Processing: ' + TPath.GetFileName(FileName));
+  Inc(FProcessedUnits);
 
   try
     SourceCode := TFile.ReadAllText(FileName);
@@ -271,8 +288,21 @@ begin
                
                // Filter out keywords mistakenly parsed as types
                if MatchStr(Decl.Name, ['public', 'protected', 'private', 'published', 'automated', 
-                                     'static', 'virtual', 'override', 'overload', 'reintroduce', 'default']) then
+                                     'static', 'virtual', 'override', 'overload', 'reintroduce', 'default',
+                                     'abstract', 'dynamic', 'message', 'deprecated', 'platform', 'experimental',
+                                     'inline', 'assembler', 'register', 'pascal', 'cdecl', 'stdcall', 'safecall',
+                                     'forward', 'external', 'varargs', 'local', 'near', 'far', 'resident']) then
+               begin
+                  Writeln(DeclInfo + ' -> Skipped (Keyword)');
                   Continue;
+               end;
+               
+               // Filter out field names (FValue, FItems, etc.)
+               if IsFieldName(Decl.Name) then
+               begin
+                  Writeln(DeclInfo + ' -> Skipped (Field)');
+                  Continue;
+               end;
                
                UnitDecl.Types.Add(Decl.Name);
                Writeln(DeclInfo + ' -> Added (Alias)');
@@ -291,7 +321,10 @@ begin
       if (UnitDecl.Types.Count > 0) or (UnitDecl.Consts.Count > 0) then
         FParsedUnits.Add(UnitDecl)
       else
+      begin
+        FSkippedUnits.Add(UnitName + ' (no public types/consts)');
         UnitDecl.Free;
+      end;
 
     finally
       // Parser is managed by LocalProject (interface)
@@ -399,6 +432,34 @@ begin
     
     Writeln('Generated ' + FileNameAliases);
     Writeln('Generated ' + FileNameUses);
+    
+    // Processing Summary
+    Writeln('');
+    Writeln('========================================');
+    Writeln('  PROCESSING SUMMARY');
+    Writeln('========================================');
+    Writeln(Format('  Files Scanned:    %d', [FProcessedUnits]));
+    Writeln(Format('  Units Extracted:  %d', [FParsedUnits.Count]));
+    Writeln(Format('  Units Skipped:    %d', [FSkippedUnits.Count]));
+    
+    var TotalTypes := 0;
+    var TotalConsts := 0;
+    for UnitInfo in FParsedUnits do
+    begin
+      Inc(TotalTypes, UnitInfo.Types.Count);
+      Inc(TotalConsts, UnitInfo.Consts.Count);
+    end;
+    Writeln(Format('  Total Types:      %d', [TotalTypes]));
+    Writeln(Format('  Total Constants:  %d', [TotalConsts]));
+    Writeln('========================================');
+    
+    if FSkippedUnits.Count > 0 then
+    begin
+      Writeln('');
+      Writeln('Skipped Units:');
+      for var SkippedUnit in FSkippedUnits do
+        Writeln('  - ' + SkippedUnit);
+    end;
     
   finally
     AliasesContent.Free;
