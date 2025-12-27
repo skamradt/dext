@@ -83,7 +83,7 @@ For technical details and granular status of each module, check:
 | **Binary JSON Parser** | ✅ Ready | High-performance binary JSON parser |
 | **AutoMapper** (`TMapper`) | ✅ Ready | DTO ↔ Entity mapping with RTTI, custom member mapping and collections |
 | **Custom Constructors (DI)** | ✅ Ready | `[ServiceConstructor]` attribute to specify which constructor to use in DI |
-| **TypeInfo Cache** | 🟡 In Progress | RTTI metadata cache for performance optimization |
+| **TypeInfo Cache** | ✅ Ready | Cache RTTI metadata for performance optimization |
 
 ### 🔄 Hosting & Lifecycle
 | Feature | Status | Notes |

@@ -486,6 +486,8 @@ constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = ni
 begin
   FDialect := ADialect;
   FMap := AMap;
+  if FMap = nil then
+    FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
   FParams := TDictionary<string, TValue>.Create;
   FParamCount := 0;
 end;
@@ -509,15 +511,22 @@ var
   Attr: TCustomAttribute;
 begin
   if (FMap <> nil) and (FMap.TableName <> '') then
-    Exit(FMap.TableName);
-
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
-  Result := Typ.Name;
-  
-  for Attr in Typ.GetAttributes do
-    if Attr is TableAttribute then
-      Result := TableAttribute(Attr).Name;
+    Result := FMap.TableName
+  else
+  begin
+    // Fallback should not happen if map is always created, 
+    // but keep logic just in case or simpler:
+    Result := FMap.TableName;
+    if Result = '' then
+    begin
+       Ctx := TRttiContext.Create;
+       Typ := Ctx.GetType(T);
+       Result := Typ.Name;
+       for Attr in Typ.GetAttributes do
+          if Attr is TableAttribute then
+            Result := TableAttribute(Attr).Name;
+    end;
+  end;
 
   Result := FDialect.QuoteIdentifier(Result);
   

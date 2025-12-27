@@ -72,6 +72,7 @@ A modern ORM focused on productivity and performance.
   - **Standard FireDAC Driver**: Full-featured with TDataSet compatibility
   - **FireDAC Phys Driver**: "Bare metal" access bypassing TDataSet for maximum performance
   - Direct access to FireDAC's physical layer (IFDPhysConnection) for ultra-fast queries
+- **Performance**: High-Speed Metadata Cache (singleton-based) to minimize reflection overhead.
 
 ### ⚙️ Dext.Core (Infrastructure)
 The foundation of the framework, usable in any type of application.

@@ -213,7 +213,10 @@ type
   /// </summary>
   TModelBuilder = class
   private
+    class var FInstance: TModelBuilder;
     FMaps: TObjectDictionary<PTypeInfo, TEntityMap>;
+    class constructor Create;
+    class destructor Destroy;
   public
     constructor Create;
     destructor Destroy; override;
@@ -226,6 +229,8 @@ type
     function GetMaps: TEnumerable<TEntityMap>;
     
     function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
+    
+    class property Instance: TModelBuilder read FInstance;
   end;
 
 implementation
@@ -579,6 +584,16 @@ begin
   inherited;
 end;
 
+class constructor TModelBuilder.Create;
+begin
+  FInstance := TModelBuilder.Create;
+end;
+
+class destructor TModelBuilder.Destroy;
+begin
+  FInstance.Free;
+end;
+
 procedure TModelBuilder.ApplyConfiguration<T>(AConfig: IEntityTypeConfiguration<T>);
 var
   Map: TEntityMap;
@@ -609,7 +624,12 @@ end;
 
 function TModelBuilder.GetMap(AType: PTypeInfo): TEntityMap;
 begin
-  FMaps.TryGetValue(AType, Result);
+  if not FMaps.TryGetValue(AType, Result) then
+  begin
+    // Auto-Discovery: Create and cache the map if it doesn't exist
+    Result := TEntityMap.Create(AType);
+    FMaps.Add(AType, Result);
+  end;
 end;
 
 function TModelBuilder.HasMap(AType: PTypeInfo): Boolean;
