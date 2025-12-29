@@ -12,10 +12,7 @@
         <Projects Include="Orm.EntityDemo\Orm.EntityDemo.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Orm.EntityDemo\Orm.SimpleTest.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="Orm.TestDbSet\Orm.TestDbSet.dproj">
+        <Projects Include="Orm.EntityStyles\Orm.EntityStyles.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Orm.Specification\Orm.SpecificationDemo.dproj">
@@ -95,23 +92,14 @@
     <Target Name="Orm_EntityDemo:Make">
         <MSBuild Projects="Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Orm_SimpleTest">
-        <MSBuild Projects="Orm.EntityDemo\Orm.SimpleTest.dproj"/>
+    <Target Name="Orm_EntityStyles">
+        <MSBuild Projects="Orm.EntityStyles\Orm.EntityStyles.dproj"/>
     </Target>
-    <Target Name="Orm_SimpleTest:Clean">
-        <MSBuild Projects="Orm.EntityDemo\Orm.SimpleTest.dproj" Targets="Clean"/>
+    <Target Name="Orm_EntityStyles:Clean">
+        <MSBuild Projects="Orm.EntityStyles\Orm.EntityStyles.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Orm_SimpleTest:Make">
-        <MSBuild Projects="Orm.EntityDemo\Orm.SimpleTest.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Orm_TestDbSet">
-        <MSBuild Projects="Orm.TestDbSet\Orm.TestDbSet.dproj"/>
-    </Target>
-    <Target Name="Orm_TestDbSet:Clean">
-        <MSBuild Projects="Orm.TestDbSet\Orm.TestDbSet.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Orm_TestDbSet:Make">
-        <MSBuild Projects="Orm.TestDbSet\Orm.TestDbSet.dproj" Targets="Make"/>
+    <Target Name="Orm_EntityStyles:Make">
+        <MSBuild Projects="Orm.EntityStyles\Orm.EntityStyles.dproj" Targets="Make"/>
     </Target>
     <Target Name="Orm_SpecificationDemo">
         <MSBuild Projects="Orm.Specification\Orm.SpecificationDemo.dproj"/>
@@ -240,13 +228,13 @@
         <MSBuild Projects="..\Tests\Core\TestJsonUUID.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Starter_Admin;Core_TestConfig;Orm_EntityDemo;Orm_SimpleTest;Orm_TestDbSet;Orm_SpecificationDemo;Web_ControllerExample;Web_CachingDemo;Web_DextStore;Web_SwaggerExample;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_TaskFlowAPI;Web_FrameworkTests;TestHash;WebUUIDExample;WebTUUIDBindingExample;TestJsonUUID"/>
+        <CallTarget Targets="Dext_Starter_Admin;Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Web_ControllerExample;Web_CachingDemo;Web_DextStore;Web_SwaggerExample;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_TaskFlowAPI;Web_FrameworkTests;TestHash;WebUUIDExample;WebTUUIDBindingExample;TestJsonUUID"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Starter_Admin:Clean;Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_SimpleTest:Clean;Orm_TestDbSet:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_CachingDemo:Clean;Web_DextStore:Clean;Web_SwaggerExample:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_TaskFlowAPI:Clean;Web_FrameworkTests:Clean;TestHash:Clean;WebUUIDExample:Clean;WebTUUIDBindingExample:Clean;TestJsonUUID:Clean"/>
+        <CallTarget Targets="Dext_Starter_Admin:Clean;Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_CachingDemo:Clean;Web_DextStore:Clean;Web_SwaggerExample:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_TaskFlowAPI:Clean;Web_FrameworkTests:Clean;TestHash:Clean;WebUUIDExample:Clean;WebTUUIDBindingExample:Clean;TestJsonUUID:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Starter_Admin:Make;Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_SimpleTest:Make;Orm_TestDbSet:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_CachingDemo:Make;Web_DextStore:Make;Web_SwaggerExample:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_TaskFlowAPI:Make;Web_FrameworkTests:Make;TestHash:Make;WebUUIDExample:Make;WebTUUIDBindingExample:Make;TestJsonUUID:Make"/>
+        <CallTarget Targets="Dext_Starter_Admin:Make;Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_CachingDemo:Make;Web_DextStore:Make;Web_SwaggerExample:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_TaskFlowAPI:Make;Web_FrameworkTests:Make;TestHash:Make;WebUUIDExample:Make;WebTUUIDBindingExample:Make;TestJsonUUID:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -384,7 +384,7 @@ begin
     if not FProps.TryGetValue(FPKColumns[0].ToLower, Prop) then
       raise Exception.Create('Primary Key property not found: ' + FPKColumns[0]);
     Val := Prop.GetValue(Pointer(AEntity));
-    Result := Val.ToString;
+    Result := GetSmartValue(Val, Prop.PropertyType.Name);
   end
   else
   begin
@@ -396,7 +396,7 @@ begin
         if not FProps.TryGetValue(FPKColumns[i].ToLower, Prop) then
           raise Exception.Create('Primary Key property not found: ' + FPKColumns[i]);
         Val := Prop.GetValue(Pointer(AEntity));
-        SB.Append(Val.ToString);
+        SB.Append(GetSmartValue(Val, Prop.PropertyType.Name));
       end;
       Result := SB.ToString;
     finally

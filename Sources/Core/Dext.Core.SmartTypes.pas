@@ -172,6 +172,13 @@ type
   /// </summary>
   TQueryPredicate<T> = reference to function(Arg: T): BooleanExpression;
 
+/// <summary>
+///   Extracts the inner value from a Smart Type (Prop<T>) record.
+///   If the value is not a Smart Type, returns the original TValue.ToString.
+///   Use this for identity map keys and other scenarios requiring raw values.
+/// </summary>
+function GetSmartValue(const AValue: TValue; const ATypeName: string): string;
+
 implementation
 
 { TPropInfo }
@@ -184,6 +191,37 @@ end;
 function TPropInfo.GetColumnName: string;
 begin
   Result := FColumnName;
+end;
+
+{ GetSmartValue }
+
+function GetSmartValue(const AValue: TValue; const ATypeName: string): string;
+var
+  Ctx: TRttiContext;
+  RecType: TRttiRecordType;
+  ValueField: TRttiField;
+  InnerVal: TValue;
+begin
+  // Check if it's a record type that might be Prop<T>
+  if (AValue.Kind = tkRecord) and ATypeName.StartsWith('Prop<') then
+  begin
+    // It's a Smart Type - extract FValue field
+    Ctx := TRttiContext.Create;
+    try
+      RecType := Ctx.GetType(AValue.TypeInfo).AsRecord;
+      ValueField := RecType.GetField('FValue');
+      if ValueField <> nil then
+      begin
+        InnerVal := ValueField.GetValue(AValue.GetReferenceToRawData);
+        Result := InnerVal.ToString;
+        Exit;
+      end;
+    finally
+      Ctx.Free;
+    end;
+  end;
+  // Default: use TValue.ToString
+  Result := AValue.ToString;
 end;
 
 { BooleanExpression }
