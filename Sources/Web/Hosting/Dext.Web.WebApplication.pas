@@ -43,7 +43,6 @@ type
     FScanner: IControllerScanner;
     FConfiguration: IConfiguration;
     FDefaultPort: Integer;
-
   public
     constructor Create;
     destructor Destroy; override;
@@ -191,7 +190,7 @@ end;
 
 function TDextApplication.GetBuilder: TDextAppBuilder;
 begin
-  Result := TDextAppBuilder.Create(FAppBuilder);
+  Result := TDextAppBuilder.Create(GetApplicationBuilder);
 end;
 
 function TDextApplication.BuildServices: IServiceProvider;
@@ -199,7 +198,8 @@ begin
   // ? REBUILD ServiceProvider to include all services registered after Create()
   FServiceProvider := nil; // Release old provider
   FServiceProvider := FServices.BuildServiceProvider;
-  FAppBuilder.SetServiceProvider(FServiceProvider);
+  // Ensure AppBuilder is updated or created with the new provider
+  GetApplicationBuilder.SetServiceProvider(FServiceProvider);
   Result := FServiceProvider;
 end;
 
@@ -211,7 +211,7 @@ begin
   // FServiceProvider will be rebuilt in Run() to include all services.
   
   FScanner := TControllerScanner.Create;
-  RouteCount := FScanner.RegisterRoutes(FAppBuilder);
+  RouteCount := FScanner.RegisterRoutes(GetApplicationBuilder);
 
   if RouteCount = 0 then
   begin
@@ -314,7 +314,7 @@ begin
     Lifetime.NotifyStarted;
 
   // Build pipeline
-  RequestHandler := FAppBuilder.Build;
+  RequestHandler := GetApplicationBuilder.Build;
 
   // Create WebHost
   SSLHandler := nil;
@@ -372,7 +372,7 @@ end;
 
 function TDextApplication.UseMiddleware(Middleware: TClass): IWebApplication;
 begin
-  FAppBuilder.UseMiddleware(Middleware);
+  GetApplicationBuilder.UseMiddleware(Middleware);
   Result := Self;
 end;
 
