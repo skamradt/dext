@@ -31,6 +31,9 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
+  {$IFDEF POSIX}
+  Posix.Base,
+  {$ENDIF}
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
@@ -123,7 +126,7 @@ begin
   
   Vars := TStringList.Create;
   try
-    // Capture environment variables
+    // Capture environment variables - Platform specific
     {$IFDEF MSWINDOWS}
     var P: PChar := GetEnvironmentStrings;
     try
@@ -135,6 +138,16 @@ begin
       end;
     finally
       FreeEnvironmentStrings(P);
+    end;
+    {$ENDIF}
+    
+    {$IFDEF POSIX}
+    // Linux/macOS: Use environ global variable
+    var EnvPtr: PPAnsiChar := environ;
+    while EnvPtr^ <> nil do
+    begin
+      Vars.Add(string(AnsiString(EnvPtr^)));
+      Inc(EnvPtr);
     end;
     {$ENDIF}
     

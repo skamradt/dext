@@ -10,25 +10,36 @@ echo Building Dext Framework Packages
 echo ==========================================
 echo.
 
+REM Build configuration
 set BUILD_CONFIG=Debug
 set PLATFORM=Win32
-set OUTPUT_PATH=%~dp0..\Output
 
+REM Output paths matching .dproj configuration: ..\Output\$(Platform)\$(Config)
+set BASE_OUTPUT=%~dp0..\Output
+set OUTPUT_PATH=%BASE_OUTPUT%\%PLATFORM%\%BUILD_CONFIG%
+
+REM Create output directories if they don't exist
+if not exist "%BASE_OUTPUT%" mkdir "%BASE_OUTPUT%"
+if not exist "%BASE_OUTPUT%\%PLATFORM%" mkdir "%BASE_OUTPUT%\%PLATFORM%"
 if not exist "%OUTPUT_PATH%" mkdir "%OUTPUT_PATH%"
+
+echo Output directory: %OUTPUT_PATH%
+echo.
+
 cd "%~dp0..\Sources"
 
 echo Building Dext.Core...
-msbuild "Dext.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_DcpOutput="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.EF.Core...
-msbuild "Dext.EF.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_DcpOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.EF.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Web...
-msbuild "Dext.Web.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_DcpOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Web.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
@@ -48,3 +59,4 @@ echo ==========================================
 if not "%1"=="--no-wait" pause
 cd ..
 exit /b 1
+
