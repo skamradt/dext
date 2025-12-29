@@ -151,8 +151,8 @@ procedure TAppStartup.Configure(const App: IWebApplication);
 begin
   var WebApp := App.GetBuilder;
 
-  // 0. Configure JSON settings globally (case-insensitive for better API compatibility)
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCaseInsensitive);
+  // 0. Configure JSON settings globally (camelCase for JS compatibility, case-insensitive for parsing)
+  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
 
   // 1. Configure Views Path (using Admin.Utils to get correct path)
   Results.SetViewsPath(GetFilePath('wwwroot\views'));
@@ -160,19 +160,21 @@ begin
   // 1. Serve Static Files (from wwwroot)
   WebApp.UseStaticFiles;
 
-  // 2. JWT Authentication Middleware
-  TApplicationBuilderJwtExtensions.UseJwtAuthentication(
-    WebApp,
+  // 2. Exception Handler (Global error handling)
+  WebApp.UseExceptionHandler;
+
+  // 3. JWT Authentication Middleware
+  WebApp.UseJwtAuthentication(
     TJwtOptions.Create('dext-admin-secret-key-change-in-production-2024')
   );
 
-  // 3. Auth Guard Middleware (Custom)
+  // 4. Auth Guard Middleware (Custom)
   WebApp.UseMiddleware(TAdminAuthMiddleware);
 
-  // 4. Generate Swagger Documentation
+  // 5. Generate Swagger Documentation
   TSwaggerExtensions.UseSwagger(WebApp.Unwrap);
 
-  // 5. Map Features
+  // 6. Map Features
   TAuthEndpoints.Map(WebApp);
   TDashboardEndpoints.Map(WebApp);
   TCustomerEndpoints.Map(WebApp);

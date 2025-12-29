@@ -21,9 +21,10 @@ type
 implementation
 
 uses
+  Dext.Json,
   Dext.Web.Interfaces, 
   Dext.Web.HandlerInvoker,
-  Dext.Web.Results, // Added
+  Dext.Web.Results,
   Auth.Dto;
 
 { TAuthEndpoints }
@@ -59,21 +60,35 @@ begin
         // Generate JWT token
         Token := JwtHandler.GenerateToken(Claims);
         
-        // Return JSON with token
-        Result := Results.Json(Format('{"token":"%s","username":"%s","role":"%s","expiresIn":3600}', 
-          [Token, User.Username, User.Role]));
+        // ✅ Return JSON with automatic serialization
+        Result := Results.Json(
+          TDextJson.Serialize<TLoginResponse>(
+            TLoginResponse.Create(Token, User.Username, User.Role, 3600)
+          )
+        );
       end
       else
       begin
-        Result := Results.Json('{"error":"Invalid credentials"}', 401);
+        // ✅ Return error with automatic serialization
+        Result := Results.Json(
+          TDextJson.Serialize<TErrorResponse>(
+            TErrorResponse.Create('Invalid credentials')
+          ), 
+          401
+        );
       end;
     end);
     
-  App.MapPost<IResult>('/auth/logout',
-    function: IResult
+  App.MapPost('/auth/logout',
+    procedure(Context: IHttpContext)
     begin
       // Token removal happens on frontend (localStorage.clear())
-      Result := Results.Json('{"message":"Logged out successfully"}');
+      // ✅ Return JSON with automatic serialization
+      Results.Json(
+        TDextJson.Serialize<TLogoutResponse>(
+          TLogoutResponse.Create('Logged out successfully')
+        )
+      ).Execute(Context);
     end);
 end;
 

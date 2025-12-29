@@ -49,7 +49,9 @@ type
 implementation
 
 uses
-  Dext.DI.Extensions;
+  Dext.DI.Interfaces,
+  Dext.DI.Extensions,
+  Dext.Logging.Console;
 
 { TApplicationBuilderMiddlewareExtensions }
 
@@ -59,9 +61,22 @@ begin
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseHttpLogging(const ABuilder: IApplicationBuilder; const AOptions: THttpLoggingOptions): IApplicationBuilder;
+var
+  Logger: ILogger;
+  Middleware: IMiddleware;
+  ServiceProvider: IServiceProvider;
 begin
-  // Let DI resolve ILogger automatically via Hybrid Activator
-  Result := ABuilder.UseMiddleware(THttpLoggingMiddleware, TValue.From(AOptions));
+  // ✅ Try to resolve ILogger from DI, fallback to console logger
+  Logger := nil;
+  ServiceProvider := ABuilder.GetServiceProvider;
+  if ServiceProvider <> nil then
+    Logger := ServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(ILogger)) as ILogger;
+  
+  if Logger = nil then
+    Logger := TConsoleLogger.Create('HttpLogging');
+  
+  Middleware := THttpLoggingMiddleware.Create(AOptions, Logger);
+  Result := ABuilder.UseMiddleware(Middleware);
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseExceptionHandler(const ABuilder: IApplicationBuilder): IApplicationBuilder;
@@ -70,9 +85,22 @@ begin
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseExceptionHandler(const ABuilder: IApplicationBuilder; const AOptions: TExceptionHandlerOptions): IApplicationBuilder;
+var
+  Logger: ILogger;
+  Middleware: IMiddleware;
+  ServiceProvider: IServiceProvider;
 begin
-  // Let DI resolve ILogger automatically via Hybrid Activator
-  Result := ABuilder.UseMiddleware(TExceptionHandlerMiddleware, TValue.From(AOptions));
+  // ✅ Try to resolve ILogger from DI, fallback to console logger
+  Logger := nil;
+  ServiceProvider := ABuilder.GetServiceProvider;
+  if ServiceProvider <> nil then
+    Logger := ServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(ILogger)) as ILogger;
+  
+  if Logger = nil then
+    Logger := TConsoleLogger.Create('ExceptionHandler');
+  
+  Middleware := TExceptionHandlerMiddleware.Create(AOptions, Logger);
+  Result := ABuilder.UseMiddleware(Middleware);
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseStartupLock(const ABuilder: IApplicationBuilder): IApplicationBuilder;
