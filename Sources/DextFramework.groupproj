@@ -12,6 +12,9 @@
         <Projects Include="Dext.Web.Core.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Examples\DatabaseAsApi\DatabaseAsApi.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -47,14 +50,23 @@
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="Dext.Web.Core.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DatabaseAsApi">
+        <MSBuild Projects="..\Examples\DatabaseAsApi\DatabaseAsApi.dproj"/>
+    </Target>
+    <Target Name="DatabaseAsApi:Clean">
+        <MSBuild Projects="..\Examples\DatabaseAsApi\DatabaseAsApi.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DatabaseAsApi:Make">
+        <MSBuild Projects="..\Examples\DatabaseAsApi\DatabaseAsApi.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;DatabaseAsApi"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;DatabaseAsApi:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;DatabaseAsApi:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

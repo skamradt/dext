@@ -145,6 +145,7 @@ end;
 
 function THandlerInvoker.ResolveArgument<T>: T;
 begin
+  Result := Default(T);
   // 1. Verify if IHttpContext
   if TypeInfo(T) = TypeInfo(IHttpContext) then
     Result := TValue.From<IHttpContext>(FContext).AsType<T>

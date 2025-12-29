@@ -28,6 +28,7 @@ unit Dext.Json;
 interface
 
 uses
+  System.Character,
   System.Generics.Collections,
   System.Rtti,
   System.SysUtils,
@@ -146,6 +147,17 @@ type
     /// <summary>Custom format string.</summary>
     CustomFormat    
   );
+
+  /// <summary>
+  ///   Utilities for JSON manipulation, including casing.
+  /// </summary>
+  TJsonUtils = record
+  public
+    class function ToCamelCase(const S: string): string; static;
+    class function ToPascalCase(const S: string): string; static;
+    class function ToSnakeCase(const S: string): string; static;
+    class function ApplyCaseStyle(const S: string; Style: TDextCaseStyle): string; static;
+  end;
 
   /// <summary>
   ///   Configuration settings for the JSON serializer.
@@ -449,6 +461,62 @@ end;
 function JsonStringToInt(const Value: string): Int64;
 begin
   Result := StrToInt64Def(Value, 0);
+end;
+
+{ TJsonUtils }
+
+class function TJsonUtils.ToCamelCase(const S: string): string;
+begin
+  if S.IsEmpty then Exit('');
+  Result := S;
+  Result[1] := Result[1].ToLower;
+end;
+
+class function TJsonUtils.ToPascalCase(const S: string): string;
+begin
+  if S.Length > 0 then
+    Result := UpperCase(S[1]) + Copy(S, 2, MaxInt)
+  else
+    Result := S;
+end;
+
+class function TJsonUtils.ToSnakeCase(const S: string): string;
+var
+  SB: TStringBuilder;
+  C: Char;
+  i: Integer;
+begin
+  if S.IsEmpty then Exit('');
+  
+  SB := TStringBuilder.Create;
+  try
+    for i := 0 to S.Length - 1 do
+    begin
+      C := S.Chars[i];
+      if C.IsUpper then
+      begin
+        if i > 0 then
+          SB.Append('_');
+        SB.Append(C.ToLower);
+      end
+      else
+        SB.Append(C);
+    end;
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+class function TJsonUtils.ApplyCaseStyle(const S: string; Style: TDextCaseStyle): string;
+begin
+  case Style of
+    TDextCaseStyle.CamelCase: Result := ToCamelCase(S);
+    TDextCaseStyle.PascalCase: Result := ToPascalCase(S);
+    TDextCaseStyle.SnakeCase: Result := ToSnakeCase(S);
+  else
+    Result := S;
+  end;
 end;
 
 { JsonNameAttribute }
@@ -2180,36 +2248,7 @@ end;
 
 function TDextSerializer.ApplyCaseStyle(const AName: string): string;
 begin
-  case FSettings.CaseStyle of
-    TDextCaseStyle.CamelCase:
-      begin
-        if AName.Length > 0 then
-          Result := LowerCase(AName[1]) + Copy(AName, 2, MaxInt)
-        else
-          Result := AName;
-      end;
-
-    TDextCaseStyle.SnakeCase:
-      begin
-        Result := '';
-        for var I := 1 to AName.Length do
-        begin
-          if (I > 1) and CharInSet(AName[I], ['A'..'Z']) then
-            Result := Result + '_';
-          Result := Result + LowerCase(AName[I]);
-        end;
-      end;
-
-    TDextCaseStyle.PascalCase:
-      begin
-        if AName.Length > 0 then
-          Result := UpperCase(AName[1]) + Copy(AName, 2, MaxInt)
-        else
-          Result := AName;
-      end;
-  else
-    Result := AName;
-  end;
+  Result := TJsonUtils.ApplyCaseStyle(AName, FSettings.CaseStyle);
 end;
 
 { TJsonBuilder }

@@ -32,12 +32,22 @@ type
     FName: string;
     FEmail: string;
     FActive: Boolean;
+    FInternalCode: string;
+    FCreatedAt: TDateTime;
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
     property Name: string read FName write FName;
     property Email: string read FEmail write FEmail;
     property Active: Boolean read FActive write FActive;
+    
+    // This field will be ignored by the API (and DB)
+    [NotMapped]
+    property InternalCode: string read FInternalCode write FInternalCode;
+    
+    // Demonstration of SnakeCase conversion
+    // CreatedAt -> created_at in JSON
+    property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
   end;
 
   /// <summary>
@@ -88,6 +98,8 @@ begin
   Customer.Name := 'John Doe';
   Customer.Email := 'john@example.com';
   Customer.Active := True;
+  Customer.InternalCode := 'SECRET_123';
+  Customer.CreatedAt := Now;
   FDbContext.Entities<TCustomer>.Add(Customer);
   
   Customer := TCustomer.Create;
@@ -102,8 +114,11 @@ end;
 
 procedure TStartup.Configure(ABuilder: IApplicationBuilder);
 begin
-  // Map the Data API for TCustomer entity
-  TDataApiHandler<TCustomer>.Map(ABuilder, '/api/customers', FDbContext);
+  // Map the Data API for TCustomer entity with SnakeCase configuration
+  TDataApiHandler<TCustomer>.Map(ABuilder, '/api/customers', FDbContext,
+    TDataApiOptions<TCustomer>.Create
+      .UseSnakeCase
+  );
   
   // Map root handler
   ABuilder.MapGet('/', HandleRoot);

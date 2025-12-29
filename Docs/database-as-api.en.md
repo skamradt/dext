@@ -177,7 +177,7 @@ GET /api/customers?active=true&name=John
 
 ## Mapping Support (Ignore)
 
-DataApi uses Dext ORM mapping configurations via `TEntityMap`. Properties ignored via Attributes (`[NotMapped]`) or Fluent API (`Ignore`) will be automatically excluded from all API operations (Read & Write).
+DataApi uses Dext ORM mapping configurations via `TEntityMap`. Properties ignored via Attributes (`[NotMapped]`) or Fluent API (`Ignore`) will be automatically excluded from all API operations.
 
 ### Example (Attribute)
 ```pascal
@@ -196,8 +196,6 @@ type
 ModelBuilder.Entity<TCustomer>
   .Ignore('InternalCode');
 ```
-
-Additionally, read-only properties (no setters) are automatically ignored during write operations (POST/PUT).
 
 ---
 

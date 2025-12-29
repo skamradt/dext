@@ -13,11 +13,13 @@ uses
   System.Classes,
   System.Rtti,
   System.SysUtils,
+  System.Character,
   System.Generics.Collections,
   Dext.DI.Interfaces,
   Dext.Entity,
   Dext.Entity.Core,
   Dext.Entity.Context,
+  Dext.Json,
   Dext.Web.Interfaces,
   Dext.Web.Routing,
   Dext.Web.Pipeline,
@@ -32,60 +34,67 @@ type
 
   const AllApiMethods = [amGet, amGetList, amPost, amPut, amDelete];
 
-  type
-    TDataApiOptions<T> = class
-    private
-      FAllowedMethods: TApiMethods;
-      FTenantIdRequired: Boolean;
-      FRequireAuthentication: Boolean;
-      FRolesForRead: string;   // Comma-separated roles for GET operations
-      FRolesForWrite: string;  // Comma-separated roles for POST/PUT/DELETE
-    public
-      constructor Create;
-      property AllowedMethods: TApiMethods read FAllowedMethods write FAllowedMethods;
-      property TenantIdRequired: Boolean read FTenantIdRequired write FTenantIdRequired;
-      property RequireAuthentication: Boolean read FRequireAuthentication write FRequireAuthentication;
-      property RolesForRead: string read FRolesForRead write FRolesForRead;
-      property RolesForWrite: string read FRolesForWrite write FRolesForWrite;
+type
+  TDataApiOptions<T> = class
+  private
+    FAllowedMethods: TApiMethods;
+    FTenantIdRequired: Boolean;
+    FRequireAuthentication: Boolean;
+    FRolesForRead: string;   // Comma-separated roles for GET operations
+    FRolesForWrite: string;  // Comma-separated roles for POST/PUT/DELETE
+    FNamingStrategy: TDextCaseStyle;
+  public
+    constructor Create;
+    property AllowedMethods: TApiMethods read FAllowedMethods write FAllowedMethods;
+    property TenantIdRequired: Boolean read FTenantIdRequired write FTenantIdRequired;
+    property RequireAuthentication: Boolean read FRequireAuthentication write FRequireAuthentication;
+    property RolesForRead: string read FRolesForRead write FRolesForRead;
+    property RolesForWrite: string read FRolesForWrite write FRolesForWrite;
       
-      // Fluent configuration
-      function Allow(AMethods: TApiMethods): TDataApiOptions<T>;
-      function RequireTenant: TDataApiOptions<T>;
-      function RequireAuth: TDataApiOptions<T>;
-      function RequireRole(const ARoles: string): TDataApiOptions<T>;  // All operations
-      function RequireReadRole(const ARoles: string): TDataApiOptions<T>;  // GET only
-      function RequireWriteRole(const ARoles: string): TDataApiOptions<T>; // POST/PUT/DELETE
-    end;
+    // Fluent configuration
+    function Allow(AMethods: TApiMethods): TDataApiOptions<T>;
+    function RequireTenant: TDataApiOptions<T>;
+    function RequireAuth: TDataApiOptions<T>;
+    function RequireRole(const ARoles: string): TDataApiOptions<T>;  // All operations
+    function RequireReadRole(const ARoles: string): TDataApiOptions<T>;  // GET only
+    function RequireWriteRole(const ARoles: string): TDataApiOptions<T>; // POST/PUT/DELETE
+      
+    // Naming Strategies
+    function UseSnakeCase: TDataApiOptions<T>;
+    function UseCamelCase: TDataApiOptions<T>;
+  end;
 
-    TDataApiHandler<T: class> = class
-    private
-      FOptions: TDataApiOptions<T>;
-      FPath: string;
-      FDbContext: TDbContext;  // Reference to DbContext (not owned)
-      FUseExplicitContext: Boolean;
+  TDataApiHandler<T: class> = class
+  private
+    FOptions: TDataApiOptions<T>;
+    FPath: string;
+    FDbContext: TDbContext;  // Reference to DbContext (not owned)
+    FUseExplicitContext: Boolean;
       
-      function GetDbContext(const Context: IHttpContext): TDbContext;
-      function EntityToJson(const Entity: T): string;
-      function CheckAuthorization(const Context: IHttpContext; IsWriteOperation: Boolean): IResult;
-    public
-      constructor Create(const APath: string; AOptions: TDataApiOptions<T>; ADbContext: TDbContext = nil);
-      destructor Destroy; override;
+    function GetDbContext(const Context: IHttpContext): TDbContext;
+    function EntityToJson(const Entity: T): string;
+    function CheckAuthorization(const Context: IHttpContext; IsWriteOperation: Boolean): IResult;
+  public
+    constructor Create(const APath: string; AOptions: TDataApiOptions<T>; ADbContext: TDbContext = nil);
+    destructor Destroy; override;
       
-      procedure RegisterRoutes(const ABuilder: IApplicationBuilder);
+    procedure RegisterRoutes(const ABuilder: IApplicationBuilder);
       
-      // Option A: Explicit DbContext parameter
-      class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; ADbContext: TDbContext); overload;
+    // Option A: Explicit DbContext parameter
+    class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; ADbContext: TDbContext); overload;
+    class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; ADbContext: TDbContext; AOptions: TDataApiOptions<T>); overload;
       
-      // Option B: Resolve DbContext from DI (Context.Services)
-      class procedure Map(const ABuilder: IApplicationBuilder; const APath: string); overload;
+    // Option B: Resolve DbContext from DI (Context.Services)
+    class procedure Map(const ABuilder: IApplicationBuilder; const APath: string); overload;
+    class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; AOptions: TDataApiOptions<T>); overload;
       
-      // Request Handlers
-      function HandleGetList(const Context: IHttpContext): IResult;
-      function HandleGet(const Context: IHttpContext): IResult;
-      function HandlePost(const Context: IHttpContext): IResult;
-      function HandlePut(const Context: IHttpContext): IResult;
-      function HandleDelete(const Context: IHttpContext): IResult;
-    end;
+    // Request Handlers
+    function HandleGetList(const Context: IHttpContext): IResult;
+    function HandleGet(const Context: IHttpContext): IResult;
+    function HandlePost(const Context: IHttpContext): IResult;
+    function HandlePut(const Context: IHttpContext): IResult;
+    function HandleDelete(const Context: IHttpContext): IResult;
+  end;
 
 function GetJsonVal(const AVal: TValue): string;
 function EscapeJsonString(const S: string): string;
@@ -97,7 +106,6 @@ uses
   System.DateUtils,
   System.TypInfo,
   Dext.Collections,
-  Dext.Json,
   Dext.Json.Types,
   Dext.Core.DateUtils,
   Dext.Specifications.Types,
@@ -138,7 +146,9 @@ end;
 constructor TDataApiOptions<T>.Create;
 begin
   FAllowedMethods := AllApiMethods;
+  FAllowedMethods := AllApiMethods;
   FTenantIdRequired := False;
+  FNamingStrategy := TDextCaseStyle.CamelCase;
 end;
 
 function TDataApiOptions<T>.Allow(AMethods: TApiMethods): TDataApiOptions<T>;
@@ -178,6 +188,18 @@ function TDataApiOptions<T>.RequireWriteRole(const ARoles: string): TDataApiOpti
 begin
   FRequireAuthentication := True;
   FRolesForWrite := ARoles;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.UseSnakeCase: TDataApiOptions<T>;
+begin
+  FNamingStrategy := TDextCaseStyle.SnakeCase;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.UseCamelCase: TDataApiOptions<T>;
+begin
+  FNamingStrategy := TDextCaseStyle.CamelCase;
   Result := Self;
 end;
 
@@ -267,6 +289,8 @@ var
   Prop: TRttiProperty;
   First: Boolean;
   PropName: string;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
   if Entity = nil then
     Exit('null');
@@ -274,6 +298,8 @@ begin
   Ctx := TRttiContext.Create;
   try
     Typ := Ctx.GetType(TypeInfo(T));
+    Map := TModelBuilder.Instance.GetMap(TypeInfo(T));
+    
     Result := '{';
     First := True;
     
@@ -282,14 +308,16 @@ begin
       if not Prop.IsReadable then
         Continue;
         
+      // Check for mapping ignore
+      if Map.Properties.TryGetValue(Prop.Name, PropMap) and PropMap.IsIgnored then
+        Continue;
+        
       if not First then
         Result := Result + ',';
       First := False;
       
-      // Convert property name to camelCase
-      PropName := Prop.Name;
-      if Length(PropName) > 0 then
-        PropName[1] := LowerCase(PropName[1])[1];
+      // Apply naming strategy
+      PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
         
       Result := Result + '"' + PropName + '":' + GetJsonVal(Prop.GetValue(TObject(Entity)));
     end;
@@ -392,6 +420,8 @@ var
   BoolVal: Boolean;
   Limit, Offset: Integer;
   AuthResult: IResult;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
   // Authorization check
   AuthResult := CheckAuthorization(Context, False);  // Read operation
@@ -410,6 +440,7 @@ begin
     Ctx := TRttiContext.Create;
     try
       Typ := Ctx.GetType(TypeInfo(T));
+      Map := TModelBuilder.Instance.GetMap(TypeInfo(T));
       
       for i := 0 to Query.Count - 1 do
       begin
@@ -441,6 +472,10 @@ begin
         
         if Prop = nil then
           Continue; // Skip unknown properties
+          
+        // Check if property is ignored in mapping
+        if Map.Properties.TryGetValue(Prop.Name, PropMap) and PropMap.IsIgnored then
+          Continue;
         
         // Build expression based on property type
         PropType := Prop.PropertyType;
@@ -560,6 +595,8 @@ var
   JsonObj: IDextJsonObject;
   PropName: string;
   AuthResult: IResult;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
   // Authorization check
   AuthResult := CheckAuthorization(Context, True);  // Write operation
@@ -590,6 +627,7 @@ begin
     Ctx := TRttiContext.Create;
     try
       Typ := Ctx.GetType(TypeInfo(T));
+      Map := TModelBuilder.Instance.GetMap(TypeInfo(T));
       Entity := Typ.GetMethod('Create').Invoke(Typ.AsInstance.MetaclassType, []).AsType<T>;
       
       // Populate entity properties from JSON
@@ -599,13 +637,16 @@ begin
           Continue;
         if SameText(Prop.Name, 'Id') then
           Continue; // Don't set ID from JSON, let DB generate it
+          
+        // Check for mapping ignore
+        if Map.Properties.TryGetValue(Prop.Name, PropMap) and PropMap.IsIgnored then
+          Continue;
         
-        // Try exact match first, then camelCase
+        // Try exact match first, then strategy match
         PropName := Prop.Name;
         if not JsonObj.Contains(PropName) then
         begin
-          if Length(PropName) > 0 then
-            PropName[1] := LowerCase(PropName[1])[1];
+          PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
         end;
         
         if JsonObj.Contains(PropName) then
@@ -669,6 +710,8 @@ var
   JsonObj: IDextJsonObject;
   PropName: string;
   AuthResult: IResult;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
   // Authorization check
   AuthResult := CheckAuthorization(Context, True);  // Write operation
@@ -709,6 +752,7 @@ begin
     Ctx := TRttiContext.Create;
     try
       Typ := Ctx.GetType(TypeInfo(T));
+      Map := TModelBuilder.Instance.GetMap(TypeInfo(T));
       
       for Prop in Typ.GetProperties do
       begin
@@ -716,36 +760,44 @@ begin
           Continue;
         if SameText(Prop.Name, 'Id') then
           Continue; // Don't update ID
+          
+        // Check for mapping ignore
+        if Map.Properties.TryGetValue(Prop.Name, PropMap) and PropMap.IsIgnored then
+          Continue;
         
-        // Try exact match first, then camelCase
+        // Try exact match first, then strategy match
         PropName := Prop.Name;
         if not JsonObj.Contains(PropName) then
         begin
-          if Length(PropName) > 0 then
-            PropName[1] := LowerCase(PropName[1])[1];
-        end;
+          // Try exact match first, then strategy match
+          PropName := Prop.Name;
+          if not JsonObj.Contains(PropName) then
+          begin
+            PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
+          end;
         
-        if JsonObj.Contains(PropName) then
-        begin
-          try
-            case Prop.PropertyType.TypeKind of
-              tkInteger: Prop.SetValue(TObject(Entity), JsonObj.GetInteger(PropName));
-              tkInt64: Prop.SetValue(TObject(Entity), JsonObj.GetInt64(PropName));
-              tkFloat: 
-                if Prop.PropertyType.Handle = TypeInfo(TDateTime) then
-                  Prop.SetValue(TObject(Entity), StrToDateTimeDef(JsonObj.GetString(PropName), 0))
-                else
-                  Prop.SetValue(TObject(Entity), JsonObj.GetDouble(PropName));
-              tkString, tkUString, tkWString, tkLString:
-                Prop.SetValue(TObject(Entity), JsonObj.GetString(PropName));
-              tkEnumeration:
-                if Prop.PropertyType.Handle = TypeInfo(Boolean) then
-                  Prop.SetValue(TObject(Entity), JsonObj.GetBoolean(PropName))
-                else
-                  Prop.SetValue(TObject(Entity), TValue.FromOrdinal(Prop.PropertyType.Handle, JsonObj.GetInteger(PropName)));
+          if JsonObj.Contains(PropName) then
+          begin
+            try
+              case Prop.PropertyType.TypeKind of
+                tkInteger: Prop.SetValue(TObject(Entity), JsonObj.GetInteger(PropName));
+                tkInt64: Prop.SetValue(TObject(Entity), JsonObj.GetInt64(PropName));
+                tkFloat:
+                  if Prop.PropertyType.Handle = TypeInfo(TDateTime) then
+                    Prop.SetValue(TObject(Entity), StrToDateTimeDef(JsonObj.GetString(PropName), 0))
+                  else
+                    Prop.SetValue(TObject(Entity), JsonObj.GetDouble(PropName));
+                tkString, tkUString, tkWString, tkLString:
+                  Prop.SetValue(TObject(Entity), JsonObj.GetString(PropName));
+                tkEnumeration:
+                  if Prop.PropertyType.Handle = TypeInfo(Boolean) then
+                    Prop.SetValue(TObject(Entity), JsonObj.GetBoolean(PropName))
+                  else
+                    Prop.SetValue(TObject(Entity), TValue.FromOrdinal(Prop.PropertyType.Handle, JsonObj.GetInteger(PropName)));
+              end;
+            except
+              // Ignore conversion errors
             end;
-          except
-            // Ignore conversion errors
           end;
         end;
       end;
@@ -816,6 +868,24 @@ begin
   ABuilder.RegisterForDisposal(Handler);
 end;
 
+class procedure TDataApiHandler<T>.Map(
+  const ABuilder: IApplicationBuilder; 
+  const APath: string; 
+  ADbContext: TDbContext;
+  AOptions: TDataApiOptions<T>);
+var
+  Handler: TDataApiHandler<T>;
+begin
+  if AOptions = nil then
+    AOptions := TDataApiOptions<T>.Create;
+
+  Handler := TDataApiHandler<T>.Create(APath, AOptions, ADbContext);
+  Handler.RegisterRoutes(ABuilder);
+  
+  // Register handler for disposal when host shuts down
+  ABuilder.RegisterForDisposal(Handler);
+end;
+
 // Option B: Resolve DbContext from DI
 class procedure TDataApiHandler<T>.Map(
   const ABuilder: IApplicationBuilder; 
@@ -830,6 +900,11 @@ begin
   
   // Register handler for disposal when host shuts down
   ABuilder.RegisterForDisposal(Handler);
+end;
+
+class procedure TDataApiHandler<T>.Map(const ABuilder: IApplicationBuilder; const APath: string; AOptions: TDataApiOptions<T>);
+begin
+  Map(ABuilder, APath, nil, AOptions);
 end;
 
 end.
