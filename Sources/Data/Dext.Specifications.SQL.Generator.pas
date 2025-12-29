@@ -71,7 +71,9 @@ type
     function GetBinaryOpSQL(Op: TBinaryOperator): string;
     function GetLogicalOpSQL(Op: TLogicalOperator): string;
     function GetUnaryOpSQL(Op: TUnaryOperator): string;
+
     function MapColumn(const AName: string): string;
+    function QuoteColumnOrAlias(const AName: string): string;
   public
     constructor Create(ADialect: ISQLDialect; AMapper: ISQLColumnMapper = nil);
     destructor Destroy; override;
@@ -112,7 +114,12 @@ type
     function GetSoftDeleteFilter: string;
     function GetDiscriminatorFilter: string;
     function GetDiscriminatorValueSQL: string;
+
     function GetDialectEnum: TDatabaseDialect;
+    function GetJoinTypeSQL(AType: TJoinType): string;
+    function GenerateJoins(const AJoins: TArray<IJoin>): string;
+    function GenerateGroupBy(const AGroupBy: TArray<string>): string;
+    function QuoteColumnOrAlias(const AName: string): string;
 
   public
     constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
@@ -237,6 +244,25 @@ begin
     Result := AName;
 end;
 
+function TSQLWhereGenerator.QuoteColumnOrAlias(const AName: string): string;
+var
+  Parts: TArray<string>;
+  i: Integer;
+begin
+  if AName.Contains('.') then
+  begin
+    Parts := AName.Split(['.']);
+    Result := '';
+    for i := 0 to High(Parts) do
+    begin
+      if i > 0 then Result := Result + '.';
+      Result := Result + FDialect.QuoteIdentifier(Parts[i]);
+    end;
+  end
+  else
+    Result := FDialect.QuoteIdentifier(AName);
+end;
+
 function TSQLWhereGenerator.Generate(const AExpression: IExpression): string;
 begin
   FSQL.Clear;
@@ -304,7 +330,7 @@ begin
         
         // Generate SQL: (Column IN (:p1, :p2, :p3))
         FSQL.Append('(')
-            .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
+            .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
             .Append(' ')
             .Append(GetBinaryOpSQL(C.BinaryOperator))
             .Append(' (')
@@ -321,7 +347,7 @@ begin
       FParams.Add(ParamName, C.Value);
       
       FSQL.Append('(')
-          .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
+          .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
           .Append(' ')
           .Append(GetBinaryOpSQL(C.BinaryOperator))
           .Append(' (:')
@@ -339,7 +365,7 @@ begin
     
     // Generate SQL: (Column Op :Param)
     FSQL.Append('(')
-        .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
+        .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
         .Append(' ')
         .Append(GetBinaryOpSQL(C.BinaryOperator))
         .Append(' ');
@@ -403,7 +429,7 @@ begin
   begin
     // IsNull / IsNotNull
     FSQL.Append('(')
-        .Append(FDialect.QuoteIdentifier(MapColumn(C.PropertyName)))
+        .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
         .Append(' ')
         .Append(GetUnaryOpSQL(C.UnaryOperator))
         .Append(')');
@@ -1299,6 +1325,9 @@ begin
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
     
+    // Append Joins
+    SB.Append(GenerateJoins(ASpec.GetJoins));
+    
     // Combine filters
     if DiscriminatorFilter <> '' then
     begin
@@ -1317,6 +1346,9 @@ begin
     else if SoftDeleteFilter <> '' then
       SB.Append(' WHERE ').Append(SoftDeleteFilter);
       
+    // Group By
+    SB.Append(GenerateGroupBy(ASpec.GetGroupBy));
+
     // Order By
     OrderBy := ASpec.GetOrderBy;
     if Length(OrderBy) > 0 then
@@ -1360,10 +1392,19 @@ begin
           SB.Append(FDialect.QuoteIdentifier(SelectedCols[0]))
         else
           SB.Append('(SELECT NULL)');
+      end
+      else if (Length(OrderBy) > 0) and FDialect.RequiresOrderByForPaging then
+      begin
+         // OrderBy already appended? NO! It was appended before GroupBy in previous logic?
+         // Let's check logic flow.
+         // Order By was appended at line 1324.
+         // Group By must come BEFORE Order By.
       end;
       
       Skip := ASpec.GetSkip;
       Take := ASpec.GetTake;
+      
+      // Paging syntax generation
       Result := SB.ToString + ' ' + FDialect.GeneratePaging(Skip, Take);
     end
     else
@@ -1487,6 +1528,9 @@ begin
   try
     SB.Append('SELECT COUNT(*) FROM ').Append(GetTableName);
     
+    // Append Joins
+    SB.Append(GenerateJoins(ASpec.GetJoins));
+
     // Add soft delete filter
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
@@ -1575,34 +1619,6 @@ begin
     
     for Prop in Typ.GetProperties do
     begin
-      // 1. Check for Foreign Keys (even if NotMapped)
-      for Attr in Prop.GetAttributes do
-      begin
-        if Attr is ForeignKeyAttribute then
-        begin
-          FK := ForeignKeyAttribute(Attr);
-          FKPropName := FK.ColumnName;
-          FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
-          
-          if (Prop.PropertyType.TypeKind = tkClass) and 
-             TSQLGeneratorHelper.GetRelatedTableAndPK(Ctx, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
-          begin
-             LConstraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
-               [FDialect.QuoteIdentifier(FKColName), 
-                FDialect.QuoteIdentifier(RelatedTable), 
-                FDialect.QuoteIdentifier(RelatedPK)]);
-                
-             if FK.OnDelete <> caNoAction then
-               LConstraint := LConstraint + ' ON DELETE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnDelete);
-               
-             if FK.OnUpdate <> caNoAction then
-               LConstraint := LConstraint + ' ON UPDATE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnUpdate);
-               
-             FKConstraints.Add(LConstraint);
-          end;
-        end;
-      end;
-    
       IsMapped := True;
       IsPK := False;
       IsAutoInc := False;
@@ -1623,19 +1639,45 @@ begin
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        // Attributes only apply if not overridden by Fluent (or we can merge, but Fluent usually wins)
-        // Here we let Fluent win if defined.
         
         if (PropMap = nil) or not PropMap.IsPK then
           if Attr is PKAttribute then IsPK := True;
           
         if (PropMap = nil) or not PropMap.IsAutoInc then
-          if Attr is AutoIncAttribute then IsAutoInc := True;
+           if Attr is AutoIncAttribute then IsAutoInc := True;
+           
+        if Attr is ForeignKeyAttribute then
+        begin
+             // Use FK Attribute to define column name if not explicitly mapped
+             FK := ForeignKeyAttribute(Attr);
+             if (PropMap = nil) or (PropMap.ColumnName = '') then
+                ColName := FK.ColumnName;
+                
+             // Add FK Constraint logic
+             FKPropName := FK.ColumnName;
+             FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
           
+             if (Prop.PropertyType.TypeKind = tkClass) and 
+                TSQLGeneratorHelper.GetRelatedTableAndPK(Ctx, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
+             begin
+                 LConstraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
+                   [FDialect.QuoteIdentifier(FKColName), 
+                    FDialect.QuoteIdentifier(RelatedTable), 
+                    FDialect.QuoteIdentifier(RelatedPK)]);
+                    
+                 if FK.OnDelete <> caNoAction then
+                   LConstraint := LConstraint + ' ON DELETE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnDelete);
+                   
+                 if FK.OnUpdate <> caNoAction then
+                   LConstraint := LConstraint + ' ON UPDATE ' + TSQLGeneratorHelper.GetCascadeSQL(FK.OnUpdate);
+                   
+                 FKConstraints.Add(LConstraint);
+             end;
+        end;
+        
         if (PropMap = nil) or (PropMap.ColumnName = '') then
         begin
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
-          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
         end;
       end;
       
@@ -1666,13 +1708,10 @@ begin
         // Handle Prop<T> (Smart Types)
         else if (Prop.PropertyType.TypeKind = tkRecord) then
         begin
-           // Auto-detect Prop<T> by checking for FValue field.
-           // Modified to be more robust: Check for FValue AND (Name contains Prop< OR has Value property)
            var FieldFValue := Prop.PropertyType.GetField('FValue');
            if (FieldFValue <> nil) and 
               (Prop.PropertyType.Name.Contains('Prop<') or (Prop.PropertyType.GetProperty('Value') <> nil)) then
            begin
-              // It looks like a Prop<T>
               PropTypeHandle := FieldFValue.FieldType.Handle;
            end;
         end;
@@ -1703,7 +1742,7 @@ begin
         PKCols.Add(FDialect.QuoteIdentifier(ColName));
         if IsAutoInc then
         begin
-            SB.Append(' PRIMARY KEY'); // AutoInc implies PK
+            SB.Append(' PRIMARY KEY'); 
             HasAutoInc := True;
         end
         else
@@ -1711,10 +1750,9 @@ begin
       end
       else if IsSoftDeleteColumn then
       begin
-        // Add DEFAULT for soft delete column
         SB.Append(' DEFAULT ').Append(VarToStr(SoftDeleteDefaultValue));
       end;
-    end;
+    end; // End of Properties Loop
     
     // Add Composite PK constraint or Single PK constraint (if not AutoInc)
     if (PKCols.Count > 0) and not HasAutoInc then
@@ -1741,6 +1779,101 @@ begin
     PKCols.Free;
     SB.Free;
   end;
+end;
+
+
+
+
+function TSQLGenerator<T>.GetJoinTypeSQL(AType: TJoinType): string;
+begin
+  case AType of
+    jtInner: Result := 'INNER JOIN';
+    jtLeft: Result := 'LEFT JOIN';
+    jtRight: Result := 'RIGHT JOIN';
+    jtFull: Result := 'FULL JOIN';
+  else
+    Result := 'INNER JOIN';
+  end;
+end;
+
+function TSQLGenerator<T>.GenerateJoins(const AJoins: TArray<IJoin>): string;
+var
+  SB: TStringBuilder;
+  JoinObj: IJoin;
+  WhereGen: TSQLWhereGenerator;
+  Pair: TPair<string, TValue>;
+begin
+  if Length(AJoins) = 0 then Exit('');
+  
+  SB := TStringBuilder.Create;
+  try
+    for JoinObj in AJoins do
+    begin
+       WhereGen := TSQLWhereGenerator.Create(FDialect, nil); // No mapper, uses raw aliased columns
+       try
+         SB.Append(' ')
+           .Append(GetJoinTypeSQL(JoinObj.GetJoinType))
+           .Append(' ')
+           .Append(FDialect.QuoteIdentifier(JoinObj.GetTableName));
+           
+         if JoinObj.GetAlias <> '' then
+           SB.Append(' ').Append(FDialect.QuoteIdentifier(JoinObj.GetAlias));
+           
+         SB.Append(' ON ')
+           .Append(WhereGen.Generate(JoinObj.GetCondition));
+           
+         // Merge Params
+         for Pair in WhereGen.Params do
+           FParams.AddOrSetValue(Pair.Key, Pair.Value);
+           
+       finally
+         WhereGen.Free;
+       end;
+    end;
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+function TSQLGenerator<T>.GenerateGroupBy(const AGroupBy: TArray<string>): string;
+var
+  SB: TStringBuilder;
+  i: Integer;
+begin
+  if Length(AGroupBy) = 0 then Exit('');
+  
+  SB := TStringBuilder.Create;
+  try
+    SB.Append(' GROUP BY ');
+    for i := 0 to High(AGroupBy) do
+    begin
+      if i > 0 then SB.Append(', ');
+      SB.Append(QuoteColumnOrAlias(AGroupBy[i]));
+    end;
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+function TSQLGenerator<T>.QuoteColumnOrAlias(const AName: string): string;
+var
+  Parts: TArray<string>;
+  i: Integer;
+begin
+  if AName.Contains('.') then
+  begin
+    Parts := AName.Split(['.']);
+    Result := '';
+    for i := 0 to High(Parts) do
+    begin
+      if i > 0 then Result := Result + '.';
+      Result := Result + FDialect.QuoteIdentifier(Parts[i]);
+    end;
+  end
+  else
+    Result := FDialect.QuoteIdentifier(AName);
 end;
 
 end.

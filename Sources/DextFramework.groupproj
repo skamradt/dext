@@ -3,9 +3,6 @@
         <ProjectGuid>{6AA0A906-18D1-4DB7-B4E5-8CE0AB267630}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
-        <Projects Include="..\Examples\Orm.TestDbSet\Orm.TestDbSet.dproj">
-            <Dependencies/>
-        </Projects>
         <Projects Include="Dext.Core.dproj">
             <Dependencies/>
         </Projects>
@@ -13,9 +10,6 @@
             <Dependencies/>
         </Projects>
         <Projects Include="Dext.Web.Core.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -26,15 +20,6 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="Orm_TestDbSet">
-        <MSBuild Projects="..\Examples\Orm.TestDbSet\Orm.TestDbSet.dproj"/>
-    </Target>
-    <Target Name="Orm_TestDbSet:Clean">
-        <MSBuild Projects="..\Examples\Orm.TestDbSet\Orm.TestDbSet.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Orm_TestDbSet:Make">
-        <MSBuild Projects="..\Examples\Orm.TestDbSet\Orm.TestDbSet.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Dext_Core">
         <MSBuild Projects="Dext.Core.dproj"/>
     </Target>
@@ -62,23 +47,14 @@
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="Dext.Web.Core.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Web_SmartPropsDemo">
-        <MSBuild Projects="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj"/>
-    </Target>
-    <Target Name="Web_SmartPropsDemo:Clean">
-        <MSBuild Projects="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Web_SmartPropsDemo:Make">
-        <MSBuild Projects="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Orm_TestDbSet;Dext_Core;Dext_EF_Core;Dext_Web_Core;Web_SmartPropsDemo"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Orm_TestDbSet:Clean;Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Web_SmartPropsDemo:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Orm_TestDbSet:Make;Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Web_SmartPropsDemo:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

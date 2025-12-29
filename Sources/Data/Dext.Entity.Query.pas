@@ -167,6 +167,13 @@ type
       const AResultSelector: TFunc<T, TInner, TResult>
     ): TFluentQuery<TResult>; overload;
     
+    // SQL Based Joins
+    function Join(const ATable, AAlias: string; const AType: TJoinType; const ACondition: IExpression): TFluentQuery<T>; overload;
+    
+    // Group By
+    function GroupBy(const AColumn: string): TFluentQuery<T>; overload;
+    function GroupBy(const AColumns: array of string): TFluentQuery<T>; overload;
+    
     // Aggregations
     function Count: Integer; overload;
     function Count(const APredicate: TPredicate<T>): Integer; overload;
@@ -696,6 +703,32 @@ begin
 
   Result := TJoining.Join<T, TInner, TKey, TResult>(
     Self, AInner, OuterSelector, InnerSelector, AResultSelector);
+end;
+
+function TFluentQuery<T>.Join(const ATable, AAlias: string; const AType: TJoinType; const ACondition: IExpression): TFluentQuery<T>;
+begin
+  if FSpecification <> nil then
+    FSpecification.Join(ATable, AAlias, AType, ACondition);
+  Result := Self;
+end;
+
+function TFluentQuery<T>.GroupBy(const AColumn: string): TFluentQuery<T>;
+begin
+  if FSpecification <> nil then
+    FSpecification.GroupBy(AColumn);
+  Result := Self;
+end;
+
+function TFluentQuery<T>.GroupBy(const AColumns: array of string): TFluentQuery<T>;
+var
+  Col: string;
+begin
+  if FSpecification <> nil then
+  begin
+    for Col in AColumns do
+      FSpecification.GroupBy(Col);
+  end;
+  Result := Self;
 end;
 
 function TFluentQuery<T>.Count: Integer;

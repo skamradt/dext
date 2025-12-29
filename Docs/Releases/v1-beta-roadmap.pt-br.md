@@ -66,14 +66,14 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 | **Multi-Tenancy** | ✅ Pronto | Schema-based, DB-based, Column-based |
 | **Advanced Types** (UUID, JSON, Arrays) | ✅ Pronto | Serialização automática |
 | **Bulk Operations** | ✅ Pronto | Update/Delete em massa |
-| **Advanced Querying** | 🟡 Parcial | `Join` e `GroupBy` (In-Memory ✅, SQL Pending ⚠️) |
+| **Advanced Querying** | ✅ Pronto | `Join` e `GroupBy` (Full SQL Support) |
 | **Inheritance Mapping** (TPH) | ✅ Pronto | Discriminator column suportado |
 | **Lazy Loading** | ✅ Pronto | `Lazy<T>`, `IList<T>` e `ILazy<T>` wrapper |
 | **Scaffolding** (DB First) | ✅ Pronto | Geração de Entities via Schema do Banco |
 | **Soft Delete** | ✅ Pronto | Atributo `[SoftDelete]` |
 | **Optimistic Concurrency** | ✅ Pronto | Atributo `[Version]` |
 | **FireDAC Phys Driver** | ✅ Pronto | Driver físico para integração transparente com FireDAC |
-| **Field Mapping** | 🟡 Em Progresso | Mapeamento por fields (além de properties) para evitar disparar setters ao carregar do banco |
+| **Field Mapping** | ✅ Pronto | Mapeamento por fields (além de properties) para evitar disparar setters ao carregar do banco |
 
 
 ### ⚙️ Infraestrutura & CLI

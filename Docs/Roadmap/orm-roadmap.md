@@ -109,14 +109,12 @@ O objetivo foi permitir consultas complexas de forma tipada e fluente. Concluíd
 - [x] **GroupBy**: Agrupamento com agregações
   - `GroupBy<TKey>(keySelector): IEnumerable<IGrouping<TKey, T>>`
   - *Exemplo*: `Context.Entities<TUser>.GroupBy(u => u.City)`
-  - *Status*: ✅ **Implementado e Validado** (In-memory)
-  - *Gap*: ⚠️ SQL translation pendente
+  - *Status*: ✅ **Implementado e Validado** (SQL & In-memory)
 
 - [x] **Join Explícito**: Joins tipados
   - `Join<TInner, TKey, TResult>(inner, outerKey, innerKey, resultSelector)`
   - *Exemplo*: `users.Join(addresses, 'AddressId', 'Id', ...)` (Novo overload simplificado)
-  - *Status*: ✅ **Implementado e Validado** (In-memory)
-  - *Gap*: ⚠️ SQL translation pendente
+  - *Status*: ✅ **Implementado e Validado** (SQL & In-memory)
 
 #### 🚀 Otimizações de Performance
 

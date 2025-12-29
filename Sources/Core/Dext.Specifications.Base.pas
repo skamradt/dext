@@ -31,6 +31,21 @@ uses
   System.Generics.Collections,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types;
+  
+type
+  TJoin = class(TInterfacedObject, IJoin)
+  private
+    FTableName: string;
+    FAlias: string;
+    FType: TJoinType;
+    FCondition: IExpression;
+  public
+    constructor Create(const ATable, AAlias: string; AType: TJoinType; const ACondition: IExpression);
+    function GetTableName: string;
+    function GetAlias: string;
+    function GetJoinType: TJoinType;
+    function GetCondition: IExpression;
+  end;
 
 type
   /// <summary>
@@ -48,6 +63,10 @@ type
     FIsTracking: Boolean;
     
     FSelectedColumns: TList<string>;
+    FJoins: TList<IJoin>;
+    FGroupBy: TList<string>;
+    
+    // Implementation of ISpecification<T>
     
     // Implementation of ISpecification<T>
     function GetExpression: IExpression;
@@ -57,7 +76,10 @@ type
     function GetTake: Integer;
     function IsPagingEnabled: Boolean;
     function IsTrackingEnabled: Boolean;
+
     function GetSelectedColumns: TArray<string>;
+    function GetJoins: TArray<IJoin>;
+    function GetGroupBy: TArray<string>;
   public
     constructor Create; overload; virtual;
     constructor Create(const AExpression: IExpression); overload; virtual;
@@ -68,6 +90,8 @@ type
     procedure Include(const APath: string); virtual;
     procedure OrderBy(const AOrderBy: IOrderBy); virtual;
     procedure Select(const AColumn: string); virtual;
+    procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression); virtual;
+    procedure GroupBy(const AColumn: string); virtual;
     
     // Legacy support
     procedure AddInclude(const APath: string);
@@ -94,6 +118,8 @@ begin
   FIncludes := TList<string>.Create;
   FSelectedColumns := TList<string>.Create;
   FOrderBy := TList<IOrderBy>.Create;
+  FJoins := TList<IJoin>.Create;
+  FGroupBy := TList<string>.Create;
   FExpression := nil; // Empty expression matches all
   FIsTracking := True; // Tracking enabled by default
 end;
@@ -109,6 +135,8 @@ begin
   FIncludes.Free;
   FSelectedColumns.Free;
   FOrderBy.Free;
+  FJoins.Free;
+  FGroupBy.Free;
   inherited;
 end;
 
@@ -220,6 +248,56 @@ end;
 procedure TSpecification<T>.AsNoTracking;
 begin
   FIsTracking := False;
+end;
+
+procedure TSpecification<T>.Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression);
+begin
+  FJoins.Add(TJoin.Create(ATable, AAlias, AType, ACondition));
+end;
+
+procedure TSpecification<T>.GroupBy(const AColumn: string);
+begin
+  FGroupBy.Add(AColumn);
+end;
+
+function TSpecification<T>.GetJoins: TArray<IJoin>;
+begin
+  Result := FJoins.ToArray;
+end;
+
+function TSpecification<T>.GetGroupBy: TArray<string>;
+begin
+  Result := FGroupBy.ToArray;
+end;
+
+{ TJoin }
+
+constructor TJoin.Create(const ATable, AAlias: string; AType: TJoinType; const ACondition: IExpression);
+begin
+  FTableName := ATable;
+  FAlias := AAlias;
+  FType := AType;
+  FCondition := ACondition;
+end;
+
+function TJoin.GetTableName: string;
+begin
+  Result := FTableName;
+end;
+
+function TJoin.GetAlias: string;
+begin
+  Result := FAlias;
+end;
+
+function TJoin.GetJoinType: TJoinType;
+begin
+  Result := FType;
+end;
+
+function TJoin.GetCondition: IExpression;
+begin
+  Result := FCondition;
 end;
 
 end.

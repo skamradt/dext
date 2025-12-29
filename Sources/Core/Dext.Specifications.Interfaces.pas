@@ -33,6 +33,7 @@ uses
 
 type
   TMatchMode = (mmExact, mmStart, mmEnd, mmAnywhere);
+  TJoinType = (jtInner, jtLeft, jtRight, jtFull);
 
   /// <summary>
   ///   Represents an expression in a query (e.g., "Age > 18").
@@ -52,6 +53,17 @@ type
   end;
 
   /// <summary>
+  ///   Represents a JOIN clause.
+  /// </summary>
+  IJoin = interface
+    ['{10000000-0000-0000-0000-000000000005}']
+    function GetTableName: string;
+    function GetAlias: string;
+    function GetJoinType: TJoinType;
+    function GetCondition: IExpression;
+  end;
+
+  /// <summary>
   ///   Base interface for specifications.
   ///   Encapsulates query logic for an entity type T.
   /// </summary>
@@ -65,6 +77,8 @@ type
     function IsPagingEnabled: Boolean;
     function GetSelectedColumns: TArray<string>;
     function IsTrackingEnabled: Boolean;
+    function GetJoins: TArray<IJoin>;
+    function GetGroupBy: TArray<string>;
     
     property Expression: IExpression read GetExpression;
     
@@ -83,6 +97,8 @@ type
     procedure OrderBy(const AOrderBy: IOrderBy);
     procedure Select(const AColumn: string);
     procedure Where(const AExpression: IExpression);
+    procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression);
+    procedure GroupBy(const AColumn: string);
   end;
 
   /// <summary>
