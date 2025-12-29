@@ -537,4 +537,4 @@ TDataApiHandler<TUser>.Map(App, '/api/admin/users', DbContext,
 
 - [Dext.Web.DataApi.pas](../Sources/Web/Dext.Web.DataApi.pas) - Implementação principal
 - [Dext.Auth.Identity.pas](../Sources/Web/Dext.Auth.Identity.pas) - Sistema de Claims/Roles
-- [06_DatabaseAsApi](../Examples/06_DatabaseAsApi/) - Projeto de exemplo
+- [DatabaseAsApi](../Examples/DatabaseAsApi/) - Projeto de exemplo

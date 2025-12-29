@@ -299,7 +299,7 @@ The repository contains practical example projects:
 - **`Examples/Web.TaskFlowAPI`**: A complete "Real World" REST API demonstrating layered architecture, ORM, Auth, and DI.
 - **`Examples/Web.SslDemo`**: Demonstrates SSL/HTTPS configuration using OpenSSL or TaurusTLS.
 - **`Examples/Dext.Starter.Admin`**: **(Recommended)** A Modern Admin Panel with HTMX, Service Layer, and Minimal APIs. [Read the Guide](Examples/Dext.Starter.Admin/README.md).
-- **`Examples/06_DatabaseAsApi`**: Demonstrates Database as API feature - zero-code REST endpoints from entities.
+- **`Examples/DatabaseAsApi`**: Demonstrates Database as API feature - zero-code REST endpoints from entities.
 - **`Examples/Web.SmartPropsDemo`**: Demonstrates usage of Smart Properties with Model Binding and ORM persistence.
 
 
