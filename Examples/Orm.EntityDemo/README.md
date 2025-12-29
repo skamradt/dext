@@ -1,205 +1,272 @@
-# EntityDemo - Quick Start Guide
+# 🗄️ Orm.EntityDemo - Dext ORM Showcase
 
-## Overview
-
-The EntityDemo project demonstrates the Dext ORM capabilities with comprehensive tests. It now supports **easy switching between database providers** using `TDbConfig`.
-
-## Running the Tests
-
-### 1. Default (PostgreSQL)
-
-The project is configured to use PostgreSQL by default. Simply run:
-
-```bash
-EntityDemo.exe
-```
-
-**Requirements**:
-- PostgreSQL server running on `localhost:5432`
-- Database: `postgres`
-- Username: `postgres`
-- Password: `root`
-
-### 2. Switch to SQLite
-
-Edit `EntityDemo.dpr` and uncomment the SQLite configuration:
-
-```pascal
-// Option 1: SQLite (Default - File-based, good for development)
-TDbConfig.SetProvider(dpSQLite);
-TDbConfig.ConfigureSQLite('test.db');
-
-// Option 2: PostgreSQL (Server-based, production-ready)
-// TDbConfig.SetProvider(dpPostgreSQL);
-// TDbConfig.ConfigurePostgreSQL('localhost', 5432, 'postgres', 'postgres', 'root');
-```
-
-**No server required!** SQLite creates a local file.
-
-### 3. Switch to Firebird
-
-```pascal
-// Option 3: Firebird (Brazilian market favorite)
-TDbConfig.SetProvider(dpFirebird);
-TDbConfig.ConfigureFirebird('test.fdb', 'SYSDBA', 'masterkey');
-
-// Option 4: SQL Server (Enterprise)
-TDbConfig.SetProvider(dpSQLServer);
-TDbConfig.ConfigureSQLServer('localhost', 'dext_test', 'sa', 'Password123!');
-```
-
-## Test Suite
-
-The demo includes **10 comprehensive test suites**:
-
-1. **CRUD Tests** - Basic Create, Read, Update, Delete operations
-2. **Relationships Tests** - Foreign Keys and navigation properties
-3. **Advanced Query Tests** - Complex queries with filters and projections
-4. **Composite Keys Tests** - Multi-column primary keys
-5. **Explicit Loading Tests** - Manual loading of related entities
-6. **Lazy Loading Tests** - Automatic loading on access
-7. **Fluent API Tests** - Query builder and LINQ-style operations
-8. **Lazy Execution Tests** - Deferred query execution
-9. **Bulk Operations Tests** - Batch insert/update/delete
-10. **Concurrency Tests** - Optimistic concurrency control
-
-## Expected Output
-
-```
-🚀 Dext Entity ORM Demo Suite
-=============================
-
-📊 Database Provider: PostgreSQL
-
-🔧 Setting up test with: PostgreSQL
-🗑️  Dropping existing tables...
-📦 Registering entities...
-🏗️  Creating schema...
-✅ Setup complete!
-
-Running Test: TCRUDTest
-🔍 Running CRUD Tests...
-========================
-🔍 Testing Insert...
-   ✅ User inserted with ID: 1
-   ✅ Name matches: John Doe
-   ✅ Age matches: 30
-...
-
-✨ All tests completed.
-```
-
-## Database Configuration
-
-### PostgreSQL Setup
-
-1. Install PostgreSQL
-2. Create database (or use default `postgres`)
-3. Update credentials in `EntityDemo.dpr` if needed
-
-### SQLite Setup
-
-No setup required! Just switch the provider.
-
-### Firebird Setup
-
-1. Install Firebird
-2. Database file will be created automatically
-
-### SQL Server Setup
-
-1. Install SQL Server (Express or Developer)
-2. Create database `dext_test`
-3. Enable TCP/IP protocol if needed
-4. Update credentials in `EntityDemo.dpr`
-
-## Customizing Tests
-
-### Run Specific Tests
-
-Edit `EntityDemo.dpr` and comment out tests you don't want to run:
-
-```pascal
-procedure RunAllTests;
-begin
-  // 1. CRUD Tests
-  RunTest(TCRUDTest);
-  
-  // 2. Relationships Tests
-  // RunTest(TRelationshipTest);  // Commented out
-  
-  // ... etc
-end;
-```
-
-### Add Your Own Tests
-
-1. Create a new unit inheriting from `TBaseTest`
-2. Implement the `Run` method
-3. Add to `RunAllTests`
-
-Example:
-
-```pascal
-type
-  TMyCustomTest = class(TBaseTest)
-  public
-    procedure Run; override;
-  end;
-
-procedure TMyCustomTest.Run;
-begin
-  Log('🔍 Running My Custom Test...');
-  
-  // Your test code here
-  var User := TUser.Create;
-  try
-    User.Name := 'Test User';
-    FContext.Entities<TUser>.Add(User);
-    FContext.SaveChanges;
-    
-    AssertTrue(User.Id > 0, 'User created', 'Failed to create user');
-  finally
-    User.Free;
-  end;
-end;
-```
-
-## Troubleshooting
-
-### "Cannot connect to PostgreSQL"
-
-**Solution**: Check that:
-1. PostgreSQL is running
-2. Credentials are correct
-3. Database exists
-
-### "Driver not found"
-
-**Solution**: Ensure FireDAC drivers are linked:
-- SQLite: `FireDAC.Phys.SQLite`
-- PostgreSQL: `FireDAC.Phys.PG`
-- Firebird: `FireDAC.Phys.FB`
-
-### "Table already exists"
-
-**Solution**: The tests automatically drop tables before running. If you see this error, manually drop the tables or delete the SQLite file.
-
-## Next Steps
-
-- Read the [Nullable Support Guide](../../Docs/NULLABLE_SUPPORT.md)
-- Check the [Database Configuration Guide](../../Docs/DATABASE_CONFIG.md)
-- Review the [ORM Roadmap](../../Docs/ORM_ROADMAP.md)
-
-## Contributing
-
-Found a bug or want to add a test? Contributions are welcome!
-
-1. Fork the repository
-2. Create your feature branch
-3. Add tests
-4. Submit a pull request
+A comprehensive demonstration of the **Dext Entity ORM** capabilities. This project showcases modern ORM features including strongly-typed queries, lazy loading, soft delete, and multi-database support.
 
 ---
 
-*Happy Testing! 🚀*
+## ✨ Features Demonstrated
+
+### Core ORM Features
+- **CRUD Operations** - Create, Read, Update, Delete with automatic change tracking
+- **Relationships** - Foreign keys, navigation properties, cascade actions
+- **Lazy Loading** - Automatic loading of related entities on access
+- **Explicit Loading** - Manual loading with `.Include()`
+- **No Tracking** - Read-only queries for performance
+
+### Advanced Queries
+- **Strongly-Typed Expressions** - `Where(TUserType.Age > 18)`
+- **Fluent Query Builder** - Chainable methods: `.Where().OrderBy().Take()`
+- **Specifications Pattern** - Reusable query criteria
+- **Complex Filters** - AND/OR conditions, LIKE, StartsWith, IsNull
+
+### Data Integrity
+- **Composite Keys** - Multi-column primary keys (Integer + String)
+- **Soft Delete** - Logical deletion with `[SoftDelete]` attribute
+- **Concurrency Control** - Optimistic locking with `[Version]`
+- **Nullable Types** - Full `Nullable<T>` support
+
+### Schema Management
+- **Migrations** - Database schema versioning
+- **Scaffolding** - Reverse-engineer entities from existing DB
+- **Fluent Mapping** - Alternative to attributes
+
+### Performance
+- **Bulk Operations** - Batch insert/update/delete
+- **Lazy Query Execution** - Deferred SQL generation
+- **Async Support** - Non-blocking database operations
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Delphi 11+ (Alexandria or later)
+- Dext Framework in Library Path
+
+### Running the Tests
+
+1. Open `Orm.EntityDemo.dproj` in Delphi
+2. Build the project (F9)
+3. Run the executable
+
+The tests use **SQLite In-Memory** by default - no database setup required!
+
+### Switch Database Provider
+
+Edit `Orm.EntityDemo.dpr` and change the provider:
+
+```pascal
+// Default: SQLite Memory (no setup required)
+ConfigureDatabase(dpSQLiteMemory);
+
+// SQLite File (persisted)
+ConfigureDatabase(dpSQLite);
+
+// PostgreSQL
+ConfigureDatabase(dpPostgreSQL);
+
+// Firebird
+ConfigureDatabase(dpFirebird);
+
+// SQL Server
+ConfigureDatabase(dpSQLServer);
+```
+
+---
+
+## 📋 Test Suite
+
+The demo includes **18 comprehensive test suites**:
+
+| # | Test | Description |
+|---|------|-------------|
+| 1 | **TCRUDTest** | Basic Create, Read, Update, Delete |
+| 2 | **TRelationshipTest** | Foreign Keys and navigation properties |
+| 3 | **TAdvancedQueryTest** | Complex queries with filters and projections |
+| 4 | **TCompositeKeyTest** | Multi-column primary keys |
+| 5 | **TExplicitLoadingTest** | Manual loading of related entities |
+| 6 | **TLazyLoadingTest** | Automatic loading on property access |
+| 7 | **TFluentAPITest** | Query builder and LINQ-style operations |
+| 8 | **TLazyExecutionTest** | Deferred query execution |
+| 9 | **TBulkTest** | Batch insert/update/delete operations |
+| 10 | **TConcurrencyTest** | Optimistic concurrency control |
+| 11 | **TScaffoldingTest** | Reverse-engineering from database |
+| 12 | **TMigrationsTest** | Schema versioning and migrations |
+| 13 | **TCollectionsTest** | IList<T> integration |
+| 14 | **TNoTrackingTest** | Read-only queries for performance |
+| 15 | **TMixedCompositeKeyTest** | Integer + String composite keys |
+| 16 | **TSoftDeleteTest** | Logical deletion with filters |
+| 17 | **TAsyncTest** | Async database operations |
+| 18 | **TTypeSystemTest** | Strongly-typed property expressions |
+
+---
+
+## 📖 Code Examples
+
+### Basic CRUD
+
+```pascal
+// Create
+var User := TUser.Create;
+User.Name := 'Alice';
+User.Age := 25;
+Context.Entities<TUser>.Add(User);
+Context.SaveChanges;
+
+// Read
+var Found := Context.Entities<TUser>.Find(1);
+
+// Update
+Found.Age := 26;
+Context.Entities<TUser>.Update(Found);
+Context.SaveChanges;
+
+// Delete
+Context.Entities<TUser>.Remove(Found);
+Context.SaveChanges;
+```
+
+### Strongly-Typed Queries
+
+```pascal
+// Using TypeSystem for compile-time safety
+var Adults := Context.Entities<TUser>.QueryAll
+  .Where(TUserType.Age >= 18)
+  .OrderBy(TUserType.Name.Asc)
+  .ToList;
+
+// Complex filters
+var NYAdults := Context.Entities<TUser>.QueryAll
+  .Where((TUserType.Age > 21) and (TUserType.City = 'NY'))
+  .ToList;
+
+// String operations
+var AliceUsers := Context.Entities<TUser>.QueryAll
+  .Where(TUserType.Name.StartsWith('Ali'))
+  .ToList;
+```
+
+### Entity Definition
+
+```pascal
+[Table('users')]
+TUser = class
+private
+  FId: Integer;
+  FName: string;
+  FAddressId: Nullable<Integer>;
+  FAddress: Lazy<TAddress>;
+public
+  [PK, AutoInc]
+  property Id: Integer read FId write FId;
+
+  [Column('full_name')]
+  property Name: string read FName write FName;
+
+  [ForeignKey('AddressId'), NotMapped]
+  property Address: TAddress read GetAddress write SetAddress;
+end;
+```
+
+### Soft Delete
+
+```pascal
+// Entity with soft delete
+[Table('tasks'), SoftDelete('IsDeleted')]
+TTask = class
+  // ...
+  property IsDeleted: Boolean read FIsDeleted write FIsDeleted;
+end;
+
+// Normal query excludes deleted
+var ActiveTasks := Context.Entities<TTask>.QueryAll.ToList;
+
+// Include deleted
+var AllTasks := Context.Entities<TTask>.QueryAll
+  .IgnoreQueryFilters
+  .ToList;
+
+// Only deleted
+var Trash := Context.Entities<TTask>.QueryAll
+  .OnlyDeleted
+  .ToList;
+```
+
+---
+
+## ⚙️ Database Configuration
+
+### SQLite (Default)
+No setup required! Uses in-memory database.
+
+### PostgreSQL
+```pascal
+TDbConfig.ConfigurePostgreSQL('localhost', 5432, 'postgres', 'postgres', 'password');
+```
+
+### Firebird
+```pascal
+TDbConfig.ConfigureFirebird('C:\temp\test.fdb', 'SYSDBA', 'masterkey');
+```
+
+### SQL Server
+```pascal
+// Windows Authentication
+TDbConfig.ConfigureSQLServerWindowsAuth('localhost', 'dext_test');
+
+// SQL Authentication
+TDbConfig.ConfigureSQLServer('localhost', 'dext_test', 'sa', 'password');
+```
+
+---
+
+## 🔧 Project Structure
+
+```
+Orm.EntityDemo/
+├── Orm.EntityDemo.dpr              # Main program
+├── EntityDemo.DbConfig.pas         # Database configuration
+├── EntityDemo.Entities.pas         # Entity definitions
+├── EntityDemo.Entities.Info.pas    # TypeSystem metadata
+├── EntityDemo.Tests.Base.pas       # Base test class
+├── EntityDemo.Tests.*.pas          # Individual test suites
+└── README.md                       # This file
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### "Driver not found"
+Ensure FireDAC drivers are linked in your uses clause:
+- SQLite: `FireDAC.Phys.SQLite`
+- PostgreSQL: `FireDAC.Phys.PG`
+- Firebird: `FireDAC.Phys.FB`
+- SQL Server: `FireDAC.Phys.MSSQL`
+
+### "Table already exists"
+The tests automatically drop tables before running. If you see this:
+1. Delete `test.db` file (if using SQLite file)
+2. Or manually drop tables in your database
+
+### Memory Leaks Reported
+Some leaks are expected with FDConnection singletons. The framework uses FastMM4 for leak detection.
+
+---
+
+## 📚 Related Documentation
+
+- [Dext ORM Guide](../../Docs/orm-guide.md)
+- [Nullable Types Support](../../Docs/NULLABLE_SUPPORT.md)
+- [Database Configuration](../../Docs/DATABASE_CONFIG.md)
+- [Portuguese Version](README.pt-br.md)
+
+---
+
+## 📄 License
+
+This example is part of the Dext Framework and is licensed under the Apache License 2.0.
+
+---
+
+*Happy Coding! 🚀*
