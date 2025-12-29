@@ -213,9 +213,12 @@ begin
             begin
                var Guid := TRttiInterfaceType(ParamType).GUID;
                ServiceType := TServiceType.FromInterface(Guid);
-               var Intf := AProvider.GetServiceAsInterface(ServiceType);
-               if Intf <> nil then
-                 TValue.Make(@Intf, ParamType.Handle, ResolvedService);
+               if AProvider <> nil then
+               begin
+                 var Intf := AProvider.GetServiceAsInterface(ServiceType);
+                 if Intf <> nil then
+                   TValue.Make(@Intf, ParamType.Handle, ResolvedService);
+               end;
             end
             else if ParamType.TypeKind = tkClass then
             begin

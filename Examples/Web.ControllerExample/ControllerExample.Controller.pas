@@ -13,14 +13,12 @@ interface
 uses
   System.Classes,
   System.SysUtils,
-  Dext, // ✅ All-in-one framework unit
+  Dext,
   Dext.Web,
   Dext.Web.Results,
   ControllerExample.Services, // For TMySettings
   Dext.Collections,
   Dext.Options;
-
-{.$RTTI EXPLICIT METHODS([vcPublic, vcPublished])}
 
 type
   // DTOs

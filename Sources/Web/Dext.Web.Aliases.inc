@@ -283,6 +283,16 @@
   EBindingException = Dext.Web.ModelBinding.EBindingException;
   TBindingSource = Dext.Web.ModelBinding.TBindingSource;
   BindingAttribute = Dext.Web.ModelBinding.BindingAttribute;
+  FromBodyAttribute = Dext.Web.ModelBinding.FromBodyAttribute;
+  FromQueryAttribute = Dext.Web.ModelBinding.FromQueryAttribute;
+  FromRouteAttribute = Dext.Web.ModelBinding.FromRouteAttribute;
+  FromHeaderAttribute = Dext.Web.ModelBinding.FromHeaderAttribute;
+  FromServicesAttribute = Dext.Web.ModelBinding.FromServicesAttribute;
+  IModelBinder = Dext.Web.ModelBinding.IModelBinder;
+  TModelBinder = Dext.Web.ModelBinding.TModelBinder;
+  TModelBinderHelper = Dext.Web.ModelBinding.TModelBinderHelper;
+  IBindingSourceProvider = Dext.Web.ModelBinding.IBindingSourceProvider;
+  TBindingSourceProvider = Dext.Web.ModelBinding.TBindingSourceProvider;
 
   // Dext.Web.ModelBinding.Extensions
   IApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.IApplicationBuilderWithModelBinding;

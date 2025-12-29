@@ -1,15 +1,22 @@
-program ControllerExampleFluentAPI;
+﻿program Web.ControllerExample.FluentAPI;
 
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
-  System.Rtti,
-  Dext; // ✅ The only core unit needed!
+  Dext,
+  Dext.Web,
+  ControllerExample.Setup in 'ControllerExample.Setup.pas',
+  ControllerExample.Services in 'ControllerExample.Services.pas',
+  ControllerExample.Controller in 'ControllerExample.Controller.pas';
 
 begin
   try
     WriteLn('🚀 Starting Dext Controller Example with Fluent API...');
+    
+    // Create appsettings.json if it doesn't exist
+    EnsureAppSettingsExists;
+    
     var App: IWebApplication := TDextApplication.Create;
 
     // 1. Register Configuration (IOptions)
@@ -64,14 +71,11 @@ begin
     // 6. Map Controllers
     App.MapControllers;
 
+    // 6.1 Map Versioned API Examples
+    RegisterVersionedRoutes(App.Builder);
+
     // 7. Run Application
-    WriteLn('✅ Server running on http://localhost:8080');
-    WriteLn('📚 Endpoints:');
-    WriteLn('   GET  /api/hello');
-    WriteLn('   POST /api/login');
-    WriteLn('   GET  /api/protected (requires JWT)');
-    WriteLn('   GET  /health');
-    WriteLn;
+    PrintFeatureInstructions;
     App.Run(8080);
   except
     on E: Exception do

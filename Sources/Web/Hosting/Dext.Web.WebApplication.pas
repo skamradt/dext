@@ -168,13 +168,10 @@ end;
 
 function TDextApplication.GetApplicationBuilder: IApplicationBuilder;
 begin
-  // Lazy initialization: build ServiceProvider and ApplicationBuilder if not already done
+  // Lazy initialization: create ApplicationBuilder with nil ServiceProvider initially.
+  // The ServiceProvider will be set/updated in Run() AFTER all services are registered.
   if FAppBuilder = nil then
-  begin
-    if FServiceProvider = nil then
-      FServiceProvider := FServices.BuildServiceProvider;
-    FAppBuilder := TApplicationBuilder.Create(FServiceProvider);
-  end;
+    FAppBuilder := TApplicationBuilder.Create(nil); // Will be updated in Run()
   Result := FAppBuilder;
 end;
 
@@ -237,10 +234,12 @@ var
 begin
   FDefaultPort := Port;
   
-  // Build ServiceProvider now if not already built (lazy initialization)
-  // This ensures all services registered via AddRange are included
-  if FServiceProvider = nil then
-    FServiceProvider := FServices.BuildServiceProvider;
+  // Build ServiceProvider now - this is the correct place to do it,
+  // AFTER all services have been registered (including HealthChecks, etc.)
+  FServiceProvider := FServices.BuildServiceProvider;
+  
+  // Update ApplicationBuilder with the final ServiceProvider
+  GetApplicationBuilder.SetServiceProvider(FServiceProvider);
   
   // Get Lifetime & State Service
   var LifetimeIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));

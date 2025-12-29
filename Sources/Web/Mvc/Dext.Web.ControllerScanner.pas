@@ -264,29 +264,36 @@ begin
       CachedMethod.HttpMethod := ControllerMethod.HttpMethod;
       
       // ✅ CHECK AUTH ATTRIBUTES (Controller or Method level)
-      CachedMethod.RequiresAuth := False;
+      // RULE: [AllowAnonymous] on method OVERRIDES [Authorize] on controller
+      var ControllerRequiresAuth := False;
+      var MethodRequiresAuth := False;
+      var MethodAllowsAnonymous := False;
+      
+      // Check controller level [Authorize]
       for var Attr in Controller.RttiType.GetAttributes do
         if Attr is AuthorizeAttribute then
         begin
-          CachedMethod.RequiresAuth := True;
+          ControllerRequiresAuth := True;
           Break;
         end;
       
-      if not CachedMethod.RequiresAuth then
+      // Check method level attributes
+      for var Attr in ControllerMethod.Method.GetAttributes do
       begin
-        var HasAuthorizeAttribute := False;
-        var HasAllowAnonymousAttribute := False;
-        for var Attr in ControllerMethod.Method.GetAttributes do
-        begin
-          if Attr is AuthorizeAttribute then
-            HasAuthorizeAttribute := True;
+        if Attr is AuthorizeAttribute then
+          MethodRequiresAuth := True;
 
-          if Attr is AllowAnonymousAttribute then
-            HasAllowAnonymousAttribute := True;
-        end;
-
-        CachedMethod.RequiresAuth := HasAuthorizeAttribute and not HasAllowAnonymousAttribute;
+        if Attr is AllowAnonymousAttribute then
+          MethodAllowsAnonymous := True;
       end;
+
+      // Final decision: 
+      // - If method has [AllowAnonymous], it's always allowed (overrides controller [Authorize])
+      // - Otherwise, auth is required if controller OR method has [Authorize]
+      if MethodAllowsAnonymous then
+        CachedMethod.RequiresAuth := False
+      else
+        CachedMethod.RequiresAuth := ControllerRequiresAuth or MethodRequiresAuth;
 
       // ✅ FILTERS REMOVED FROM CACHE
       // We now fetch them dynamically in ExecuteCachedMethod to avoid AVs

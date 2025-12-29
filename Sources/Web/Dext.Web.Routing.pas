@@ -277,7 +277,7 @@ function TRouteMatcher.FindMatchingRoute(const AContext: IHttpContext;
 var
   Route: TRouteDefinition;
   Method, Path, RequestVersion: string;
-  Candidates: TList<TRouteDefinition>;
+  LiteralCandidates, PatternCandidates: TList<TRouteDefinition>;
   BestMatch: TRouteDefinition;
 begin
   ARouteParams := nil;
@@ -290,57 +290,74 @@ begin
   if (Length(Path) > 1) and (Path[Length(Path)] = '/') then
     Path := Copy(Path, 1, Length(Path) - 1);
   
-  // Collect all path-matching candidates
-  Candidates := TList<TRouteDefinition>.Create;
+  // Separate into literal and pattern candidates
+  // RULE: Literal routes (exact match) take priority over pattern routes (with {params})
+  LiteralCandidates := TList<TRouteDefinition>.Create;
+  PatternCandidates := TList<TRouteDefinition>.Create;
   try
     for Route in FRoutes do
     begin
         if (Route.Method = Method) then
         begin
              if (Route.Pattern = nil) and (Route.Path = Path) then
-               Candidates.Add(Route)
+               LiteralCandidates.Add(Route)
              else if (Route.Pattern <> nil) and Route.Pattern.Match(Path, ARouteParams) then
              begin
-               // Note: Match creates ARouteParams. If we continue loop, we overwrite/leak it.
-               // We need to manage ARouteParams carefully. 
-               // Since Pattern Match creates a dictionary, we should check if we keep this candidate.
-               // Re-matching later is safer/simpler for this logic block, or cache params.
-               
-               // Optimization: For now, just add candidate. We will re-match parameters for the WINNER.
+               // Route matches with pattern. Clean up the params created by Match().
                if Assigned(ARouteParams) then 
                begin
                  ARouteParams.Free;
                  ARouteParams := nil;
                end;
-               Candidates.Add(Route);
+               PatternCandidates.Add(Route);
              end;
         end;
     end;
     
     // Select Best Candidate based on Version
+    // Priority: Literal routes first, then pattern routes
     BestMatch := nil;
     
-    // 1. Try to find exact version match
-    for Route in Candidates do
+    // 1. Try literal candidates first
+    for Route in LiteralCandidates do
     begin
       if IsVersionMatch(RequestVersion, Route.Metadata.ApiVersions) then
       begin
         BestMatch := Route;
-        Break; // Priority to first defined match or exact match?
-        // If we have V1 and V2, and request is V1, we get V1.
-        // If we have Neutral and V1, and request is V1, we get V1 (because we checked Version match).
+        Break;
       end;
     end;
     
-    // 2. If no exact version match found and RequestVersion is empty, try to find a neutral route
+    // 2. If no literal match, try pattern candidates
+    if BestMatch = nil then
+    begin
+      for Route in PatternCandidates do
+      begin
+        if IsVersionMatch(RequestVersion, Route.Metadata.ApiVersions) then
+        begin
+          BestMatch := Route;
+          Break;
+        end;
+      end;
+    end;
+    
+    // 3. If still no match and RequestVersion is empty, try neutral routes (literal first)
     if (BestMatch = nil) and (RequestVersion = '') then
     begin
-      for Route in Candidates do
+      for Route in LiteralCandidates do
         if Length(Route.Metadata.ApiVersions) = 0 then
         begin
           BestMatch := Route;
           Break;
         end;
+      
+      if BestMatch = nil then
+        for Route in PatternCandidates do
+          if Length(Route.Metadata.ApiVersions) = 0 then
+          begin
+            BestMatch := Route;
+            Break;
+          end;
     end;
     
     if BestMatch <> nil then
@@ -356,7 +373,8 @@ begin
     end;
     
   finally
-    Candidates.Free;
+    LiteralCandidates.Free;
+    PatternCandidates.Free;
   end;
 end;
 

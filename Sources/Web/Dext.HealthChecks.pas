@@ -32,6 +32,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  Dext.DI.Attributes, // For [ServiceConstructor]
   Dext.Web.Core,
   Dext.Web.Interfaces,
   Dext.DI.Interfaces;
@@ -93,6 +94,7 @@ type
   private
     FService: IHealthCheckService;
   public
+    [ServiceConstructor]
     constructor Create(AService: IHealthCheckService);
     procedure Invoke(AContext: IHttpContext; ANext: TRequestDelegate); override;
   end;

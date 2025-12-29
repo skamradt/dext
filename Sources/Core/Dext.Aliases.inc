@@ -227,6 +227,12 @@
   // Dext.Validation
   TValidationError = Dext.Validation.TValidationError;
   TValidationResult = Dext.Validation.TValidationResult;
+  ValidationAttribute = Dext.Validation.ValidationAttribute;
+  RequiredAttribute = Dext.Validation.RequiredAttribute;
+  StringLengthAttribute = Dext.Validation.StringLengthAttribute;
+  EmailAddressAttribute = Dext.Validation.EmailAddressAttribute;
+  RangeAttribute = Dext.Validation.RangeAttribute;
+  TValidator = Dext.Validation.TValidator;
 
   // JsonDataObjects
   TJsonBaseObject = JsonDataObjects.TJsonBaseObject;
