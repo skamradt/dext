@@ -56,9 +56,48 @@ begin
 end.
 ```
 
-### 2. Adding Metadata to Endpoints
+### 2. Adding Metadata to Endpoints (Fluent API - Recommended)
 
-Use the fluent API to add rich metadata to your endpoints:
+Use the new fluent DSL for clean, chainable endpoint configuration:
+
+```pascal
+uses
+  Dext.OpenAPI.Fluent;
+
+// Simple endpoint with summary and tag
+SwaggerEndpoint.From(App.MapGet('/api/users', GetUsersHandler))
+  .Summary('Get all users')
+  .Tag('Users');
+
+// Full documentation with responses
+SwaggerEndpoint.From(
+  TApplicationBuilderExtensions.MapGet<Integer, IHttpContext>(App, '/api/users/{id}', GetUserHandler))
+  .Summary('Get user by ID')
+  .Description('Retrieves detailed information about a specific user')
+  .Tag('Users')
+  .Response(200, TypeInfo(TUser), 'User found')
+  .Response(404, TypeInfo(TErrorResponse), 'User not found');
+
+// POST with request type and multiple responses
+SwaggerEndpoint.From(
+  TApplicationBuilderExtensions.MapPost<TCreateUserRequest, IHttpContext>(App, '/api/users', CreateUserHandler))
+  .Summary('Create a new user')
+  .Description('Creates a new user account with the provided information')
+  .Tag('Users')
+  .RequestType(TypeInfo(TCreateUserRequest))
+  .Response(201, TypeInfo(TUser), 'User created')
+  .Response(400, TypeInfo(TErrorResponse), 'Invalid input');
+
+// Protected endpoint
+SwaggerEndpoint.From(App.MapGet('/api/admin/data', AdminHandler))
+  .Summary('Get admin data')
+  .Tag('Admin')
+  .RequireAuthorization('bearerAuth');
+```
+
+### 3. Traditional API (Alternative)
+
+For explicit control or backward compatibility, use `TEndpointMetadataExtensions`:
 
 ```pascal
 uses
@@ -70,7 +109,7 @@ TEndpointMetadataExtensions.WithSummary(
   'Get all users'
 );
 
-// Summary + Description
+// Full metadata
 TEndpointMetadataExtensions.WithMetadata(
   App.GetApplicationBuilder.MapPost('/api/users', CreateUserHandler),
   'Create a new user',
@@ -78,21 +117,12 @@ TEndpointMetadataExtensions.WithMetadata(
   ['Users', 'Authentication']
 );
 
-// Chaining metadata (if you prefer)
-var Builder := App.GetApplicationBuilder;
-TEndpointMetadataExtensions.WithSummary(
-  TEndpointMetadataExtensions.WithDescription(
-    TEndpointMetadataExtensions.WithTag(
-      Builder.MapGet('/api/products', GetProductsHandler),
-      'Products'
-    ),
-    'Retrieves a paginated list of all products'
-  ),
-  'Get all products'
-);
+// Add response documentation
+TEndpointMetadataExtensions.WithResponse(App, 200, 'OK', TypeInfo(TUser));
+TEndpointMetadataExtensions.WithResponse(App, 400, 'Bad Request', TypeInfo(TErrorResponse));
 ```
 
-### 3. Using Generic Handlers with Metadata
+### 4. Using Generic Handlers with Metadata
 
 ```pascal
 type
@@ -190,8 +220,12 @@ Options.LicenseUrl := 'https://www.apache.org/licenses/LICENSE-2.0';
    - `TSwaggerMiddleware`: Handles `/swagger` and `/swagger.json` requests
    - `TSwaggerExtensions`: Fluent API for adding Swagger to your app
 
-4. **`Dext.OpenAPI.Extensions.pas`**: Fluent API for endpoint metadata
+4. **`Dext.OpenAPI.Extensions.pas`**: Traditional API for endpoint metadata
    - `TEndpointMetadataExtensions`: Methods for adding metadata to routes
+
+5. **`Dext.OpenAPI.Fluent.pas`**: Modern fluent DSL (Recommended)
+   - `TEndpointBuilder`: Fluent record-based builder
+   - `SwaggerEndpoint`: Factory for creating endpoint builders
 
 ### How It Works
 
@@ -208,33 +242,31 @@ Options.LicenseUrl := 'https://www.apache.org/licenses/LICENSE-2.0';
 ### 1. Organize with Tags
 
 ```pascal
-// Group related endpoints with tags
-TEndpointMetadataExtensions.WithTag(
-  App.GetApplicationBuilder.MapGet('/api/users', GetUsersHandler),
-  'Users'
-);
+// Group related endpoints with tags using fluent API
+SwaggerEndpoint.From(App.MapGet('/api/users', GetUsersHandler))
+  .Summary('List users')
+  .Tag('Users');
 
-TEndpointMetadataExtensions.WithTag(
-  App.GetApplicationBuilder.MapPost('/api/users', CreateUserHandler),
-  'Users'
-);
+SwaggerEndpoint.From(App.MapPost('/api/users', CreateUserHandler))
+  .Summary('Create user')
+  .Tag('Users');
 
-TEndpointMetadataExtensions.WithTag(
-  App.GetApplicationBuilder.MapGet('/api/products', GetProductsHandler),
-  'Products'
-);
+SwaggerEndpoint.From(App.MapGet('/api/products', GetProductsHandler))
+  .Summary('List products')
+  .Tag('Products');
 ```
 
 ### 2. Provide Meaningful Descriptions
 
 ```pascal
-TEndpointMetadataExtensions.WithMetadata(
-  App.GetApplicationBuilder.MapGet('/api/users/{id}', GetUserByIdHandler),
-  'Get User by ID',
-  'Retrieves detailed information about a specific user by their unique identifier. ' +
-  'Returns 404 if the user is not found.',
-  ['Users']
-);
+SwaggerEndpoint.From(
+  TApplicationBuilderExtensions.MapGet<Integer, IHttpContext>(App, '/api/users/{id}', GetUserByIdHandler))
+  .Summary('Get User by ID')
+  .Description('Retrieves detailed information about a specific user by their unique identifier. ' +
+    'Returns 404 if the user is not found.')
+  .Tag('Users')
+  .Response(200, TypeInfo(TUser))
+  .Response(404, TypeInfo(TErrorResponse));
 ```
 
 ### 3. Use Consistent Naming

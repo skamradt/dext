@@ -14,6 +14,7 @@ uses
   Dext.Swagger.Middleware,
   Dext.OpenAPI.Attributes,
   Dext.OpenAPI.Extensions,
+  Dext.OpenAPI.Fluent,
   Dext.OpenAPI.Generator,
   Dext.OpenAPI.Types,
   Dext.Web.Results,
@@ -147,9 +148,11 @@ begin
         // User Endpoints
         // ========================================
 
+        // ========================================
         // GET /api/users - Get all users
+        // ========================================
         Writeln('1. GET /api/users');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           App.MapGet('/api/users',
             procedure(Ctx: IHttpContext)
             var
@@ -157,14 +160,16 @@ begin
             begin
               UsersJson := TDextJson.Serialize<TArray<TUser>>(Users);
               Ctx.Response.Json(UsersJson);
-            end),
-          'Get all users',
-          'Retrieves a list of all registered users in the system',
-          ['Users']);
+            end))
+          .Summary('Get all users')
+          .Description('Retrieves a list of all registered users in the system')
+          .Tag('Users');
 
+        // ========================================
         // GET /api/users/{id} - Get user by ID
+        // ========================================
         Writeln('2. GET /api/users/{id}');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           TApplicationBuilderExtensions.MapGet<Integer, IHttpContext>(App, '/api/users/{id}',
             procedure(UserId: Integer; Ctx: IHttpContext)
             var
@@ -187,16 +192,18 @@ begin
                 Ctx.Response.StatusCode := 404;
                 Ctx.Response.Json('{"error": "User not found"}');
               end;
-            end),
-          'Get user by ID',
-          'Retrieves detailed information about a specific user by their unique identifier. Returns 404 if the user is not found.',
-          ['Users']);
-        TEndpointMetadataExtensions.WithResponse(App, 200, 'User found', TypeInfo(TUser));
-        TEndpointMetadataExtensions.WithResponse(App, 404, 'User not found');
+            end))
+          .Summary('Get user by ID')
+          .Description('Retrieves detailed information about a specific user by their unique identifier. Returns 404 if the user is not found.')
+          .Tag('Users')
+          .Response(200, TypeInfo(TUser), 'User found')
+          .Response(404, TypeInfo(TErrorResponse), 'User not found');
 
+        // ========================================
         // POST /api/users - Create new user
+        // ========================================
         Writeln('3. POST /api/users');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           TApplicationBuilderExtensions.MapPost<TCreateUserRequest, IHttpContext>(App, '/api/users',
             procedure(Req: TCreateUserRequest; Ctx: IHttpContext)
             var
@@ -220,18 +227,19 @@ begin
 
               Ctx.Response.StatusCode := 201;
               Ctx.Response.Json(TDextJson.Serialize<TUser>(NewUser));
-            end),
-          'Create a new user',
-          'Creates a new user account with the provided information. Returns the created user with assigned ID.',
-          ['Users']);
-        TEndpointMetadataExtensions.WithResponse(App, 201, 'User created', TypeInfo(TUser));
-        TEndpointMetadataExtensions.WithResponse(App, 400, 'Invalid input', TypeInfo(TErrorResponse));
-        // Ensure Request body is documented
-        TEndpointMetadataExtensions.WithRequestType(App, TypeInfo(TCreateUserRequest));
+            end))
+          .Summary('Create a new user')
+          .Description('Creates a new user account with the provided information. Returns the created user with assigned ID.')
+          .Tag('Users')
+          .RequestType(TypeInfo(TCreateUserRequest))
+          .Response(201, TypeInfo(TUser), 'User created')
+          .Response(400, TypeInfo(TErrorResponse), 'Invalid input');
 
+        // ========================================
         // DELETE /api/users/{id} - Delete user
+        // ========================================
         Writeln('4. DELETE /api/users/{id}');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           TApplicationBuilderExtensions.MapDelete<Integer, IHttpContext>(App, '/api/users/{id}',
             procedure(UserId: Integer; Ctx: IHttpContext)
             var
@@ -262,12 +270,12 @@ begin
                 Ctx.Response.StatusCode := 404;
                 Ctx.Response.Json('{"error": "User not found"}');
               end;
-            end),
-          'Delete user',
-          'Deletes a user from the system. Returns 204 on success, 404 if user not found.',
-          ['Users']);
-        TEndpointMetadataExtensions.WithResponse(App, 204, 'User deleted');
-        TEndpointMetadataExtensions.WithResponse(App, 404, 'User not found', TypeInfo(TErrorResponse));
+            end))
+          .Summary('Delete user')
+          .Description('Deletes a user from the system. Returns 204 on success, 404 if user not found.')
+          .Tag('Users')
+          .Response(204, nil, 'User deleted')
+          .Response(404, TypeInfo(TErrorResponse), 'User not found');
 
         // ========================================
         // Product Endpoints
@@ -275,7 +283,7 @@ begin
 
         // GET /api/products - Get all products
         Writeln('5. GET /api/products');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           App.MapGet('/api/products',
             procedure(Ctx: IHttpContext)
             var
@@ -293,45 +301,45 @@ begin
               Products[1].InStock := False;
 
               Ctx.Response.Json(TDextJson.Serialize<TArray<TProduct>>(Products));
-            end),
-          'Get all products',
-          'Retrieves a list of all available products in the catalog',
-          ['Products']);
-        TEndpointMetadataExtensions.WithResponse(App, 200, 'Successful response', TypeInfo(TProductArray));
+            end))
+          .Summary('Get all products')
+          .Description('Retrieves a list of all available products in the catalog')
+          .Tag('Products')
+          .Response(200, TypeInfo(TProductArray), 'Product list');
+
 
         // ========================================
-        // Health Check
+        // Health Check (Using NEW Fluent Syntax)
         // ========================================
 
         Writeln('6. GET /health');
-        TEndpointMetadataExtensions.WithMetadata(
+        SwaggerEndpoint.From(
           App.MapGet('/health',
             procedure(Ctx: IHttpContext)
             begin
               Ctx.Response.Json('{"status": "healthy", "timestamp": "' + DateTimeToStr(Now) + '"}');
-            end),
-          'Health check',
-          'Returns the health status of the API',
-          ['System']);
-        TEndpointMetadataExtensions.WithResponse(App, 200, 'Successful response', TypeInfo(THealthResponse));
+            end))
+          .Summary('Health check')
+          .Description('Returns the health status of the API')
+          .Tag('System')
+          .Response(200, TypeInfo(THealthResponse));
 
         // ========================================
-        // Protected Endpoint
+        // Protected Endpoint (Using NEW Fluent Syntax)
         // ========================================
 
         Writeln('7. GET /api/admin/secure-data');
-        TEndpointMetadataExtensions.RequireAuthorization(
-          TEndpointMetadataExtensions.WithMetadata(
-            App.MapGet('/api/admin/secure-data',
-              procedure(Ctx: IHttpContext)
-              begin
-                // In a real scenario, middleware would validate the token before reaching here
-                Ctx.Response.Json('{"data": "This is top secret data", "access": "granted"}');
-              end),
-            'Get secure data',
-            'Retrieves sensitive data. Requires Bearer authentication.',
-            ['Admin']),
-          'bearerAuth');
+        SwaggerEndpoint.From(
+          App.MapGet('/api/admin/secure-data',
+            procedure(Ctx: IHttpContext)
+            begin
+              // In a real scenario, middleware would validate the token before reaching here
+              Ctx.Response.Json('{"data": "This is top secret data", "access": "granted"}');
+            end))
+          .Summary('Get secure data')
+          .Description('Retrieves sensitive data. Requires Bearer authentication.')
+          .Tag('Admin')
+          .RequireAuthorization('bearerAuth');
 
         Writeln('📚 Configuring Swagger...');
         // Add Swagger middleware after routes are defined so it can discover them

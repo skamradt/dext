@@ -175,6 +175,7 @@
         <DCCReference Include="Web\Middleware\Dext.Web.Middleware.Compression.pas"/>
         <DCCReference Include="Web\Dext.Auth.Middleware.pas"/>
         <DCCReference Include="Web\Dext.Web.DataApi.pas"/>
+        <DCCReference Include="Web\Dext.OpenAPI.Fluent.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
