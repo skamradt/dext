@@ -152,15 +152,16 @@ begin
         // GET /api/users - Get all users
         // ========================================
         Writeln('1. GET /api/users');
-        SwaggerEndpoint.From(
-          App.MapGet('/api/users',
+        var GetAllUsers := App.MapGet('/api/users',
             procedure(Ctx: IHttpContext)
             var
               UsersJson: string;
             begin
               UsersJson := TDextJson.Serialize<TArray<TUser>>(Users);
               Ctx.Response.Json(UsersJson);
-            end))
+            end);
+
+        SwaggerEndpoint.From(GetAllUsers)
           .Summary('Get all users')
           .Description('Retrieves a list of all registered users in the system')
           .Tag('Users');

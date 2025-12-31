@@ -729,23 +729,16 @@ begin
     Result.Parameters.Add(Param);
   end;
   
-  // Add request body for POST/PUT/PATCH
-  if AMetadata.Method.ToUpper.Equals('POST') or 
+  // Add request body for POST/PUT/PATCH only if a RequestType is defined
+  if (AMetadata.Method.ToUpper.Equals('POST') or 
      AMetadata.Method.ToUpper.Equals('PUT') or 
-     AMetadata.Method.ToUpper.Equals('PATCH') then
+     AMetadata.Method.ToUpper.Equals('PATCH')) and 
+     Assigned(AMetadata.RequestType) then
   begin
     Result.RequestBody := TOpenAPIRequestBody.Create;
     Result.RequestBody.Required := True;
     
-    var Schema: TOpenAPISchema;
-    if Assigned(AMetadata.RequestType) then
-      Schema := TypeToSchema(AMetadata.RequestType)
-    else
-    begin
-      Schema := TOpenAPISchema.Create;
-      Schema.DataType := odtObject;
-    end;
-    
+    var Schema := TypeToSchema(AMetadata.RequestType);
     Result.RequestBody.Content.Add('application/json', Schema);
   end;
   

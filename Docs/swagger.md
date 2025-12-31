@@ -284,23 +284,73 @@ SwaggerEndpoint.From(
 .MapPost('/createNewUser')
 ```
 
+## Controller-Based Swagger
+
+For MVC-style applications, you can use attribute-based Swagger documentation directly on controllers:
+
+### Basic Example
+
+```pascal
+[DextController('/api/books')]
+[SwaggerTag('Books')]
+TBooksController = class
+public
+  [DextGet('')]
+  [SwaggerOperation('List all books', 'Returns all books in the catalog')]
+  [SwaggerResponse(200, 'List of books')]
+  procedure GetAll(Ctx: IHttpContext); virtual;
+
+  [DextPost('')]
+  [SwaggerOperation('Create a book', 'Creates a new book entry')]
+  [SwaggerResponse(201, 'Book created')]
+  [SwaggerResponse(400, 'Invalid request')]
+  procedure Create(Ctx: IHttpContext; const Request: TCreateBookRequest); virtual;
+end;
+```
+
+### Automatic Request Type Extraction
+
+When a controller method has a `record` parameter, the framework automatically extracts it as the request body type for OpenAPI documentation:
+
+```pascal
+// The TCreateBookRequest type is automatically used as the request body schema
+procedure Create(Ctx: IHttpContext; const Request: TCreateBookRequest); virtual;
+```
+
+### Available Controller Attributes
+
+| Attribute | Location | Description |
+|-----------|----------|-------------|
+| `[DextController('/path')]` | Class | Defines controller route prefix |
+| `[SwaggerTag('Name')]` | Class | Groups all actions under a tag |
+| `[SwaggerOperation('summary', 'description')]` | Method | Endpoint documentation |
+| `[SwaggerResponse(code, 'description')]` | Method | Response documentation |
+| `[Authorize('scheme')]` | Method/Class | Requires authentication (with JWT middleware) |
+| `[AllowAnonymous]` | Method | Allows unauthenticated access |
+
+### Example Project
+
+See `Examples/Web.SwaggerControllerExample` for a complete working example.
+
 ## Limitations & Future Enhancements
 
 ### Current Limitations
 
-- Schema introspection for request/response bodies is basic
-- Only one server configuration supported
-- No support for authentication schemes in OpenAPI spec (yet)
-- No support for examples in schemas
+- Schema introspection for response bodies requires explicit `ResponseType` or attributes
+- Only one server configuration supported per call (use `WithServer` multiple times for more)
+
+### Implemented Features ✅
+
+- ✅ Full RTTI-based schema generation for records (via `RequestType`)
+- ✅ Authentication/Authorization scheme documentation (`WithBearerAuth`, `WithApiKeyAuth`)
+- ✅ Request/Response examples via attributes
+- ✅ Controller-based Swagger with automatic `RequestType` extraction
 
 ### Planned Features
 
-- [ ] Full RTTI-based schema generation for records and classes
-- [ ] Support for multiple servers
-- [ ] Authentication/Authorization scheme documentation
-- [ ] Request/Response examples
-- [ ] Custom schema annotations via attributes
-- [ ] Support for file uploads
+- [ ] Support for multiple servers in single configuration
+- [ ] Response type inference from method return values
+- [ ] Support for file uploads documentation
 - [ ] Webhook documentation
 
 ## Troubleshooting
@@ -348,9 +398,9 @@ TEndpointMetadataExtensions.WithSummary(
 
 See the `/Examples` directory for complete working examples:
 
-- `SwaggerBasic.dpr`: Basic Swagger setup
-- `SwaggerAdvanced.dpr`: Advanced usage with metadata and tags
-- `SwaggerGeneric.dpr`: Using generic handlers with Swagger
+- `Web.SwaggerExample`: Minimal API with fluent Swagger documentation
+- `Web.SwaggerControllerExample`: Controllers with attribute-based Swagger
+- `Web.ControllerExample`: MVC Controllers without Swagger
 
 ## Contributing
 

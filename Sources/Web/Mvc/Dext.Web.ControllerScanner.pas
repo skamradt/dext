@@ -335,13 +335,52 @@ begin
         SecuritySchemes.Free;
       end;
 
-      // ✅ PROCESSAR [SwaggerOperation] e [SwaggerResponse]
+      // ✅ PROCESSAR [SwaggerOperation], [SwaggerResponse], [SwaggerTag] e RequestType
       var Routes := AppBuilder.GetRoutes;
       if Length(Routes) > 0 then
       begin
         var Metadata := Routes[High(Routes)];
         var Updated := False;
 
+        // 1. [SwaggerTag] do Controller
+        for var TypeAttr in Controller.RttiType.GetAttributes do
+        begin
+          if TypeAttr is SwaggerTagAttribute then
+          begin
+            var TagAttr := SwaggerTagAttribute(TypeAttr);
+            if Length(Metadata.Tags) = 0 then
+            begin
+              SetLength(Metadata.Tags, 1);
+              Metadata.Tags[0] := TagAttr.Tag;
+              Updated := True;
+            end;
+          end;
+        end;
+
+        // 2. Extrair RequestType dos parâmetros do método (para POST/PUT/PATCH)
+        if (ControllerMethod.HttpMethod = 'POST') or 
+           (ControllerMethod.HttpMethod = 'PUT') or 
+           (ControllerMethod.HttpMethod = 'PATCH') then
+        begin
+          var Params := ControllerMethod.Method.GetParameters;
+          for var Param in Params do
+          begin
+            var ParamType := Param.ParamType;
+            if (ParamType <> nil) and (ParamType.TypeKind in [tkRecord, tkMRecord]) then
+            begin
+              // Ignorar IHttpContext e tipos básicos
+              if not SameText(ParamType.Name, 'IHttpContext') then
+              begin
+                Metadata.RequestType := ParamType.Handle;
+                Updated := True;
+                WriteLn('      📝 RequestType: ', ParamType.Name);
+                Break;
+              end;
+            end;
+          end;
+        end;
+
+        // 3. [SwaggerOperation] do método
         for var Attr in ControllerMethod.Method.GetAttributes do
         begin
           if Attr is SwaggerOperationAttribute then
@@ -353,6 +392,27 @@ begin
             Updated := True;
           end;
         end;
+
+        // 4. [SwaggerResponse] do método -> popular array Responses
+        var ResponsesList: TArray<TOpenAPIResponseMetadata>;
+        SetLength(ResponsesList, 0);
+        for var Attr in ControllerMethod.Method.GetAttributes do
+        begin
+          if Attr is SwaggerResponseAttribute then
+          begin
+            var RespAttr := SwaggerResponseAttribute(Attr);
+            var RespMeta: TOpenAPIResponseMetadata;
+            RespMeta.StatusCode := RespAttr.StatusCode;
+            RespMeta.Description := RespAttr.Description;
+            RespMeta.MediaType := RespAttr.ContentType;
+            RespMeta.SchemaType := nil; // Atributo não tem TypeInfo
+            SetLength(ResponsesList, Length(ResponsesList) + 1);
+            ResponsesList[High(ResponsesList)] := RespMeta;
+            Updated := True;
+          end;
+        end;
+        if Length(ResponsesList) > 0 then
+          Metadata.Responses := ResponsesList;
 
         if Updated then
           AppBuilder.UpdateLastRouteMetadata(Metadata);
