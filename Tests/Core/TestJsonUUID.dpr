@@ -3,6 +3,7 @@
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,
   System.SysUtils,
   Dext.Types.UUID,
   Dext.Json,

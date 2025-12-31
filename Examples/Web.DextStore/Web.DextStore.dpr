@@ -70,7 +70,7 @@ begin
     App.MapControllers;
 
     // 3. Run
-    WriteLn('🚀 Server running on http://localhost:9000');
+    WriteLn('🚀 Server running on http://localhost:5000');
     WriteLn('');
     WriteLn('📚 Available Endpoints:');
     WriteLn('  Authentication:');
