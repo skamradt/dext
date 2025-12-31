@@ -43,10 +43,11 @@ unit Dext.Core.SmartTypes;
 interface
 
 uses
-  System.SysUtils,
-  System.Generics.Defaults,
   System.Generics.Collections,
+  System.Generics.Defaults,
   System.Rtti,
+  System.SysUtils,
+  System.TypInfo,
   System.Variants,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types;
