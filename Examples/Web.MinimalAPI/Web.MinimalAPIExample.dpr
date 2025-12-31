@@ -3,7 +3,17 @@ program Web.MinimalAPIExample;
 
 {$APPTYPE CONSOLE}
 
-{$R *.res}
+{
+  Dext Minimal API Example
+  ========================
+  This is the simplest way to create HTTP endpoints with Dext.
+  
+  Demonstrates:
+  - Direct route mapping (no Controllers needed)
+  - Dependency Injection in handlers
+  - Query parameter handling
+  - JSON responses
+}
 
 uses
   Dext.MM,
@@ -13,25 +23,26 @@ uses
   Dext.DI.Interfaces,
   Dext.DI.Extensions,
   Dext.Web.Interfaces,
-  Dext.Web.Results,
-  Dext.Web.ApplicationBuilder.Extensions;
+  Dext.Web.Results;
 
 type
-  ISomeService = interface
+  // Simple service interface for DI demonstration
+  IGreetingService = interface
     ['{89A82D2C-D213-4629-A77E-F6C7D8A1B2C3}']
-    procedure DoSomething;
+    function GetGreeting(const Name: string): string;
   end;
 
-  TSomeService = class(TInterfacedObject, ISomeService)
+  TGreetingService = class(TInterfacedObject, IGreetingService)
   public
-    procedure DoSomething;
+    function GetGreeting(const Name: string): string;
   end;
 
-{ TSomeService }
-
-procedure TSomeService.DoSomething;
+function TGreetingService.GetGreeting(const Name: string): string;
 begin
-  WriteLn('Doing something...');
+  if Name <> '' then
+    Result := Format('Hello, %s! Welcome to Dext.', [Name])
+  else
+    Result := 'Hello from Dext!';
 end;
 
 var
@@ -39,48 +50,96 @@ var
   Host: IWebHost;
 
 begin
-  Builder := TDextWebHost.CreateDefaultBuilder;
+  try
+    WriteLn('🚀 Dext Minimal API Example');
+    WriteLn('============================');
+    WriteLn;
+    
+    Builder := TDextWebHost.CreateDefaultBuilder;
 
-  Builder.ConfigureServices(
-    procedure(Services: IServiceCollection)
-    begin
-      TServiceCollectionExtensions.AddSingleton<ISomeService, TSomeService>(Services);
-    end);
+    // Register services for Dependency Injection
+    Builder.ConfigureServices(
+      procedure(Services: IServiceCollection)
+      begin
+        TServiceCollectionExtensions.AddSingleton<IGreetingService, TGreetingService>(Services);
+        WriteLn('✅ Services registered');
+      end);
 
-  Builder.Configure(
-    procedure(App: IApplicationBuilder)
-    begin
-      // Simple GET endpoint
-      App.Map('/hello',
-        procedure(Context: IHttpContext)
-        begin
-          Context.Response.Write('Hello from Dext!');
-        end);
+    Builder.Configure(
+      procedure(App: IApplicationBuilder)
+      begin
+        // GET /hello - Uses DI to resolve service
+        App.MapGet('/hello',
+          procedure(Context: IHttpContext)
+          var
+            Svc: IGreetingService;
+            Name: string;
+          begin
+            Name := Context.Request.Query.Values['name'];
+            // Resolve service from request context using Supports
+            if Supports(Context.Services.GetService(TypeInfo(IGreetingService)), IGreetingService, Svc) then
+              Context.Response.Write(Svc.GetGreeting(Name))
+            else
+              Context.Response.Write('Hello! (Service not resolved)');
+          end);
 
-      // GET with time
-      App.Map('/time',
-        procedure(Context: IHttpContext)
-        begin
-          Context.Response.Write(Format('Server time: %s', [DateTimeToStr(Now)]));
-        end);
+        // GET /echo?text=abc - Query parameter example
+        App.MapGet('/echo',
+          procedure(Context: IHttpContext)
+          var
+            Text: string;
+          begin
+            Text := Context.Request.Query.Values['text'];
+            if Text = '' then Text := 'No text provided';
+            Context.Response.Write('Echo: ' + Text);
+          end);
 
-      // Simple JSON endpoint
-      App.Map('/json',
-        procedure(Context: IHttpContext)
-        begin
-          Context.Response.Json('{"message": "Hello JSON!", "timestamp": "' +
-            DateTimeToStr(Now) + '"}');
-        end);
-        
-      WriteLn('Routes mapped:');
-      WriteLn('  GET /hello');
-      WriteLn('  GET /time');
-      WriteLn('  GET /json');
-      WriteLn('');
-      WriteLn('Server running on http://localhost:8080');
-      WriteLn('Press Ctrl+C to stop');
-    end);
+        // GET /time - Server time
+        App.MapGet('/time',
+          procedure(Context: IHttpContext)
+          begin
+            Context.Response.Write(Format('Server time: %s', [DateTimeToStr(Now)]));
+          end);
 
-  Host := Builder.Build;
-  Host.Run;
+        // GET /json - JSON response
+        App.MapGet('/json',
+          procedure(Context: IHttpContext)
+          begin
+            Context.Response.Json(
+              '{"message": "Hello JSON!", "timestamp": "' + DateTimeToStr(Now) + '"}'
+            );
+          end);
+
+        // GET /health - Health check endpoint
+        App.MapGet('/health',
+          procedure(Context: IHttpContext)
+          begin
+            Context.Response.Json('{"status": "healthy"}');
+          end);
+
+        WriteLn;
+        WriteLn('📍 Routes registered:');
+        WriteLn('  GET /hello?name=World  - Greeting with DI');
+        WriteLn('  GET /echo?text=abc     - Echo query param');
+        WriteLn('  GET /time              - Current server time');
+        WriteLn('  GET /json              - JSON response');
+        WriteLn('  GET /health            - Health check');
+        WriteLn;
+        WriteLn('═══════════════════════════════════════════');
+        WriteLn('🌐 Server running on http://localhost:5000');
+        WriteLn('═══════════════════════════════════════════');
+        WriteLn;
+        WriteLn('Press Enter to stop the server...');
+      end);
+
+    Host := Builder.Build;
+    Host.Run;
+    
+    ReadLn; 
+    Host.Stop;
+    
+  except
+    on E: Exception do
+      WriteLn('❌ Error: ', E.Message);
+  end;
 end.
