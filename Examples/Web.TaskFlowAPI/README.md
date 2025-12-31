@@ -28,7 +28,7 @@ This example showcases how Dext can inject both the Request Body and Services in
 ```delphi
 // TUser comes from Body
 // IUserService comes from DI
-TApplicationBuilderExtensions.MapPostR<TUser, IUserService, IResult>(App, '/api/users',
+App.Builder.MapPost<TUser, IUserService, IResult>('/api/users',
   function(User: TUser; UserService: IUserService): IResult
   begin
     // Use the service directly
@@ -42,9 +42,15 @@ Binding URL segments to primitive types:
 
 ```delphi
 // {id} becomes Id: Integer
-TApplicationBuilderExtensions.MapGetR<Integer, IResult>(App, '/api/tasks/{id}',
+App.Builder.MapGet<Integer, IResult>('/api/tasks/{id}',
   function(Id: Integer): IResult
   begin
     // ...
   end);
 ```
+
+## 📚 See Also
+
+*   [Web Framework Documentation](../../Docs/web-framework.md)
+*   [Dependency Injection](../../Docs/dependency-injection.md)
+*   [Routing System](../../Docs/routing.md)

@@ -2,19 +2,14 @@
 
 uses
   Dext.MM,
-  Dext.Web.WebApplication,
-  Dext.DI.Extensions,
-  Dext.Web.Routing.Attributes,
-  Dext.Web.ModelBinding,
+  System.SysUtils,
+  Dext.Web,
   Dext.Web.Interfaces,
+  Dext.Web.Results,
   TaskFlow.Domain,
   TaskFlow.Repository.Interfaces,
   TaskFlow.Repository.Mock,
-  TaskFlow.Handlers.Tasks,
-  Dext.Web.HandlerInvoker,
-  Dext.Web.ApplicationBuilder.Extensions,
-  Dext.Web.Results,
-  System.SysUtils;
+  TaskFlow.Handlers.Tasks;
 
 type
   // ✅ Modelo para teste
@@ -57,8 +52,9 @@ begin
     App := TDextApplication.Create;
 
     // 2. Configurar DI Container
-    TServiceCollectionExtensions.AddSingleton<ITaskRepository, TTaskRepositoryMock>(App.GetServices);
-    TServiceCollectionExtensions.AddSingleton<IUserService, TUserService>(App.GetServices); // ✅ Registrar UserService
+    // Usando sintaxe simplificada (App.Services)
+    App.Services.AddSingleton<ITaskRepository, TTaskRepositoryMock>;
+    App.Services.AddSingleton<IUserService, TUserService>; // ✅ Registrar UserService
 
     // 3. Mapear Handlers
     App.MapControllers;
@@ -68,7 +64,7 @@ begin
 
     // 4. ✅ MAPEAMENTO COM SMART BINDING (FASE 2)
     var AppBuilder := App.GetApplicationBuilder;
-
+    
     // ✅ Functional Middleware: Logging Simples
     AppBuilder.Use(
       procedure(Context: IHttpContext; Next: TRequestDelegate)
@@ -96,7 +92,7 @@ begin
       end);
 
     // GET /api/tasks/{id} - Smart Binding de Inteiro (Route Param) + Results
-    TApplicationBuilderExtensions.MapGetR<Integer, IResult>(AppBuilder, '/api/tasks/{id}',
+    App.Builder.MapGet<Integer, IResult>('/api/tasks/{id}',
       function(Id: Integer): IResult
       begin
         WriteLn(Format('🎯 HANDLER: GetTaskById (%d)', [Id]));
@@ -111,7 +107,7 @@ begin
       end);
 
     // DELETE /api/tasks/{id} - Smart Binding + Service Injection (Simulado)
-    TApplicationBuilderExtensions.MapDelete<Integer, IHttpContext>(AppBuilder, '/api/tasks/{id}',
+    App.Builder.MapDelete<Integer, IHttpContext>('/api/tasks/{id}',
       procedure(Id: Integer; Context: IHttpContext)
       begin
         WriteLn(Format('🎯 HANDLER: DeleteTask (%d)', [Id]));
@@ -121,7 +117,7 @@ begin
 
     // ✅ NOVO: Endpoint com Handler Injection (Minimal API Style) + Results
     // Recebe: Body (TUser), Serviço (IUserService) -> Retorna IResult
-    TApplicationBuilderExtensions.MapPostR<TUser, IUserService, IResult>(AppBuilder, '/api/users',
+    App.Builder.MapPost<TUser, IUserService, IResult>('/api/users',
       function(User: TUser; UserService: IUserService): IResult
       var
         CreatedUser: TUser;
@@ -153,8 +149,6 @@ begin
     WriteLn('   curl http://localhost:8080/');
     WriteLn('   curl http://localhost:8080/api/tasks');
     WriteLn('   curl http://localhost:8080/api/tasks/error');
-    WriteLn('');
-    WriteLn('⏹️  Press Enter to stop');
     WriteLn('');
 
     // 5. 🚀 INICIAR SERVIDOR!

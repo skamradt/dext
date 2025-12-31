@@ -139,9 +139,82 @@ type
       Handler: THandlerResultFunc<T1, T2, T3, TResult>): IApplicationBuilder; overload;
   end;
 
+  TDextAppBuilderHelper = record helper for TDextAppBuilder
+  public
+    // 1 Argument Handlers
+    function MapGet<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder; overload;
+    function MapPost<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder; overload;
+    function MapPut<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder; overload;
+    function MapDelete<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder; overload;
+
+    // handlers returning IResult
+    function MapGet<TResult>(const Path: string; Handler: THandlerResultFunc<TResult>): IApplicationBuilder; overload;
+    function MapGet<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
+    function MapPost<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
+    function MapPost<T1, T2, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, TResult>): IApplicationBuilder; overload;
+    function MapPut<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
+    function MapDelete<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
+    
+    // Explicit legacy support (MapPostR aliases) if needed, but modern code prefers MapPost<T,R>
+  end;
+
+
 procedure UpdateRouteMetadata(App: IApplicationBuilder; RequestType: PTypeInfo; ResponseType: PTypeInfo);
 
 implementation
+
+{ TDextAppBuilderHelper }
+
+function TDextAppBuilderHelper.MapGet<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapGet<T>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapPost<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapPost<T>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapPut<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapPut<T>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapDelete<T>(const Path: string; Handler: THandlerProc<T>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapDelete<T>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapGet<TResult>(const Path: string; Handler: THandlerResultFunc<TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapGet<TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapGet<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapGet<T, TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapPost<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapPost<T, TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapPost<T1, T2, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapPost<T1, T2, TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapPut<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapPut<T, TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.MapDelete<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder;
+begin
+  Result := TApplicationBuilderExtensions.MapDelete<T, TResult>(Self.Unwrap, Path, Handler);
+end;
+
 
 procedure UpdateRouteMetadata(App: IApplicationBuilder; RequestType: PTypeInfo; ResponseType: PTypeInfo);
 var
