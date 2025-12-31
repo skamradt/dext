@@ -26,7 +26,8 @@ uses
   Dext.Entity.Mapping,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.TypeConverters,
-  Dext.Core.ValueConverters;
+  Dext.Core.ValueConverters,
+  Dext.OpenAPI.Extensions;
 
 type
   TApiMethod = (amGet, amGetList, amPost, amPut, amDelete);
@@ -43,6 +44,10 @@ type
     FRolesForRead: string;   // Comma-separated roles for GET operations
     FRolesForWrite: string;  // Comma-separated roles for POST/PUT/DELETE
     FNamingStrategy: TDextCaseStyle;
+    // Swagger options (disabled by default)
+    FEnableSwagger: Boolean;
+    FSwaggerTag: string;
+    FSwaggerDescription: string;
   public
     constructor Create;
     property AllowedMethods: TApiMethods read FAllowedMethods write FAllowedMethods;
@@ -50,6 +55,9 @@ type
     property RequireAuthentication: Boolean read FRequireAuthentication write FRequireAuthentication;
     property RolesForRead: string read FRolesForRead write FRolesForRead;
     property RolesForWrite: string read FRolesForWrite write FRolesForWrite;
+    property EnableSwagger: Boolean read FEnableSwagger write FEnableSwagger;
+    property SwaggerTag: string read FSwaggerTag write FSwaggerTag;
+    property SwaggerDescription: string read FSwaggerDescription write FSwaggerDescription;
       
     // Fluent configuration
     function Allow(AMethods: TApiMethods): TDataApiOptions<T>;
@@ -62,6 +70,11 @@ type
     // Naming Strategies
     function UseSnakeCase: TDataApiOptions<T>;
     function UseCamelCase: TDataApiOptions<T>;
+    
+    // Swagger documentation (opt-in)
+    function UseSwagger: TDataApiOptions<T>;
+    function Tag(const ATag: string): TDataApiOptions<T>;
+    function Description(const ADescription: string): TDataApiOptions<T>;
   end;
 
   TDataApiHandler<T: class> = class
@@ -203,6 +216,24 @@ begin
   Result := Self;
 end;
 
+function TDataApiOptions<T>.UseSwagger: TDataApiOptions<T>;
+begin
+  FEnableSwagger := True;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.Tag(const ATag: string): TDataApiOptions<T>;
+begin
+  FSwaggerTag := ATag;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.Description(const ADescription: string): TDataApiOptions<T>;
+begin
+  FSwaggerDescription := ADescription;
+  Result := Self;
+end;
+
 { TDataApiHandler<T> }
 
 constructor TDataApiHandler<T>.Create(const APath: string; AOptions: TDataApiOptions<T>; ADbContext: TDbContext);
@@ -330,49 +361,153 @@ end;
 
 procedure TDataApiHandler<T>.RegisterRoutes(const ABuilder: IApplicationBuilder);
 var
-  CleanPath: string;
+  CleanPath, EntityName, EntityTag: string;
+  RttiCtx: TRttiContext;
+  RttiType: TRttiType;
 begin
   CleanPath := FPath.TrimRight(['/']);
+  
+  // Get entity name for Swagger tag (e.g., "TCustomer" -> "Customers")
+  RttiCtx := TRttiContext.Create;
+  try
+    RttiType := RttiCtx.GetType(TypeInfo(T));
+    if RttiType <> nil then
+      EntityName := RttiType.Name
+    else
+      EntityName := 'Entity';
+  finally
+    RttiCtx.Free;
+  end;
+  
+  // Remove 'T' prefix if present and pluralize
+  if EntityName.StartsWith('T') then
+    EntityTag := EntityName.Substring(1)
+  else
+    EntityTag := EntityName;
+  if not EntityTag.EndsWith('s') then
+    EntityTag := EntityTag + 's';
+  
+  // Use custom tag if provided
+  if FOptions.SwaggerTag <> '' then
+    EntityTag := FOptions.SwaggerTag;
 
+  // GET List
   if amGetList in FOptions.AllowedMethods then
+  begin
     ABuilder.MapGet(CleanPath, 
       procedure(Ctx: IHttpContext)
       begin
         var Res := HandleGetList(Ctx);
         Res.Execute(Ctx);
       end);
+    
+    // Add Swagger metadata
+    if FOptions.EnableSwagger then
+    begin
+      TEndpointMetadataExtensions.WithSummary(ABuilder, 'List all ' + EntityTag);
+      TEndpointMetadataExtensions.WithDescription(ABuilder, 
+        'Returns a list of ' + EntityTag + '. Supports filtering by property values, ' +
+        'pagination with _limit and _offset query parameters.');
+      TEndpointMetadataExtensions.WithTag(ABuilder, EntityTag);
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 200, 'List of ' + EntityTag, TypeInfo(T));
+      if FOptions.RequireAuthentication then
+        TEndpointMetadataExtensions.RequireAuthorization(ABuilder, 'bearerAuth');
+    end;
+  end;
 
+  // GET by ID
   if amGet in FOptions.AllowedMethods then
+  begin
     ABuilder.MapGet(CleanPath + '/{id}', 
       procedure(Ctx: IHttpContext)
       begin
         var Res := HandleGet(Ctx);
         Res.Execute(Ctx);
       end);
+    
+    if FOptions.EnableSwagger then
+    begin
+      TEndpointMetadataExtensions.WithSummary(ABuilder, 'Get ' + EntityTag.TrimRight(['s']) + ' by ID');
+      TEndpointMetadataExtensions.WithDescription(ABuilder, 
+        'Returns a single ' + EntityTag.TrimRight(['s']) + ' by its unique identifier.');
+      TEndpointMetadataExtensions.WithTag(ABuilder, EntityTag);
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 200, EntityTag.TrimRight(['s']) + ' found', TypeInfo(T));
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 404, 'Entity not found');
+      if FOptions.RequireAuthentication then
+        TEndpointMetadataExtensions.RequireAuthorization(ABuilder, 'bearerAuth');
+    end;
+  end;
 
+  // POST
   if amPost in FOptions.AllowedMethods then
+  begin
     ABuilder.MapPost(CleanPath, 
       procedure(Ctx: IHttpContext)
       begin
         var Res := HandlePost(Ctx);
         Res.Execute(Ctx);
       end);
+    
+    if FOptions.EnableSwagger then
+    begin
+      TEndpointMetadataExtensions.WithSummary(ABuilder, 'Create ' + EntityTag.TrimRight(['s']));
+      TEndpointMetadataExtensions.WithDescription(ABuilder, 
+        'Creates a new ' + EntityTag.TrimRight(['s']) + '. Returns the created entity with its generated ID.');
+      TEndpointMetadataExtensions.WithTag(ABuilder, EntityTag);
+      TEndpointMetadataExtensions.WithRequestType(ABuilder, TypeInfo(T));
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 201, 'Entity created', TypeInfo(T));
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 400, 'Invalid request body');
+      if FOptions.RequireAuthentication then
+        TEndpointMetadataExtensions.RequireAuthorization(ABuilder, 'bearerAuth');
+    end;
+  end;
 
+  // PUT
   if amPut in FOptions.AllowedMethods then
+  begin
     ABuilder.MapPut(CleanPath + '/{id}', 
       procedure(Ctx: IHttpContext)
       begin
-         var Res := HandlePut(Ctx);
-         Res.Execute(Ctx);
+        var Res := HandlePut(Ctx);
+        Res.Execute(Ctx);
       end);
+    
+    if FOptions.EnableSwagger then
+    begin
+      TEndpointMetadataExtensions.WithSummary(ABuilder, 'Update ' + EntityTag.TrimRight(['s']));
+      TEndpointMetadataExtensions.WithDescription(ABuilder, 
+        'Updates an existing ' + EntityTag.TrimRight(['s']) + ' by ID.');
+      TEndpointMetadataExtensions.WithTag(ABuilder, EntityTag);
+      TEndpointMetadataExtensions.WithRequestType(ABuilder, TypeInfo(T));
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 200, 'Entity updated', TypeInfo(T));
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 404, 'Entity not found');
+      if FOptions.RequireAuthentication then
+        TEndpointMetadataExtensions.RequireAuthorization(ABuilder, 'bearerAuth');
+    end;
+  end;
 
+  // DELETE
   if amDelete in FOptions.AllowedMethods then
+  begin
     ABuilder.MapDelete(CleanPath + '/{id}', 
       procedure(Ctx: IHttpContext) 
       begin
-         var Res := HandleDelete(Ctx);
-         Res.Execute(Ctx);
+        var Res := HandleDelete(Ctx);
+        Res.Execute(Ctx);
       end);
+    
+    if FOptions.EnableSwagger then
+    begin
+      TEndpointMetadataExtensions.WithSummary(ABuilder, 'Delete ' + EntityTag.TrimRight(['s']));
+      TEndpointMetadataExtensions.WithDescription(ABuilder, 
+        'Deletes an existing ' + EntityTag.TrimRight(['s']) + ' by ID.');
+      TEndpointMetadataExtensions.WithTag(ABuilder, EntityTag);
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 204, 'Entity deleted');
+      TEndpointMetadataExtensions.WithResponse(ABuilder, 404, 'Entity not found');
+      if FOptions.RequireAuthentication then
+        TEndpointMetadataExtensions.RequireAuthorization(ABuilder, 'bearerAuth');
+    end;
+  end;
 end;
 
 

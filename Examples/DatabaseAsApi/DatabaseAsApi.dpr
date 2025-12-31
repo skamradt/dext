@@ -19,6 +19,9 @@ uses
   Dext.WebHost,
   Dext.Web.Results,
   Dext.Web.Interfaces,
+  // Swagger/OpenAPI
+  Dext.OpenAPI.Generator,
+  Dext.Swagger.Middleware,
   
   // Storage
   FireDAC.Comp.Client,
@@ -113,15 +116,29 @@ begin
 end;
 
 procedure TStartup.Configure(ABuilder: IApplicationBuilder);
+var
+  SwaggerOptions: TOpenAPIOptions;
 begin
-  // Map the Data API for TCustomer entity with SnakeCase configuration
+  // Map the Data API for TCustomer entity
+  // Enable Swagger documentation with .UseSwagger
   TDataApiHandler<TCustomer>.Map(ABuilder, '/api/customers', FDbContext,
     TDataApiOptions<TCustomer>.Create
       .UseSnakeCase
+      .UseSwagger       // Opt-in to Swagger documentation
+      .Tag('Customers') // Optional: custom tag name
   );
   
   // Map root handler
   ABuilder.MapGet('/', HandleRoot);
+  
+  // Configure Swagger/OpenAPI
+  SwaggerOptions := TOpenAPIOptions.Default;
+  SwaggerOptions.Title := 'Database as API';
+  SwaggerOptions.Description := 'Auto-generated REST API from Dext entities with automatic Swagger documentation';
+  SwaggerOptions.Version := '1.0.0';
+  SwaggerOptions := SwaggerOptions.WithServer('http://localhost:5000', 'Development server');
+  
+  TSwaggerExtensions.UseSwagger(ABuilder, SwaggerOptions);
 end;
 
 procedure TStartup.Initialize;
@@ -153,8 +170,13 @@ begin
     .Configure(Configure)
     .Build;
     
+  Writeln('');
   Writeln('Server listening on http://localhost:5000');
-  Writeln('Try: http://localhost:5000/api/customers');
+  Writeln('');
+  Writeln('Endpoints:');
+  Writeln('  API:     http://localhost:5000/api/customers');
+  Writeln('  Swagger: http://localhost:5000/swagger');
+  Writeln('  JSON:    http://localhost:5000/swagger.json');
 end;
 
 procedure TStartup.Run;
