@@ -171,14 +171,14 @@ begin
   // 4. Auth Guard Middleware (Custom)
   WebApp.UseMiddleware(TAdminAuthMiddleware);
 
-  // 5. Generate Swagger Documentation
-  TSwaggerExtensions.UseSwagger(WebApp.Unwrap);
-
-  // 6. Map Features
+  // 5. Map Features
   TAuthEndpoints.Map(WebApp);
   TDashboardEndpoints.Map(WebApp);
   TCustomerEndpoints.Map(WebApp);
   TSettingsEndpoints.Map(WebApp);
+
+  // 6. Generate Swagger Documentation
+  TSwaggerExtensions.UseSwagger(WebApp.Unwrap);
 end;
 
 end.

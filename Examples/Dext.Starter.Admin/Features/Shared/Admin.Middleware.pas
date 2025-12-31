@@ -29,7 +29,8 @@ begin
   Path := AContext.Request.Path;
   
   // Define Public Paths
-  if (Path = '/') or 
+  if (Path = '/') or
+     (Path.StartsWith('/swagger', True)) or
      (Path.StartsWith('/login', True)) or 
      (Path.StartsWith('/auth/', True)) or 
      (Path.StartsWith('/css/', True)) or 
