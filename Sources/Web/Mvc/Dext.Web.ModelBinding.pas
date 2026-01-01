@@ -1170,9 +1170,24 @@ begin
 end;
 
 class function TModelBinderHelper.BindRoute<T>(ABinder: IModelBinder; Context: IHttpContext): T;
+var
+  Value: TValue;
+  P: Pointer;
 begin
-  var Value := ABinder.BindRoute(TypeInfo(T), Context);
-  Result := Value.AsType<T>;
+  Value := ABinder.BindRoute(TypeInfo(T), Context);
+  
+  // For records like TUUID/TGUID, AsType<T> fails with "Insufficient RTTI"
+  // Always use direct memory copy for records
+  if PTypeInfo(TypeInfo(T)).Kind = tkRecord then
+  begin
+    P := Value.GetReferenceToRawData;
+    if P <> nil then
+      Move(P^, Result, SizeOf(T))
+    else
+      Result := Default(T);
+  end
+  else
+    Result := Value.AsType<T>;
 end;
 
 { TBindingSourceProvider }

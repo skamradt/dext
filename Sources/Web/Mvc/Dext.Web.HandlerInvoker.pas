@@ -31,6 +31,7 @@ uses
   System.SysUtils,
   System.Rtti,
   System.TypInfo,
+  Dext.Types.UUID,
   Dext.Web.Interfaces,
   Dext.Web.Controllers,
   Dext.Web.ModelBinding;
@@ -149,7 +150,15 @@ begin
   // 1. Verify if IHttpContext
   if TypeInfo(T) = TypeInfo(IHttpContext) then
     Result := TValue.From<IHttpContext>(FContext).AsType<T>
-  // 2. Records AND Classes -> Body OR Query (Smart Binding)
+  // 2. Special Records (TGUID, TUUID) -> Route binding (like primitives)
+  else if (TypeInfo(T) = TypeInfo(TGUID)) or (TypeInfo(T) = TypeInfo(TUUID)) then
+  begin
+    if FContext.Request.RouteParams.Count > 0 then
+      Result := TModelBinderHelper.BindRoute<T>(FModelBinder, FContext)
+    else
+      Result := TModelBinderHelper.BindQuery<T>(FModelBinder, FContext);
+  end
+  // 3. Other Records AND Classes -> Body OR Query (Smart Binding)
   else if (PTypeInfo(TypeInfo(T)).Kind = tkRecord) or (PTypeInfo(TypeInfo(T)).Kind = tkClass) then
   begin
     var Bound := False;
@@ -178,10 +187,10 @@ begin
          Result := TModelBinderHelper.BindBody<T>(FModelBinder, FContext);
     end;
   end
-  // 3. Interfaces -> Services
+  // 4. Interfaces -> Services
   else if PTypeInfo(TypeInfo(T)).Kind = tkInterface then
     Result := FModelBinder.BindServices(TypeInfo(T), FContext).AsType<T>
-  // 4. Primitives -> Route (if available) or Query
+  // 5. Primitives -> Route (if available) or Query
   else
   begin
     if FContext.Request.RouteParams.Count > 0 then
@@ -261,7 +270,11 @@ var
 begin
   Arg1 := ResolveArgument<T>;
 
-  if not Validate(TValue.From<T>(Arg1)) then Exit(False);
+  // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
+  if (TypeInfo(T) <> TypeInfo(TGUID)) and (TypeInfo(T) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T>(Arg1)) then Exit(False);
+  end;
 
   Res := AHandler(Arg1);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
@@ -279,8 +292,15 @@ begin
   Arg1 := ResolveArgument<T1>;
   Arg2 := ResolveArgument<T2>;
 
-  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
-  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+  // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
+  if (TypeInfo(T1) <> TypeInfo(TGUID)) and (TypeInfo(T1) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  end;
+  if (TypeInfo(T2) <> TypeInfo(TGUID)) and (TypeInfo(T2) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+  end;
 
   Res := AHandler(Arg1, Arg2);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
@@ -300,9 +320,19 @@ begin
   Arg2 := ResolveArgument<T2>;
   Arg3 := ResolveArgument<T3>;
 
-  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
-  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
-  if not Validate(TValue.From<T3>(Arg3)) then Exit(False);
+  // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
+  if (TypeInfo(T1) <> TypeInfo(TGUID)) and (TypeInfo(T1) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+  end;
+  if (TypeInfo(T2) <> TypeInfo(TGUID)) and (TypeInfo(T2) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+  end;
+  if (TypeInfo(T3) <> TypeInfo(TGUID)) and (TypeInfo(T3) <> TypeInfo(TUUID)) then
+  begin
+    if not Validate(TValue.From<T3>(Arg3)) then Exit(False);
+  end;
 
   Res := AHandler(Arg1, Arg2, Arg3);
   if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then

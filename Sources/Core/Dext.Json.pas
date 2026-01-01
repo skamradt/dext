@@ -1101,7 +1101,13 @@ begin
       if Field.FieldType.Handle = TypeInfo(TGUID) then
       begin
         try
-          FieldValue := TValue.From<TGUID>(StringToGUID(AJson.GetString(ActualFieldName)));
+          var GuidStr := AJson.GetString(ActualFieldName).Trim;
+          
+          // StringToGUID requires braces, add if missing
+          if (GuidStr <> '') and (not GuidStr.StartsWith('{')) then
+            GuidStr := '{' + GuidStr + '}';
+            
+          FieldValue := TValue.From<TGUID>(StringToGUID(GuidStr));
         except
           FieldValue := TValue.From<TGUID>(TGUID.Empty);
         end;

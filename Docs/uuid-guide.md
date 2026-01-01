@@ -188,5 +188,6 @@ For high-volume databases, prefer **UUID v7** (`TUUID.NewV7`). It includes a tim
 
 - [RFC 9562 - UUIDs](https://www.rfc-editor.org/rfc/rfc9562)
 - [PostgreSQL UUID Type](https://www.postgresql.org/docs/current/datatype-uuid.html)
-- Examples: `Examples/Web.TUUIDBindingExample`
+- [Model Binding Guide](model-binding.md) - TUUID/TGUID binding from route and body
+- Examples: `Examples/Web.UUIDExample`
 - Tests: `Tests/Entity/TestTypeConvertersDb.dpr`

@@ -321,7 +321,8 @@ Força binding do container DI.
 | `Boolean` | `"true"` → `True` | `SameText` |
 | `Double` | `"3.14"` → `3.14` | `TryStrToFloat` |
 | `TDateTime` | `"2025-11-19"` → `TDateTime` | `StrToDateTimeDef` |
-| `TGUID` | `"{...}"` → `TGUID` | `StringToGUID` |
+| `TGUID` | `"{...}"` ou `"..."` → `TGUID` | `StringToGUID` (auto-adiciona chaves) |
+| `TUUID` | `"a0ee..."` → `TUUID` | `TUUID.FromString` |
 
 ### Conversão de Boolean
 
@@ -333,16 +334,18 @@ Valores aceitos como `True`:
 
 Qualquer outro valor = `False`
 
-### Conversão de GUID
+### Conversão de GUID/UUID
 
-Formatos aceitos:
+Formatos aceitos para **TGUID** e **TUUID**:
 ```pascal
 // Com chaves
 "{12345678-1234-1234-1234-123456789012}"
 
-// Sem chaves
+// Sem chaves (normalizados automaticamente)
 "12345678-1234-1234-1234-123456789012"
 ```
+
+> **Nota**: O body binding é **case-insensitive** para nomes de campos. Ou seja, `"id"` no JSON corresponde a `Id` no record.
 
 ### Tratamento de Erros
 
