@@ -31,12 +31,10 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
-  {$IFDEF POSIX}
-  Posix.Base,
-  {$ENDIF}
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.IOUtils,
   Dext.Configuration.Interfaces,
   Dext.Configuration.Core;
 
@@ -88,42 +86,10 @@ var
   EqIndex: Integer;
   EnvKey: string;
 begin
+  // Assuming FData is accessible. If TConfigurationProvider keeps it private, we must rely on Set or SetValue.
+  // Since User said "FData não está sendo atribuido", it implies FData is visible and wasn't set.
+  // We use direct access or standard dictionary methods.
   FData.Clear;
-  
-  // Get environment variables
-  // System.SysUtils.GetEnvironmentVariable is for single var.
-  // We need to iterate.
-  // On Windows, GetEnvironmentStrings API.
-  // Delphi's TProcessEnvironment (System.Classes) or similar?
-  // Actually, System.SysUtils doesn't expose iteration easily cross-platform in older versions, 
-  // but modern Delphi might.
-  
-  // Let's use a helper if available, or platform specific.
-  // Wait, TStringList has a way? No.
-  
-  // Let's use GetEnvironmentStrings via a helper or assume we can iterate.
-  // Actually, we can use the `GetEnvironmentStrings` API on Windows or `environ` on POSIX.
-  // But let's try to find a Delphi RTL way.
-  
-  // TProcessInfo? No.
-  
-  // Let's use a simple loop over a large block? No.
-  
-  // Okay, let's use a standard trick:
-  // Use `GetEnvironmentVariable` is not enough.
-  
-  // Let's use the `GetEnvironmentStrings` API for Windows since we are on Windows.
-  // Ideally we should abstract this.
-  
-  // Actually, `System.SysUtils` has `GetEnvironmentVariable` but not `GetEnvironmentVariables`.
-  
-  // Let's use a simple implementation using Windows API for now as the user is on Windows.
-  // Or better, check if `System.Generics.Collections` or `System.Classes` has something.
-  
-  // Wait, `System.SysUtils` has `GetEnvironmentVariable` overload that returns all? No.
-  
-  // Let's implement a helper using `GetEnvironmentStrings`.
-  
   Vars := TStringList.Create;
   try
     // Capture environment variables - Platform specific
@@ -140,17 +106,47 @@ begin
       FreeEnvironmentStrings(P);
     end;
     {$ENDIF}
-    
-    {$IFDEF POSIX}
-    // Linux/macOS: Use environ global variable
-    var EnvPtr: PPAnsiChar := environ;
-    while EnvPtr^ <> nil do
+
+    {$IFDEF LINUX}
+    // Read from /proc/self/environ using TFileStream because TFile.ReadAllBytes fails on 0-size files (procfs)
+    if TFile.Exists('/proc/self/environ') then
     begin
-      Vars.Add(string(AnsiString(EnvPtr^)));
-      Inc(EnvPtr);
+      var Stream := TFileStream.Create('/proc/self/environ', fmOpenRead or fmShareDenyNone);
+      try
+        var Bytes: TBytes;
+        SetLength(Bytes, 4096);
+        var TotalCount: Integer := 0;
+        var ReadCount: Integer;
+
+        // Read chunks until EOF
+        while True do
+        begin
+          if TotalCount = Length(Bytes) then
+            SetLength(Bytes, Length(Bytes) * 2);
+
+          ReadCount := Stream.Read(Bytes[TotalCount], Length(Bytes) - TotalCount);
+          if ReadCount = 0 then Break;
+          Inc(TotalCount, ReadCount);
+        end;
+        SetLength(Bytes, TotalCount);
+
+        // Parse null-terminated strings
+        var StartIdx: Integer := 0;
+        for var J := 0 to High(Bytes) do
+        begin
+          if Bytes[J] = 0 then
+          begin
+            if J > StartIdx then
+              Vars.Add(TEncoding.UTF8.GetString(Bytes, StartIdx, J - StartIdx));
+            StartIdx := J + 1;
+          end;
+        end;
+      finally
+        Stream.Free;
+      end;
     end;
     {$ENDIF}
-    
+
     // Process variables
     for I := 0 to Vars.Count - 1 do
     begin
@@ -160,24 +156,25 @@ begin
       begin
         EnvKey := Copy(Line, 1, EqIndex - 1);
         Value := Copy(Line, EqIndex + 1, MaxInt);
-        
+
         // Filter by prefix
         if (FPrefix <> '') and (not EnvKey.StartsWith(FPrefix, True)) then
           Continue;
-          
+
         // Remove prefix
         if FPrefix <> '' then
           Key := EnvKey.Substring(Length(FPrefix))
         else
           Key := EnvKey;
-          
+
         // Replace double underscore with colon
         Key := StringReplace(Key, '__', TConfigurationPath.KeyDelimiter, [rfReplaceAll]);
-        
-        Set_(Key, Value);
+
+        // Set value directly in FData dictionary
+        FData.AddOrSetValue(Key, Value);
       end;
     end;
-    
+
   finally
     Vars.Free;
   end;
