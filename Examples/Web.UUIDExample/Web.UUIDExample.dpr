@@ -1,4 +1,4 @@
-program WebUUIDExample;
+program Web.UUIDExample;
 
 {$APPTYPE CONSOLE}
 

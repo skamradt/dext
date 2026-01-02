@@ -48,10 +48,10 @@
         <Projects Include="Web.FrameworkTests\Web.FrameworkTests.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.UUIDExample\WebUUIDExample.dproj">
+        <Projects Include="Web.UUIDExample\Web.UUIDExample.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj">
+        <Projects Include="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="..\Tests\Core\TestJsonUUID.dproj">
@@ -200,23 +200,23 @@
     <Target Name="Web_FrameworkTests:Make">
         <MSBuild Projects="Web.FrameworkTests\Web.FrameworkTests.dproj" Targets="Make"/>
     </Target>
-    <Target Name="WebUUIDExample">
-        <MSBuild Projects="Web.UUIDExample\WebUUIDExample.dproj"/>
+    <Target Name="Web_UUIDExample">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj"/>
     </Target>
-    <Target Name="WebUUIDExample:Clean">
-        <MSBuild Projects="Web.UUIDExample\WebUUIDExample.dproj" Targets="Clean"/>
+    <Target Name="Web_UUIDExample:Clean">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="WebUUIDExample:Make">
-        <MSBuild Projects="Web.UUIDExample\WebUUIDExample.dproj" Targets="Make"/>
+    <Target Name="Web_UUIDExample:Make">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Make"/>
     </Target>
-    <Target Name="WebTUUIDBindingExample">
-        <MSBuild Projects="Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj"/>
+    <Target Name="Web_TUUIDBindingExample">
+        <MSBuild Projects="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj"/>
     </Target>
-    <Target Name="WebTUUIDBindingExample:Clean">
-        <MSBuild Projects="Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj" Targets="Clean"/>
+    <Target Name="Web_TUUIDBindingExample:Clean">
+        <MSBuild Projects="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="WebTUUIDBindingExample:Make">
-        <MSBuild Projects="Web.TUUIDBindingExample\WebTUUIDBindingExample.dproj" Targets="Make"/>
+    <Target Name="Web_TUUIDBindingExample:Make">
+        <MSBuild Projects="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj" Targets="Make"/>
     </Target>
     <Target Name="TestJsonUUID">
         <MSBuild Projects="..\Tests\Core\TestJsonUUID.dproj"/>
@@ -228,13 +228,13 @@
         <MSBuild Projects="..\Tests\Core\TestJsonUUID.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Dext_Starter_Admin;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DextStore;Web_SwaggerExample;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_TaskFlowAPI;Web_FrameworkTests;WebUUIDExample;WebTUUIDBindingExample;TestJsonUUID"/>
+        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Dext_Starter_Admin;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DextStore;Web_SwaggerExample;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_TaskFlowAPI;Web_FrameworkTests;Web_UUIDExample;Web_TUUIDBindingExample;TestJsonUUID"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Dext_Starter_Admin:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DextStore:Clean;Web_SwaggerExample:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_TaskFlowAPI:Clean;Web_FrameworkTests:Clean;WebUUIDExample:Clean;WebTUUIDBindingExample:Clean;TestJsonUUID:Clean"/>
+        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Dext_Starter_Admin:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DextStore:Clean;Web_SwaggerExample:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_TaskFlowAPI:Clean;Web_FrameworkTests:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;TestJsonUUID:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Dext_Starter_Admin:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DextStore:Make;Web_SwaggerExample:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_TaskFlowAPI:Make;Web_FrameworkTests:Make;WebUUIDExample:Make;WebTUUIDBindingExample:Make;TestJsonUUID:Make"/>
+        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Dext_Starter_Admin:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DextStore:Make;Web_SwaggerExample:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_TaskFlowAPI:Make;Web_FrameworkTests:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;TestJsonUUID:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

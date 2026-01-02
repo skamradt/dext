@@ -1,31 +1,87 @@
-# Exemplo Binding TUUID
+# Exemplo TUUID Binding
 
-Exemplos de como trabalhar com records `TUUID` em Aplicações Web Dext, focando especificamente em binding JSON e parsing de parâmetros de URL.
+Este exemplo demonstra cenários completos de binding TUUID em aplicações Dext Web, incluindo model binding automático, deserialização JSON e parsing de formatos.
 
-## 🚀 Funcionalidades
+## 🚀 Funcionalidades Demonstradas
 
-*   **Serialização JSON**: Campos `TUUID` em records DTO (ex: `TProductRequest`) são automaticamente serializados/deserializados para strings JSON pela engine Dext JSON.
-*   **Parsing Flexível**: `TUUID.FromString` lida robustamente com:
-    *   UUIDs Padrão (Com hífens)
-    *   Hex Raw (32 caracteres)
-    *   GUIDs com chaves (`{...}`)
-*   **Validação**: Lógica de exemplo para garantir que IDs de Parâmetros de Rota (URL) correspondam aos IDs do Corpo em requisições PUT.
-*   **Interop com Banco de Dados**: Conversão de `TUUID` para `TGUID` do Delphi para compatibilidade com bancos de dados.
+| Funcionalidade | Endpoint | Descrição |
+|----------------|----------|-----------|
+| **Parsing Manual** | `GET /api/products/{id}` | `TUUID.FromString` para formatos flexíveis |
+| **Binding Automático** | `GET /api/products/lookup/{id}` | Framework vincula TUUID automaticamente |
+| **Binding de Body** | `POST /api/products` | Campo TUUID no DTO deserializado do JSON |
+| **Fontes Mistas** | `PUT /api/products/{id}` | TUUID da URL + Body com validação |
+| **Geração UUID v7** | `POST /api/products/generate-v7` | `TUUID.NewV7` para UUIDs ordenados por tempo |
+| **Parsing de Formatos** | `GET /api/uuid/formats/{id}` | Aceita formatos com hífen, hex puro e com chaves |
 
 ## 🛠️ Como Iniciar
 
-1.  **Compile** `WebTUUIDBindingExample.dproj`.
-2.  **Execute** `WebTUUIDBindingExample.exe`.
-    *   O servidor inicia em **http://localhost:8080**.
-3.  **Teste**:
-    ```powershell
-    .\Test.Web.TUUIDBindingExample.ps1
-    ```
+1. **Compile** `Web.TUUIDBindingExample.dproj`
+2. **Execute** `Web.TUUIDBindingExample.exe`
+   - O servidor inicia em **http://localhost:8080**
+3. **Teste**:
+   ```powershell
+   .\Test.Web.TUUIDBindingExample.ps1
+   ```
 
-## 📍 Endpoints
+## 💡 Destaques do Código
 
-*   `POST /api/products`: Cria produto (Corpo JSON -> DTO TUUID).
-*   `GET /api/products/{id}`: Obtém produto (String URL -> TUUID).
-*   `PUT /api/products/{id}`: Atualiza produto (Validação URL vs Corpo).
-*   `POST /api/products/generate-v7`: Gera novo UUID.
-*   `GET /api/uuid/formats/{id}`: Playground de formatos flexíveis.
+### Binding Automático de TUUID da Rota
+```delphi
+App.Builder.MapGet<TUUID, IResult>('/api/products/lookup/{id}',
+  function(Id: TUUID): IResult
+  begin
+    // Id é automaticamente parseado do parâmetro da rota
+    WriteLn('Auto-bound: ', Id.ToString);
+    Result := Results.Ok<TProductRequest>(Product);
+  end);
+```
+
+### TUUID no Body JSON
+```delphi
+TProductRequest = record
+  Id: TUUID;  // Deserializado automaticamente do JSON
+  Name: string;
+  Price: Double;
+end;
+
+App.Builder.MapPost<TProductRequest, IResult>('/api/products',
+  function(Product: TProductRequest): IResult
+  begin
+    // Product.Id é TUUID parseado de {"id":"xxx-xxx-..."}
+    Result := Results.Created<TProductRequest>(Product);
+  end);
+```
+
+### Validação ID URL vs Body
+```delphi
+App.Builder.MapPut<TUUID, TProductRequest, IResult>('/api/products/{id}',
+  function(UrlId: TUUID; Body: TProductRequest): IResult
+  begin
+    // TUUID suporta operador de igualdade
+    if UrlId <> Body.Id then
+      Exit(Results.BadRequest('ID da URL não corresponde ao ID do body'));
+      
+    Result := Results.Ok<TProductRequest>(Body);
+  end);
+```
+
+### UUID v7 com Extração de Timestamp
+```delphi
+NewId := TUUID.NewV7;
+WriteLn('Gerado: ', NewId.ToString);
+WriteLn('Timestamp: ', NewId.ToTimestamp, ' ms');  // Unix timestamp
+```
+
+### Parsing de Formatos Flexíveis
+```delphi
+// Todas estas entradas produzem o mesmo TUUID:
+U := TUUID.FromString('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');  // Padrão
+U := TUUID.FromString('a0eebc999c0b4ef8bb6d6bb9bd380a11');      // Sem hífens  
+U := TUUID.FromString('{a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11}'); // Com chaves
+```
+
+## 🔗 Veja Também
+
+- [Guia UUID](../../docs/uuid-guide.md) - Detalhes técnicos do TUUID
+- [Guia Model Binding](../../docs/model-binding.md) - Configuração de binding
+- [Web.UUIDExample](../Web.UUIDExample) - Uso geral de UUID com interop TGUID
