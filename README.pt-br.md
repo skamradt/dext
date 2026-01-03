@@ -140,7 +140,7 @@ A fundação do framework, utilizável em qualquer tipo de aplicação.
 
 ## 📦 Instalação e Configuração
 
-> 📖 **Guia Detalhado**: Para um passo a passo completo, leia o [Guia de Instalação](Docs/Installation.pt-br.md).
+> 📖 **Guia Detalhado**: Para um passo a passo completo, incluindo **Instalação Automatizada** e configuração avançada, leia o [Guia de Instalação](Docs/Installation.md).
 
 1. **Clone o repositório:**
    ```bash
@@ -149,14 +149,25 @@ A fundação do framework, utilizável em qualquer tipo de aplicação.
 
    > 📦 **Nota sobre Pacotes**: O projeto está organizado em pacotes modulares localizados no diretório `Sources` (ex: `Dext.Core.dpk`, `Dext.Web.Core.dpk`, `Dext.Data.dpk`). Você pode abrir `Sources/DextFramework.groupproj` para carregar todos os pacotes de uma vez.
 
-2. **Configure os Paths no Delphi:**
+2. **Configure Variável de Ambiente (Opcional, mas Recomendado):**
+   Para simplificar a configuração e trocar facilmente entre versões, crie uma Variável de Ambiente de Usuário chamada `DEXT` apontando para o diretório `Sources`.
+
+   - Vá em: **Tools** > **Options** > **IDE** > **Environment Variables**
+   - Em **User System Overrides**, clique em **New...**
+   - **Variable Name**: `DEXT`
+   - **Variable Value**: `C:\caminho\para\dext\Sources` (ex: `C:\dev\Dext\Sources`)
+
+   ![Variável de Ambiente DEXT](Docs/Images/ide-env-var.png)
+
+3. **Configure os Paths no Delphi:**
    Adicione os seguintes caminhos ao seu **Library Path** (para compilação) e **Browsing Path** (para navegação no código):
-   - `\Sources\Core`
-   - `\Sources\Data`
-   - `\Sources\Expressions`
-   - `\Sources\Hosting`
-   - `\Sources\Http`
-   - `\Sources\Testing`
+   - `$(DEXT)`
+   - `$(DEXT)\Core`
+   - `$(DEXT)\Data`
+   - `$(DEXT)\Expressions`
+   - `$(DEXT)\Hosting`
+   - `$(DEXT)\Http`
+   - `$(DEXT)\Testing`
 
    > 📝 **Nota**: Arquivos compilados (`.dcu`, binários) serão gerados no diretório `.\Output`.
 

@@ -15,18 +15,32 @@ Os arquivos compilados serão gerados automaticamente na pasta:
 *   `Output\$(Platform)\$(Config)`
 *   *Exemplo:* `Output\Win32\Debug`
 
-## 2. Configuração do Library Path (DCUs)
+## 2. Configuração de Variável de Ambiente (Recomendado)
+
+Utilizar uma variável de ambiente simplifica seus Library Paths e permite alternar entre diferentes versões/forks do Dext facilmente.
+
+1.  No Delphi, vá em **Tools** > **Options** > **IDE** > **Environment Variables**.
+2.  Em **User System Overrides**, clique em **New...**.
+3.  **Variable Name**: `DEXT`
+4.  **Value**: O caminho completo para a pasta `Sources` dentro do seu repositório clonado.
+    *   *Exemplo:* `C:\dev\Dext\DextRepository\Sources`
+    *   *Nota:* Aponte para a pasta `Sources`, não a raiz.
+
+    ![Variável de Ambiente DEXT](Images/ide-env-var.png)
+
+## 3. Configuração do Library Path (DCUs)
 
 Para que a IDE encontre os arquivos compilados do framework:
 
 1.  No Delphi, vá em **Tools** > **Options** > **Language** > **Delphi** > **Library**.
 2.  Selecione a **Platform** desejada (ex: Windows 32-bit).
-3.  No campo **Library Path**, adicione o caminho absoluto para a pasta de saída gerada no passo anterior.
-    *   Exemplo: `C:\dev\Dext\DextRepository\Output\Win32\Debug`
+3.  No campo **Library Path**, adicione o caminho para a pasta de saída usando a variável `$(DEXT)` (que aponta para Sources):
+    *   `$(DEXT)\..\Output\$(Platform)\$(Config)`
+
 
 > **Nota:** Se você alternar entre as configurações de Debug e Release ou Plataformas (Win32/Win64), lembre-se de ajustar este caminho ou adicionar ambos.
 
-## 3. Configuração do Browsing Path (Arquivos Fonte)
+## 4. Configuração do Browsing Path (Arquivos Fonte)
 
 Para permitir a navegação no código fonte (Ctrl+Click) e debugging detalhado, adicione os seguintes diretórios ao **Browsing Path** da sua IDE.
 
@@ -42,35 +56,19 @@ Para permitir a navegação no código fonte (Ctrl+Click) e debugging detalhado,
 Substitua `[Raiz]` pelo caminho onde você clonou o repositório (ex: `C:\dev\Dext\DextRepository\`).
 
 ```text
-[Raiz]\Sources\Core
-[Raiz]\Sources\Core\Base
-[Raiz]\Sources\Core\Json
-[Raiz]\Sources\Data
-[Raiz]\Sources\Hosting\CLI
-[Raiz]\Sources\Hosting\CLI\Commands
-[Raiz]\Sources\Web
-[Raiz]\Sources\Web\Caching
-[Raiz]\Sources\Web\Hosting
-[Raiz]\Sources\Web\Indy
-[Raiz]\Sources\Web\Middleware
-[Raiz]\Sources\Web\Mvc
-```
-
-### Lista Pronta para Copiar (Exemplo Baseado em `C:\dev\Dext\DextRepository`)
-
-```text
-C:\dev\Dext\DextRepository\Sources\Core
-C:\dev\Dext\DextRepository\Sources\Core\Base
-C:\dev\Dext\DextRepository\Sources\Core\Json
-C:\dev\Dext\DextRepository\Sources\Data
-C:\dev\Dext\DextRepository\Sources\Hosting\CLI
-C:\dev\Dext\DextRepository\Sources\Hosting\CLI\Commands
-C:\dev\Dext\DextRepository\Sources\Web
-C:\dev\Dext\DextRepository\Sources\Web\Caching
-C:\dev\Dext\DextRepository\Sources\Web\Hosting
-C:\dev\Dext\DextRepository\Sources\Web\Indy
-C:\dev\Dext\DextRepository\Sources\Web\Middleware
-C:\dev\Dext\DextRepository\Sources\Web\Mvc
+$(DEXT)
+$(DEXT)\Core
+$(DEXT)\Core\Base
+$(DEXT)\Core\Json
+$(DEXT)\Data
+$(DEXT)\Hosting\CLI
+$(DEXT)\Hosting\CLI\Commands
+$(DEXT)\Web
+$(DEXT)\Web\Caching
+$(DEXT)\Web\Hosting
+$(DEXT)\Web\Indy
+$(DEXT)\Web\Middleware
+$(DEXT)\Web\Mvc
 ```
 
 *Observação: As pastas `Http` e `Expressions` mencionadas em versões anteriores foram renomeadas ou reorganizadas para `Web` e outros módulos.*

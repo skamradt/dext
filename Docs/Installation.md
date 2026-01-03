@@ -1,142 +1,81 @@
-# Dext Framework Installation and Setup
+# Dext Framework Installation Guide
 
-This guide outlines the steps required to compile the framework and configure Delphi to use Dext.
+This guide covers the installation of the Dext Framework. You can choose between the **Automated Setup** (recommended) or the **Manual Setup**.
 
-## 1. Source Compilation
+## Prerequisites
+- Delphi 11 Alexandria or newer.
+- Git (to clone the repository).
 
-The Dext Framework is designed so that its compiled binaries (`.dcu`, `.bpl`, `.dcp`) are generated in a centralized output folder, simplifying configuration.
+---
 
-1.  Open the main project group:
-    *   `Sources\DextFramework.groupproj`
-2.  In the Project Manager, right-click on the root node (**ProjectGroup**) and select **Build All**.
-3.  Wait for all packages to compile.
+## Option 1: Automated Setup (Recommended)
 
-The compiled files will be automatically generated in the folder:
-*   `Output\$(Platform)\$(Config)`
-*   *Example:* `Output\Win32\Debug`
+We use **TMS Smart Setup** to automate the build process and manage dependencies. A PowerShell script is provided to handle this for you.
 
-## 2. Library Path Configuration (DCUs)
+1.  Open PowerShell in the `DextRepository` folder.
+2.  Run the setup script:
+    ```powershell
+    ./setup.ps1
+    ```
+    *This script will download the necessary build tool locally and compile all Dext packages (Core, EF, Web) in the correct order for Windows and Linux.*
 
-For the IDE to locate the framework's compiled files:
+    > **Note:** If this is your first time using TMS Smart Setup, the script might fail asking for configuration. If so, run `.\.tms_tool\tms.exe config` manually to initialize the environment.
+    > The config can be empty, just running the command is enough to create the default config file in your user folder.
 
-1.  In Delphi, go to **Tools** > **Options** > **Language** > **Delphi** > **Library**.
-2.  Select the desired **Platform** (e.g., Windows 32-bit).
-3.  In the **Library Path** field, add the absolute path to the output folder generated in the previous step.
-    *   Example: `C:\dev\Dext\DextRepository\Output\Win32\Debug`
+3.  Once completed, the compiled files will be in the `.tmssetup` hidden folder.
 
-> **Note:** If you switch between Debug and Release configurations or Platforms (Win32/Win64), remember to adjust this path or add both.
+We recommend adding the `.tmssetup` folder to your Delphi Library Path, or let Smart Setup manage it via `tms install` if you have it installed globally.
 
-## 3. Browsing Path Configuration (Source Files)
+---
 
-To allow source code navigation (Ctrl+Click) and detailed debugging, add the following directories to your IDE's **Browsing Path**.
+## Option 2: Manual Setup
 
-> [!IMPORTANT]
-> **Do NOT add these Source folders to the Library Path!**  
-> The Library Path should only contain the compiled `.dcu` files (the `Output` folder from Step 2).  
-> Adding Source folders to the Library Path will cause compilation conflicts (see [Troubleshooting](#troubleshooting) below).
+If you prefer to compile manually using the IDE, follow these steps.
 
-1.  In Delphi, go to **Tools** > **Options** > **Language** > **Delphi** > **Library**.
-2.  Select the desired **Platform** (e.g., Windows 32-bit).
-3.  In the **Browsing Path** field, add the Source directories listed below.
+### 1. Environment Variable Configuration (Best Practice)
 
-Replace `[Root]` with the path where you cloned the repository (e.g., `C:\dev\Dext\DextRepository\`).
+Using an environment variable simplifies your Library Paths and allows you to switch between different versions/forks of Dext easily.
 
-```text
-[Root]\Sources\Core
-[Root]\Sources\Core\Base
-[Root]\Sources\Core\Json
-[Root]\Sources\Data
-[Root]\Sources\Hosting\CLI
-[Root]\Sources\Hosting\CLI\Commands
-[Root]\Sources\Web
-[Root]\Sources\Web\Caching
-[Root]\Sources\Web\Hosting
-[Root]\Sources\Web\Indy
-[Root]\Sources\Web\Middleware
-[Root]\Sources\Web\Mvc
-```
+1.  In Delphi, go to **Tools** > **Options** > **IDE** > **Environment Variables**.
+2.  Click **New...**
+3.  **Variable Name**: `DEXT`
+4.  **Value**: The full path to the `Sources` directory inside your cloned repository.
+    *   *Example*: `C:\dev\Dext\DextRepository\Sources`
+    *   *Note*: Ensure it points to the `Sources` folder, not the root, to match the paths below.
+    
+    ![DEXT Environment Variable](Images/ide-env-var.png)
 
-### Ready-to-Copy List (Example Based on `C:\dev\Dext\DextRepository`)
+### 2. Configure Library Paths
+
+Add the following paths to your **Library Path** (Tools > Options > Language > Delphi > Library) for your target platforms (Win32, Win64, Linux64). 
+
+If you set up the `$(DEXT)` variable as described above:
 
 ```text
-C:\dev\Dext\DextRepository\Sources\Core
-C:\dev\Dext\DextRepository\Sources\Core\Base
-C:\dev\Dext\DextRepository\Sources\Core\Json
-C:\dev\Dext\DextRepository\Sources\Data
-C:\dev\Dext\DextRepository\Sources\Hosting\CLI
-C:\dev\Dext\DextRepository\Sources\Hosting\CLI\Commands
-C:\dev\Dext\DextRepository\Sources\Web
-C:\dev\Dext\DextRepository\Sources\Web\Caching
-C:\dev\Dext\DextRepository\Sources\Web\Hosting
-C:\dev\Dext\DextRepository\Sources\Web\Indy
-C:\dev\Dext\DextRepository\Sources\Web\Middleware
-C:\dev\Dext\DextRepository\Sources\Web\Mvc
+$(DEXT)
+$(DEXT)\Core
+$(DEXT)\Core\Base
+$(DEXT)\Core\Json
+$(DEXT)\Data
+$(DEXT)\Hosting
+$(DEXT)\Hosting\Cli
+$(DEXT)\Hosting\Cli\Commands
+$(DEXT)\Web
+$(DEXT)\Web\Caching
+$(DEXT)\Web\Hosting
+$(DEXT)\Web\Indy
+$(DEXT)\Web\Middleware
+$(DEXT)\Web\MVC
 ```
 
-*Note: Folders like `Http` and `Expressions` mentioned in previous versions have been renamed or reorganized into `Web` and other modules.*
+### 3. Build
 
-## 4. Verification
-
-To confirm the installation is correct:
-
-1.  Close the framework project group.
-2.  Open the examples group:
-    *   `Examples\DextExamples.groupproj`
-3.  Execute **Build All**.
-4.  If all projects compile successfully, the environment is correctly configured.
+1.  Open `Sources\DextFramework.groupproj`.
+2.  Right-click **ProjectGroup** > **Build All**.
 
 ---
 
 ## Troubleshooting
 
-### F2051: Unit was compiled with a different version
-
-**Error Example:**
-```
-[dcc32 Fatal Error] Dext.WebHost.pas(35): F2051 Unit Dext.Web.HandlerInvoker was compiled with a different version of Dext.Json.TDextSerializer.Serialize
-```
-
-**Cause:**  
-This error occurs when the Delphi compiler finds a conflict between pre-compiled `.dcu` files and raw `.pas` source files. Typically, this happens when Source folders are incorrectly added to the **Library Path** instead of the **Browsing Path**.
-
-**Solution:**
-
-1.  Go to **Tools** > **Options** > **Language** > **Delphi** > **Library**.
-2.  Select the correct **Platform** (e.g., Windows 32-bit).
-3.  Check your **Library Path**:
-    *   ✅ It should contain **only** the `Output` folder with compiled DCUs (e.g., `C:\dev\Dext\DextRepository\Output\Win32\Debug`).
-    *   ❌ Remove any `Sources\*` folders from the Library Path.
-4.  Check your **Browsing Path**:
-    *   ✅ It should contain the `Sources\*` folders (as listed in Step 3 above).
-5.  Clean and rebuild:
-    *   Delete any `.dcu` files from your project's output folder.
-    *   Rebuild the Dext framework (`Sources\DextFramework.groupproj` > **Build All**).
-    *   Rebuild your project.
-
-### Compilation fails with "File not found" errors
-
-**Cause:**  
-The Library Path is missing the compiled DCU folder, or the framework was not compiled for the target platform/configuration.
-
-**Solution:**
-
-1.  Ensure you have compiled the Dext framework for the correct platform (Win32/Win64) and configuration (Debug/Release).
-2.  Verify that the Library Path points to the correct `Output\$(Platform)\$(Config)` folder.
-3.  If switching between Debug and Release, update the Library Path accordingly or add both paths.
-
-### Debug stepping doesn't work / Cannot navigate to source
-
-**Cause:**  
-The Source folders are not in the Browsing Path.
-
-**Solution:**
-
-1.  Add all `Sources\*` folders to the **Browsing Path** (not the Library Path).
-2.  Ensure "Use debug DCUs" is enabled in your project options if you want to step into RTL/VCL code as well.
-
-### Quick Reference: Path Configuration Summary
-
-| Path Type       | What to Add                                      | Purpose                          |
-|-----------------|--------------------------------------------------|----------------------------------|
-| **Library Path**    | `Output\Win32\Debug` (or your target config) | Locate compiled `.dcu` files     |
-| **Browsing Path**   | All `Sources\*` folders                      | Source navigation & debugging    |
+- **"File not found" during Manual Build**: Ensure all subdirectories in `Sources` are covered by your Library Path or the `$(DEXT)` expansion.
+- **TMS Smart Setup download fails**: Check your internet connection or manually download `tmssmartsetup.zip` from GitHub and extract it to `.tms_tool`.
