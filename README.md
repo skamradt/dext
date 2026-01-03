@@ -142,7 +142,7 @@ The foundation of the framework, usable in any type of application.
 
 ## 📦 Installation and Configuration
 
-> 📖 **Detailed Guide**: For a complete step-by-step walkthrough, including **Automated Setup** and advanced configuration, please read the [Installation Guide](Docs/Installation.md).
+> 📖 **Detailed Guide**: For a complete step-by-step walkthrough and advanced configuration, please read the [Installation Guide](Docs/Installation.md).
 
 1. **Clone the repository:**
    ```bash
@@ -162,14 +162,17 @@ The foundation of the framework, usable in any type of application.
    ![DEXT Environment Variable](Docs/Images/ide-env-var.png)
 
 3. **Configure Paths in Delphi:**
-   Add the following paths to your **Library Path** (for compilation) and **Browsing Path** (for code navigation):
-   - `$(DEXT)`
-   - `$(DEXT)\Core`
-   - `$(DEXT)\Data`
-   - `$(DEXT)\Expressions`
-   - `$(DEXT)\Hosting`
-   - `$(DEXT)\Http`
-   - `$(DEXT)\Testing`
+   
+   *   **Library Path** (for compilation):
+       - `$(DEXT)\..\Output\$(ProductVersion)_$(Platform)_$(Config)`
+   
+   *   **Browsing Path** (for code navigation):
+       - `$(DEXT)`
+       - `$(DEXT)\Core`
+       - `$(DEXT)\Data`
+       - `$(DEXT)\Hosting`
+       - `$(DEXT)\Web`
+       - *(See [Installation Guide](Docs/Installation.md) for the complete list)*
 
    > 📝 **Note**: Compiled files (`.dcu`, binaries) will be generated in the `.\Output` directory.
 

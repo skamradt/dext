@@ -35,7 +35,7 @@ Para que a IDE encontre os arquivos compilados do framework:
 1.  No Delphi, vá em **Tools** > **Options** > **Language** > **Delphi** > **Library**.
 2.  Selecione a **Platform** desejada (ex: Windows 32-bit).
 3.  No campo **Library Path**, adicione o caminho para a pasta de saída usando a variável `$(DEXT)` (que aponta para Sources):
-    *   `$(DEXT)\..\Output\$(Platform)\$(Config)`
+    *   `$(DEXT)\..\Output\$(ProductVersion)_$(Platform)_$(Config)`
 
 
 > **Nota:** Se você alternar entre as configurações de Debug e Release ou Plataformas (Win32/Win64), lembre-se de ajustar este caminho ou adicionar ambos.
@@ -61,14 +61,15 @@ $(DEXT)\Core
 $(DEXT)\Core\Base
 $(DEXT)\Core\Json
 $(DEXT)\Data
-$(DEXT)\Hosting\CLI
-$(DEXT)\Hosting\CLI\Commands
+$(DEXT)\Hosting
+$(DEXT)\Hosting\Cli
+$(DEXT)\Hosting\Cli\Commands
 $(DEXT)\Web
 $(DEXT)\Web\Caching
 $(DEXT)\Web\Hosting
 $(DEXT)\Web\Indy
 $(DEXT)\Web\Middleware
-$(DEXT)\Web\Mvc
+$(DEXT)\Web\MVC
 ```
 
 *Observação: As pastas `Http` e `Expressions` mencionadas em versões anteriores foram renomeadas ou reorganizadas para `Web` e outros módulos.*
