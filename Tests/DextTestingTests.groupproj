@@ -27,6 +27,9 @@
         <Projects Include="Mocking\TestNewAssertions.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Testing\TestAttributeRunner.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -107,14 +110,23 @@
     <Target Name="TestNewAssertions:Make">
         <MSBuild Projects="Mocking\TestNewAssertions.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestAttributeRunner">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj"/>
+    </Target>
+    <Target Name="TestAttributeRunner:Clean">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestAttributeRunner:Make">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Testing;TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions"/>
+        <CallTarget Targets="Dext_Testing;TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions;TestAttributeRunner"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Testing:Clean;TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean"/>
+        <CallTarget Targets="Dext_Testing:Clean;TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean;TestAttributeRunner:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Testing:Make;TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make"/>
+        <CallTarget Targets="Dext_Testing:Make;TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make;TestAttributeRunner:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

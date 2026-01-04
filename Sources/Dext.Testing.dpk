@@ -43,6 +43,10 @@ contains
   Dext.Mocks.Matching in 'Testing\Dext.Mocks.Matching.pas',
   Dext.Mocks.Auto in 'Testing\Dext.Mocks.Auto.pas',
   Dext.Mocks in 'Testing\Dext.Mocks.pas',
-  Dext.Testing.DI in 'Testing\Dext.Testing.DI.pas';
+  Dext.Testing.DI in 'Testing\Dext.Testing.DI.pas',
+  Dext.Testing.Attributes in 'Testing\Dext.Testing.Attributes.pas',
+  Dext.Testing.Runner in 'Testing\Dext.Testing.Runner.pas',
+  Dext.Testing.Report in 'Testing\Dext.Testing.Report.pas',
+  Dext.Testing.Fluent in 'Testing\Dext.Testing.Fluent.pas';
 
 end.
