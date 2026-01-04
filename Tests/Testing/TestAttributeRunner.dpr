@@ -70,9 +70,6 @@ type
     property Name: string read FName;
     property Address: TAddress read FAddress;
   end;
-  // Enable RTTI for attribute-based test discovery
-  {$RTTI EXPLICIT METHODS([vcPublic, vcPublished]) PROPERTIES([vcPublic, vcPublished])}
-  {$M+}
   
   /// <summary>
   ///   Global setup/cleanup fixture - runs once for entire test suite.
@@ -484,6 +481,7 @@ begin
     // Everything in one elegant chain:
     if TTest.Configure
       .Verbose
+      .UseDashboard(9000) // 🚀 Enable Live Dashboard at http://localhost:9000
       .RegisterFixtures([TGlobalSetup, TCalculatorTests, TStringTests, TAssertionTests])
       .ExportToJUnit('test-results.xml')
       .ExportToJson('test-results.json')
@@ -491,17 +489,15 @@ begin
       .Run then
       ExitCode := 0
     else
+
       ExitCode := 1;
-      
   except
     on E: Exception do
     begin
       WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
       ExitCode := 1;
+      WriteLn('Press Enter to exit...');
+      ReadLn;
     end;
   end;
-  
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.

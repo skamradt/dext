@@ -100,6 +100,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 - **Snapshot Testing**: Simplify complex object verification by comparing against JSON baselines (`MatchSnapshot`).
 - **Test-Centric DI**: Specialized `TTestServiceProvider` to easily swap production services with mocks during integration tests.
 - **CI/CD Integration** ⭐ NEW: Export reports to JUnit XML, JSON, xUnit, TRX (Azure DevOps), SonarQube, and beautiful standalone HTML.
+- **Live Dashboard** ⭐ NEW: Monitor your tests in real-time with a beautiful dark-themed web dashboard and historical analysis.
 
 ---
 

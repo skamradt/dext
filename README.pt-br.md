@@ -99,6 +99,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - **Snapshot Testing**: Simplifique a verificação de objetos complexos comparando contra baselines em JSON (`MatchSnapshot`).
 - **DI Orientada a Testes**: `TTestServiceProvider` especializado para substituir facilmente serviços de produção por mocks durante testes de integração.
 - **Integração CI/CD** ⭐ NOVO: Exporte relatórios para JUnit XML, JSON, xUnit, TRX (Azure DevOps), SonarQube e HTML standalone moderno.
+- **Live Dashboard** ⭐ NOVO: Monitore seus testes em tempo real com um dashboard web dark-theme moderno e histórico de execuções.
 
 ---
 

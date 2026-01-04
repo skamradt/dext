@@ -107,6 +107,19 @@ type
   ///   Event fired when a fixture completes.
   /// </summary>
   TFixtureCompleteEvent = procedure(const FixtureName: string) of object;
+  
+  /// <summary>
+  ///   Interface for listening to test execution events.
+  /// </summary>
+  ITestListener = interface
+    ['{88439A1D-F6E2-4D5C-8A9B-1234567890AB}']
+    procedure OnRunStart(TotalTests: Integer);
+    procedure OnRunComplete(const Summary: TTestSummary);
+    procedure OnFixtureStart(const FixtureName: string; TestCount: Integer);
+    procedure OnFixtureComplete(const FixtureName: string);
+    procedure OnTestStart(const Fixture, Test: string);
+    procedure OnTestComplete(const Info: TTestInfo);
+  end;
 
   /// <summary>
   ///   Output format for test results.
@@ -203,6 +216,15 @@ type
     class var FOnTestComplete: TTestCompleteEvent;
     class var FOnFixtureStart: TFixtureStartEvent;
     class var FOnFixtureComplete: TFixtureCompleteEvent;
+    
+    class var FListeners: TList<ITestListener>;
+    
+    class procedure NotifyRunStart(TotalTests: Integer);
+    class procedure NotifyRunComplete(const Summary: TTestSummary);
+    class procedure NotifyFixtureStart(const FixtureName: string; TestCount: Integer);
+    class procedure NotifyFixtureComplete(const FixtureName: string);
+    class procedure NotifyTestStart(const Fixture, Test: string);
+    class procedure NotifyTestComplete(const Info: TTestInfo);
 
     class procedure DiscoverFixtures;
     class procedure DiscoverTestMethods(Fixture: TTestFixtureInfo);
@@ -245,6 +267,16 @@ type
     ///   Runs all discovered tests.
     /// </summary>
     class procedure RunAll;
+
+    /// <summary>
+    ///   Registers a listener for test execution events.
+    /// </summary>
+    class procedure RegisterListener(const Listener: ITestListener);
+
+    /// <summary>
+    ///   Unregisters and clears all listeners.
+    /// </summary>
+    class procedure ClearListeners;
 
     /// <summary>
     ///   Runs tests matching the specified filter.
@@ -981,6 +1013,8 @@ begin
 
   Stopwatch := TStopwatch.StartNew;
 
+  NotifyRunStart(TestCount);
+
   TTestConsole.WriteHeader('Dext Test Runner');
   WriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
   WriteLn;
@@ -1000,6 +1034,8 @@ begin
   FSummary.TotalDuration := Stopwatch.Elapsed;
 
   PrintSummary;
+  
+  NotifyRunComplete(FSummary);
 end;
 
 class procedure TTestRunner.RunFiltered(const AFilter: TTestFilter);
@@ -1018,6 +1054,7 @@ begin
 
   Stopwatch := TStopwatch.StartNew;
 
+  NotifyRunStart(0);
   TTestConsole.WriteHeader('Dext Test Runner (Filtered)');
   WriteLn;
 
@@ -1036,6 +1073,7 @@ begin
   FSummary.TotalDuration := Stopwatch.Elapsed;
 
   PrintSummary;
+  NotifyRunComplete(FSummary);
 end;
 
 class procedure TTestRunner.RunCategory(const Category: string);
@@ -1091,6 +1129,7 @@ var
   DisplayNames: TArray<string>;
   I: Integer;
 begin
+  NotifyFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
   if Assigned(FOnFixtureStart) then
     FOnFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
 
@@ -1145,6 +1184,7 @@ begin
     Instance.Free;
   end;
 
+  NotifyFixtureComplete(Fixture.Name);
   if Assigned(FOnFixtureComplete) then
     FOnFixtureComplete(Fixture.Name);
 end;
@@ -1180,6 +1220,7 @@ begin
 
   Inc(FSummary.TotalTests);
 
+  NotifyTestStart(Fixture.Name, Info.DisplayName);
   if Assigned(FOnTestStart) then
     FOnTestStart(Fixture.Name, Info.DisplayName);
 
@@ -1191,6 +1232,7 @@ begin
     Inc(FSummary.Skipped);
     PrintResultChar(trSkipped);
     PrintTestResult(Info);
+    NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
     Exit;
@@ -1205,6 +1247,7 @@ begin
     Inc(FSummary.Skipped);
     PrintResultChar(trSkipped);
     PrintTestResult(Info);
+    NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
     Exit;
@@ -1290,6 +1333,7 @@ begin
       FTestResults := TList<TTestInfo>.Create;
     FTestResults.Add(Info);
 
+    NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
   end;
@@ -1745,9 +1789,74 @@ begin
   WriteLn;
 end;
 
+class procedure TTestRunner.ClearListeners;
+begin
+  if FListeners <> nil then
+  begin
+    FListeners.Free;
+    FListeners := nil;
+  end;
+end;
+
+class procedure TTestRunner.RegisterListener(const Listener: ITestListener);
+begin
+  if FListeners = nil then
+    FListeners := TList<ITestListener>.Create;
+  FListeners.Add(Listener);
+end;
+
+class procedure TTestRunner.NotifyRunStart(TotalTests: Integer);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnRunStart(TotalTests);
+end;
+
+class procedure TTestRunner.NotifyRunComplete(const Summary: TTestSummary);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnRunComplete(Summary);
+end;
+
+class procedure TTestRunner.NotifyFixtureStart(const FixtureName: string; TestCount: Integer);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnFixtureStart(FixtureName, TestCount);
+end;
+
+class procedure TTestRunner.NotifyFixtureComplete(const FixtureName: string);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnFixtureComplete(FixtureName);
+end;
+
+class procedure TTestRunner.NotifyTestStart(const Fixture, Test: string);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnTestStart(Fixture, Test);
+end;
+
+class procedure TTestRunner.NotifyTestComplete(const Info: TTestInfo);
+var
+  L: ITestListener;
+begin
+  if FListeners <> nil then
+    for L in FListeners do L.OnTestComplete(Info);
+end;
+
 initialization
 
 finalization
+  TTestRunner.FListeners.Free;
   TTestRunner.Clear;
 
 end.

@@ -51,6 +51,9 @@ type
   private
     FVerbose: Boolean;
     FDebugDiscovery: Boolean;
+    FUseDashboard: Boolean;
+    FDashboardPort: Integer;
+    FWaitDashboard: Boolean;
     FJUnitFile: string;
     FJsonFile: string;
     FSonarQubeFile: string;
@@ -76,7 +79,15 @@ type
     /// <summary>
     ///   Enables debug discovery logging.
     /// </summary>
+    /// <summary>
+    ///   Enables debug discovery logging.
+    /// </summary>
     function DebugDiscovery: TTestConfigurator;
+    
+    /// <summary>
+    ///   Enables the Live Dashboard Runner.
+    /// </summary>
+    function UseDashboard(Port: Integer = 9000; WaitAfterRun: Boolean = True): TTestConfigurator;
 
     /// <summary>
     ///   Configures JUnit XML export.
@@ -189,7 +200,8 @@ type
 implementation
 
 uses
-  Dext.Testing.Report;
+  Dext.Testing.Report,
+  Dext.Testing.Dashboard;
 
 { TTestConfigurator }
 
@@ -208,6 +220,14 @@ end;
 function TTestConfigurator.DebugDiscovery: TTestConfigurator;
 begin
   FDebugDiscovery := True;
+  Result := Self;
+end;
+
+function TTestConfigurator.UseDashboard(Port: Integer; WaitAfterRun: Boolean): TTestConfigurator;
+begin
+  FUseDashboard := True;
+  FDashboardPort := Port;
+  FWaitDashboard := WaitAfterRun;
   Result := Self;
 end;
 
@@ -308,7 +328,16 @@ var
 begin
   // Apply configuration
   TTestRunner.SetVerbose(FVerbose);
+  TTestRunner.SetVerbose(FVerbose);
   TTestRunner.SetDebugDiscovery(FDebugDiscovery);
+
+  // Start Dashboard
+  if FUseDashboard then
+  begin
+    // TDashboardListener auto-registers itself with TTestRunner in Start.
+    // The instance is kept alive by TTestRunner's interface list.
+    TDashboardListener.Create(FDashboardPort).Start;
+  end;
 
   // Register fixtures
   for Cls in FFixtureClasses do
@@ -345,7 +374,18 @@ begin
     TTestRunner.SaveHTMLReport(FHTMLFile);
 
   // Return success status
+  // Return success status
   Result := TTestRunner.Summary.Failed = 0;
+  
+  if FUseDashboard and FWaitDashboard then
+  begin
+    WriteLn;
+    WriteLn('Press ENTER to close dashboard and exit...');
+    ReadLn;
+  end;
+  
+  // Clean up listeners to prevent memory leaks from late finalization
+  TTestRunner.ClearListeners;
 end;
 
 function TTestConfigurator.GetSummary: TTestSummary;

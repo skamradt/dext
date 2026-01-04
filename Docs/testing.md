@@ -477,6 +477,26 @@ begin
 end;
 ```
 
+### Live Dashboard (NEW! 2026-01)
+
+A real-time, dark-themed dashboard to visualize test execution as it happens.
+
+**Features:**
+- **Live Updates**: Watch tests pass/fail in real-time using Server-Sent Events (SSE).
+- **Execution History**: Track trends and detailed history of past runs with a scrollable log.
+- **Detailed Insights**: Filter by status, view duration, and inspect error stack traces.
+
+Enable it with a single fluent call:
+
+```pascal
+if TTest.Configure
+  .UseDashboard(9000) // Start dashboard on port 9000
+  .RegisterFixtures([TCalculatorTests])
+  .Run then ...
+```
+
+When running, open `http://localhost:9000` to see the magic.
+
 ### CI/CD Report Formats (NEW! 2026-01)
 
 Generate test reports for CI/CD integration:

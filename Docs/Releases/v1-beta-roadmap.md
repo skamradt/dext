@@ -98,6 +98,7 @@ For technical details and granular status of each module, check:
 | **Fluent Assertions** (`Should`) | ✅ Ready | Expressive assertion library |
 | **Global Syntax** (`Should()`) | ✅ Ready | Clean API for tests |
 | **Soft Asserts** (`Assert.Multiple`) | ✅ Ready | Failure aggregation for multiple checks |
+| **Live Dashboard** | ✅ Ready | Real-time Web UI with Timeline & History |
 | **Integration** | ✅ Ready | Works with Dext DI and Core types |
 | **Attribute-Based Runner** ⭐ NEW | ✅ Ready | `[TestFixture]`, `[Test]`, `[Setup]`, `[TearDown]` - NUnit/xUnit style |
 | **Assembly Lifecycle Hooks** ⭐ NEW | ✅ Ready | `[AssemblyInitialize]`, `[AssemblyCleanup]` |
