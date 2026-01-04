@@ -754,30 +754,10 @@ var
   SB: TStringBuilder;
   Suite: TTestSuiteReport;
   TC: TTestCaseReport;
-  TotalTests, TotalFailures, TotalErrors, TotalSkipped, TotalPassed: Integer;
-  TotalTime: Double;
   ResultStr: string;
 begin
   SB := TStringBuilder.Create;
   try
-    // Calculate totals
-    TotalTests := 0;
-    TotalFailures := 0;
-    TotalErrors := 0;
-    TotalSkipped := 0;
-    TotalPassed := 0;
-    TotalTime := 0;
-    
-    for Suite in FTestSuites do
-    begin
-      Inc(TotalTests, Suite.Tests);
-      Inc(TotalFailures, Suite.Failures);
-      Inc(TotalErrors, Suite.Errors);
-      Inc(TotalSkipped, Suite.Skipped);
-      TotalPassed := TotalPassed + Suite.Tests - Suite.Failures - Suite.Errors - Suite.Skipped;
-      TotalTime := TotalTime + Suite.Duration;
-    end;
-
     // XML header
     SB.AppendLine('<?xml version="1.0" encoding="UTF-8"?>');
     
@@ -917,7 +897,7 @@ end;
 
 function TTRXReporter.CreateGuid: TGUID;
 begin
-  CreateGUID(Result);
+  System.SysUtils.CreateGUID(Result);
 end;
 
 function TTRXReporter.GuidToString(const G: TGUID): string;

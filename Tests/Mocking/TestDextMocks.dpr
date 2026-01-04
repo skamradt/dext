@@ -9,8 +9,9 @@ program TestDextMocks;
 
 uses
   Dext.MM,
-  System.SysUtils,
   System.Rtti,
+  System.SysUtils,
+  System.TypInfo,
   Dext.Interception,
   Dext.Interception.Proxy,
   Dext.Mocks,
