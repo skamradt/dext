@@ -35,7 +35,29 @@ type
     function Greet(const Name: string): string;
     function GreetWithTitle(const Title, Name: string): string;
   end;
+
+  // Simple interceptor to test direct proxy creation (without Mock<T>)
+  TSimpleInterceptor = class(TInterfacedObject, IInterceptor)
+  private
+    FCallCount: Integer;
+    FLastMethod: string;
+  public
+    procedure Intercept(const Invocation: IInvocation);
+    property CallCount: Integer read FCallCount;
+    property LastMethod: string read FLastMethod;
+  end;
   {$M-}
+
+{ TSimpleInterceptor }
+
+procedure TSimpleInterceptor.Intercept(const Invocation: IInvocation);
+begin
+  Inc(FCallCount);
+  FLastMethod := Invocation.Method.Name;
+  // Simple pass-through behavior or default result
+  if Invocation.Method.ReturnType.TypeKind = tkInteger then
+    Invocation.Result := TValue.From<Integer>(123); // Always return 123
+end;
 
 procedure TestBasicMocking;
 var
@@ -135,6 +157,14 @@ begin
     on E: EMockException do
       WriteLn('  FAIL: Verification failed - ', E.Message);
   end;
+  // Verify with Alias (.Verify)
+  try
+    Calculator.Verify(Times.Exactly(3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    WriteLn('  PASS: Verification alias Verify(Exactly(3)) passed');
+  except
+    on E: EMockException do
+      WriteLn('  FAIL: Verification alias failed - ', E.Message);
+  end;
 end;
 
 procedure TestStrictBehavior;
@@ -202,11 +232,117 @@ begin
     WriteLn('  FAIL: Expected 1,2,3,3 but got ', R1, ',', R2, ',', R3, ',', R4);
 end;
 
+procedure TestVerifyNoOtherCalls;
+var
+  Calculator: Mock<ICalculator>;
+begin
+  WriteLn('');
+  WriteLn('=== Test 8: VerifyNoOtherCalls ===');
+  
+  Calculator := Mock<ICalculator>.Create;
+  
+  // Setup
+  Calculator.Setup.Returns(0).When.Add(1, 2);
+  
+  // Act
+  Calculator.Instance.Add(1, 2);
+  
+  // Verify specific call
+  Calculator.Received.Add(1, 2);
+  
+  // Verify no other calls - should PASS
+  try
+    Calculator.VerifyNoOtherCalls;
+    WriteLn('  PASS: VerifyNoOtherCalls passed when only expected calls made');
+  except
+    on E: Exception do
+      WriteLn('  FAIL: VerifyNoOtherCalls threw exception: ', E.Message);
+  end;
+  
+  // Act again (unexpected call)
+  Calculator.Instance.Subtract(5, 5);
+  
+  // Verify no other calls - should FAIL
+  try
+    Calculator.VerifyNoOtherCalls;
+    WriteLn('  FAIL: VerifyNoOtherCalls passed but unexpected Subtract was called');
+  except
+    on E: EMockException do
+      WriteLn('  PASS: VerifyNoOtherCalls caught unexpected call: ', E.Message);
+  end;
+end;
+
+procedure TestVerificationVariants;
+var
+  Calculator: Mock<ICalculator>;
+begin
+  WriteLn('');
+  WriteLn('=== Test 9: Verification Variants ===');
+  
+  Calculator := Mock<ICalculator>.Create;
+  Calculator.Setup.Returns(0).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  
+  // Call 2 times
+  Calculator.Instance.Add(1, 1);
+  Calculator.Instance.Add(2, 2);
+  
+  try
+    // AtLeastOnce (2 >= 1) - PASS
+    Calculator.Verify(Times.AtLeastOnce).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    
+    // AtMost(5) (2 <= 5) - PASS
+    Calculator.Verify(Times.AtMost(5)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    
+    // Between(1, 3) (1 <= 2 <= 3) - PASS
+    Calculator.Verify(Times.Between(1, 3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    
+    // Once - FAIL
+    // We expect this to fail, so we wrap in sub-try
+    try
+        Calculator.Verify(Times.Once).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+        WriteLn('  FAIL: Times.Once passed but called 2 times');
+    except
+        on E: EMockException do
+            WriteLn('  PASS: Times.Once failed as expected');
+    end;
+
+    WriteLn('  PASS: All verification variants behave as expected');
+  except
+    on E: Exception do
+      WriteLn('  FAIL: Verification variant error: ', E.Message);
+  end;
+end;
+
 procedure TestInterceptionDirectly;
+var
+  Interceptor: TSimpleInterceptor;
+  Calculator: ICalculator;
 begin
   WriteLn('');
   WriteLn('=== Test 8: Direct Interception ===');
-  WriteLn('  SKIP: Direct interception test (needs custom interceptor)');
+  
+  // 1. Create the interceptor manually
+  Interceptor := TSimpleInterceptor.Create;
+  
+  // 2. Create the proxy manually using Dext.Interception
+  Calculator := TProxy.CreateInterface<ICalculator>(Interceptor);
+  
+  // 3. Act
+  var Res := Calculator.Add(5, 5);
+  
+  // 4. Assert
+  if (Res = 123) and (Interceptor.CallCount = 1) and (Interceptor.LastMethod = 'Add') then
+    WriteLn('  PASS: Direct interception worked (Result=123, Calls=1)')
+  else
+    WriteLn('  FAIL: Expected 123/1/Add but got ', Res, '/', Interceptor.CallCount, '/', Interceptor.LastMethod);
+    
+  // Test another call
+  Calculator.Subtract(10, 2);
+  
+  if (Interceptor.CallCount = 2) and (Interceptor.LastMethod = 'Subtract') then
+    WriteLn('  PASS: Second call intercepted correctly')
+  else
+    WriteLn('  FAIL: Second call failed expectation');
 end;
 
 begin
@@ -223,6 +359,8 @@ begin
     TestStrictBehavior;
     TestThrowsSetup;
     TestMultipleReturns;
+    TestVerifyNoOtherCalls;
+    TestVerificationVariants;
     TestInterceptionDirectly;
     
     WriteLn;

@@ -267,6 +267,9 @@ Mock.Setup.Returns(True).When.GetBool;   // Boolean
 // Ensure method was called exactly once
 Mock.Received(Times.Once).Save(Arg.Any<TUser>);
 
+// Alias: You can also use .Verify() if you prefer Moq syntax
+Mock.Verify(Times.Once).Save(Arg.Any<TUser>);
+
 // Ensure method was never called
 Mock.Received(Times.Never).Delete(Arg.Any<Integer>);
 

@@ -182,7 +182,10 @@ type
     procedure Reset;
 
     /// <summary>Verify all expectations were met.</summary>
-    procedure Verify;
+    procedure Verify; overload;
+
+    /// <summary>Verify the method was called a specific number of times (Alias for Received).</summary>
+    function Verify(const ATimes: Times): T; overload;
     
     /// <summary>Verify no other calls were made besides those already verified.</summary>
     procedure VerifyNoOtherCalls;
@@ -321,6 +324,12 @@ procedure Mock<T>.Verify;
 begin
   EnsureCreated;
   FMock.Verify;
+end;
+
+function Mock<T>.Verify(const ATimes: Times): T;
+begin
+  EnsureCreated;
+  Result := FMock.Received(ATimes);
 end;
 
 procedure Mock<T>.VerifyNoOtherCalls;

@@ -83,11 +83,13 @@ type
   private
     FName: string;
     FArguments: TArray<TValue>;
+    FVerified: Boolean;
   public
     constructor Create(const AName: string; const AArguments: TArray<TValue>);
 
     property Name: string read FName;
     property Arguments: TArray<TValue> read FArguments;
+    property Verified: Boolean read FVerified write FVerified;
   end;
 
   /// <summary>
@@ -110,6 +112,7 @@ type
 
     procedure BeginSetup(ASetup: TMethodSetup);
     procedure BeginVerify(const ATimes: Times);
+    procedure VerifyNoOtherCalls;
     procedure Reset;
 
     property Behavior: TMockBehavior read FBehavior write FBehavior;
@@ -244,6 +247,7 @@ begin
   inherited Create;
   FName := AName;
   FArguments := AArguments;
+  FVerified := False;
 end;
 
 { TMockInterceptor }
@@ -333,7 +337,10 @@ begin
         if SameText(MatchingCall.Name, MethodName) then
         begin
           if Length(Matchers) = 0 then
-            Inc(CallCount)
+          begin
+            Inc(CallCount);
+            MatchingCall.Verified := True;
+          end
           else
           begin
             // Check if arguments match using matchers
@@ -350,7 +357,10 @@ begin
               end;
             end;
             if AllMatch then
+            begin
               Inc(CallCount);
+              MatchingCall.Verified := True;
+            end;
           end;
         end;
       end;
@@ -374,6 +384,17 @@ procedure TMockInterceptor.BeginVerify(const ATimes: Times);
 begin
   FVerifyTimes := ATimes;
   FState := TMockState.Asserting;
+end;
+
+procedure TMockInterceptor.VerifyNoOtherCalls;
+var
+  Call: TMethodCall;
+begin
+  for Call in FReceivedCalls do
+  begin
+    if not Call.Verified then
+      raise EMockException.CreateFmt('Unverified call to %s', [Call.Name]);
+  end;
 end;
 
 procedure TMockInterceptor.Reset;
@@ -625,19 +646,8 @@ begin
 end;
 
 procedure TMock<T>.VerifyNoOtherCalls;
-var
-  TotalCalls: Integer;
 begin
-  // Count how many calls were verified (via Received)
-  // This is a simplified implementation - tracks if there are unverified calls
-  TotalCalls := FInterceptorObj.ReceivedCalls.Count;
-  // For now, we just check if there are more calls than expected
-  // A full implementation would track which specific calls were verified
-  if TotalCalls > 0 then
-  begin
-    // Note: A complete implementation would track verified calls separately
-    // For now, this raises if any calls were made at all (use after Received checks)
-  end;
+  FInterceptorObj.VerifyNoOtherCalls;
 end;
 
 procedure TMock<T>.SetCallBase(Value: Boolean);
