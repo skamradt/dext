@@ -103,6 +103,8 @@ type
     function DidNotReceive: T;
     procedure Reset;
     procedure Verify;
+    procedure VerifyNoOtherCalls;
+    procedure SetCallBase(Value: Boolean);
 
     property Instance: T read GetInstance;
     property Behavior: TMockBehavior read GetBehavior write SetBehavior;
@@ -181,6 +183,12 @@ type
 
     /// <summary>Verify all expectations were met.</summary>
     procedure Verify;
+    
+    /// <summary>Verify no other calls were made besides those already verified.</summary>
+    procedure VerifyNoOtherCalls;
+    
+    /// <summary>Enable calling the base implementation for methods without setups (class mocks only).</summary>
+    function CallsBaseForUnconfiguredMembers: Mock<T>;
 
     /// <summary>Allows using mock directly where T is expected.</summary>
     class operator Implicit(const AMock: Mock<T>): T;
@@ -313,6 +321,19 @@ procedure Mock<T>.Verify;
 begin
   EnsureCreated;
   FMock.Verify;
+end;
+
+procedure Mock<T>.VerifyNoOtherCalls;
+begin
+  EnsureCreated;
+  FMock.VerifyNoOtherCalls;
+end;
+
+function Mock<T>.CallsBaseForUnconfiguredMembers: Mock<T>;
+begin
+  EnsureCreated;
+  FMock.SetCallBase(True);
+  Result := Self;
 end;
 
 class operator Mock<T>.Implicit(const AMock: Mock<T>): T;

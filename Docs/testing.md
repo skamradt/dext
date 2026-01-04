@@ -1,6 +1,61 @@
 # 🧪 Dext Testing Framework
 
+> *"Depois de usar Dext Testing, você não vai querer outra ferramenta na vida."*
+
 The **Dext Testing Framework** is a native Delphi testing library designed for modern patterns like TDD (Test Driven Development) and BDD (Behavior Driven Development). It provides a fluent, expressive API for **Mocking** and **Assertions**, eliminating the need for external dependencies like DUnitX extensions or third-party mocking libraries.
+
+## 💡 Why Dext Testing?
+
+### The Problem with Testing in Delphi
+
+Testing in Delphi has traditionally been challenging:
+- **DUnit/DUnitX** are great for test execution, but lack fluent assertions and mocking
+- **Writing mocks manually** is tedious and error-prone
+- **No snapshot testing** means complex object assertions require tons of boilerplate
+
+### What Dext Testing Provides
+
+Dext Testing is designed from the ground up for modern Delphi development, bringing the **developer experience of .NET testing frameworks** (FluentAssertions, Moq, xUnit) to Delphi:
+
+✅ **Fluent Assertions** — `Should(Value).Be(Expected)` readable syntax  
+✅ **Interface Mocking** — `Mock<IService>` with full argument matching  
+✅ **Class Mocking** — Virtual methods can be intercepted  
+✅ **Auto-Mocking (DI)** — `TAutoMocker` injects dependencies automatically  
+✅ **Snapshot Testing** — `MatchSnapshot` for regression testing  
+✅ **GUID/UUID Native Support** — Assertions for Dext's TUUID type  
+✅ **Moq-Compatible Syntax** — Familiar `.Setup.Returns.When` pattern  
+✅ **Zero External Dependencies** — Works with DUnit/DUnitX or standalone
+
+### One Framework, Zero Compromises
+
+```pascal
+// This is what testing SHOULD look like in Delphi:
+procedure TestUserService;
+var
+  Mocker: TAutoMocker;
+  Service: TUserService;
+begin
+  Mocker := TAutoMocker.Create;
+  try
+    // Auto-inject all dependencies as mocks
+    Service := Mocker.CreateInstance<TUserService>;
+    
+    // Setup behavior with fluent syntax
+    Mocker.GetMock<IUserRepository>.Setup.Returns(TUser.Create('John')).When.FindById(1);
+    
+    // Execute
+    var User := Service.GetUser(1);
+    
+    // Assert with readable syntax
+    Should(User.Name).Be('John').And.NotBeEmpty;
+    
+    // Verify interactions
+    Mocker.GetMock<IUserRepository>.Received(Times.Once).FindById(1);
+  finally
+    Mocker.Free;
+  end;
+end;
+```
 
 ## 📦 Features
 
@@ -280,3 +335,169 @@ begin
   end;
 end;
 ```
+
+### DI Integration for Tests
+
+Use `TTestServiceProvider` to create a mock-aware dependency injection container:
+
+```pascal
+uses Dext.Testing.DI;
+
+var
+  Provider: TTestServiceProvider;
+  EmailMock: Mock<IEmailService>;
+  Service: TOrderService;
+begin
+  EmailMock := Mock<IEmailService>.Create;
+  EmailMock.Setup.Returns(True).When.Send(Arg.Any<string>, Arg.Any<string>);
+  
+  Provider := TTestServiceProvider.Create;
+  try
+    // Add mock
+    Provider.AddMock<IEmailService>(EmailMock);
+    
+    // Add real implementations
+    Provider.AddSingleton<TOrderService>;
+    
+    // Get service - uses mock for IEmailService, real for others
+    Service := Provider.GetService<TOrderService>;
+    
+    Service.ProcessOrder(Order);
+    
+    EmailMock.Received(Times.Once).Send(Arg.Any<string>, Arg.Any<string>);
+  finally
+    Provider.Free;
+  end;
+end;
+```
+
+---
+
+## ⚠️ Common Gotchas & FAQ
+
+### 1. "Interface not found" when mocking
+
+**Problem:** You get an error when trying to create a mock.
+
+**Solution:** Ensure the interface has `{$M+}` RTTI enabled:
+
+```pascal
+type
+  {$M+}  // REQUIRED for mocking!
+  IMyService = interface
+    ['{GUID-HERE}']
+    procedure DoWork;
+  end;
+  {$M-}
+```
+
+### 2. Class methods not being intercepted
+
+**Problem:** Mocked class methods still execute the real code.
+
+**Solution:** The method MUST be declared as `virtual`:
+
+```pascal
+type
+  TMyClass = class
+  public
+    function GetData: string; virtual;  // ✅ Will be intercepted
+    function Process: Boolean;           // ❌ Will NOT be intercepted
+  end;
+```
+
+### 3. Mock returns nil/0 when I expected a value
+
+**Problem:** You set up a return value but get default values.
+
+**Solution:** Ensure your argument matchers match exactly what's being called:
+
+```pascal
+// Setup
+Mock.Setup.Returns('Hello').When.GetValue(1);
+
+// This will NOT match:
+Mock.Instance.GetValue(2);  // Returns '' (default)
+
+// Use Arg.Any<T> for flexible matching:
+Mock.Setup.Returns('Hello').When.GetValue(Arg.Any<Integer>);
+```
+
+### 4. Snapshot test fails after code changes
+
+**Problem:** Snapshot comparison fails after legitimate changes.
+
+**Solution:** Set environment variable `SNAPSHOT_UPDATE=1` to regenerate snapshots:
+
+```
+set SNAPSHOT_UPDATE=1
+MyTests.exe
+set SNAPSHOT_UPDATE=
+```
+
+---
+
+## 🔄 Migrating from DUnitX
+
+If you're currently using DUnitX, Dext Testing works alongside it. You can use DUnitX for test discovery and execution while leveraging Dext for assertions and mocking.
+
+### Before (DUnitX + Manual Assertions)
+
+```pascal
+procedure TMyTests.TestCalculation;
+begin
+  Assert.AreEqual(42, FCalculator.Add(40, 2));
+  Assert.IsTrue(FCalculator.IsPositive(5));
+  Assert.IsNotNull(FResult);
+end;
+```
+
+### After (DUnitX + Dext Assertions)
+
+```pascal
+uses Dext.Assertions;
+
+procedure TMyTests.TestCalculation;
+begin
+  Should(FCalculator.Add(40, 2)).Be(42);
+  Should(FCalculator.IsPositive(5)).BeTrue;
+  Should(FResult).NotBeNil;
+end;
+```
+
+### Before (Manual Stub)
+
+```pascal
+type
+  TStubRepository = class(TInterfacedObject, IRepository)
+    function GetById(Id: Integer): TEntity;
+  end;
+
+function TStubRepository.GetById(Id: Integer): TEntity;
+begin
+  Result := TEntity.Create;
+  Result.Name := 'Test';
+end;
+```
+
+### After (Dext Mock)
+
+```pascal
+uses Dext.Mocks;
+
+var
+  Repo: Mock<IRepository>;
+begin
+  Repo := Mock<IRepository>.Create;
+  Repo.Setup.Returns(TEntity.Create('Test')).When.GetById(Arg.Any<Integer>);
+end;
+```
+
+---
+
+## 📚 See Also
+
+- [Main Documentation](../README.md)
+- [Dext.Mocks API Reference](../Sources/Testing/README.md)
+- [Framework Comparison](testing-framework-comparison.md)
+- [Examples: TestNewFeatures.dpr](../Tests/Mocking/TestNewFeatures.dpr)

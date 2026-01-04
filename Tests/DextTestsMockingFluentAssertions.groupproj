@@ -21,6 +21,9 @@
         <Projects Include="Mocking\TestNewFeatures.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Mocking\TestNewAssertions.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -83,14 +86,23 @@
     <Target Name="TestNewFeatures:Make">
         <MSBuild Projects="Mocking\TestNewFeatures.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestNewAssertions">
+        <MSBuild Projects="Mocking\TestNewAssertions.dproj"/>
+    </Target>
+    <Target Name="TestNewAssertions:Clean">
+        <MSBuild Projects="Mocking\TestNewAssertions.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestNewAssertions:Make">
+        <MSBuild Projects="Mocking\TestNewAssertions.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures"/>
+        <CallTarget Targets="TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean"/>
+        <CallTarget Targets="TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make"/>
+        <CallTarget Targets="TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

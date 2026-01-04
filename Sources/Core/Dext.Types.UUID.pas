@@ -77,8 +77,14 @@ type
     /// <summary>Checks if UUID is null (all zeros).</summary>
     function IsNull: Boolean;
     
+    /// <summary>Alias for IsNull - checks if UUID is empty (all zeros).</summary>
+    function IsEmpty: Boolean; inline;
+    
     /// <summary>Returns a null UUID (all zeros).</summary>
     class function Null: TUUID; static;
+    
+    /// <summary>Alias for Null - returns an empty UUID (all zeros).</summary>
+    class function Empty: TUUID; static; inline;
     
     // Implicit conversions for seamless usage
     class operator Implicit(const S: string): TUUID;
@@ -251,6 +257,16 @@ end;
 class function TUUID.Null: TUUID;
 begin
   FillChar(Result.FBytes, 16, 0);
+end;
+
+function TUUID.IsEmpty: Boolean;
+begin
+  Result := IsNull;
+end;
+
+class function TUUID.Empty: TUUID;
+begin
+  Result := Null;
 end;
 
 class operator TUUID.Implicit(const S: string): TUUID;

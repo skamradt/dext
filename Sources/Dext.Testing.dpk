@@ -42,6 +42,7 @@ contains
   Dext.Mocks.Interceptor in 'Testing\Dext.Mocks.Interceptor.pas',
   Dext.Mocks.Matching in 'Testing\Dext.Mocks.Matching.pas',
   Dext.Mocks.Auto in 'Testing\Dext.Mocks.Auto.pas',
-  Dext.Mocks in 'Testing\Dext.Mocks.pas';
+  Dext.Mocks in 'Testing\Dext.Mocks.pas',
+  Dext.Testing.DI in 'Testing\Dext.Testing.DI.pas';
 
 end.
