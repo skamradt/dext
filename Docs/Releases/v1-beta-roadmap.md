@@ -79,7 +79,7 @@ For technical details and granular status of each module, check:
 ### ⚙️ Infrastructure & CLI
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **CLI Tool** (`dext.exe`) | ✅ Ready | Migrations management |
+| **CLI Tool** (`dext.exe`) | ✅ Ready | Migrations, Tests & Code Coverage |
 | **Async Tasks** (`TAsyncTask`) | ✅ Ready | Modern concurrency primitives |
 | **Logging** (`ILogger`) | ✅ Ready | Log abstraction |
 | **Configuration** (`IConfiguration`) | ✅ Ready | JSON file provider |
@@ -111,6 +111,7 @@ For technical details and granular status of each module, check:
 | **JSON Report** | ✅ Ready | Custom tooling integration |
 | **SonarQube Report** | ✅ Ready | Quality gates integration |
 | **Fluent API** | ✅ Ready | `TTest.Configure.Verbose.ExportToHtml('report.html').Run` |
+| **Code Coverage** | ✅ Ready | Automatic generation via `dext test --coverage` |
 
 ### 🔄 Hosting & Lifecycle
 | Feature | Status | Notes |

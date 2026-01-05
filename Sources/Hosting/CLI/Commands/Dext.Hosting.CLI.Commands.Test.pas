@@ -7,8 +7,11 @@ uses
   System.Classes,
   System.IOUtils,
   System.Diagnostics,
+  System.Masks,
   Winapi.Windows,
-  Dext.Hosting.CLI.Args;
+  Dext.Hosting.CLI.Args,
+  Dext.Hosting.CLI.Config,
+  Dext.Hosting.CLI.Tools.Sonar;
 
 type
   TTestCommand = class(TInterfacedObject, IConsoleCommand)
@@ -23,12 +26,14 @@ type
     function BuildProject(const ProjectFile: string; EnableMap: Boolean): Boolean;
     function RunProcess(const Exe, Params: string): Boolean;
     
-    procedure GenerateCoverageLists(const BaseDir: string; out UnitFile, SourcePathFile: string);
+    function GetSourceDirectory(const BaseDir: string): string;
+    procedure GenerateCoverageLists(const BaseDir, SourceDir: string; const Excludes: TArray<string>; out UnitFile, SourcePathFile: string);
     procedure GenerateAutoInclude(const BaseDir, SourceDir: string);
     function FindCodeCoverageExe(const TargetPlatform: string): string;
+    function FindRSVars: string;
     
-    procedure RunTests(const ProjectFile: string; const Args: TCommandLineArgs);
-    procedure RunWithCoverage(const ProjectFile: string; const Args: TCommandLineArgs);
+    procedure RunTests(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig);
+    procedure RunWithCoverage(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig);
   public
     function GetName: string;
     function GetDescription: string;
@@ -53,33 +58,42 @@ procedure TTestCommand.Execute(const Args: TCommandLineArgs);
 var
   ProjectFile: string;
   WorkDir: string;
+  Config: TDextConfig;
 begin
   WorkDir := GetCurrentDir;
+  Config := TDextConfig.Create;
+  try
+    Config.LoadFromFile(TPath.Combine(WorkDir, 'dext.json'));
+    
+    // 1. Find Project File
+    if Args.HasOption('project') then
+      ProjectFile := Args.GetOption('project')
+    else if Config.Test.Project <> '' then
+      ProjectFile := TPath.GetFullPath(TPath.Combine(WorkDir, Config.Test.Project))
+    else
+      ProjectFile := FindProjectFile(WorkDir);
   
-  // 1. Find Project File
-  if Args.HasOption('project') then
-    ProjectFile := Args.GetOption('project')
-  else
-    ProjectFile := FindProjectFile(WorkDir);
-
-  if ProjectFile = '' then
-  begin
-    WriteLn('Error: No Delphi project file (.dproj) found in current directory.');
-    WriteLn('Use --project=<path> to specify one.');
-    Exit;
-  end;
-
-  ProjectFile := TPath.GetFullPath(ProjectFile);
-  WriteLn('Testing Project: ' + ExtractFileName(ProjectFile));
-
-  // 2. Determine Mode
-  if Args.HasOption('coverage') then
-  begin
-    RunWithCoverage(ProjectFile, Args);
-  end
-  else
-  begin
-    RunTests(ProjectFile, Args);
+    if ProjectFile = '' then
+    begin
+      WriteLn('Error: No Delphi project file (.dproj) found in current directory.');
+      WriteLn('Use --project=<path> to specify one.');
+      Exit;
+    end;
+  
+    ProjectFile := TPath.GetFullPath(ProjectFile);
+    WriteLn('Testing Project: ' + ExtractFileName(ProjectFile));
+  
+    // 2. Determine Mode
+    if Args.HasOption('coverage') then
+    begin
+      RunWithCoverage(ProjectFile, Args, Config);
+    end
+    else
+    begin
+      RunTests(ProjectFile, Args, Config);
+    end;
+  finally
+    Config.Free;
   end;
 end;
 
@@ -148,11 +162,38 @@ begin
   Result := ExitCode = 0;
 end;
 
+function TTestCommand.FindRSVars: string;
+var
+  Paths: TArray<string>;
+  Path: string;
+begin
+  if GetEnvironmentVariable('BDS') <> '' then
+  begin
+     Result := TPath.Combine(GetEnvironmentVariable('BDS'), 'bin\rsvars.bat');
+     if FileExists(Result) then Exit;
+  end;
+
+  // Typical paths - Prioritize User's 37.0
+  Paths := [
+    'C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat',
+    'C:\Program Files (x86)\Embarcadero\Studio\24.0\bin\rsvars.bat',
+    'C:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat', // Delphi 12
+    'C:\Program Files (x86)\Embarcadero\Studio\22.0\bin\rsvars.bat', // Delphi 11
+    'C:\Program Files (x86)\Embarcadero\Studio\21.0\bin\rsvars.bat'  // Delphi 10.4
+  ];
+
+  for Path in Paths do
+    if FileExists(Path) then Exit(Path);
+    
+  Result := '';
+end;
+
 function TTestCommand.BuildProject(const ProjectFile: string; EnableMap: Boolean): Boolean;
 var
   Args: string;
   ProjectName: string;
   OutDir: string;
+  RSVars: string;
 begin
   ProjectName := TPath.GetFileNameWithoutExtension(ProjectFile);
   OutDir := TPath.Combine(GetCurrentDir, BUILD_DIR);
@@ -166,14 +207,31 @@ begin
   if EnableMap then
     Args := Args + ' /p:DCC_MapFile=3 /p:DCC_GenerateStackFrames=true /p:DCC_Define="DEBUG;TESTING;COVERAGE"';
 
-  WriteLn('Building project...');
-  Result := RunProcess('msbuild', Args);
+  RSVars := FindRSVars;
+  if RSVars <> '' then
+  begin
+    WriteLn('Using Environment: ' + RSVars);
+    WriteLn('Building project...');
+    // Invoke cmd /c "call rsvars && msbuild ..."
+    Result := RunProcess('cmd', Format('/c "call "%s" && msbuild %s"', [RSVars, Args]));
+  end
+  else
+  begin
+    if GetEnvironmentVariable('BDS') = '' then
+    begin
+       WriteLn('WARNING: "BDS" environment variable not set and "rsvars.bat" not found.');
+       WriteLn('         Build will likely fail.');
+    end;
   
+    WriteLn('Building project...');
+    Result := RunProcess('msbuild', Args);
+  end;
+
   if not Result then
     WriteLn('Error: Build failed.');
 end;
 
-procedure TTestCommand.RunTests(const ProjectFile: string; const Args: TCommandLineArgs);
+procedure TTestCommand.RunTests(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig);
 var
   ExePath: string;
   ProjectName: string;
@@ -237,28 +295,38 @@ begin
   end;
 end;
 
-procedure TTestCommand.GenerateCoverageLists(const BaseDir: string; out UnitFile, SourcePathFile: string);
+function TTestCommand.GetSourceDirectory(const BaseDir: string): string;
+begin
+  // Assume standard Dext structure: ProjectRoot/Sources
+  // Resolve canonical path to handle '../../' correctly
+  Result := TPath.GetFullPath(TPath.Combine(BaseDir, 'Sources'));
+  
+  if not TDirectory.Exists(Result) then
+  begin
+    // Try Dext Structure (Tests/Testing -> ../../Sources)
+    Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../../Sources'));
+    
+    if not TDirectory.Exists(Result) then
+    begin
+       // Try Sibling (Tests -> Sources)
+       Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../Sources'));
+       
+       if not TDirectory.Exists(Result) then
+          Result := BaseDir;
+    end;
+  end;
+end;
+
+procedure TTestCommand.GenerateCoverageLists(const BaseDir, SourceDir: string; const Excludes: TArray<string>; out UnitFile, SourcePathFile: string);
 var
   Units, Paths: TStringList;
-  SourceDir: string;
   Files: TArray<string>;
   FileName: string;
   UnitName: string;
+  Mask: string;
+  Excluded: Boolean;
 begin
-  // Assume standard Dext structure: ProjectRoot/Sources
-  SourceDir := TPath.Combine(BaseDir, 'Sources');
-  if not TDirectory.Exists(SourceDir) then
-  begin
-    SourceDir := TPath.Combine(TPath.Combine(BaseDir, '..'), '..'); // Try up?
-    SourceDir := TPath.Combine(SourceDir, 'Sources');
-    // For specific project structure adjustments
-    // Fallback:
-    if not TDirectory.Exists(SourceDir) then
-       SourceDir := BaseDir;
-  end;
-
-  // Generate AutoInclude BEFORE generating lists (so it exists)
-  GenerateAutoInclude(BaseDir, SourceDir);
+  WriteLn('Scanning sources in: ' + SourceDir);
 
   Units := TStringList.Create;
   Paths := TStringList.Create;
@@ -271,6 +339,19 @@ begin
       if FileName.ToLower.Contains('\tests\') then Continue;
       
       UnitName := TPath.GetFileNameWithoutExtension(FileName);
+      
+      // Check Exclusions
+      Excluded := False;
+      for Mask in Excludes do
+      begin
+        if MatchesMask(FileName, Mask) or MatchesMask(UnitName, Mask) then
+        begin
+          Excluded := True;
+          Break;
+        end;
+      end;
+      if Excluded then Continue;
+      
       Units.Add(UnitName);
       
       // Add directory to paths if unique
@@ -311,6 +392,10 @@ begin
   
   AppDir := ExtractFileDir(ParamStr(0));
   
+  // 1. Check same directory as CLI executable
+  Candidate := TPath.Combine(AppDir, 'CodeCoverage.exe');
+  if FileExists(Candidate) then Exit(Candidate);
+  
   // Search structure:
   // 1. ../Tools/DelphiCodeCoverage (Repo localized)
   // 2. ../../Libs/DelphiCodeCoverage/{Platform} (Sibling localized)
@@ -331,17 +416,22 @@ begin
   end;
 end;
 
-procedure TTestCommand.RunWithCoverage(const ProjectFile: string; const Args: TCommandLineArgs);
+procedure TTestCommand.RunWithCoverage(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig);
 var
   ExePath, MapPath: string;
   ProjectName, UnitLst, SourceLst: string;
   CoverageCmd: string;
   DCCExe: string;
+  SourceDir: string;
 begin
-  // 1. Generate lists first (and AutoInclude)
-  GenerateCoverageLists(GetCurrentDir, UnitLst, SourceLst);
+  // 1. Resolve Source Dir & Generate AutoInclude
+  SourceDir := GetSourceDirectory(GetCurrentDir);
+  GenerateAutoInclude(GetCurrentDir, SourceDir);
+
+  // 2. Generate lists
+  GenerateCoverageLists(GetCurrentDir, SourceDir, Config.Test.CoverageExclude, UnitLst, SourceLst);
   
-  // 2. Build (After AutoInclude is updated)
+  // 3. Build (After AutoInclude is updated)
   // Currently forcing Win32
   if not BuildProject(ProjectFile, True) then Exit;
   
@@ -368,6 +458,11 @@ begin
   
   // Create Report Directory
   var ReportDir := TPath.Combine(TPath.GetDirectoryName(ExePath), 'report');
+  
+  // Override if config present
+  if Config.Test.ReportDir <> '' then
+     ReportDir := TPath.GetFullPath(TPath.Combine(ExtractFileDir(ProjectFile), Config.Test.ReportDir));
+
   ForceDirectories(ReportDir);
 
   // Construct DCC command matchin best practices:
@@ -378,7 +473,14 @@ begin
   if not RunProcess(DCCExe, CoverageCmd) then
     WriteLn('Coverage analysis failed (or tests failed).')
   else
-    WriteLn('Coverage analysis complete. Check output in ' + BUILD_DIR);
+  begin
+    WriteLn('Coverage analysis complete. Check output in ' + ReportDir);
+    
+    // Convert to Sonar
+    var DccXml := TPath.Combine(ReportDir, 'CodeCoverage_Summary.xml');
+    var SonarXml := TPath.Combine(ReportDir, 'dext_coverage.xml');
+    TSonarConverter.Convert(DccXml, SonarXml, SourceDir, Config.Test.CoverageThreshold);
+  end;
 end;
 
 end.

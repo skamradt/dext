@@ -79,7 +79,7 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 ### ⚙️ Infraestrutura & CLI
 | Feature | Status | Notas |
 |---------|--------|-------|
-| **CLI Tool** (`dext.exe`) | ✅ Pronto | Gerenciamento de migrations |
+| **CLI Tool** (`dext.exe`) | ✅ Pronto | Gerenciamento de Migrations, Test Runner e Code Coverage |
 | **Async Tasks** (`TAsyncTask`) | ✅ Pronto | Primitivas modernas de concorrência |
 | **Logging** (`ILogger`) | ✅ Pronto | Abstração de log |
 | **Configuration** (`IConfiguration`) | ✅ Pronto | JSON file provider |
@@ -97,6 +97,7 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 | **Snapshot Testing** (`MatchSnapshot`) | ✅ Pronto | Verificação de snapshots JSON/String |
 | **Fluent Assertions** (`Should`) | ✅ Pronto | Biblioteca de asserções expressiva |
 | **Sintaxe Global** (`Should()`) | ✅ Pronto | API limpa para testes |
+| **Code Coverage** | ✅ Pronto | Geração automática via `dext test --coverage` |
 | **Integração** | ✅ Pronto | Funciona com Dext DI e Core types |
 
 ### 🔄 Hosting & Lifecycle

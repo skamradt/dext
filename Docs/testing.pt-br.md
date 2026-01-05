@@ -247,6 +247,51 @@ begin
 end;
 ```
 
+## 🛠️ Integração via CLI e Code Coverage
+
+O Dext fornece uma ferramenta CLI poderosa para rodar seus testes e analisar a cobertura de código automaticamente.
+
+### Rodando Testes
+
+Execute todos os testes do seu projeto via linha de comando:
+
+```bash
+dext test
+```
+
+### Gerando Cobertura de Código
+
+Para gerar um relatório de cobertura, simplesmente adicione a flag `--coverage`:
+
+```bash
+dext test --coverage
+```
+
+Este comando irá:
+1. Compilar seu projeto com informações de debug (arquivo `-map`).
+2. Executar seus testes usando `CodeCoverage.exe`.
+3. Gerar um relatório HTML legível em `TestOutput/report`.
+4. Gerar um relatório XML compatível com **SonarQube** (`dext_coverage.xml`).
+
+### Quality Gates (Limite de Cobertura)
+
+Você pode obrigar uma porcentagem mínima de cobertura para falhar o build (Quality Gate) se o padrão não for atendido. Configure isso no `dext.json`:
+
+```json
+{
+  "test": {
+    "project": "Tests/MyTests.dproj",
+    "coverageThreshold": 80.0,
+    "coverageExclude": [
+      "*Dext.*",
+      "*Test*"
+    ]
+  }
+}
+```
+
+Se a cobertura cair abaixo de 80%, o comando `dext test` sairá com um código de erro, perfeito para pipelines de CI/CD.
+
 ## 🌟 Recursos Avançados
 
 ### Snapshot Testing

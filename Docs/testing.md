@@ -645,6 +645,53 @@ end;
 
 ---
 
+## 🛠️ CLI Integration & Code Coverage
+
+Dext provides a powerful CLI tool to run your tests and analyze code coverage automatically.
+
+### Running Tests
+
+Execute all tests in your project from the command line:
+
+```bash
+dext test
+```
+
+### Generating Code Coverage
+
+To generate a coverage report, simply add the `--coverage` flag:
+
+```bash
+dext test --coverage
+```
+
+This command will:
+1. Compile your project with debug information (`-map` file).
+2. Run your tests using `CodeCoverage.exe`.
+3. Generate a human-readable HTML report in `TestOutput/report`.
+4. Generate a **SonarQube-compatible** XML report (`dext_coverage.xml`).
+
+### Quality Gates (Coverage Threshold)
+
+You can enforce a minimum coverage percentage to fail the build if the quality standard is not met. Configure this in `dext.json`:
+
+```json
+{
+  "test": {
+    "project": "Tests/MyTests.dproj",
+    "coverageThreshold": 80.0,
+    "coverageExclude": [
+      "*Dext.*",
+      "*Test*"
+    ]
+  }
+}
+```
+
+If coverage falls below 80%, the `dext test` command will exit with an error code, perfect for CI/CD pipelines.
+
+---
+
 ## 📚 See Also
 
 - [Main Documentation](../README.md)

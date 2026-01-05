@@ -100,6 +100,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - **DI Orientada a Testes**: `TTestServiceProvider` especializado para substituir facilmente serviços de produção por mocks durante testes de integração.
 - **Integração CI/CD** ⭐ NOVO: Exporte relatórios para JUnit XML, JSON, xUnit, TRX (Azure DevOps), SonarQube e HTML standalone moderno.
 - **Live Dashboard** ⭐ NOVO: Monitore seus testes em tempo real com um dashboard web dark-theme moderno e histórico de execuções.
+- **Code Coverage & CLI**: Rode testes e gere relatórios de cobertura prontos para o SonarQube com `dext test --coverage`. Garanta qualidade com thresholds (Quality Gates).
 
 ---
 
@@ -137,6 +138,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - [Ciclo de Vida & Integridade](Docs/application-lifecycle.md)
 - [Async Programming](Docs/async-api.md)
 - [Caching](Docs/caching.md)
+- [CLI Tool & Migrations](Docs/cli.pt-br.md) ⭐ NOVO
 
 ### 🧪 Testes
 - [Começando](Docs/testing.pt-br.md)

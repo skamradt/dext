@@ -159,6 +159,8 @@
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateUp.pas"/>
         <DCCReference Include="Data\Dext.Entity.Prototype.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

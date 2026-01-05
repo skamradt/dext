@@ -101,6 +101,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 - **Test-Centric DI**: Specialized `TTestServiceProvider` to easily swap production services with mocks during integration tests.
 - **CI/CD Integration** ⭐ NEW: Export reports to JUnit XML, JSON, xUnit, TRX (Azure DevOps), SonarQube, and beautiful standalone HTML.
 - **Live Dashboard** ⭐ NEW: Monitor your tests in real-time with a beautiful dark-themed web dashboard and historical analysis.
+- **Code Coverage & CLI**: Run tests and generate SonarQube-ready coverage reports with `dext test --coverage`. Enforce quality gates with thresholds.
 
 ---
 
@@ -139,6 +140,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 - [Application Lifecycle & Integrity](Docs/application-lifecycle.md)
 - [Async Programming](Docs/async-api.md)
 - [Caching](Docs/caching.md)
+- [CLI Tool & Migrations](Docs/cli.md) ⭐ NEW
 
 ### 🧪 Testing
 - [Getting Started](Docs/testing.md)
