@@ -7,7 +7,7 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.TypInfo,
-  JsonDataObjects,
+  DextJsonDataObjects,
   Dext.OpenAPI.Types,
   Dext.OpenAPI.Attributes,
   Dext.Web.Interfaces,

@@ -18,6 +18,46 @@ dext help
 
 ---
 
+## 🖥️ Dashboard UI
+
+### `ui`
+Launches the web-based dashboard for visual Dext management, configuration, and environment handling.
+
+**Syntax:**
+```bash
+dext ui [--port <number>]
+```
+
+**Features:**
+- **Projects**: View recent projects and their statuses.
+- **Tests**: View test results, code coverage metrics, and access full HTML reports.
+- **Settings**: Configure global paths (Dext CLI, Code Coverage) and manage Delphi environments.
+- **Tools**: Auto-install tools like CodeCoverage (via Settings).
+
+---
+
+## 🌍 Environment Commands
+
+Manage detected Delphi installations and configure which version to use for compilation.
+
+### `env scan`
+Scans the Windows Registry for available Delphi installations and updates the global `config.yaml`.
+
+**Syntax:**
+```bash
+dext env scan
+```
+
+### `env list`
+Lists all configured Delphi installations and indicates the default one.
+
+**Syntax:**
+```bash
+dext env list
+```
+
+---
+
 ## 🧪 Testing Commands
 
 ### `test`

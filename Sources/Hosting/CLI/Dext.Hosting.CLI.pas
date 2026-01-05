@@ -59,11 +59,15 @@ type
 implementation
 
 uses
+  System.IOUtils,
+  Dext.Hosting.CLI.Registry,
   Dext.Hosting.CLI.Commands.MigrateUp,
   Dext.Hosting.CLI.Commands.MigrateList,
   Dext.Hosting.CLI.Commands.MigrateDown,
   Dext.Hosting.CLI.Commands.MigrateGenerate,
-  Dext.Hosting.CLI.Commands.Test;
+  Dext.Hosting.CLI.Commands.Test,
+  Dext.Hosting.CLI.Commands.Configuration,
+  Dext.Hosting.CLI.Commands.UI;
 
 { TDextCLI }
 
@@ -96,6 +100,15 @@ begin
 
   var CmdTest := TTestCommand.Create;
   FCommands.Add(CmdTest.GetName, CmdTest);
+  
+  var CmdConfig := TConfigInitCommand.Create;
+  FCommands.Add(CmdConfig.GetName, CmdConfig);
+  
+  var CmdEnv := TEnvScanCommand.Create;
+  FCommands.Add(CmdEnv.GetName, CmdEnv);
+
+  var CmdUI := TUICommand.Create;
+  FCommands.Add(CmdUI.GetName, CmdUI);
 end;
 
 procedure TDextCLI.ShowHelp;
@@ -163,6 +176,25 @@ begin
     end;
   finally
     Args.Free;
+  end;
+
+  // Auto-register project if we are in a valid folder (has .dproj or .dext.config)
+  try
+    var CurrentDir := GetCurrentDir;
+    // Simple heuristic: if .dproj exists or .dext.config exists
+    if Length(TDirectory.GetFiles(CurrentDir, '*.dproj')) > 0 then
+    begin
+       // Use lazy loaded registry to avoid performance hit on every command?
+       // It's fast enough for CLI.
+       var Registry := TProjectRegistry.Create;
+       try
+         Registry.RegisterProject(CurrentDir);
+       finally
+         Registry.Free;
+       end;
+    end;
+  except
+    // Ignore errors here, logging shouldn't break CLI flow
   end;
 end;
 

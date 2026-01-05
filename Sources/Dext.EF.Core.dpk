@@ -71,15 +71,6 @@ contains
   Dext.Entity.LazyLoading in 'Data\Dext.Entity.LazyLoading.pas',
   Dext.Entity.Grouping in 'Data\Dext.Entity.Grouping.pas',
   Dext.Entity.Joining in 'Data\Dext.Entity.Joining.pas',
-  Dext.Hosting.CLI.Args in 'Hosting\CLI\Dext.Hosting.CLI.Args.pas',
-  Dext.Hosting.CLI in 'Hosting\CLI\Dext.Hosting.CLI.pas',
-  Dext.Hosting.CLI.Commands.MigrateDown in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateDown.pas',
-  Dext.Hosting.CLI.Commands.MigrateGenerate in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateGenerate.pas',
-  Dext.Hosting.CLI.Commands.MigrateList in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateList.pas',
-  Dext.Hosting.CLI.Commands.MigrateUp in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateUp.pas',
-  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas',
-  Dext.Hosting.CLI.Commands.Test in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas',
-  Dext.Hosting.CLI.Config in 'Hosting\CLI\Dext.Hosting.CLI.Config.pas',
-  Dext.Hosting.CLI.Tools.Sonar in 'Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas';
+  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas';
 
 end.

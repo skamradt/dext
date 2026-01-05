@@ -79,7 +79,8 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 ### ⚙️ Infraestrutura & CLI
 | Feature | Status | Notas |
 |---------|--------|-------|
-| **CLI Tool** (`dext.exe`) | ✅ Pronto | Gerenciamento de Migrations, Test Runner e Code Coverage |
+| **CLI Tool** (`dext.exe`) | ✅ Pronto | Dashboard UI Web, Gerenciamento de Ambientes, Migrations e Test Runner |
+| **Test Results Dashboard** | ✅ Pronto | Visualização de cobertura e relatórios HTML integrada ao `dext ui` |
 | **Async Tasks** (`TAsyncTask`) | ✅ Pronto | Primitivas modernas de concorrência |
 | **Logging** (`ILogger`) | ✅ Pronto | Abstração de log |
 | **Configuration** (`IConfiguration`) | ✅ Pronto | JSON file provider |

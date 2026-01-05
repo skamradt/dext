@@ -119,7 +119,7 @@
   TJsonBuilder = Dext.Json.TJsonBuilder;
 
   // Dext.Json.Driver.JsonDataObjects
-  TJsonDataObjectWrapper = Dext.Json.Driver.JsonDataObjects.TJsonDataObjectWrapper;
+  TJsonDataObjectWrapper = Dext.Json.Driver.DextJsonDataObjects.TJsonDataObjectWrapper;
 
   // Dext.Json.Driver.SystemJson
   TSystemJsonWrapper = Dext.Json.Driver.SystemJson.TSystemJsonWrapper;
@@ -235,14 +235,14 @@
   TValidator = Dext.Validation.TValidator;
 
   // JsonDataObjects
-  TJsonBaseObject = JsonDataObjects.TJsonBaseObject;
-  TJsonObject = JsonDataObjects.TJsonObject;
-  TJsonArray = JsonDataObjects.TJsonArray;
-  // EJsonException = JsonDataObjects.EJsonException;
-  EJsonCastException = JsonDataObjects.EJsonCastException;
-  EJsonPathException = JsonDataObjects.EJsonPathException;
-  EJsonParserException = JsonDataObjects.EJsonParserException;
-  // ALineNum = JsonDataObjects.ALineNum;
+  TJsonBaseObject = DextJsonDataObjects.TJsonBaseObject;
+  TJsonObject = DextJsonDataObjects.TJsonObject;
+  TJsonArray = DextJsonDataObjects.TJsonArray;
+  // EJsonException = DextJsonDataObjects.EJsonException;
+  EJsonCastException = DextJsonDataObjects.EJsonCastException;
+  EJsonPathException = DextJsonDataObjects.EJsonPathException;
+  EJsonParserException = DextJsonDataObjects.EJsonParserException;
+  // ALineNum = DextJsonDataObjects.ALineNum;
 
 const
 

@@ -23,14 +23,14 @@
 {  Created: 2025-12-08                                                      }
 {                                                                           }
 {***************************************************************************}
-unit Dext.Json.Driver.JsonDataObjects;
+unit Dext.Json.Driver.DextJsonDataObjects;
 
 interface
 
 uses
   System.SysUtils,
   Dext.Json.Types,
-  JsonDataObjects;
+  DextJsonDataObjects;
 
 type
   TJsonDataObjectWrapper = class(TInterfacedObject, IDextJsonNode)

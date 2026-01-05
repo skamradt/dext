@@ -161,6 +161,9 @@
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Registry.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

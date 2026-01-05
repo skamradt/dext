@@ -20,7 +20,7 @@
   Dext.Hosting.AppState,
   Dext.Hosting.BackgroundService,
   Dext.Json,
-  Dext.Json.Driver.JsonDataObjects,
+  Dext.Json.Driver.DextJsonDataObjects,
   Dext.Json.Driver.SystemJson,
   Dext.Json.Types,
   Dext.Json.Utf8,
@@ -43,4 +43,4 @@
   Dext.Types.Nullable,
   Dext.Types.UUID,
   Dext.Validation,
-  JsonDataObjects
+  DextJsonDataObjects

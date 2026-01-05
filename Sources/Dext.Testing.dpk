@@ -34,7 +34,9 @@ requires
   IndySystem,
   IndyProtocols,
   IndyCore,
-  Dext.Core;
+  Dext.Core,
+  Dext.EF.Core,
+  Dext.Web.Core;
 
 contains
   Dext.Assertions in 'Testing\Dext.Assertions.pas',

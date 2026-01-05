@@ -328,8 +328,27 @@ var
 begin
   // Apply configuration
   TTestRunner.SetVerbose(FVerbose);
-  TTestRunner.SetVerbose(FVerbose);
   TTestRunner.SetDebugDiscovery(FDebugDiscovery);
+
+  // Check for CI/Headless override
+  if FindCmdLineSwitch('dext-headless', ['-', '/'], True) or 
+     (GetEnvironmentVariable('DEXT_HEADLESS') = '1') then
+  begin
+    FUseDashboard := False;
+    FWaitDashboard := False;
+  end;
+
+  // Check for Report Overrides via Command Line
+  for var I := 1 to ParamCount do
+  begin
+    var P := ParamStr(I);
+    if P.StartsWith('-junit:', True) or P.StartsWith('/junit:', True) then
+      FJUnitFile := P.Substring(7).DeQuotedString('"')
+    else if P.StartsWith('-html:', True) or P.StartsWith('/html:', True) then
+      FHTMLFile := P.Substring(6).DeQuotedString('"')
+    else if P.StartsWith('-json:', True) or P.StartsWith('/json:', True) then
+      FJsonFile := P.Substring(6).DeQuotedString('"');
+  end;
 
   // Start Dashboard
   if FUseDashboard then

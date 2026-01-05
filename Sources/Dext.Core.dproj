@@ -8,8 +8,7 @@
         <TargetedPlatforms>1081473</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
-        <ProjectVersion>20.3</ProjectVersion> 
-
+        <ProjectVersion>20.3</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -126,9 +125,9 @@
         <DCCReference Include="Core\Base\Dext.Types.Nullable.pas"/>
         <DCCReference Include="Core\Base\Dext.Types.Lazy.pas"/>
         <DCCReference Include="Core\Base\Dext.Core.Extensions.pas"/>
-        <DCCReference Include="Core\Json\Dext.Json.Driver.JsonDataObjects.pas"/>
+        <DCCReference Include="Core\Json\Dext.Json.Driver.DextJsonDataObjects.pas"/>
         <DCCReference Include="Core\Json\Dext.Json.Driver.SystemJson.pas"/>
-        <DCCReference Include="Core\Json\JsonDataObjects.pas"/>
+        <DCCReference Include="Core\Json\DextJsonDataObjects.pas"/>
         <DCCReference Include="Core\Dext.Collections.Extensions.pas"/>
         <DCCReference Include="Core\Dext.Collections.pas"/>
         <DCCReference Include="Core\Dext.Configuration.Binder.pas"/>
@@ -169,6 +168,8 @@
         <DCCReference Include="Core\Dext.Mapper.pas"/>
         <DCCReference Include="Core\Dext.DI.Attributes.pas"/>
         <DCCReference Include="Core\Dext.Core.SmartTypes.pas"/>
+        <DCCReference Include="Core\Dext.Configuration.Yaml.pas"/>
+        <DCCReference Include="Core\Dext.Yaml.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -218,7 +219,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\Output\Win32\Debug\Dext.Core.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.Core.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>Dext.Core.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

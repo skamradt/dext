@@ -118,6 +118,8 @@
         <DCCReference Include="Dext.Configuration.EnvironmentVariables.pas"/>
         <DCCReference Include="Dext.Configuration.Json.pas"/>
         <DCCReference Include="Dext.Configuration.Interfaces.pas"/>
+        <DCCReference Include="Dext.Yaml.pas"/>
+        <DCCReference Include="Dext.Configuration.Yaml.pas"/>
         <DCCReference Include="Dext.Http.Interfaces.pas"/>
         <DCCReference Include="Dext.Options.pas"/>
         <DCCReference Include="Dext.Configuration.Binder.pas"/>

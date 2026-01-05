@@ -57,7 +57,7 @@ SOFTWARE.
   {$POINTERMATH ON}
 {$ENDIF FPC}
 
-unit JsonDataObjects;
+unit DextJsonDataObjects;
 
 {--------------------------------------------------------------------------------------------------}
 { Detect Compiler/RTL features                                                                     }

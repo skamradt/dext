@@ -45,9 +45,9 @@ contains
   Dext.Types.Nullable in 'Core\Base\Dext.Types.Nullable.pas',
   Dext.Types.Lazy in 'Core\Base\Dext.Types.Lazy.pas',
   Dext.Core.Extensions in 'Core\Base\Dext.Core.Extensions.pas',
-  Dext.Json.Driver.JsonDataObjects in 'Core\Json\Dext.Json.Driver.JsonDataObjects.pas',
+  Dext.Json.Driver.DextJsonDataObjects in 'Core\Json\Dext.Json.Driver.DextJsonDataObjects.pas',
   Dext.Json.Driver.SystemJson in 'Core\Json\Dext.Json.Driver.SystemJson.pas',
-  JsonDataObjects in 'Core\Json\JsonDataObjects.pas',
+  DextJsonDataObjects in 'Core\Json\DextJsonDataObjects.pas',
   Dext.Collections.Extensions in 'Core\Dext.Collections.Extensions.pas',
   Dext.Collections in 'Core\Dext.Collections.pas',
   Dext.Configuration.Binder in 'Core\Dext.Configuration.Binder.pas',
@@ -87,7 +87,9 @@ contains
   Dext.Json.Utf8.Serializer in 'Core\Json\Dext.Json.Utf8.Serializer.pas',
   Dext.Mapper in 'Core\Dext.Mapper.pas',
   Dext.DI.Attributes in 'Core\Dext.DI.Attributes.pas',
-  Dext.Core.SmartTypes in 'Core\Dext.Core.SmartTypes.pas';
+  Dext.Core.SmartTypes in 'Core\Dext.Core.SmartTypes.pas',
+  Dext.Configuration.Yaml in 'Core\Dext.Configuration.Yaml.pas',
+  Dext.Yaml in 'Core\Dext.Yaml.pas';
 
 end.
 

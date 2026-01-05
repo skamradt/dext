@@ -81,6 +81,8 @@ contains
   Dext.Specifications.Base in 'Dext.Specifications.Base.pas',
   Dext.Specifications.Fluent in 'Dext.Specifications.Fluent.pas',
   Dext.Specifications.OrderBy in 'Dext.Specifications.OrderBy.pas',
+  Dext.Yaml in 'Dext.Yaml.pas',
+  Dext.Configuration.Yaml in 'Dext.Configuration.Yaml.pas',
   Dext.Collections.Extensions in 'Dext.Collections.Extensions.pas';
 
 end.

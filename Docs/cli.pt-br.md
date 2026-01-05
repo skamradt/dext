@@ -18,6 +18,24 @@ dext help
 
 ---
 
+## 🖥️ Dashboard UI
+ 
+### `ui`
+Inicia o painel de controle web para gerenciamento visual do Dext, configurações e ambientes.
+ 
+**Sintaxe:**
+```bash
+dext ui [--port <numero>]
+```
+ 
+**Funcionalidades:**
+- **Projects**: Visualiza projetos recentes e seus status.
+- **Tests**: Visualiza resultados das últimas execuções de teste, métricas de cobertura de código e acesso ao relatório HTML completo.
+- **Settings**: Configura paths globais (Dext CLI, Code Coverage) e gerencia ambientes Delphi.
+- **Tools**: Instalação automática de ferramentas como CodeCoverage (via Settings).
+ 
+---
+ 
 ## 🧪 Comandos de Teste
 
 ### `test`
@@ -116,6 +134,30 @@ Gera um arquivo como `20260104223000_AdicionarTabelaCliente.json`.
 
 ---
 
+---
+ 
+## 🌍 Comandos de Ambiente
+ 
+Gerencia as instalações do Delphi detectadas e configura qual versão utilizar para compilação.
+ 
+### `env scan`
+Escaneia o registro do Windows em busca de instalações do Delphi disponíveis e atualiza o `config.yaml` global.
+ 
+**Sintaxe:**
+```bash
+dext env scan
+```
+ 
+### `env list`
+Lista todas as instalações do Delphi configuradas e indica qual é a padrão (Default).
+ 
+**Sintaxe:**
+```bash
+dext env list
+```
+ 
+---
+ 
 ## ⚙️ Opções Globais
 
 - `--help` / `-h` / `help`: Exibe a tela de ajuda com a lista de comandos disponíveis.

@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   System.Classes,
   Dext.Hosting.CLI,
+  Dext.Hosting.CLI.Registry,
   Dext.Entity.Core,
   Dext.Entity.Context,
   Dext.Entity.Setup,

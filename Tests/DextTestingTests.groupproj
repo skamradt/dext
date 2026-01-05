@@ -12,6 +12,9 @@
         <Projects Include="..\Sources\Dext.Web.Core.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Sources\Dext.Hosting.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="..\Sources\Dext.Testing.dproj">
             <Dependencies/>
         </Projects>
@@ -40,6 +43,9 @@
             <Dependencies/>
         </Projects>
         <Projects Include="Testing\TestAttributeRunner.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Core\TestYaml.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -76,6 +82,15 @@
     </Target>
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="..\Sources\Dext.Web.Core.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Dext_Hosting">
+        <MSBuild Projects="..\Sources\Dext.Hosting.dproj"/>
+    </Target>
+    <Target Name="Dext_Hosting:Clean">
+        <MSBuild Projects="..\Sources\Dext.Hosting.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Hosting:Make">
+        <MSBuild Projects="..\Sources\Dext.Hosting.dproj" Targets="Make"/>
     </Target>
     <Target Name="Dext_Testing">
         <MSBuild Projects="..\Sources\Dext.Testing.dproj"/>
@@ -167,14 +182,23 @@
     <Target Name="TestAttributeRunner:Make">
         <MSBuild Projects="Testing\TestAttributeRunner.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestYaml">
+        <MSBuild Projects="Core\TestYaml.dproj"/>
+    </Target>
+    <Target Name="TestYaml:Clean">
+        <MSBuild Projects="Core\TestYaml.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestYaml:Make">
+        <MSBuild Projects="Core\TestYaml.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Testing;DextTool;TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions;TestAttributeRunner"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Hosting;Dext_Testing;DextTool;TestVirtualInterface;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions;TestAttributeRunner;TestYaml"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;DextTool:Clean;TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean;TestAttributeRunner:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;DextTool:Clean;TestVirtualInterface:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean;TestAttributeRunner:Clean;TestYaml:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Testing:Make;DextTool:Make;TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make;TestAttributeRunner:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Hosting:Make;Dext_Testing:Make;DextTool:Make;TestVirtualInterface:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make;TestAttributeRunner:Make;TestYaml:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
