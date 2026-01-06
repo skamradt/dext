@@ -17,7 +17,7 @@ Abaixo, comparamos o Dext com as principais alternativas do mercado Delphi e sua
 | Funcionalidade | ⚡ Dext | 🐴 Horse | 📦 DMVC | 🔷 ASP.NET Core |
 | :--- | :---: | :---: | :---: | :---: |
 | **Arquitetura** | Modular (Microsoft.Extensions.* style) | Middleware-based (Express.js style) | MVC Clássico | Modular |
-| **Real-Time (WebSockets)** | ✅ (Planejado v1.0) | ⚠️ (Socket.IO externo) | ❌ | ✅ (SignalR) |
+| **Real-Time (WebSockets)** | ✅ (Dext.Web.Hubs) | ⚠️ (Socket.IO externo) | ❌ | ✅ (SignalR) |
 | **Injeção de Dependência** | ✅ **Nativa & First-Class** (Scoped, Transient, Singleton) | ❌ (Requer lib externa) | ⚠️ (Limitada/Externa) | ✅ Nativa |
 | **Scoped Services** | ✅ **Por Requisição** (DbContext, UoW) | ❌ | ❌ | ✅ |
 | **Minimal APIs** | ✅ `App.MapGet('/route', ...)` | ✅ | ❌ | ✅ |
@@ -284,7 +284,7 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
   - ✅ **Rollback**: Reversão de migrações (`migrate:down`).
   - ✅ **Generation**: Criação de novas migrações (`migrate:generate`).
   - [ ] **Scaffolding**: Geração automática de classes (Próximo passo).
-- [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
+  - [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
 
 ### 6. Ecossistema & Tooling (📅 Planejado para v1.1)
 - [ ] **Templates**: Templates de projeto para Delphi (IDE Wizards).
@@ -292,6 +292,7 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
 - [ ] **Docker**: Imagens oficiais e exemplos de deploy.
 - [ ] **Distributed Cache**: Implementação Redis para `IDistributedCache`.
 - [ ] **Distributed Rate Limiting**: Suporte a Redis para Rate Limiting distribuído.
+- [ ] **Feature Toggle**: Sistema de gerenciamento de features (flags) para habilitar/desabilitar funcionalidades dinamicamente.
 
 ### 7. Documentação & Qualidade (🚧 Em Andamento)
 - [x] **Integration Tests**: Testes de integração completos (MinimalAPITest, ControllerExample).

@@ -122,9 +122,16 @@ begin
   begin
     try
       FHTTPServer.IOHandler := FSSLHandler.CreateIOHandler(FHTTPServer);
+      // Verify handler was actually created
+      if FHTTPServer.IOHandler = nil then
+        SafeWriteLn('[WARN] SSL requested but IOHandler creation returned nil. Using HTTP.');
     except
       on E: Exception do
-        SafeWriteLn('[ERROR] Exception configuring IOHandler: ' + E.Message);
+      begin
+        SafeWriteLn('[ERROR] Failed to configure HTTPS: ' + E.Message);
+        SafeWriteLn('[INFO] Falling back to HTTP.');
+        FHTTPServer.IOHandler := nil; // Ensure we fall back to HTTP
+      end;
     end;
   end;
 end;

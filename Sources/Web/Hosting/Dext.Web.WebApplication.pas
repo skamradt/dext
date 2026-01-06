@@ -332,14 +332,18 @@ begin
     var KeyFile := ServerSection['SslKey'];
     var RootFile := ServerSection['SslRootCert'];
     
-    if (CertFile <> '') and (KeyFile <> '') then
+    // Only enable SSL if certificate files exist
+    if (CertFile <> '') and (KeyFile <> '') and 
+       FileExists(CertFile) and FileExists(KeyFile) then
     begin
       var ProviderName := ServerSection['SslProvider'];
       if SameText(ProviderName, 'Taurus') then
         SSLHandler := TIndyTaurusSSLHandler.Create(CertFile, KeyFile, RootFile)
       else
         SSLHandler := TIndyOpenSSLHandler.Create(CertFile, KeyFile, RootFile);
-    end;
+    end
+    else if (CertFile <> '') or (KeyFile <> '') then
+      SafeWriteLn('[WARN] HTTPS configured but certificate files not found. Using HTTP.');
   end;
 
   WebHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);

@@ -1,0 +1,404 @@
+{***************************************************************************}
+{                                                                           }
+{           Dext Framework                                                  }
+{                                                                           }
+{           Copyright (C) 2025-2026 Cesar Romero & Dext Contributors        }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the License is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{  Author:  Cesar Romero                                                    }
+{  Created: 2026-01-06                                                      }
+{                                                                           }
+{  Description:                                                             }
+{    Server-Sent Events (SSE) transport for Dext.Web.Hubs.                      }
+{    Provides unidirectional server-to-client real-time communication.      }
+{                                                                           }
+{***************************************************************************}
+unit Dext.Web.Hubs.Transport.SSE;
+
+{$I ..\..\Dext.inc}
+
+interface
+
+uses
+  System.Classes,
+  System.Generics.Collections,
+  System.SyncObjs,
+  System.SysUtils,
+  System.Rtti,
+  Dext.Auth.Identity,
+  Dext.Core.CancellationToken,
+  Dext.Web.Hubs.Interfaces,
+  Dext.Web.Hubs.Connections,
+  Dext.Web.Hubs.Protocol.Json,
+  Dext.Web.Interfaces;
+
+type
+  /// <summary>
+  /// SSE connection that wraps HTTP response for streaming.
+  /// </summary>
+  TSSEConnection = class(TInterfacedObject, IHubConnection)
+  private
+    FConnectionId: string;
+    FState: TConnectionState;
+    FItems: TDictionary<string, TValue>;
+    FMessageQueue: TQueue<string>;
+    FQueueLock: TCriticalSection;
+    FAborted: Boolean;
+  public
+    constructor Create(const AConnectionId: string);
+    destructor Destroy; override;
+    
+    // IHubConnection
+    function GetConnectionId: string;
+    function GetTransportType: TTransportType;
+    function GetState: TConnectionState;
+    function GetUser: IClaimsPrincipal;
+    function GetUserIdentifier: string;
+    function GetItems: TDictionary<string, TValue>;
+    function GetAbortToken: ICancellationToken;
+    
+    procedure SendAsync(const Message: string);
+    procedure Close(const Reason: string = '');
+    
+    // SSE-specific
+    function HasPendingMessages: Boolean;
+    function DequeueMessage: string;
+    procedure SetConnected;
+    
+    property ConnectionId: string read GetConnectionId;
+    property State: TConnectionState read GetState;
+    property Aborted: Boolean read FAborted;
+  end;
+  
+  /// <summary>
+  /// SSE Transport manager.
+  /// Handles SSE connections and message delivery.
+  /// </summary>
+  TSSETransport = class(TInterfacedObject, IHubTransport)
+  private
+    FConnections: TDictionary<string, TSSEConnection>;
+    FLock: TCriticalSection;
+    FOnMessageReceived: TOnMessageReceived;
+    FOnConnected: TOnConnectionEvent;
+    FOnDisconnected: TOnConnectionEvent;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    
+    // IHubTransport
+    function GetTransportType: TTransportType;
+    function IsAvailable: Boolean;
+    procedure SendAsync(const ConnectionId, Data: string);
+    procedure CloseConnection(const ConnectionId: string; const Reason: string = '');
+    procedure SetOnMessageReceived(const Handler: TOnMessageReceived);
+    procedure SetOnConnected(const Handler: TOnConnectionEvent);
+    procedure SetOnDisconnected(const Handler: TOnConnectionEvent);
+    
+    // Connection management
+    function CreateConnection(const ConnectionId: string): TSSEConnection;
+    function GetConnection(const ConnectionId: string): TSSEConnection;
+    procedure RemoveConnection(const ConnectionId: string);
+    
+    // Event triggers
+    procedure TriggerConnected(const ConnectionId: string);
+    procedure TriggerDisconnected(const ConnectionId: string);
+    procedure TriggerMessageReceived(const ConnectionId, Data: string);
+  end;
+  
+  /// <summary>
+  /// SSE Response Writer.
+  /// Writes SSE-formatted events to HTTP response.
+  /// </summary>
+  TSSEWriter = class
+  public
+    /// <summary>Writes an SSE event line</summary>
+    class procedure WriteEvent(const Response: IHttpResponse; const EventType, Data: string); overload;
+    /// <summary>Writes an SSE data-only line</summary>
+    class procedure WriteData(const Response: IHttpResponse; const Data: string);
+    /// <summary>Writes an SSE comment (for keep-alive)</summary>
+    class procedure WriteComment(const Response: IHttpResponse; const Comment: string);
+    /// <summary>Writes SSE retry directive</summary>
+    class procedure WriteRetry(const Response: IHttpResponse; const Milliseconds: Integer);
+    /// <summary>Configures response headers for SSE</summary>
+    class procedure ConfigureResponse(const Response: IHttpResponse);
+  end;
+
+implementation
+
+{ TSSEConnection }
+
+constructor TSSEConnection.Create(const AConnectionId: string);
+begin
+  inherited Create;
+  FConnectionId := AConnectionId;
+  FState := csConnecting;
+  FItems := TDictionary<string, TValue>.Create;
+  FMessageQueue := TQueue<string>.Create;
+  FQueueLock := TCriticalSection.Create;
+  FAborted := False;
+end;
+
+destructor TSSEConnection.Destroy;
+begin
+  FQueueLock.Free;
+  FMessageQueue.Free;
+  FItems.Free;
+  inherited;
+end;
+
+function TSSEConnection.GetConnectionId: string;
+begin
+  Result := FConnectionId;
+end;
+
+function TSSEConnection.GetTransportType: TTransportType;
+begin
+  Result := ttServerSentEvents;
+end;
+
+function TSSEConnection.GetState: TConnectionState;
+begin
+  Result := FState;
+end;
+
+function TSSEConnection.GetUser: IClaimsPrincipal;
+begin
+  Result := nil; // Set externally if needed
+end;
+
+function TSSEConnection.GetUserIdentifier: string;
+begin
+  Result := '';
+end;
+
+function TSSEConnection.GetItems: TDictionary<string, TValue>;
+begin
+  Result := FItems;
+end;
+
+function TSSEConnection.GetAbortToken: ICancellationToken;
+begin
+  Result := nil; // Could be implemented with external source
+end;
+
+procedure TSSEConnection.SendAsync(const Message: string);
+begin
+  if FState <> csConnected then Exit;
+  
+  FQueueLock.Enter;
+  try
+    FMessageQueue.Enqueue(Message);
+  finally
+    FQueueLock.Leave;
+  end;
+end;
+
+procedure TSSEConnection.Close(const Reason: string);
+begin
+  FState := csDisconnected;
+  FAborted := True;
+end;
+
+function TSSEConnection.HasPendingMessages: Boolean;
+begin
+  FQueueLock.Enter;
+  try
+    Result := FMessageQueue.Count > 0;
+  finally
+    FQueueLock.Leave;
+  end;
+end;
+
+function TSSEConnection.DequeueMessage: string;
+begin
+  FQueueLock.Enter;
+  try
+    if FMessageQueue.Count > 0 then
+      Result := FMessageQueue.Dequeue
+    else
+      Result := '';
+  finally
+    FQueueLock.Leave;
+  end;
+end;
+
+procedure TSSEConnection.SetConnected;
+begin
+  FState := csConnected;
+end;
+
+{ TSSETransport }
+
+constructor TSSETransport.Create;
+begin
+  inherited Create;
+  FConnections := TDictionary<string, TSSEConnection>.Create;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TSSETransport.Destroy;
+begin
+  FLock.Enter;
+  try
+    FConnections.Free;
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
+  inherited;
+end;
+
+function TSSETransport.GetTransportType: TTransportType;
+begin
+  Result := ttServerSentEvents;
+end;
+
+function TSSETransport.IsAvailable: Boolean;
+begin
+  Result := True; // SSE is always available with HTTP
+end;
+
+procedure TSSETransport.SendAsync(const ConnectionId, Data: string);
+var
+  Conn: TSSEConnection;
+begin
+  FLock.Enter;
+  try
+    if FConnections.TryGetValue(ConnectionId, Conn) then
+      Conn.SendAsync(Data);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TSSETransport.CloseConnection(const ConnectionId: string; const Reason: string);
+var
+  Conn: TSSEConnection;
+begin
+  FLock.Enter;
+  try
+    if FConnections.TryGetValue(ConnectionId, Conn) then
+      Conn.Close(Reason);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TSSETransport.SetOnMessageReceived(const Handler: TOnMessageReceived);
+begin
+  FOnMessageReceived := Handler;
+end;
+
+procedure TSSETransport.SetOnConnected(const Handler: TOnConnectionEvent);
+begin
+  FOnConnected := Handler;
+end;
+
+procedure TSSETransport.SetOnDisconnected(const Handler: TOnConnectionEvent);
+begin
+  FOnDisconnected := Handler;
+end;
+
+function TSSETransport.CreateConnection(const ConnectionId: string): TSSEConnection;
+begin
+  Result := TSSEConnection.Create(ConnectionId);
+  
+  FLock.Enter;
+  try
+    FConnections.AddOrSetValue(ConnectionId, Result);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TSSETransport.GetConnection(const ConnectionId: string): TSSEConnection;
+begin
+  FLock.Enter;
+  try
+    if not FConnections.TryGetValue(ConnectionId, Result) then
+      Result := nil;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TSSETransport.RemoveConnection(const ConnectionId: string);
+begin
+  FLock.Enter;
+  try
+    FConnections.Remove(ConnectionId);
+  finally
+    FLock.Leave;
+  end;
+  
+  TriggerDisconnected(ConnectionId);
+end;
+
+procedure TSSETransport.TriggerConnected(const ConnectionId: string);
+begin
+  if Assigned(FOnConnected) then
+    FOnConnected(ConnectionId);
+end;
+
+procedure TSSETransport.TriggerDisconnected(const ConnectionId: string);
+begin
+  if Assigned(FOnDisconnected) then
+    FOnDisconnected(ConnectionId);
+end;
+
+procedure TSSETransport.TriggerMessageReceived(const ConnectionId, Data: string);
+begin
+  if Assigned(FOnMessageReceived) then
+    FOnMessageReceived(ConnectionId, Data);
+end;
+
+{ TSSEWriter }
+
+class procedure TSSEWriter.ConfigureResponse(const Response: IHttpResponse);
+begin
+  Response.SetContentType('text/event-stream');
+  Response.AddHeader('Cache-Control', 'no-cache');
+  Response.AddHeader('Connection', 'keep-alive');
+  Response.AddHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+end;
+
+class procedure TSSEWriter.WriteEvent(const Response: IHttpResponse;
+  const EventType, Data: string);
+begin
+  Response.Write('event: ' + EventType + #10);
+  Response.Write('data: ' + Data + #10#10);
+end;
+
+class procedure TSSEWriter.WriteData(const Response: IHttpResponse;
+  const Data: string);
+begin
+  Response.Write('data: ' + Data + #10#10);
+end;
+
+class procedure TSSEWriter.WriteComment(const Response: IHttpResponse;
+  const Comment: string);
+begin
+  Response.Write(': ' + Comment + #10#10);
+end;
+
+class procedure TSSEWriter.WriteRetry(const Response: IHttpResponse;
+  const Milliseconds: Integer);
+begin
+  Response.Write('retry: ' + IntToStr(Milliseconds) + #10#10);
+end;
+
+end.

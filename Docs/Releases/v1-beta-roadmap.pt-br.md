@@ -41,6 +41,7 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 | **Zero Alloc HTTP Context** | ✅ Pronto | HTTP Server/Context com zero allocations e consumo sob demanda |
 | **Database as API** | ✅ Pronto | REST endpoints zero-code a partir de entities (`TDataApiHandler<T>.Map`) com filtros, paginação, security policies |
 | **RegisterForDisposal** | ✅ Pronto | Gerenciamento de lifecycle de objetos via `IApplicationBuilder.RegisterForDisposal` |
+| **Real-Time Hubs** ⭐ NOVO | ✅ Pronto | Comunicação em tempo real compatível com SignalR (`Dext.Web.Hubs`) - Grupos, Clients, Broadcast |
 
 ### 🛠️ Dext.Web Middlewares (Built-in)
 | Middleware | Classe | Função |
@@ -207,6 +208,5 @@ Funcionalidades movidas para v1.1 ou v2.0:
 - **Suporte a NoSQL** (MongoDB no ORM).
 - **Distributed Caching** (Redis implementation - Em Progresso).
 - **Cache de Instruções SQL**: Cache de strings SQL geradas para specifications para pular overhead de geração (Compiled Queries).
-- **SNI / Virtual Hosts**: Suporte a múltiplos domínios e certificados no mesmo IP (Taurus TLS).
-
-
+- [ ] **Feature Toggle**: Sistema de gerenciamento de features (flags) para habilitar/desabilitar funcionalidades dinamicamente.
+- [ ] **SNI / Virtual Hosts**: Suporte a múltiplos domínios e certificados no mesmo IP (Taurus TLS).

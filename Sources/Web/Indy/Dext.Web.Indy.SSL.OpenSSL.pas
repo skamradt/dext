@@ -19,7 +19,6 @@ type
     FCertFile: string;
     FKeyFile: string;
     FRootFile: string;
-    // FPassword: string; // If we want to support passwords
   public
     constructor Create(const ACertFile, AKeyFile, ARootFile: string); reintroduce;
     function CreateIOHandler(AServer: TIdCustomHTTPServer): TIdServerIOHandler;
@@ -48,6 +47,8 @@ var
   LIOHandler: TIdServerIOHandlerSSLOpenSSL;
 {$ENDIF}
 begin
+  Result := nil; // Default to nil - use HTTP if SSL fails
+  
   {$IFDEF DEXT_ENABLE_SSL}
   LIOHandler := TIdServerIOHandlerSSLOpenSSL.Create(AServer);
   LIOHandler.SSLOptions.CertFile := FCertFile;
@@ -61,9 +62,7 @@ begin
 
   Result := LIOHandler;
   {$ELSE}
-  // If SSL is not enabled via compiler directive, we could raise an exception or return nil.
-  // Returning nil will likely cause the server to run without SSL or fail if it expects one.
-  SafeWriteLn('WARNING: SSL requested but DEXT_ENABLE_SSL is not defined. Secure IOHandler not created.');
+  SafeWriteLn('[WARN] SSL requested but DEXT_ENABLE_SSL is not defined. Using HTTP.');
   {$ENDIF}
 end;
 

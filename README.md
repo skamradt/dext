@@ -50,6 +50,7 @@ A lightweight and powerful HTTP framework for building REST APIs and microservic
 - **Cookies**: Full support for reading and writing cookies with `TCookieOptions`.
 - **OpenAPI**: Native Swagger integration with auto-generated documentation.
 - **Database as API**: Zero-code REST endpoints from entities with `TDataApiHandler<T>.Map` - includes filtering, pagination, and security policies.
+- **Real-Time Communication** ⭐ NEW: SignalR-compatible Hubs for real-time messaging. Supports groups, user targeting, and broadcast with `Dext.Web.Hubs`. [Learn more](Docs/hubs.md)
 
 ### 🗄️ Dext.Entity (ORM)
 A modern ORM focused on productivity and performance.
@@ -124,6 +125,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
   - [Background Services](Docs/background-services.md)
   - [Action Filters](Docs/action-filters.md)
   - [Swagger / OpenAPI](Docs/swagger.md)
+  - [Real-Time Hubs](Docs/hubs.md) ⭐ NEW
 
 ### 🗄️ Data Access (ORM)
 - [Database Configuration](Docs/database-config.md)
@@ -337,6 +339,7 @@ The repository contains practical example projects:
 - **`Examples/Web.Dext.Starter.Admin`**: **(Recommended)** A Modern Admin Panel with HTMX, Service Layer, and Minimal APIs. [Read the Guide](Examples/Web.Dext.Starter.Admin/README.md).
 - **`Examples/Web.DatabaseAsApi`**: Demonstrates Database as API feature - zero-code REST endpoints from entities.
 - **`Examples/Web.SmartPropsDemo`**: Demonstrates usage of Smart Properties with Model Binding and ORM persistence.
+- **`Examples/Hubs/HubsExample`** ⭐ NEW: Real-time communication demo with groups, messaging, and server-time broadcast. [Read the Guide](Examples/Hubs/README.md).
 
 
 ---

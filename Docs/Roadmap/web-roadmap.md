@@ -137,13 +137,15 @@ Suporte nativo a padrões abertos de monitoramento para produção.
 
 ### 4. Real-Time & Eventing (SignalR-like)
 Suporte a comunicação bidirecional em tempo real.
-- [ ] **Dext.Hubs**: Abstração de alto nível para WebSockets (similar ao SignalR Hubs).
-  - *Status*: Planejado para v1.0 (Required for Dext Forum showcase).
-
-  - RPC Cliente-Servidor (`Clients.All.SendAsync`).
-  - Gerenciamento de Grupos e Conexões.
-  - Fallback automático (Long Polling / SSE).
-- [ ] **Server-Sent Events (SSE)**: Suporte nativo para streaming de eventos unidirecional.
+- [x] **Dext.Web.Hubs** ✅ **IMPLEMENTADO**: Abstração de alto nível para comunicação em tempo real (SignalR-compatible).
+  - *Status*: Pronto para v1.0
+  - ✅ RPC Cliente-Servidor (`Clients.All.SendAsync`).
+  - ✅ Gerenciamento de Grupos (`Groups.AddToGroupAsync`, `Groups.RemoveFromGroupAsync`).
+  - ✅ Targeting de clientes (All, Caller, Others, Group, User).
+  - ✅ Transporte via Polling (com suporte a SSE planejado).
+  - ✅ JavaScript client (`dext-hubs.js`).
+  - ✅ Exemplo completo (`Examples/Hubs/HubsExample`).
+- [x] **Server-Sent Events (SSE)**: Infraestrutura pronta (usado internamente por Hubs).
 
 ### 5. UI & Frontend Strategy
 Estratégia para construção de interfaces modernas, focando em produtividade e simplicidade (Server-Driven UI).

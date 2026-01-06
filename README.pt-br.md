@@ -49,6 +49,7 @@ Um framework HTTP leve e poderoso para construir REST APIs e microserviços.
 - **Cookies**: Suporte completo a leitura e escrita com `TCookieOptions`.
 - **OpenAPI**: Integração nativa com Swagger e geração automática de documentação.
 - **Database as API**: REST endpoints zero-code a partir de entities com `TDataApiHandler<T>.Map` - inclui filtros, paginação e security policies.
+- **Comunicação em Tempo Real** ⭐ NOVO: Hubs compatíveis com SignalR para messaging em tempo real. Suporta grupos, targeting por usuário e broadcast com `Dext.Web.Hubs`. [Saiba mais](Docs/hubs.md)
 
 ### 🗄️ Dext.Entity (ORM)
 Um ORM moderno focado em produtividade e performance.
@@ -123,6 +124,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
   - [Background Services](Docs/background-services.md)
   - [Action Filters](Docs/action-filters.md)
   - [Swagger / OpenAPI](Docs/swagger.md)
+  - [Comunicação em Tempo Real (Hubs)](Docs/hubs.md) ⭐ NOVO
 
 ### 🗄️ Acesso a Dados (ORM)
 - [Configuração de Banco de Dados](Docs/database-config.md)
@@ -337,6 +339,7 @@ O repositório contém projetos de exemplo práticos:
 - **`Examples/Web.Dext.Starter.Admin`**: **(Recomendado)** Um Painel Administrativo Moderno com HTMX, Camada de Serviço e Minimal APIs. [Leia o Guia](Examples/Web.Dext.Starter.Admin/README.md).
 - **`Examples/Web.DatabaseAsApi`**: Demonstra a feature Database as API - REST endpoints zero-code a partir de entities.
 - **`Examples/Web.SmartPropsDemo`**: Demonstra o uso de Smart Properties com Model Binding e persistência ORM.
+- **`Examples/Hubs/HubsExample`** ⭐ NOVO: Demo de comunicação em tempo real com grupos, mensagens e broadcast de hora do servidor. [Leia o Guia](Examples/Hubs/README.md).
 
 ---
 

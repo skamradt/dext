@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dext.Hubs Demo</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+        }
+
+        .status-dot.disconnected {
+            background: var(--error);
+        }
+
+        .status-dot.connecting {
+            background: var(--warning);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 1.25rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: var(--accent-light);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button.secondary {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        button.secondary:hover {
+            border-color: var(--accent);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .messages {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+        }
+
+        .message {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .message:last-child {
+            border-bottom: none;
+        }
+
+        .message-time {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .message-user {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .message-content {
+            color: var(--text-primary);
+        }
+
+        .message.system {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .message.error {
+            color: var(--error);
+        }
+
+        .groups-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .group-tag {
+            padding: 0.25rem 0.75rem;
+            background: var(--accent);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .group-tag .remove {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .group-tag .remove:hover {
+            opacity: 1;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>&#128268; Dext.Hubs Demo</h1>
+            <p class="subtitle">Real-Time Communication with Server-Sent Events</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="statusDot" class="status-dot disconnected"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span>Connection ID:</span>
+                <code id="connectionId">-</code>
+            </div>
+            <div class="status-item">
+                <span>Server Time:</span>
+                <code id="serverTime">-</code>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Connection Card -->
+            <div class="card">
+                <h2>Connection</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" value="User" placeholder="Enter your name">
+                </div>
+                <div class="button-group">
+                    <button id="btnConnect">Connect</button>
+                    <button id="btnDisconnect" class="secondary" disabled>Disconnect</button>
+                </div>
+            </div>
+
+            <!-- Groups Card -->
+            <div class="card">
+                <h2>Groups</h2>
+                <div class="form-group">
+                    <label>Group Name</label>
+                    <input type="text" id="groupName" placeholder="Enter group name">
+                </div>
+                <div class="button-group">
+                    <button id="btnJoinGroup" disabled>Join Group</button>
+                    <button id="btnLeaveGroup" class="secondary" disabled>Leave Group</button>
+                </div>
+                <div class="groups-list" id="groupsList"></div>
+            </div>
+
+            <!-- Send Message Card -->
+            <div class="card">
+                <h2>Send Message</h2>
+                <div class="form-group">
+                    <label>Message</label>
+                    <input type="text" id="message" placeholder="Type your message...">
+                </div>
+                <div class="form-group">
+                    <label>Target</label>
+                    <select id="messageTarget">
+                        <option value="all">All Users</option>
+                        <option value="group">Selected Group</option>
+                    </select>
+                </div>
+                <button id="btnSend" disabled>Send Message</button>
+            </div>
+
+            <!-- Messages Card -->
+            <div class="card">
+                <h2>Messages</h2>
+                <div class="messages" id="messages">
+                    <div class="message system">Waiting for connection...</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Dext Framework - Real-Time Communication Demo</p>
+            <p>Using Server-Sent Events (SSE) with SignalR-compatible protocol</p>
+        </footer>
+    </div>
+
+    <script src="/dext-hubs.js"></script>
+    <script>
+        // Elements
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const connectionIdEl = document.getElementById('connectionId');
+        const serverTimeEl = document.getElementById('serverTime');
+        const messagesEl = document.getElementById('messages');
+        const groupsListEl = document.getElementById('groupsList');
+
+        const usernameInput = document.getElementById('username');
+        const groupNameInput = document.getElementById('groupName');
+        const messageInput = document.getElementById('message');
+        const messageTargetSelect = document.getElementById('messageTarget');
+
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnJoinGroup = document.getElementById('btnJoinGroup');
+        const btnLeaveGroup = document.getElementById('btnLeaveGroup');
+        const btnSend = document.getElementById('btnSend');
+
+        // State
+        let hub = null;
+        let myGroups = [];
+
+        // Helpers
+        function addMessage(content, type = 'normal', user = null) {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+
+            if (user) {
+                div.innerHTML = `
+                    <span class="message-time">[${time}]</span>
+                    <span class="message-user">${user}:</span>
+                    <span class="message-content">${content}</span>
+                `;
+            } else {
+                div.innerHTML = `
+                    <span class="message-time">[${time}]</span>
+                    <span class="message-content">${content}</span>
+                `;
+            }
+
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            statusDot.className = `status-dot ${status}`;
+            statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+
+            const connected = status === 'connected';
+            btnConnect.disabled = connected;
+            btnDisconnect.disabled = !connected;
+            btnJoinGroup.disabled = !connected;
+            btnLeaveGroup.disabled = !connected;
+            btnSend.disabled = !connected;
+        }
+
+        function updateGroupsList() {
+            groupsListEl.innerHTML = myGroups.map(g => `
+                <span class="group-tag">
+                    ${g}
+                    <span class="remove" onclick="leaveGroup('${g}')">&times;</span>
+                </span>
+            `).join('');
+        }
+
+        // Connection
+        async function connect() {
+            hub = new DextHubConnection('/hubs/demo');
+
+            // Register handlers
+            hub.on('connected', (data) => {
+                updateStatus('connected');
+                connectionIdEl.textContent = data.connectionId || hub.connectionId;
+                addMessage('Connected to hub', 'system');
+            });
+
+            hub.on('disconnected', () => {
+                updateStatus('disconnected');
+                connectionIdEl.textContent = '-';
+                addMessage('Disconnected from hub', 'system');
+            });
+
+            hub.on('ReceiveMessage', (user, message) => {
+                addMessage(message, 'normal', user);
+            });
+
+            hub.on('ReceiveGroupMessage', (group, user, message) => {
+                addMessage(`[${group}] ${message}`, 'normal', user);
+            });
+
+            hub.on('UserConnected', (connectionId) => {
+                addMessage(`User connected: ${connectionId.substring(0, 8)}...`, 'system');
+            });
+
+            hub.on('UserDisconnected', (connectionId) => {
+                addMessage(`User disconnected: ${connectionId.substring(0, 8)}...`, 'system');
+            });
+
+            hub.on('JoinedGroup', (groupName) => {
+                if (!myGroups.includes(groupName)) {
+                    myGroups.push(groupName);
+                    updateGroupsList();
+                }
+                addMessage(`Joined group: ${groupName}`, 'system');
+            });
+
+            hub.on('LeftGroup', (groupName) => {
+                myGroups = myGroups.filter(g => g !== groupName);
+                updateGroupsList();
+                addMessage(`Left group: ${groupName}`, 'system');
+            });
+
+            hub.on('UserJoinedGroup', (connectionId, groupName) => {
+                addMessage(`User ${connectionId.substring(0, 8)}... joined ${groupName}`, 'system');
+            });
+
+            hub.on('UserLeftGroup', (connectionId, groupName) => {
+                addMessage(`User ${connectionId.substring(0, 8)}... left ${groupName}`, 'system');
+            });
+
+            hub.on('ServerTime', (time, counter) => {
+                serverTimeEl.textContent = `${time} (#${counter})`;
+            });
+
+            // Connect
+            updateStatus('connecting');
+            try {
+                await hub.start();
+                // Also update here in case handler doesn't fire
+                updateStatus('connected');
+                connectionIdEl.textContent = hub.connectionId || '-';
+                addMessage('Connected to hub', 'system');
+            } catch (error) {
+                addMessage(`Connection failed: ${error.message}`, 'error');
+                updateStatus('disconnected');
+            }
+        }
+
+        async function disconnect() {
+            if (hub) {
+                await hub.stop();
+                hub = null;
+                myGroups = [];
+                updateGroupsList();
+            }
+        }
+
+        async function joinGroup(groupName) {
+            if (!groupName) {
+                groupName = groupNameInput.value.trim();
+            }
+            if (!groupName) return;
+
+            try {
+                await hub.invoke('JoinGroup', groupName);
+            } catch (error) {
+                addMessage(`Failed to join group: ${error.message}`, 'error');
+            }
+        }
+
+        async function leaveGroup(groupName) {
+            if (!groupName) {
+                groupName = groupNameInput.value.trim();
+            }
+            if (!groupName) return;
+
+            try {
+                await hub.invoke('LeaveGroup', groupName);
+            } catch (error) {
+                addMessage(`Failed to leave group: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            const user = usernameInput.value.trim() || 'Anonymous';
+            const target = messageTargetSelect.value;
+
+            if (!message) return;
+
+            try {
+                if (target === 'all') {
+                    await hub.invoke('SendMessage', user, message);
+                } else {
+                    const group = groupNameInput.value.trim();
+                    if (!group) {
+                        addMessage('Please enter a group name first', 'error');
+                        return;
+                    }
+                    await hub.invoke('SendToGroup', group, user, message);
+                }
+                messageInput.value = '';
+            } catch (error) {
+                addMessage(`Failed to send: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        btnConnect.addEventListener('click', connect);
+        btnDisconnect.addEventListener('click', disconnect);
+        btnJoinGroup.addEventListener('click', () => joinGroup());
+        btnLeaveGroup.addEventListener('click', () => leaveGroup());
+        btnSend.addEventListener('click', sendMessage);
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Make leaveGroup available globally for the X button
+        window.leaveGroup = leaveGroup;
+    </script>
+</body>
+
+</html>
