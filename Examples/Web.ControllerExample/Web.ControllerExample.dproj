@@ -139,6 +139,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="ControllerExample.Setup.pas"/>
         <DCCReference Include="ControllerExample.Controller.pas"/>
         <DCCReference Include="ControllerExample.Services.pas"/>
         <BuildConfiguration Include="Base">

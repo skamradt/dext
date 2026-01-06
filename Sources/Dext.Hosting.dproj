@@ -138,6 +138,8 @@
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas"/>
+        <DCCReference Include="Hosting\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas"/>
+        <DCCReference Include="Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

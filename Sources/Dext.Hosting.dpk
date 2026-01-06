@@ -57,6 +57,8 @@ contains
   Dext.Hosting.CLI.Registry in 'Hosting\CLI\Dext.Hosting.CLI.Registry.pas',
   Dext.Hosting.CLI.Commands.Configuration in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas',
   Dext.Hosting.CLI.Commands.UI in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas',
-  Dext.Hosting.CLI.Tools.CodeCoverage in 'Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas';
+  Dext.Hosting.CLI.Tools.CodeCoverage in 'Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas',
+  Dext.Hosting.CLI.Hubs.Dashboard in 'Hosting\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas',
+  Dext.Hosting.CLI.Logger in 'Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas';
 
 end.
