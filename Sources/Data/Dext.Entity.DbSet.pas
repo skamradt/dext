@@ -179,7 +179,8 @@ type
 implementation
 
 uses
-  Dext.Entity.LazyLoading;
+  Dext.Entity.LazyLoading,
+  Dext.Utils;
 
 function TValueToKeyString(const AValue: TValue): string;
 var
@@ -525,7 +526,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn(Format('ERROR getting value for col %s: %s', [ColName, E.Message]));
+        SafeWriteLn(Format('ERROR getting value for col %s: %s', [ColName, E.Message]));
         raise;
       end;
     end;
@@ -557,7 +558,7 @@ begin
           TValueConverter.ConvertAndSet(Result, Prop, Val);
       except
         on E: Exception do
-          WriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
+          SafeWriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
       end;
     end;
   end;
@@ -1169,7 +1170,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
+        SafeWriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
         raise;
       end;
     end;

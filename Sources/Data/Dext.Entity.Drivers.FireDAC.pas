@@ -143,6 +143,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 { TFireDACTransaction }
 
 constructor TFireDACTransaction.Create(AConnection: TFDConnection);
@@ -290,7 +293,7 @@ begin
   except
     on E: Exception do
     begin
-      Writeln(ErrOutput, Format('CRITICAL ERROR in AddParam(%s): %s', [AName, E.Message]));
+      SafeWriteLn(Format('CRITICAL ERROR in AddParam(%s): %s', [AName, E.Message]));
       raise;
     end;
   end;

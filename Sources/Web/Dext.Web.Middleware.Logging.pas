@@ -1,4 +1,4 @@
-﻿unit Dext.Web.Middleware.Logging;
+unit Dext.Web.Middleware.Logging;
 
 interface
 
@@ -15,6 +15,10 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
+
 { TRequestLoggingMiddleware }
 
 procedure TRequestLoggingMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDelegate);
@@ -24,12 +28,12 @@ begin
   Method := AContext.Request.Method;
   Path := AContext.Request.Path;
   
-  WriteLn('📝 [REQ] ' + Format('%s %s', [Method, Path]));
+  SafeWriteLn('?? [REQ] ' + Format('%s %s', [Method, Path]));
   
   try
     ANext(AContext);
   finally
-    WriteLn('✅ [RES] ' + Format('%s %s -> %d',
+    SafeWriteLn('? [RES] ' + Format('%s %s -> %d',
       [Method, Path, AContext.Response.StatusCode]));
   end;
 end;

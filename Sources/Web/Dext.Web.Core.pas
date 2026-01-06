@@ -135,8 +135,6 @@ begin
   Result := Self;
 end;
 
-// ... (Update CreateMiddlewarePipeline to handle delegate)
-
 function TApplicationBuilder.CreateMiddlewarePipeline(const ARegistration: TMiddlewareRegistration;
   ANext: TRequestDelegate): TRequestDelegate;
 var
@@ -245,10 +243,6 @@ begin
 
   FMiddlewares.Add(Registration);
 
-  Writeln('✅ MIDDLEWARE REGISTERED: ', AMiddleware.ClassName);
-  if not AParam.IsEmpty then
-    Writeln('   With parameter type: ', AParam.TypeInfo.Name);
-
   Result := Self;
 end;
 
@@ -286,7 +280,6 @@ begin
   SetLength(Registration.Parameters, 0);
 
   FMiddlewares.Add(Registration);
-  Writeln('✅ SINGLETON MIDDLEWARE REGISTERED: ', (AMiddleware as TObject).ClassName);
   
   Result := Self;
 end;
@@ -302,7 +295,7 @@ end;
 
 function TApplicationBuilder.UseMiddleware(AMiddleware: TClass): IApplicationBuilder;
 var
-  Registration: TMiddlewareRegistration; // ✅ USAR O NOVO RECORD
+  Registration: TMiddlewareRegistration;
 begin
   if not AMiddleware.InheritsFrom(TMiddleware) then
     raise EArgumentException.Create('Middleware must inherit from TMiddleware');
@@ -325,7 +318,6 @@ var
 begin
   RouteDef := TRouteDefinition.Create(AMethod, APath, ADelegate);
   FRoutes.Add(RouteDef);
-  Writeln(Format('📍 REGISTERED %s %s', [AMethod, APath]));
   Result := Self;
 end;
 

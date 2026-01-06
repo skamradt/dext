@@ -67,7 +67,8 @@ uses
   Dext.Hosting.CLI.Commands.MigrateGenerate,
   Dext.Hosting.CLI.Commands.Test,
   Dext.Hosting.CLI.Commands.Configuration,
-  Dext.Hosting.CLI.Commands.UI;
+  Dext.Hosting.CLI.Commands.UI,
+  Dext.Utils;
 
 { TDextCLI }
 
@@ -113,16 +114,16 @@ end;
 
 procedure TDextCLI.ShowHelp;
 begin
-  WriteLn('Dext CLI Tool');
-  WriteLn('-------------');
-  WriteLn('Usage: MyApp.exe <command> [args]');
-  WriteLn('');
-  WriteLn('Available Commands:');
+  SafeWriteLn('Dext CLI Tool');
+  SafeWriteLn('-------------');
+  SafeWriteLn('Usage: MyApp.exe <command> [args]');
+  SafeWriteLn('');
+  SafeWriteLn('Available Commands:');
   for var Cmd in FCommands.Values do
   begin
-    WriteLn('  ' + Cmd.GetName.PadRight(20) + Cmd.GetDescription);
+    SafeWriteLn('  ' + Cmd.GetName.PadRight(20) + Cmd.GetDescription);
   end;
-  WriteLn('');
+  SafeWriteLn('');
 end;
 
 function TDextCLI.Run: Boolean;
@@ -160,7 +161,7 @@ begin
         Cmd.Execute(Args);
       except
         on E: Exception do
-          WriteLn('Error executing command: ' + E.Message);
+          SafeWriteLn('Error executing command: ' + E.Message);
       end;
       Result := True; // Command executed, app should terminate
     end
@@ -170,7 +171,7 @@ begin
       if CmdName.StartsWith('-') then
         Exit(False);
         
-      WriteLn('Unknown command: ' + CmdName);
+      SafeWriteLn('Unknown command: ' + CmdName);
       ShowHelp;
       Result := True; // Prevent normal startup on bad command
     end;

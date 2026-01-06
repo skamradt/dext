@@ -31,7 +31,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  Dext.Entity.Drivers.Interfaces;
+  Dext.Entity.Drivers.Interfaces,
+  Dext.Utils;
 
 type
   TMetaColumn = record
@@ -165,9 +166,6 @@ begin
     Meta.TableKinds := [tkTable];
     Meta.ObjectScopes := [osMy, osOther, osSystem];
     
-    // Debug
-    Writeln('Debug: Fetching columns for table "' + ATableName + '"');
-    
     // Try Configuration A: ObjectName = TableName (Standard)
     Meta.BaseObjectName := '';
     Meta.ObjectName := ATableName;
@@ -176,7 +174,6 @@ begin
     except
       on E: Exception do
       begin
-        Writeln('Debug: Config A (ObjectName) failed: ' + E.Message);
         // Try Configuration B: BaseObjectName = TableName (SQLite specific?)
         Meta.Close;
         Meta.BaseObjectName := ATableName;
@@ -186,7 +183,6 @@ begin
         except
            on E2: Exception do
            begin
-              Writeln('Debug: Config B (BaseObject+Wildcard) failed: ' + E2.Message);
               // Try Configuration C: Both
               Meta.Close;
               Meta.BaseObjectName := ATableName;
@@ -264,7 +260,6 @@ begin
     except
       on E: Exception do
       begin
-        Writeln('Debug: FK Config A (ObjectName) failed: ' + E.Message);
         // Try Configuration B: BaseObjectName = TableName (SQLite specific?)
         Meta.Close;
         Meta.BaseObjectName := ATableName;
@@ -274,7 +269,6 @@ begin
         except
            on E2: Exception do
            begin
-              Writeln('Debug: FK Config B (BaseObject+Wildcard) failed: ' + E2.Message);
               // Try Configuration C: Both
               Meta.Close;
               Meta.BaseObjectName := ATableName;
@@ -287,12 +281,6 @@ begin
     
     FKs := TList<TMetaForeignKey>.Create;
     try
-      if not Meta.Eof then
-      begin
-         Writeln('Debug: Available fields in mkForeignKeys:');
-         for var i := 0 to Meta.FieldCount - 1 do
-           Writeln('  - ' + Meta.Fields[i].FieldName);
-      end;
 
       while not Meta.Eof do
       begin
@@ -328,14 +316,6 @@ begin
        try
          Meta.Open;
          
-         // Debug: List fields for the first FK to identify correct names
-         if (i = 0) and (not Meta.Eof) then 
-         begin
-            Writeln('Debug: Available fields in mkForeignKeyFields:');
-            for var k := 0 to Meta.FieldCount - 1 do
-               Writeln('  - ' + Meta.Fields[k].FieldName);
-         end;
-
          if not Meta.Eof then
          begin
            // Defensive check for FK Column Name
@@ -362,7 +342,7 @@ begin
          end;
        except
          on E: Exception do
-           Writeln('Debug: Failed to fetch columns for FK ' + FK.Name + ': ' + E.Message);
+           SafeWriteLn('Debug: Failed to fetch columns for FK ' + FK.Name + ': ' + E.Message);
        end;
        Meta.Close;
     end;

@@ -93,6 +93,7 @@ type
 implementation
 
 uses
+  Dext.Utils,
   Dext.Logging;
 
 { LogActionAttribute }
@@ -100,7 +101,7 @@ uses
 procedure LogActionAttribute.OnActionExecuting(AContext: IActionExecutingContext);
 begin
   FStartTime := Now;
-  WriteLn(Format('[ActionFilter] Executing: %s.%s (%s %s)', 
+  SafeWriteLn(Format('[ActionFilter] Executing: %s.%s (%s %s)', 
     [AContext.ActionDescriptor.ControllerName,
      AContext.ActionDescriptor.ActionName,
      AContext.ActionDescriptor.HttpMethod,
@@ -115,7 +116,7 @@ begin
   
   if Assigned(AContext.Exception) then
   begin
-    WriteLn(Format('[ActionFilter] Executed: %s.%s - EXCEPTION: %s (took %d ms)', 
+    SafeWriteLn(Format('[ActionFilter] Executed: %s.%s - EXCEPTION: %s (took %d ms)', 
       [AContext.ActionDescriptor.ControllerName,
        AContext.ActionDescriptor.ActionName,
        AContext.Exception.Message,
@@ -123,7 +124,7 @@ begin
   end
   else
   begin
-    WriteLn(Format('[ActionFilter] Executed: %s.%s - SUCCESS (took %d ms)', 
+    SafeWriteLn(Format('[ActionFilter] Executed: %s.%s - SUCCESS (took %d ms)', 
       [AContext.ActionDescriptor.ControllerName,
        AContext.ActionDescriptor.ActionName,
        ElapsedMs]));

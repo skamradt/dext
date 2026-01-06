@@ -9,7 +9,8 @@ uses
   Dext.Entity.Migrations.Runner,
   Dext.Entity.Migrations.Json,
   Dext.Hosting.CLI,
-  Dext.Hosting.CLI.Args;
+  Dext.Hosting.CLI.Args,
+  Dext.Utils;
 
 type
   TMigrateDownCommand = class(TInterfacedObject, IConsoleCommand)
@@ -51,13 +52,13 @@ begin
   if TargetId = '' then
     TargetId := Args.GetOption('t');
 
-  WriteLn('Starting migration rollback...');
+  SafeWriteLn('Starting migration rollback...');
   Context := FContextFactory();
   try
     Migrator := TMigrator.Create(Context);
     try
       Migrator.Rollback(TargetId);
-      WriteLn('Rollback completed.');
+      SafeWriteLn('Rollback completed.');
     finally
       Migrator.Free;
     end;

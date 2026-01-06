@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -59,6 +59,7 @@ type
 implementation
 
 uses
+  Dext.Utils,
   Dext.Web.Indy,
 {$IFDEF MSWINDOWS}
   Winapi.Windows
@@ -119,16 +120,11 @@ procedure TIndyWebServer.ConfigureSecureServer;
 begin
   if FSSLHandler <> nil then
   begin
-    Writeln('[DEBUG] Configuring Secure Server IOHandler...');
     try
       FHTTPServer.IOHandler := FSSLHandler.CreateIOHandler(FHTTPServer);
-      if FHTTPServer.IOHandler <> nil then
-        Writeln('[DEBUG] IOHandler assigned successfully: ', FHTTPServer.IOHandler.ClassName)
-      else
-        Writeln('[ERROR] IOHandler creation failed (returned nil). Check DEXT_ENABLE_SSL definition.');
     except
       on E: Exception do
-        Writeln('[ERROR] Exception configuring IOHandler: ', E.Message);
+        SafeWriteLn('[ERROR] Exception configuring IOHandler: ' + E.Message);
     end;
   end;
 end;
@@ -181,18 +177,18 @@ begin
     if FHTTPServer.IOHandler <> nil then 
       Protocol := 'https';
 
-    Writeln(Format('Dext server running on %s://localhost:%d', [Protocol, FPort]));
+    SafeWriteLn(Format('Dext server running on %s://localhost:%d', [Protocol, FPort]));
     if FHTTPServer.IOHandler <> nil then
-      Writeln('HTTPS Enabled.');
+      SafeWriteLn('HTTPS Enabled.');
 
     // Check for automated test mode
     if FindCmdLineSwitch('no-wait', ['-', '/'], True) then
     begin
-       Writeln('🤖 Automated test mode: Server started successfully. Exiting run loop.');
+       SafeWriteLn('🤖 Automated test mode: Server started successfully. Exiting run loop.');
        Exit;
     end;
 
-    Writeln('Press Ctrl+C to stop the server...');
+    SafeWriteLn('Press Ctrl+C to stop the server...');
 
     GServerStopping := False;
 {$IFDEF MSWINDOWS}
@@ -232,7 +228,7 @@ begin
   if FHTTPServer.Active then
   begin
     FHTTPServer.Active := False;
-    Writeln('Dext server stopped.');
+    SafeWriteLn('Dext server stopped.');
   end;
 end;
 

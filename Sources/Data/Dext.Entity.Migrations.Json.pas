@@ -71,6 +71,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 { TJsonMigration }
 
 constructor TJsonMigration.Create(const AId, AJsonContent: string);
@@ -180,7 +183,7 @@ begin
       RegisterMigration(Migration);
     except
       on E: Exception do
-        WriteLn('Error loading migration ' + FileName + ': ' + E.Message);
+        SafeWriteLn('Error loading migration ' + FileName + ': ' + E.Message);
     end;
   end;
 end;

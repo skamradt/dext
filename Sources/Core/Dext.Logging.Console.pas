@@ -29,6 +29,7 @@ interface
 
 uses
   System.SysUtils,
+  Dext.Utils,
   Dext.Logging;
 
 type
@@ -89,7 +90,7 @@ begin
       LMsg := AMessage + ' (Format Error: ' + E.Message + ')';
   end;
 
-  Writeln(Format('%s: %s' + sLineBreak + '      %s', [LLevelStr, FCategoryName, LMsg]));
+  SafeWriteLn(Format('%s: %s' + sLineBreak + '      %s', [LLevelStr, FCategoryName, LMsg]));
 end;
 
 procedure TConsoleLogger.Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const);
@@ -98,7 +99,7 @@ begin
   
   Log(ALevel, AMessage, AArgs);
   if AException <> nil then
-    Writeln(Format('      %s: %s', [AException.ClassName, AException.Message]));
+    SafeWriteLn(Format('      %s: %s', [AException.ClassName, AException.Message]));
 end;
 
 { TConsoleLoggerProvider }

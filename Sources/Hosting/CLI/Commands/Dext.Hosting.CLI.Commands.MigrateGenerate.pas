@@ -5,7 +5,8 @@ interface
 uses
   System.SysUtils, System.IOUtils,
   Dext.Hosting.CLI,
-  Dext.Hosting.CLI.Args;
+  Dext.Hosting.CLI.Args,
+  Dext.Utils;
 
 type
   TMigrateGenerateCommand = class(TInterfacedObject, IConsoleCommand)
@@ -35,7 +36,7 @@ var
 begin
   if Args.Values.Count = 0 then
   begin
-    WriteLn('Error: Migration name is required.');
+    SafeWriteLn('Error: Migration name is required.');
     Exit;
   end;
 
@@ -58,7 +59,7 @@ begin
     '}';
 
   TFile.WriteAllText(TPath.Combine(Path, FileName), Content);
-  WriteLn('   ✨ Generated migration: ' + FileName);
+  SafeWriteLn('   ✨ Generated migration: ' + FileName);
 end;
 
 end.

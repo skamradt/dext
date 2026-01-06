@@ -26,6 +26,11 @@ type
 
 implementation
 
+{$IFNDEF DEXT_ENABLE_TAURUS_TLS}
+uses
+  Dext.Utils;
+{$ENDIF}
+
 { TIndyTaurusSSLHandler }
 
 constructor TIndyTaurusSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
@@ -54,7 +59,7 @@ begin
   Result := LIOHandler;
   {$ELSE}
   Result := nil;
-  Writeln('WARNING: Taurus TLS requested but DEXT_ENABLE_TAURUS_TLS is not defined.');
+  SafeWriteLn('WARNING: Taurus TLS requested but DEXT_ENABLE_TAURUS_TLS is not defined.');
   {$ENDIF}
 end;
 

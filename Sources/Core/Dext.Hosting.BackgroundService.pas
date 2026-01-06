@@ -103,6 +103,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 { TBackgroundServiceThread }
 
 constructor TBackgroundServiceThread.Create(Service: TBackgroundService; Token: ICancellationToken);
@@ -119,7 +122,7 @@ begin
     FService.Execute(FToken);
   except
     on E: Exception do
-      WriteLn(Format('❌ Error in BackgroundService thread: %s', [E.Message]));
+      SafeWriteLn(Format('❌ Error in BackgroundService thread: %s', [E.Message]));
   end;
 end;
 
@@ -180,15 +183,15 @@ procedure THostedServiceManager.StartAsync(Token: ICancellationToken);
 var
   Service: IHostedService;
 begin
-  WriteLn('🚀 Starting Hosted Services...');
+  SafeWriteLn('🚀 Starting Hosted Services...');
   for Service in FServices do
   begin
     try
       Service.Start;
-      WriteLn(Format('  ✅ Started %s', [(Service as TObject).ClassName]));
+      SafeWriteLn(Format('  ✅ Started %s', [(Service as TObject).ClassName]));
     except
       on E: Exception do
-        WriteLn(Format('  ❌ Failed to start %s: %s', [(Service as TObject).ClassName, E.Message]));
+        SafeWriteLn(Format('  ❌ Failed to start %s: %s', [(Service as TObject).ClassName, E.Message]));
     end;
   end;
 end;
@@ -197,15 +200,15 @@ procedure THostedServiceManager.StopAsync(Token: ICancellationToken);
 var
   Service: IHostedService;
 begin
-  WriteLn('🛑 Stopping Hosted Services...');
+  SafeWriteLn('🛑 Stopping Hosted Services...');
   for Service in FServices do
   begin
     try
       Service.Stop;
-      WriteLn(Format('  ✅ Stopped %s', [(Service as TObject).ClassName]));
+      SafeWriteLn(Format('  ✅ Stopped %s', [(Service as TObject).ClassName]));
     except
       on E: Exception do
-        WriteLn(Format('  ❌ Failed to stop %s: %s', [(Service as TObject).ClassName, E.Message]));
+        SafeWriteLn(Format('  ❌ Failed to stop %s: %s', [(Service as TObject).ClassName, E.Message]));
     end;
   end;
 end;

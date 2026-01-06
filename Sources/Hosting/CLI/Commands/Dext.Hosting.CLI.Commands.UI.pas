@@ -1,4 +1,4 @@
-unit Dext.Hosting.CLI.Commands.UI;
+﻿unit Dext.Hosting.CLI.Commands.UI;
 
 interface
 
@@ -27,7 +27,8 @@ uses
   Dext.Hosting.CLI.Registry,
   Dext.Yaml,
   Dext.Hosting.CLI.Config,
-  Dext.Hosting.CLI.Tools.CodeCoverage; // Added
+  Dext.Hosting.CLI.Tools.CodeCoverage,
+  Dext.Utils;
 
 type
   TUICommand = class(TInterfacedObject, IConsoleCommand)
@@ -81,7 +82,7 @@ begin
   
   EnsureUIAssets(WwwRoot);
 
-  WriteLn(Format('Starting Dext Dashboard on port %d...', [Port]));
+  SafeWriteLn(Format('Starting Dext Dashboard on port %d...', [Port]));
 
   Host := TWebHostBuilder.CreateDefault(nil)
     .UseUrls(Format('http://localhost:%d', [Port]))
@@ -124,7 +125,7 @@ begin
                    FilePath := TPath.Combine(ReportPath, Path.Substring(9)); 
                    
                    // DEBUG LOG
-                   WriteLn('Serving Report: ' + FilePath);
+                   SafeWriteLn('Serving Report: ' + FilePath);
                    
                    if FileExists(FilePath) then
                    begin
@@ -145,8 +146,8 @@ begin
                           FS.Free;
                        end;
                        Exit;
-                   end else WriteLn('File not found: ' + FilePath);
-               end else WriteLn('Report Dir not found: ' + ReportPath);
+                   end else SafeWriteLn('File not found: ' + FilePath);
+               end else SafeWriteLn('Report Dir not found: ' + ReportPath);
             end;
             
             Next(Ctx);

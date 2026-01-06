@@ -17,9 +17,9 @@ uses
   Dext.Web.ModelBinding,
   Dext.Web.ModelBinding.Extensions,
   Dext.WebHost,
-  Dext.Json.Driver.JsonDataObjects,
+  Dext.Json.Driver.DextJsonDataObjects,
   Dext.Json.Driver.SystemJson,
-  JsonDataObjects;
+  DextJsonDataObjects;
 
 type
   TUserStatus = (Active, Inactive, Suspended);

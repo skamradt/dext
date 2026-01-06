@@ -213,7 +213,7 @@ begin
 
   if RouteCount = 0 then
   begin
-    Writeln('No routes found!')
+    SafeWriteLn('No routes found!')
   end;
 
   Result := Self;
@@ -263,7 +263,7 @@ begin
   var DbConfig := FConfiguration.GetSection('Database');
   if (DbConfig <> nil) and (SameText(DbConfig['AutoMigrate'], 'true')) then
   begin
-    Writeln('⚙️ AutoMigrate enabled. Checking database schema...');
+    SafeWriteLn('⚙️ AutoMigrate enabled. Checking database schema...');
     
     // Resolve DbContext
     // Note: We assume the user has registered their DbContext in ConfigureServices
@@ -306,7 +306,7 @@ begin
     end;
   except
     on E: Exception do
-      Writeln('Error starting hosted services: ' + E.Message);
+      SafeWriteLn('Error starting hosted services: ' + E.Message);
   end;
 
   // Notify Started
@@ -397,7 +397,7 @@ procedure TDextApplication.Stop;
 begin
   if FActiveHost <> nil then
   begin
-    Writeln('Stopping active host...');
+    SafeWriteLn('Stopping active host...');
     FActiveHost.Stop;
   end;
 end;

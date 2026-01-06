@@ -7,7 +7,8 @@ uses
   System.Classes,
   System.IOUtils,
   Dext.Hosting.CLI.Args,
-  Dext.Hosting.CLI.Config;
+  Dext.Hosting.CLI.Config,
+  Dext.Utils;
 
 type
   TConfigInitCommand = class(TInterfacedObject, IConsoleCommand)
@@ -45,14 +46,14 @@ var
 begin
   if (Args.Values.Count < 1) or (Args.Values[0] <> 'init') then
   begin
-    WriteLn('Usage: dext config init');
+    SafeWriteLn('Usage: dext config init');
     Exit;
   end;
 
   FileName := '.dext.config'; 
   if FileExists(FileName) then
   begin
-    WriteLn('Configuration file already exists: ' + FileName);
+    SafeWriteLn('Configuration file already exists: ' + FileName);
     Exit;
   end;
 
@@ -69,7 +70,7 @@ begin
     '    - Tests/Integration/**';
 
   TFile.WriteAllText(FileName, Content);
-  WriteLn('Created configuration file: ' + FileName);
+  SafeWriteLn('Created configuration file: ' + FileName);
 end;
 
 { TEnvScanCommand }
@@ -91,11 +92,11 @@ var
 begin
   if (Args.Values.Count < 1) or (Args.Values[0] <> 'scan') then
   begin
-    WriteLn('Usage: dext env scan');
+    SafeWriteLn('Usage: dext env scan');
     Exit;
   end;
 
-  WriteLn('Scanning for Delphi installations...');
+  SafeWriteLn('Scanning for Delphi installations...');
   
   Scanner := TDextGlobalConfig.Create;
   try

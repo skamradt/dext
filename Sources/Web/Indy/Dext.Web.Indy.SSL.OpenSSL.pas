@@ -27,6 +27,11 @@ type
 
 implementation
 
+{$IFNDEF DEXT_ENABLE_SSL}
+uses
+  Dext.Utils;
+{$ENDIF}
+
 { TIndyOpenSSLHandler }
 
 constructor TIndyOpenSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
@@ -58,7 +63,7 @@ begin
   {$ELSE}
   // If SSL is not enabled via compiler directive, we could raise an exception or return nil.
   // Returning nil will likely cause the server to run without SSL or fail if it expects one.
-  Writeln('WARNING: SSL requested but DEXT_ENABLE_SSL is not defined. Secure IOHandler not created.');
+  SafeWriteLn('WARNING: SSL requested but DEXT_ENABLE_SSL is not defined. Secure IOHandler not created.');
   {$ENDIF}
 end;
 

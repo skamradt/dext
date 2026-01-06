@@ -193,7 +193,8 @@ type
 
 implementation
 
-
+uses
+  Dext.Utils;
 { TStringArrayHelper }
 
 function TStringArrayHelper.Contains(const AValue: string): Boolean;
@@ -252,7 +253,7 @@ end;
 procedure TCorsMiddleware.DebugLog(const AMessage: string);
 begin
   if FEnableDebugLog then
-    WriteLn(AMessage);
+    SafeWriteLn(AMessage);
 end;
 
 procedure TCorsMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDelegate);

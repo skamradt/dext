@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -161,7 +161,7 @@ begin
   inherited Destroy;
 end;
 
-// ? NOVO: Parsear headers do Indy para dicionário
+// ? NOVO: Parsear headers do Indy para dicion�rio
 function TIndyHttpRequest.ParseHeaders(AHeaderList: TIdHeaderList): TDictionary<string, string>;
 var
   I: Integer;
@@ -446,7 +446,7 @@ begin
   FResponseInfo := AResponseInfo;
 end;
 
-// ? NOVO: Adicionar header à response
+// ? NOVO: Adicionar header � response
 procedure TIndyHttpResponse.AddHeader(const AName, AValue: string);
 begin
   FResponseInfo.CustomHeaders.AddValue(AName, AValue);
@@ -661,27 +661,15 @@ var
   IndyRequest: TIndyHttpRequest;
   Param: TPair<string, string>;
 begin
-  // ? CORREÇÃO: Cast manual em vez de Supports
   if FRequest is TIndyHttpRequest then
   begin
     IndyRequest := TIndyHttpRequest(FRequest);
 
-    // Limpar parâmetros existentes e adicionar os novos
     IndyRequest.FRouteParams.Clear;
     for Param in AParams do
     begin
       IndyRequest.FRouteParams.Add(Param.Key, Param.Value);
     end;
-
-    Writeln(Format('Injected route params: %d parameters', [AParams.Count]));
-    for Param in AParams do
-    begin
-      Writeln(Format('  %s = %s', [Param.Key, Param.Value]));
-    end;
-  end
-  else
-  begin
-    Writeln('WARNING: Cannot inject route params - request is not TIndyHttpRequest');
   end;
 end;
 

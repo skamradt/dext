@@ -9,7 +9,8 @@ uses
   Dext.Entity.Migrations.Runner,
   Dext.Entity.Migrations.Json,
   Dext.Hosting.CLI,
-  Dext.Hosting.CLI.Args;
+  Dext.Hosting.CLI.Args,
+  Dext.Utils;
 
 type
   TMigrateUpCommand = class(TInterfacedObject, IConsoleCommand)
@@ -53,17 +54,17 @@ begin
 
   if SourcePath <> '' then
   begin
-    WriteLn('   📂 Loading migrations from: ' + SourcePath);
+    SafeWriteLn('   📂 Loading migrations from: ' + SourcePath);
     TJsonMigrationLoader.LoadFromDirectory(SourcePath);
   end;
 
-  WriteLn('Starting migration update...');
+  SafeWriteLn('Starting migration update...');
   Context := FContextFactory();
   try
     Migrator := TMigrator.Create(Context);
     try
       Migrator.Migrate;
-      WriteLn('Database is up to date.');
+      SafeWriteLn('Database is up to date.');
     finally
       Migrator.Free;
     end;

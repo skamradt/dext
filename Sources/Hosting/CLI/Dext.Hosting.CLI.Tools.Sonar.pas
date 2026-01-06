@@ -11,7 +11,8 @@ uses
   System.Variants,
   Xml.XMLIntf, 
   Xml.XMLDoc,
-  Winapi.ActiveX;
+  Winapi.ActiveX,
+  Dext.Utils;
 
 type
   TSonarConverter = class
@@ -63,11 +64,11 @@ var
 begin
   if not FileExists(DccXmlFile) then 
   begin
-    WriteLn('Error: DCC XML file not found: ' + DccXmlFile);
+    SafeWriteLn('Error: DCC XML file not found: ' + DccXmlFile);
     Exit;
   end;
 
-  WriteLn('Converting Coverage Report to Sonar Generic Format...');
+  SafeWriteLn('Converting Coverage Report to Sonar Generic Format...');
   
   // 1. Build Unit Map (Case Insensitive via LowerCase keys)
   UnitMap := TDictionary<string, string>.Create;
@@ -94,11 +95,11 @@ begin
     LineHitsNode := DataNode.ChildNodes.FindNode('linehits');
     if LineHitsNode = nil then
     begin
-       WriteLn('Error: <linehits> node not found in XML report.');
+       SafeWriteLn('Error: <linehits> node not found in XML report.');
        Exit;
     end;
     
-    WriteLn(Format('  Found <linehits> with %d files.', [LineHitsNode.ChildNodes.Count]));
+    SafeWriteLn(Format('  Found <linehits> with %d files.', [LineHitsNode.ChildNodes.Count]));
 
     // 3. Prepare Sonar Output
     SonarOutput := TStringList.Create;
@@ -168,12 +169,12 @@ begin
       else
          Percentage := 100.0;
          
-      WriteLn(Format('Coverage Report generated: %s', [ExtractFileName(SonarXmlFile)]));
-      WriteLn(Format('Total Lines: %d | Covered: %d | Coverage: %.2f%%', [TotalLinesToCover, CoveredLinesCount, Percentage]));
+      SafeWriteLn(Format('Coverage Report generated: %s', [ExtractFileName(SonarXmlFile)]));
+      SafeWriteLn(Format('Total Lines: %d | Covered: %d | Coverage: %.2f%%', [TotalLinesToCover, CoveredLinesCount, Percentage]));
       
       if (Threshold > 0) and (Percentage < Threshold) then
       begin
-         WriteLn(Format('ERROR: Coverage (%.2f%%) is below the required threshold (%.2f%%).', [Percentage, Threshold]));
+         SafeWriteLn(Format('ERROR: Coverage (%.2f%%) is below the required threshold (%.2f%%).', [Percentage, Threshold]));
          raise Exception.Create('Code coverage threshold not met.');
       end;
     finally

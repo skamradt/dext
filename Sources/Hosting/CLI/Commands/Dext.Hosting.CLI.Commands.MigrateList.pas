@@ -11,7 +11,8 @@ uses
   Dext.Entity.Migrations.Runner,
   Dext.Hosting.CLI,
   Dext.Hosting.CLI.Args,
-  Dext.Entity.Drivers.Interfaces;
+  Dext.Entity.Drivers.Interfaces,
+  Dext.Utils;
 
 type
   TMigrateListCommand = class(TInterfacedObject, IConsoleCommand)
@@ -55,14 +56,14 @@ begin
   try
     Migrator := TMigrator.Create(Context);
     try
-      WriteLn('Migration Status:');
-      WriteLn('-----------------');
+      SafeWriteLn('Migration Status:');
+      SafeWriteLn('-----------------');
       
       Available := TMigrationRegistry.Instance.GetMigrations;
       
       if not Context.Connection.TableExists('__DextMigrations') then
       begin
-        WriteLn('History table not found. All ' + Length(Available).ToString + ' migrations are PENDING.');
+        SafeWriteLn('History table not found. All ' + Length(Available).ToString + ' migrations are PENDING.');
         Exit;
       end;
       
@@ -80,7 +81,7 @@ begin
           else
             Status := '[Pending]';
             
-          WriteLn(Status.PadRight(12) + Mig.GetId);
+          SafeWriteLn(Status.PadRight(12) + Mig.GetId);
         end;
         
       finally

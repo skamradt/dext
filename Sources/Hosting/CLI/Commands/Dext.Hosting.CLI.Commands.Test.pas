@@ -13,7 +13,8 @@ uses
   Dext.Hosting.CLI.Args,
   Dext.Hosting.CLI.Config,
   Dext.Hosting.CLI.Tools.Sonar,
-  Dext.Hosting.CLI.Tools.CodeCoverage; // Shared logic
+  Dext.Hosting.CLI.Tools.CodeCoverage,
+  Dext.Utils;
 
 type
   TTestCommand = class(TInterfacedObject, IConsoleCommand)
@@ -85,14 +86,14 @@ begin
   
     if ProjectFile = '' then
     begin
-      WriteLn('Error: No Delphi project file (.dproj) found in current directory.');
-      WriteLn('Use --project=<path> to specify one.');
+      SafeWriteLn('Error: No Delphi project file (.dproj) found in current directory.');
+      SafeWriteLn('Use --project=<path> to specify one.');
       Exit;
     end;
   
     ProjectFile := TPath.GetFullPath(ProjectFile);
-    WriteLn('Testing Project: ' + ExtractFileName(ProjectFile));
-    if DesiredDelphi <> '' then WriteLn('Target Delphi: ' + DesiredDelphi);
+    SafeWriteLn('Testing Project: ' + ExtractFileName(ProjectFile));
+    if DesiredDelphi <> '' then SafeWriteLn('Target Delphi: ' + DesiredDelphi);
   
     if Args.HasOption('coverage') then
       RunWithCoverage(ProjectFile, Args, Config, GlobalConfig, DesiredDelphi)
@@ -142,12 +143,12 @@ begin
   FillChar(SI, SizeOf(SI), 0);
   SI.cb := SizeOf(SI);
   CmdLine := Format('"%s" %s', [Exe, Params]);
-  WriteLn(Format('Running: %s %s', [Exe, Params]));
+  SafeWriteLn(Format('Running: %s %s', [Exe, Params]));
   
   Res := CreateProcess(nil, PChar(CmdLine), nil, nil, True, 0, nil, nil, SI, PI);
   if not Res then
   begin
-    WriteLn('Failed to start process: ' + SysErrorMessage(GetLastError));
+    SafeWriteLn('Failed to start process: ' + SysErrorMessage(GetLastError));
     Exit(False);
   end;
   
@@ -206,17 +207,17 @@ begin
   RSVars := FindRSVars(GlobalConfig, DesiredDelphi);
   if RSVars <> '' then
   begin
-    WriteLn('Using Environment: ' + RSVars);
-    WriteLn('Building project...');
+    SafeWriteLn('Using Environment: ' + RSVars);
+    SafeWriteLn('Building project...');
     Result := RunProcess('cmd', Format('/c "call "%s" && msbuild %s"', [RSVars, Args]));
   end
   else
   begin
-    WriteLn('WARNING: rsvars.bat not found for requested version. Relying on system PATH.');
-    if DesiredDelphi <> '' then WriteLn('Requested version: ' + DesiredDelphi);
+    SafeWriteLn('WARNING: rsvars.bat not found for requested version. Relying on system PATH.');
+    if DesiredDelphi <> '' then SafeWriteLn('Requested version: ' + DesiredDelphi);
     Result := RunProcess('msbuild', Args);
   end;
-  if not Result then WriteLn('Error: Build failed.');
+  if not Result then SafeWriteLn('Error: Build failed.');
 end;
 
 procedure TTestCommand.RunTests(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig; GlobalConfig: TDextGlobalConfig; const DesiredDelphi: string);
@@ -229,10 +230,10 @@ begin
   
   if not FileExists(ExePath) then
   begin
-    WriteLn('Error: Executable not found at ' + ExePath);
+    SafeWriteLn('Error: Executable not found at ' + ExePath);
     Exit;
   end;
-  WriteLn('Running tests...');
+  SafeWriteLn('Running tests...');
   RunProcess(ExePath, '');
 end;
 
@@ -291,7 +292,7 @@ var
   FileName, UnitName, Mask: string;
   Excluded: Boolean;
 begin
-  WriteLn('Scanning sources in: ' + SourceDir);
+  SafeWriteLn('Scanning sources in: ' + SourceDir);
   Units := TStringList.Create;
   Paths := TStringList.Create;
   try
@@ -319,7 +320,7 @@ begin
     ForceDirectories(ExtractFilePath(UnitFile));
     Units.SaveToFile(UnitFile);
     Paths.SaveToFile(SourcePathFile);
-    WriteLn(Format('Coverage Lists Generated: %d units, %d paths.', [Units.Count, Paths.Count]));
+    SafeWriteLn(Format('Coverage Lists Generated: %d units, %d paths.', [Units.Count, Paths.Count]));
   finally
     Units.Free;
     Paths.Free;
@@ -333,7 +334,7 @@ begin
   ExePath := TCodeCoverageTool.FindPath(GlobalConfig, 'Win32');
   if (ExePath <> '') and (FileExists(ExePath) or (ExtractFilePath(ExePath) = '')) then Exit;
 
-  WriteLn('CodeCoverage.exe not found or not configured.');
+  SafeWriteLn('CodeCoverage.exe not found or not configured.');
   Write('Do you want to download and install the latest release automatically? [Y/n]: ');
   ReadLn(Input);
   
@@ -341,10 +342,10 @@ begin
   begin
      try
        TCodeCoverageTool.InstallLatest(ExePath);
-       WriteLn('Installed successfully to: ' + ExePath);
+       SafeWriteLn('Installed successfully to: ' + ExePath);
      except
        on E: Exception do
-         WriteLn('Installation failed: ' + E.Message);
+         SafeWriteLn('Installation failed: ' + E.Message);
      end;
   end;
 end;
@@ -364,18 +365,18 @@ begin
 
   if not FileExists(MapPath) then
   begin
-    WriteLn('Error: MAP file not generated. Coverage analysis impossible.');
+    SafeWriteLn('Error: MAP file not generated. Coverage analysis impossible.');
     Exit;
   end;
   
   EnsureCodeCoverage(GlobalConfig, DCCExe);
   if (DCCExe = '') or (not FileExists(DCCExe) and (ExtractFilePath(DCCExe) <> '')) then
   begin
-     WriteLn('Error: CodeCoverage tool missing. Cannot proceed.');
+     SafeWriteLn('Error: CodeCoverage tool missing. Cannot proceed.');
      Exit;
   end;
 
-  WriteLn('Executing Code Coverage using: ' + DCCExe);
+  SafeWriteLn('Executing Code Coverage using: ' + DCCExe);
   var ReportDir := TPath.Combine(TPath.GetDirectoryName(ExePath), 'report');
   if Config.Test.ReportDir <> '' then
      ReportDir := TPath.GetFullPath(TPath.Combine(ExtractFileDir(ProjectFile), Config.Test.ReportDir));
@@ -395,10 +396,10 @@ begin
   SetEnvironmentVariable('DEXT_HEADLESS', '1');
   try
     if not RunProcess(DCCExe, CoverageCmd) then
-      WriteLn('Coverage analysis failed (or tests failed).')
+      SafeWriteLn('Coverage analysis failed (or tests failed).')
     else
     begin
-      WriteLn('Coverage analysis complete. Check output in ' + ReportDir);
+      SafeWriteLn('Coverage analysis complete. Check output in ' + ReportDir);
       var DccXml := TPath.Combine(ReportDir, 'CodeCoverage_Summary.xml');
       var SonarXml := TPath.Combine(ReportDir, 'dext_coverage.xml');
       TSonarConverter.Convert(DccXml, SonarXml, SourceDir, Config.Test.CoverageThreshold);
@@ -408,7 +409,7 @@ begin
          var HtmlReport := TPath.Combine(ReportDir, 'CodeCoverage_Summary.html');
          if FileExists(HtmlReport) then
          begin
-            WriteLn('Opening report: ' + HtmlReport);
+            SafeWriteLn('Opening report: ' + HtmlReport);
             ShellExecute(0, 'open', PChar(HtmlReport), nil, nil, SW_SHOWNORMAL);
          end;
       end;

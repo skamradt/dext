@@ -30,7 +30,7 @@
 {    begin                                                                  }
 {      Calculator := Mock<ICalculator>.Create;                              }
 {      Calculator.Setup.Returns(42).When.Add(Arg.Any<Integer>, 10);         }
-{      WriteLn(Calculator.Instance.Add(5, 10)); // 42                       }
+{      SafeWriteLn(Calculator.Instance.Add(5, 10)); // 42                   }
 {      Calculator.Received(Times.Once).Add(5, 10);                          }
 {    end;                                                                   }
 {                                                                           }

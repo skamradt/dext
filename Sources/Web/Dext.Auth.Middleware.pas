@@ -97,22 +97,14 @@ end;
 
 function TJwtAuthenticationMiddleware.ExtractToken(const AAuthHeader: string): string;
 begin
-  WriteLn('AUTH: ExtractToken called with: ', AAuthHeader);
   Result := AAuthHeader;
   
   if FTokenPrefix <> '' then
   begin
-    WriteLn('AUTH: Token prefix configured: ', FTokenPrefix);
     if StartsText(FTokenPrefix, AAuthHeader) then
-    begin
-      Result := Copy(AAuthHeader, Length(FTokenPrefix) + 1, MaxInt);
-      WriteLn('AUTH: Extracted token (first 50 chars): ', Copy(Result, 1, 50));
-    end
+      Result := Copy(AAuthHeader, Length(FTokenPrefix) + 1, MaxInt)
     else
-    begin
-      WriteLn('AUTH: Header does not start with expected prefix');
       Result := '';
-    end;
   end;
 end;
 
@@ -156,46 +148,28 @@ var
   ValidationResult: TJwtValidationResult;
   Principal: IClaimsPrincipal;
 begin
-  try
-    WriteLn('AUTH: Middleware Invoke started');
-    // Try to get Authorization header
-    if AContext.Request.Headers.ContainsKey('Authorization') then
-    begin
-      AuthHeader := AContext.Request.Headers['Authorization'];
-      WriteLn('AUTH: Header found');
-      Token := ExtractToken(AuthHeader);
-      
-      if Token <> '' then
-      begin
-        // Validate token
-        WriteLn('AUTH: Validating token...');
-        ValidationResult := FTokenHandler.ValidateToken(Token);
-        
-        if ValidationResult.IsValid then
-        begin
-          // Create principal and set user
-          Principal := CreatePrincipal(ValidationResult.Claims);
-          AContext.User := Principal;
-          
-          WriteLn(Format('AUTH: User authenticated: %s', [Principal.Identity.Name]));
-        end
-        else
-        begin
-          WriteLn(Format('AUTH: Token validation failed: %s', [ValidationResult.ErrorMessage]));
-        end;
-      end;
-    end
-    else
-    begin
-      WriteLn('AUTH: No Authorization header found');
-    end;
+  // Try to get Authorization header
+  if AContext.Request.Headers.ContainsKey('Authorization') then
+  begin
+    AuthHeader := AContext.Request.Headers['Authorization'];
+    Token := ExtractToken(AuthHeader);
     
-    // Continue pipeline
-    ANext(AContext);
-  except
-    on E: Exception do
-      WriteLn('AUTH: Exception in middleware: ', E.ClassName, ': ', E.Message);
+    if Token <> '' then
+    begin
+      // Validate token
+      ValidationResult := FTokenHandler.ValidateToken(Token);
+      
+      if ValidationResult.IsValid then
+      begin
+        // Create principal and set user
+        Principal := CreatePrincipal(ValidationResult.Claims);
+        AContext.User := Principal;
+      end;
+    end;
   end;
+  
+  // Continue pipeline
+  ANext(AContext);
 end;
 
 { TApplicationBuilderJwtExtensions }

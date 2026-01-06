@@ -504,7 +504,7 @@ procedure TTestContext.WriteLine(const Msg: string);
 begin
   FOutput.AppendLine(Msg);
   // Also write to console in verbose mode
-  WriteLn('      📝 ' + Msg);
+  SafeWriteLn('      📝 ' + Msg);
 end;
 
 procedure TTestContext.WriteLine(const Fmt: string; const Args: array of const);
@@ -515,7 +515,7 @@ end;
 procedure TTestContext.AttachFile(const FilePath: string);
 begin
   FAttachedFiles.Add(FilePath);
-  WriteLn('      📎 Attached: ' + FilePath);
+  SafeWriteLn('      📎 Attached: ' + FilePath);
 end;
 
 function TTestContext.GetOutput: string;
@@ -596,18 +596,18 @@ begin
     Inc(InstanceCount);
     
     if FDebugDiscovery then
-      WriteLn('  [Discovery] Checking: ', RttiType.QualifiedName);
+      SafeWriteLn('  [Discovery] Checking: ' + RttiType.QualifiedName);
 
     for Attr in RttiType.GetAttributes do
     begin
       if FDebugDiscovery then
-        WriteLn('    - Attribute: ', Attr.ClassName);
+        SafeWriteLn('    - Attribute: ' + Attr.ClassName);
         
       if (Attr is TestFixtureAttribute) then
       begin
         Inc(FixtureAttrCount);
         if FDebugDiscovery then
-          WriteLn('    ** Found TestFixture!');
+          SafeWriteLn('    ** Found TestFixture!');
           
         Fixture := TTestFixtureInfo.Create(RttiType);
         DiscoverTestMethods(Fixture);
@@ -622,12 +622,12 @@ begin
   
   if FDebugDiscovery then
   begin
-    WriteLn;
-    WriteLn('  [Discovery Summary]');
-    WriteLn('    Total types scanned: ', TypeCount);
-    WriteLn('    Instance types: ', InstanceCount);
-    WriteLn('    Fixtures found: ', FixtureAttrCount);
-    WriteLn;
+    SafeWriteLn;
+    SafeWriteLn('  [Discovery Summary]');
+    SafeWriteLn('    Total types scanned: ' + IntToStr(TypeCount));
+    SafeWriteLn('    Instance types: ' + IntToStr(InstanceCount));
+    SafeWriteLn('    Fixtures found: ' + IntToStr(FixtureAttrCount));
+    SafeWriteLn;
   end;
 end;
 
@@ -724,7 +724,7 @@ begin
     
   if FVerbose then
   begin
-    WriteLn;
+    SafeWriteLn;
     TTestConsole.WriteInfo('🌐 [AssemblyInitialize] Running global setup...');
   end;
   
@@ -745,7 +745,7 @@ begin
     end;
     
     if FVerbose then
-      WriteLn('    ✅ Global setup complete.');
+      SafeWriteLn('    ✅ Global setup complete.');
   except
     on E: Exception do
     begin
@@ -764,7 +764,7 @@ begin
     
   if FVerbose then
   begin
-    WriteLn;
+    SafeWriteLn;
     TTestConsole.WriteInfo('🌐 [AssemblyCleanup] Running global cleanup...');
   end;
   
@@ -784,7 +784,7 @@ begin
     end;
     
     if FVerbose then
-      WriteLn('    ✅ Global cleanup complete.');
+      SafeWriteLn('    ✅ Global cleanup complete.');
   except
     on E: Exception do
       TTestConsole.WriteFail('    ⚠️ [AssemblyCleanup] failed: ' + E.Message);
@@ -1100,8 +1100,8 @@ begin
   NotifyRunStart(TestCount);
 
   TTestConsole.WriteHeader('Dext Test Runner');
-  WriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
-  WriteLn;
+  SafeWriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
+  SafeWriteLn;
 
   // Execute global setup (if defined)
   ExecuteAssemblyInit;
@@ -1140,7 +1140,7 @@ begin
 
   NotifyRunStart(0);
   TTestConsole.WriteHeader('Dext Test Runner (Filtered)');
-  WriteLn;
+  SafeWriteLn;
 
   // Execute global setup (if defined)
   ExecuteAssemblyInit;
@@ -1219,11 +1219,11 @@ begin
 
   if FVerbose then
   begin
-    WriteLn;
+    SafeWriteLn;
     TTestConsole.WriteInfo('Fixture: ' + Fixture.Name);
     if Fixture.Description <> '' then
       Write('  ' + Fixture.Description);
-    WriteLn;
+    SafeWriteLn;
   end;
 
   // Create fixture instance
@@ -1446,41 +1446,41 @@ begin
     trPassed:
       begin
         Write('  ✅  ');
-        WriteLn(Format('%s (%dms)', [Info.DisplayName, Round(Info.Duration.TotalMilliseconds)]));
+        SafeWriteLn(Format('%s (%dms)', [Info.DisplayName, Round(Info.Duration.TotalMilliseconds)]));
         if Info.ErrorMessage <> '' then
         begin
           Write('      ⚠️  Warning: ' + Info.ErrorMessage);
-          WriteLn;
+          SafeWriteLn;
         end;
       end;
     trFailed:
       begin
         Write('  ❌  ');
-        WriteLn(Info.DisplayName);
+        SafeWriteLn(Info.DisplayName);
         Write('      ');
         TTestConsole.WriteFail('>> ' + Info.ErrorMessage);
-        WriteLn;
+        SafeWriteLn;
       end;
     trSkipped:
       begin
-        Write('  ⚠️  ');
-        Write(Info.DisplayName);
+        SafeWrite('  ⚠️  ');
+        SafeWrite(Info.DisplayName);
         if Info.ErrorMessage <> '' then
-          Write('  [' + Info.ErrorMessage + ']');
-        WriteLn;
+          SafeWrite('  [' + Info.ErrorMessage + ']');
+        SafeWriteLn;
       end;
     trTimeout:
       begin
         Write('  ⏱️  ');
-        WriteLn(Info.DisplayName + ' (TIMEOUT)');
+        SafeWriteLn(Info.DisplayName + ' (TIMEOUT)');
       end;
     trError:
       begin
         Write('  ⛔  ');
-        WriteLn(Info.DisplayName);
+        SafeWriteLn(Info.DisplayName);
         Write('      ');
         TTestConsole.WriteFail('>> ' + Info.ErrorMessage);
-        WriteLn;
+        SafeWriteLn;
       end;
   end;
 end;
@@ -1489,10 +1489,10 @@ class procedure TTestRunner.PrintSummary;
 var
   PassPercent: Double;
 begin
-  WriteLn;
-  WriteLn;
+  SafeWriteLn;
+  SafeWriteLn;
   TTestConsole.WriteHeader('Test Summary');
-  WriteLn;
+  SafeWriteLn;
 
   // Calculate pass percentage
   if FSummary.TotalTests > 0 then
@@ -1501,24 +1501,24 @@ begin
     PassPercent := 100;
 
   // Total
-  WriteLn(Format('  📊  Total:     %d', [FSummary.TotalTests]));
+  SafeWriteLn(Format('  📊  Total:     %d', [FSummary.TotalTests]));
   
   // Passed - with green emoji
-  WriteLn(Format('  ✅  Passed:    %d', [FSummary.Passed]));
+  SafeWriteLn(Format('  ✅  Passed:    %d', [FSummary.Passed]));
   
   // Failed - with red emoji
-  WriteLn(Format('  ❌  Failed:    %d', [FSummary.Failed]));
+  SafeWriteLn(Format('  ❌  Failed:    %d', [FSummary.Failed]));
     
   // Skipped - with warning emoji (yellow)
-  WriteLn(Format('  ⚠️  Skipped:   %d', [FSummary.Skipped]));
+  SafeWriteLn(Format('  ⚠️  Skipped:   %d', [FSummary.Skipped]));
   
-  WriteLn;
+  SafeWriteLn;
   
   // Duration - show ms if under 1 second, otherwise show seconds
   if FSummary.TotalDuration.TotalSeconds < 1 then
-    WriteLn(Format('  ⏱️  Duration:  %dms', [Round(FSummary.TotalDuration.TotalMilliseconds)]))
+    SafeWriteLn(Format('  ⏱️  Duration:  %dms', [Round(FSummary.TotalDuration.TotalMilliseconds)]))
   else
-    WriteLn(Format('  ⏱️  Duration:  %.3fs', [FSummary.TotalDuration.TotalSeconds]));
+    SafeWriteLn(Format('  ⏱️  Duration:  %.3fs', [FSummary.TotalDuration.TotalSeconds]));
   
   // Pass rate - colored based on percentage
   Write('  📈  Pass Rate: ');
@@ -1528,20 +1528,20 @@ begin
     TTestConsole.WriteSkip(Format('%.1f%%', [PassPercent]))
   else
     TTestConsole.WriteFail(Format('%.1f%%', [PassPercent]));
-  WriteLn;
+  SafeWriteLn;
   
-  WriteLn;
+  SafeWriteLn;
 
   // Final result banner
   if FSummary.Failed = 0 then
   begin
-    WriteLn('  🎉  All tests passed!');
+    SafeWriteLn('  🎉  All tests passed!');
   end
   else
   begin
     Write('  💥  ');
     TTestConsole.WriteFail(Format('%d test(s) failed!', [FSummary.Failed]));
-    WriteLn;
+    SafeWriteLn;
   end;
 end;
 
@@ -1611,12 +1611,12 @@ begin
   if RttiType = nil then
   begin
     if FDebugDiscovery then
-      WriteLn('  [RegisterFixture] RTTI not available for: ', AClass.ClassName);
+      SafeWriteLn('  [RegisterFixture] RTTI not available for: ' + AClass.ClassName);
     Exit;
   end;
   
   if FDebugDiscovery then
-    WriteLn('  [RegisterFixture] Registering: ', AClass.ClassName);
+    SafeWriteLn('  [RegisterFixture] Registering: ' + AClass.ClassName);
     
   Fixture := TTestFixtureInfo.Create(RttiType);
   DiscoverTestMethods(Fixture);
@@ -1625,12 +1625,12 @@ begin
   begin
     FFixtures.Add(Fixture);
     if FDebugDiscovery then
-      WriteLn('    Found ', Fixture.TestMethods.Count, ' test methods');
+      SafeWriteLn('    Found ' + IntToStr(Fixture.TestMethods.Count) + ' test methods');
   end
   else
   begin
     if FDebugDiscovery then
-      WriteLn('    No test methods found');
+      SafeWriteLn('    No test methods found');
     Fixture.Free;
   end;
 end;
@@ -1654,7 +1654,7 @@ var
 begin
   if FTestResults = nil then
   begin
-    WriteLn('Warning: No test results available. Run tests first.');
+    SafeWriteLn('Warning: No test results available. Run tests first.');
     Exit;
   end;
 
@@ -1675,7 +1675,7 @@ begin
     Reporter.SaveToFile(FileName);
     
     if FVerbose then
-      WriteLn('📄 JUnit report saved: ', FileName);
+      SafeWriteLn('📄 JUnit report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
@@ -1689,7 +1689,7 @@ var
 begin
   if FTestResults = nil then
   begin
-    WriteLn('Warning: No test results available. Run tests first.');
+    SafeWriteLn('Warning: No test results available. Run tests first.');
     Exit;
   end;
 
@@ -1710,7 +1710,7 @@ begin
     Reporter.SaveToFile(FileName);
     
     if FVerbose then
-      WriteLn('📄 JSON report saved: ', FileName);
+      SafeWriteLn('📄 JSON report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
@@ -1724,7 +1724,7 @@ var
 begin
   if FTestResults = nil then
   begin
-    WriteLn('Warning: No test results available. Run tests first.');
+    SafeWriteLn('Warning: No test results available. Run tests first.');
     Exit;
   end;
 
@@ -1744,7 +1744,7 @@ begin
     Reporter.SaveToFile(FileName);
     
     if FVerbose then
-      WriteLn('📄 xUnit report saved: ', FileName);
+      SafeWriteLn('📄 xUnit report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
@@ -1758,7 +1758,7 @@ var
 begin
   if FTestResults = nil then
   begin
-    WriteLn('Warning: No test results available. Run tests first.');
+    SafeWriteLn('Warning: No test results available. Run tests first.');
     Exit;
   end;
 
@@ -1780,7 +1780,7 @@ begin
     Reporter.SaveToFile(FileName);
     
     if FVerbose then
-      WriteLn('📄 TRX report saved: ', FileName);
+      SafeWriteLn('📄 TRX report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
@@ -1794,7 +1794,7 @@ var
 begin
   if FTestResults = nil then
   begin
-    WriteLn('Warning: No test results available. Run tests first.');
+    SafeWriteLn('Warning: No test results available. Run tests first.');
     Exit;
   end;
 
@@ -1816,7 +1816,7 @@ begin
     Reporter.SaveToFile(FileName);
     
     if FVerbose then
-      WriteLn('📄 HTML report saved: ', FileName);
+      SafeWriteLn('📄  HTML report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
@@ -1864,13 +1864,13 @@ end;
 
 class procedure TTestConsole.WriteHeader(const Text: string);
 begin
-  WriteLn;
-  WriteColored('═══════════════════════════════════════════════════════════', CONSOLE_COLOR_CYAN);
-  WriteLn;
+  SafeWriteLn;
+  WriteColored('-----------------------------------------------------------', CONSOLE_COLOR_CYAN);
+  SafeWriteLn;
   WriteColored('  ' + Text, CONSOLE_COLOR_WHITE);
-  WriteLn;
-  WriteColored('═══════════════════════════════════════════════════════════', CONSOLE_COLOR_CYAN);
-  WriteLn;
+  SafeWriteLn;
+  WriteColored('-----------------------------------------------------------', CONSOLE_COLOR_CYAN);
+  SafeWriteLn;
 end;
 
 class procedure TTestRunner.ClearListeners;

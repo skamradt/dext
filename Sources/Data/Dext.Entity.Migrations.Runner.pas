@@ -60,6 +60,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 { TMigrator }
 
 constructor TMigrator.Create(AContext: IDbContext);
@@ -134,7 +137,7 @@ var
   CmdIntf: IInterface;
   Cmd: IDbCommand;
 begin
-  WriteLn('   🚀 Applying migration: ' + AMigration.GetId);
+  SafeWriteLn('   🚀 Applying migration: ' + AMigration.GetId);
   
   FContext.BeginTransaction;
   try
@@ -183,7 +186,7 @@ var
   CmdIntf: IInterface;
   Cmd: IDbCommand;
 begin
-  WriteLn('   ⏪ Rolling back migration: ' + AMigration.GetId);
+  SafeWriteLn('   ⏪ Rolling back migration: ' + AMigration.GetId);
   
   FContext.BeginTransaction;
   try
@@ -265,9 +268,9 @@ begin
     Available := TMigrationRegistry.Instance.GetMigrations;
     
     if Length(Available) = 0 then
-      WriteLn('   ⚠️No migrations found in registry.')
+      SafeWriteLn('   ⚠️No migrations found in registry.')
     else
-      WriteLn('   🔎 Found ' + Length(Available).ToString + ' migrations in registry.');
+      SafeWriteLn('   🔎 Found ' + Length(Available).ToString + ' migrations in registry.');
     
     for Migration in Available do
     begin
@@ -277,7 +280,7 @@ begin
       end
       else
       begin
-        // WriteLn('   ⏭️ Skipping applied migration: ' + Migration.GetId);
+        // SafeWriteLn('   ⏭️ Skipping applied migration: ' + Migration.GetId);
       end;
     end;
   finally

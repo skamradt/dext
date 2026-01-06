@@ -201,7 +201,8 @@ implementation
 
 uses
   Dext.Testing.Report,
-  Dext.Testing.Dashboard;
+  Dext.Testing.Dashboard,
+  Dext.Utils;
 
 { TTestConfigurator }
 
@@ -398,8 +399,8 @@ begin
   
   if FUseDashboard and FWaitDashboard then
   begin
-    WriteLn;
-    WriteLn('Press ENTER to close dashboard and exit...');
+    SafeWriteLn;
+    SafeWriteLn('Press ENTER to close dashboard and exit...');
     ReadLn;
   end;
   

@@ -87,7 +87,8 @@ implementation
 uses
   Dext.Auth.Attributes,
   Dext.Web.ModelBinding,
-  Dext.Web.HandlerInvoker;
+  Dext.Web.HandlerInvoker,
+  Dext.Utils;
 
 { TControllerScanner }
 
@@ -112,7 +113,7 @@ begin
   try
     Types := FCtx.GetTypes;
 
-    WriteLn('🔍 Scanning ', Length(Types), ' types...');
+    SafeWriteLn('🔍 ' + Format('Scanning %d types...', [Length(Types)]));
 
     for RttiType in Types do
     begin
@@ -158,7 +159,7 @@ begin
           // ✅ SE TEM MÉTODOS DE ROTA, ADICIONAR COMO CONTROLLER
           if HasRouteMethods then
           begin
-            WriteLn('    🎉 ADDING CONTROLLER: ', RttiType.Name);
+            SafeWriteLn('    🎉 ADDING CONTROLLER: ' + RttiType.Name);
             ControllerInfo.RttiType := RttiType;
             ControllerInfo.Methods := MethodsList.ToArray;
 
@@ -184,7 +185,7 @@ begin
     end;
 
     Result := Controllers.ToArray;
-    WriteLn('🎯 Total controllers found: ', Length(Result));
+    SafeWriteLn('🎯 ' + Format('Total controllers found: %d', [Length(Result)]));
 
   finally
     Controllers.Free;
@@ -197,7 +198,7 @@ var
   Controller: TControllerInfo;
 begin
   Controllers := FindControllers;
-  WriteLn('🔧 Registering ', Length(Controllers), ' controllers in DI...');
+  SafeWriteLn('🔧 ' + Format('Registering %d controllers in DI...', [Length(Controllers)]));
 
   for Controller in Controllers do
   begin
@@ -206,7 +207,7 @@ begin
       // Register as Transient
       var ClassType := Controller.RttiType.AsInstance.MetaclassType;
       Services.AddTransient(TServiceType.FromClass(ClassType), ClassType);
-      WriteLn('  ✅ Registered service: ', Controller.RttiType.Name);
+      SafeWriteLn('  ✅ Registered service: ' + Controller.RttiType.Name);
     end;
   end;
 end;
@@ -221,7 +222,7 @@ begin
   Result := 0;
   Controllers := FindControllers;
 
-  WriteLn('🔍 Found ', Length(Controllers), ' controllers:');
+  SafeWriteLn('🔍 ' + Format('Found %d controllers:', [Length(Controllers)]));
 
   // ✅ CACHE DE MÉTODOS PARA EVITAR PROBLEMAS DE REFERÊNCIA RTTI
   for Controller in Controllers do
@@ -231,14 +232,14 @@ begin
     if Assigned(Controller.ControllerAttribute) then
       Prefix := Controller.ControllerAttribute.Prefix;
 
-    WriteLn('  📦 ', Controller.RttiType.Name, ' (Prefix: "', Prefix, '")');
+    SafeWriteLn('  📦 ' + Format('  %s (Prefix: "%s")', [Controller.RttiType.Name, Prefix]));
 
     for ControllerMethod in Controller.Methods do
     begin
       // ✅ CONSTRUIR PATH COMPLETO: Prefix + MethodPath
       FullPath := Prefix + ControllerMethod.Path;
 
-      WriteLn('    ', ControllerMethod.HttpMethod, ' ', FullPath, ' -> ', ControllerMethod.Method.Name);
+      SafeWriteLn(Format('    %s %s -> %s', [ControllerMethod.HttpMethod, FullPath, ControllerMethod.Method.Name]));
 
       // ✅ VERIFICAR [SwaggerIgnore]
       var IsIgnored := False;
@@ -251,7 +252,7 @@ begin
 
       if IsIgnored then
       begin
-        WriteLn('      🚫 Ignored by [SwaggerIgnore]');
+        SafeWriteLn('      🚫 Ignored by [SwaggerIgnore]');
         Continue;
       end;
 
@@ -328,7 +329,7 @@ begin
             var Metadata := Routes[High(Routes)];
             Metadata.Security := SecuritySchemes.ToArray;
             AppBuilder.UpdateLastRouteMetadata(Metadata);
-            WriteLn('      🔒 Secured with: ', string.Join(', ', Metadata.Security));
+            SafeWriteLn('      🔒 Secured with: ' + string.Join(', ', Metadata.Security));
           end;
         end;
       finally
@@ -373,7 +374,7 @@ begin
               begin
                 Metadata.RequestType := ParamType.Handle;
                 Updated := True;
-                WriteLn('      📝 RequestType: ', ParamType.Name);
+                SafeWriteLn('      📝 RequestType: ' + ParamType.Name);
                 Break;
               end;
             end;
@@ -422,8 +423,8 @@ begin
     end;
   end;
 
-  WriteLn('✅ Registered ', Result, ' auto-routes');
-  WriteLn('💾 Cached ', FCachedMethods.Count, ' methods for runtime execution');
+  SafeWriteLn('✅ ' + Format('Registered %d auto-routes', [Result]));
+  SafeWriteLn('💾 ' + Format('Cached %d methods for runtime execution', [FCachedMethods.Count]));
 end;
 
 destructor TControllerScanner.Destroy;
@@ -450,14 +451,14 @@ var
   Filter: IActionFilter;
   I: Integer;
 begin
-  WriteLn('🔄 Executing: ', CachedMethod.FullPath, ' -> ', CachedMethod.TypeName, '.', CachedMethod.MethodName);
+  SafeWriteLn('🔄 ' + Format('Executing: %s -> %s.%s', [CachedMethod.FullPath, CachedMethod.TypeName, CachedMethod.MethodName]));
 
   // ✅ ENFORCE AUTHORIZATION
   if CachedMethod.RequiresAuth then
   begin
     if (Context.User = nil) or (Context.User.Identity = nil) or (not Context.User.Identity.IsAuthenticated) then
     begin
-      WriteLn('⛔ Authorization failed: User not authenticated');
+      SafeWriteLn('⛔ Authorization failed: User not authenticated');
       Context.Response.Status(401).Json('{"error": "Unauthorized"}');
       Exit;
     end;
@@ -468,7 +469,7 @@ begin
   ControllerType := Ctx.FindType(CachedMethod.TypeName);
   if ControllerType = nil then
   begin
-    WriteLn('❌ Controller type not found: ', CachedMethod.TypeName);
+    SafeWriteLn('❌ Controller type not found: ' + CachedMethod.TypeName);
     Context.Response.Status(500).Json(Format('{"error": "Controller type not found: %s"}', [CachedMethod.TypeName]));
     Exit;
   end;
@@ -486,7 +487,7 @@ begin
 
   if Method = nil then
   begin
-    WriteLn('❌ Method not found: ', CachedMethod.TypeName, '.', CachedMethod.MethodName);
+    SafeWriteLn('❌ ' + Format('Method not found: %s.%s', [CachedMethod.TypeName, CachedMethod.MethodName]));
     Context.Response.Status(500).Json(Format('{"error": "Method not found: %s.%s"}', [CachedMethod.TypeName, CachedMethod.MethodName]));
     Exit;
   end;
@@ -522,7 +523,7 @@ begin
           // Check for short-circuit
           if Assigned(ExecutingContext.Result) then
           begin
-            WriteLn('⚡ Filter short-circuited execution');
+            SafeWriteLn('⚡ Filter short-circuited execution');
             ExecutingContext.Result.Execute(Context);
             Exit;
           end;
@@ -531,7 +532,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('❌ Error in OnActionExecuting filter: ', E.Message);
+        SafeWriteLn('❌ Error in OnActionExecuting filter: ' + E.Message);
         raise;
       end;
     end;
@@ -546,7 +547,7 @@ begin
 
         if ControllerInstance = nil then
         begin
-          WriteLn('❌ Controller instance not found: ', CachedMethod.TypeName);
+          SafeWriteLn('❌ Controller instance not found: ' + CachedMethod.TypeName);
           Context.Response.Status(500).Json(Format('{"error": "Controller instance not found: %s"}', [CachedMethod.TypeName]));
           Exit;
         end;
@@ -579,7 +580,6 @@ begin
       end;
 
       // ✅ EXECUTE ACTION FILTERS - OnActionExecuted
-      // ✅ FIX: Use interface variable
       var ExecutedContext: IActionExecutedContext := TActionExecutedContext.Create(Context, ActionDescriptor, nil, nil);
       // Execute filters in reverse order
       for I := FilterList.Count - 1 downto 0 do
@@ -592,10 +592,9 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('❌ Error executing method: ', E.Message);
+        SafeWriteLn('❌ Error executing method: ' + E.Message);
           
         // ✅ EXECUTE ACTION FILTERS - OnActionExecuted (with exception)
-        // ✅ FIX: Use interface variable
         var ExecutedContext: IActionExecutedContext := TActionExecutedContext.Create(Context, ActionDescriptor, nil, E);
         for I := FilterList.Count - 1 downto 0 do
         begin
@@ -605,7 +604,7 @@ begin
             Filter.OnActionExecuted(ExecutedContext);
             if ExecutedContext.ExceptionHandled then
             begin
-              WriteLn('✅ Exception handled by filter');
+              SafeWriteLn('✅ Exception handled by filter');
               Exit; // Don't re-raise
             end;
           end;

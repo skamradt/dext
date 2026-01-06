@@ -192,6 +192,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 { Helper Functions }
 
 /// <summary>
@@ -693,7 +696,7 @@ begin
                 Cmd.ExecuteNonQuery;
               except
                  on E: Exception do
-                   WriteLn('Warning creating table for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+                   SafeWriteLn('Warning creating table for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
               end;
             end;
           end;
@@ -708,7 +711,7 @@ begin
       begin
         // Cycle detected or missing dependency.
         // For now, force create the remaining ones (might fail on FKs, but better than hanging)
-        WriteLn('?? Warning: Cyclic dependency or missing dependency detected in EnsureCreated. Force creating remaining tables...');
+        SafeWriteLn('⚠️ Warning: Cyclic dependency or missing dependency detected in EnsureCreated. Force creating remaining tables...');
         for i := Nodes.Count - 1 downto 0 do
         begin
            Node := Nodes[i];
@@ -721,7 +724,7 @@ begin
                 Cmd.ExecuteNonQuery;
               except
                  on E: Exception do
-                   WriteLn('Error creating table (forced) for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+                   SafeWriteLn('Error creating table (forced) for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
               end;
             end;
            Nodes.Delete(i);

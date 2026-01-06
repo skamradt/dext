@@ -36,18 +36,88 @@ function ConsolePause: Boolean;
 procedure DebugLog(const AMessage: string);
 procedure SetConsoleCharSet(CharSet: Cardinal = 65001);
 
+/// <summary>
+///   Checks if console output is available. Returns False for GUI applications
+///   (VCL/FMX) that don't have a console attached.
+/// </summary>
+function IsConsoleAvailable: Boolean;
+
+/// <summary>
+///   Writes a message to console only if console is available.
+///   Silently does nothing in GUI applications to prevent I/O error 105.
+/// </summary>
+procedure SafeWriteLn(const AMessage: string); overload;
+procedure SafeWriteLn; overload;
+procedure SafeWrite(const AMessage: string);
+
 implementation
 
 uses
   System.SysUtils;
+
+var
+  ConsoleAvailable: Boolean = False;
+  ConsoleChecked: Boolean = False;
+
+function IsConsoleAvailable: Boolean;
+begin
+  if not ConsoleChecked then
+  begin
+    ConsoleChecked := True;
+    {$IFDEF CONSOLE}
+    ConsoleAvailable := True;
+    {$ELSE}
+      {$IFDEF MSWINDOWS}
+      var Handle := GetStdHandle(STD_OUTPUT_HANDLE);
+      ConsoleAvailable := (Handle <> 0) and (Handle <> INVALID_HANDLE_VALUE);
+      {$ELSE}
+      ConsoleAvailable := System.IsConsole;
+      {$ENDIF}
+    {$ENDIF}
+  end;
+  Result := ConsoleAvailable;
+end;
+
+procedure SafeWriteLn(const AMessage: string);
+begin
+  if IsConsoleAvailable then
+  try
+    System.Writeln(AMessage);
+  except
+    // Silently ignore I/O errors
+  end;
+end;
+
+procedure SafeWriteLn;
+begin
+  if IsConsoleAvailable then
+  try
+    System.Writeln;
+  except
+    // Silently ignore I/O errors
+  end;
+end;
+
+procedure SafeWrite(const AMessage: string);
+begin
+  if IsConsoleAvailable then
+  try
+    System.Write(AMessage);
+  except
+    // Silently ignore I/O errors
+  end;
+end;
 
 function ConsolePause: Boolean;
 begin
   Result := FindCmdLineSwitch('no-wait', ['-', '\'], True);
   if not Result then
   begin
-    Write('Press <ENTER> to continue...');
-    ReadLn;
+    if IsConsoleAvailable then
+    begin
+      System.Write('Press <ENTER> to continue...');
+      System.ReadLn;
+    end;
   end;
 end;
 
@@ -56,7 +126,7 @@ begin
 {$IFDEF MSWINDOWS}
   OutputDebugString(PChar(AMessage + sLineBreak));
 {$ENDIF}
-  Writeln(AMessage);
+  SafeWriteLn(AMessage);
 end;
 
 procedure SetConsoleCharSet(CharSet: Cardinal);

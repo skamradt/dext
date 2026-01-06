@@ -19,6 +19,10 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
+
 { TTestRunner }
 
 class procedure TTestRunner.Run(const TestName: string; const Action: TProc);
@@ -27,23 +31,23 @@ begin
   try
     Action;
     Inc(FPassed);
-    WriteLn('PASS');
+    SafeWriteLn('PASS');
   except
     on E: Exception do
     begin
       Inc(FFailed);
-      WriteLn('FAIL');
-      WriteLn('  Error: ', E.Message);
+      SafeWriteLn('FAIL');
+      SafeWriteLn('  Error: ' + E.Message);
     end;
   end;
 end;
 
 class procedure TTestRunner.PrintSummary;
 begin
-  WriteLn;
-  WriteLn('=========================================');
-  WriteLn(Format('Tests Summary: %d Passed, %d Failed', [FPassed, FFailed]));
-  WriteLn('=========================================');
+  SafeWriteLn;
+  SafeWriteLn('=========================================');
+  SafeWriteLn(Format('Tests Summary: %d Passed, %d Failed', [FPassed, FFailed]));
+  SafeWriteLn('=========================================');
   
   if FFailed > 0 then
     ExitCode := 1

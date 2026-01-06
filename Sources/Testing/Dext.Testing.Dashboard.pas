@@ -48,6 +48,9 @@ type
 
 implementation
 
+uses
+  Dext.Utils;
+
 const
   HTML_TEMPLATE = 
     '<!DOCTYPE html>' +
@@ -362,7 +365,7 @@ begin
   if not FServer.Active then
   begin
     FServer.Active := True;
-    Writeln('Dext Dashboard running at http://localhost:' + FPort.ToString);
+    SafeWriteLn('Dext Dashboard running at http://localhost:' + FPort.ToString);
     TTestRunner.RegisterListener(Self);
   end;
 end;
@@ -421,7 +424,7 @@ begin
     TMonitor.Enter(FLock);
     try
       // if FEventBuffer.Count > 0 then
-      //   Writeln('Replaying ' + FEventBuffer.Count.ToString + ' events to new client');
+      //   SafeWriteLn('Replaying ' + FEventBuffer.Count.ToString + ' events to new client');
 
       // Replay existing events to the new client
       for Msg in FEventBuffer do
@@ -510,9 +513,9 @@ begin
   
   BroadcastEvent('run_complete', '{}');
   
-  Writeln;
-  Writeln('📊 Dext Dashboard: http://localhost:' + FPort.ToString);
-  Writeln;
+  SafeWriteLn;
+  SafeWriteLn('📊 Dext Dashboard: http://localhost:' + FPort.ToString);
+  SafeWriteLn;
 end;
 
 procedure TDashboardListener.OnFixtureStart(const FixtureName: string; TestCount: Integer);
