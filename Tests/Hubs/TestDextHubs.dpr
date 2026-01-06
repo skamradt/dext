@@ -5,8 +5,10 @@ program TestDextHubs;
 {$R *.res}
 
 uses
+  Dext.MM,
   System.SysUtils,
   System.Rtti,
+  System.JSON,
   System.Generics.Collections,
   // Dext.Hubs units
   Dext.Web.Hubs.Interfaces,
@@ -74,10 +76,10 @@ begin
   
   Protocol := TJsonHubProtocol.Create;
   try
-    // Test protocol properties
-    Check(Protocol.Name = 'json', 'Protocol Name');
-    Check(Protocol.Version = 1, 'Protocol Version');
-    Check(Protocol.TransferFormat = 'Text', 'Protocol TransferFormat');
+    // Test protocol properties (via getter methods)
+    Check(Protocol.GetName = 'json', 'Protocol Name');
+    Check(Protocol.GetVersion = 1, 'Protocol Version');
+    Check(Protocol.GetTransferFormat = 'Text', 'Protocol TransferFormat');
     
     // Test Invocation serialization
     Msg := THubMessage.Invocation('ReceiveMessage', [TValue.From('Test')]);
@@ -368,6 +370,216 @@ begin
   end;
 end;
 
+procedure TestTHubConnection;
+var
+  Connection: THubConnection;
+  SentMessages: TList<string>;
+begin
+  WriteLn;
+  WriteLn('=== THubConnection Tests ===');
+  
+  SentMessages := TList<string>.Create;
+  try
+    Connection := THubConnection.Create('test-conn', ttServerSentEvents);
+    try
+      Check(Connection.ConnectionId = 'test-conn', 'ConnectionId');
+      Check(Connection.TransportType = ttServerSentEvents, 'TransportType');
+      Check(Connection.State = csConnecting, 'State initially csConnecting');
+      
+      // Set state to connected (middleware would do this)
+      Connection.SetState(csConnected);
+      Check(Connection.State = csConnected, 'SetState to csConnected');
+      
+      // Test SendAsync with handler
+      Connection.SetOnSend(
+        procedure(Msg: string)
+        begin
+          SentMessages.Add(Msg);
+        end
+      );
+      
+      Connection.SendAsync('test-message-1');
+      Connection.SendAsync('test-message-2');
+      Check(SentMessages.Count = 2, 'SendAsync handler called');
+      Check(SentMessages[0] = 'test-message-1', 'SendAsync message 1');
+      Check(SentMessages[1] = 'test-message-2', 'SendAsync message 2');
+      
+      // Test Close
+      Connection.Close('test reason');
+      Check(Connection.State = csDisconnected, 'Close sets State to csDisconnected');
+      
+      // SendAsync should not work after close
+      SentMessages.Clear;
+      Connection.SendAsync('should-not-send');
+      Check(SentMessages.Count = 0, 'SendAsync does nothing after Close');
+      
+    finally
+      Connection.Free;
+    end;
+  finally
+    SentMessages.Free;
+  end;
+end;
+
+procedure TestConnectionManagerEdgeCases;
+var
+  ConnectionManager: TConnectionManager;
+  Connection: THubConnection;
+  Retrieved: IHubConnection;
+begin
+  WriteLn;
+  WriteLn('=== TConnectionManager Edge Cases ===');
+  
+  ConnectionManager := TConnectionManager.Create;
+  try
+    // Test TryGet non-existing returns False
+    Check(not ConnectionManager.TryGet('nonexistent', Retrieved), 'TryGet non-existing returns False');
+    Check(not ConnectionManager.Contains('nonexistent'), 'Contains non-existing returns False');
+    
+    // Test double add same ID (should replace or just work)
+    Connection := THubConnection.Create('same-id', ttServerSentEvents);
+    ConnectionManager.Add(Connection);
+    Check(ConnectionManager.Count = 1, 'Add first');
+    
+    // Add another with same ID - behavior depends on implementation
+    Connection := THubConnection.Create('same-id', ttLongPolling);
+    ConnectionManager.Add(Connection);
+    Check(ConnectionManager.Count >= 1, 'Add duplicate ID handled');
+    
+    // Test Remove non-existing (should not crash)
+    try
+      ConnectionManager.Remove('does-not-exist');
+      Check(True, 'Remove non-existing does not crash');
+    except
+      Check(False, 'Remove non-existing does not crash');
+    end;
+    
+    // Test Clear (if available) or remove all
+    ConnectionManager.Remove('same-id');
+    
+  finally
+    ConnectionManager.Free;
+  end;
+end;
+
+procedure TestGroupManagerEdgeCases;
+var
+  GroupManager: TGroupManager;
+  Connections: TArray<string>;
+begin
+  WriteLn;
+  WriteLn('=== TGroupManager Edge Cases ===');
+  
+  GroupManager := TGroupManager.Create;
+  try
+    // Test GetConnectionsInGroup for non-existing group
+    Connections := GroupManager.GetConnectionsInGroup('no-such-group');
+    Check(Length(Connections) = 0, 'GetConnectionsInGroup empty for non-existing');
+    
+    // Test IsInGroup for non-existing
+    Check(not GroupManager.IsInGroup('conn', 'no-group'), 'IsInGroup false for non-existing');
+    
+    // Test double add to same group (should be idempotent)
+    GroupManager.AddToGroupAsync('conn1', 'group1');
+    GroupManager.AddToGroupAsync('conn1', 'group1');
+    Connections := GroupManager.GetConnectionsInGroup('group1');
+    Check(Length(Connections) = 1, 'Double add is idempotent');
+    
+    // Test remove from group not in
+    try
+      GroupManager.RemoveFromGroupAsync('conn1', 'not-in-this-group');
+      Check(True, 'Remove from non-member group does not crash');
+    except
+      Check(False, 'Remove from non-member group does not crash');
+    end;
+    
+    // Test RemoveFromAllGroups for connection with no groups
+    try
+      GroupManager.RemoveFromAllGroupsAsync('no-groups-conn');
+      Check(True, 'RemoveFromAllGroups for untracked connection does not crash');
+    except
+      Check(False, 'RemoveFromAllGroups for untracked connection does not crash');
+    end;
+    
+  finally
+    GroupManager.Free;
+  end;
+end;
+
+procedure TestProtocolMultipleArguments;
+var
+  Protocol: TJsonHubProtocol;
+  Msg, Parsed: THubMessage;
+  Json: string;
+begin
+  WriteLn;
+  WriteLn('=== Protocol Multiple Arguments Tests ===');
+  
+  Protocol := TJsonHubProtocol.Create;
+  try
+    // Test with multiple arguments of different types
+    Msg := THubMessage.Invocation('MultiArg', [
+      TValue.From('string'),
+      TValue.From(42),
+      TValue.From(True),
+      TValue.From(3.14)
+    ]);
+    
+    Json := Protocol.Serialize(Msg);
+    Check(Pos('"arguments":["string",42,true,', Json) > 0, 'Multiple args serialized');
+    
+    // Deserialize and check
+    Parsed := Protocol.Deserialize(Json);
+    Check(Parsed.Target = 'MultiArg', 'MultiArg target preserved');
+    Check(Length(Parsed.Arguments) = 4, 'MultiArg arguments count');
+    
+    // Test empty arguments
+    Msg := THubMessage.Invocation('NoArgs', []);
+    Json := Protocol.Serialize(Msg);
+    Check(Pos('"arguments":[]', Json) > 0, 'Empty arguments serialized');
+    
+  finally
+    Protocol.Free;
+  end;
+end;
+
+procedure TestProtocolWithInvocationId;
+var
+  Protocol: TJsonHubProtocol;
+  Msg: THubMessage;
+  Json: string;
+begin
+  WriteLn;
+  WriteLn('=== Protocol Invocation ID Tests ===');
+  
+  Protocol := TJsonHubProtocol.Create;
+  try
+    // Create message with invocation ID
+    Msg.MessageType := hmtInvocation;
+    Msg.InvocationId := 'inv-12345';
+    Msg.Target := 'MethodWithResult';
+    SetLength(Msg.Arguments, 1);
+    Msg.Arguments[0] := TValue.From('arg1');
+    
+    Json := Protocol.Serialize(Msg);
+    Check(Pos('"invocationId":"inv-12345"', Json) > 0, 'InvocationId serialized');
+    
+    // Test Completion message
+    Msg := THubMessage.Completion('inv-12345', TValue.From('result-value'));
+    Json := Protocol.Serialize(Msg);
+    Check(Pos('"type":3', Json) > 0, 'Completion type');
+    Check(Pos('"invocationId":"inv-12345"', Json) > 0, 'Completion invocationId');
+    
+    // Test Completion with error
+    Msg := THubMessage.CompletionError('inv-error', 'Something went wrong');
+    Json := Protocol.Serialize(Msg);
+    Check(Pos('"error":"Something went wrong"', Json) > 0, 'Completion error');
+    
+  finally
+    Protocol.Free;
+  end;
+end;
+
 begin
   try
     WriteLn('=========================================');
@@ -383,6 +595,13 @@ begin
     TestTHubCallerContext;
     TestTHub;
     TestValueSerialization;
+    
+    // New tests
+    TestTHubConnection;
+    TestConnectionManagerEdgeCases;
+    TestGroupManagerEdgeCases;
+    TestProtocolMultipleArguments;
+    TestProtocolWithInvocationId;
     
     WriteLn;
     WriteLn('=========================================');
