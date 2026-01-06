@@ -2,6 +2,8 @@
 
 O padrão de Opções (`IOptions<T>`) permite acesso fortemente tipado a configurações, separando a lógica de leitura de configuração da lógica de consumo.
 
+Para entender como os arquivos de configuração (JSON, YAML) são carregados, veja [Configuração da Aplicação](app-configuration.md).
+
 ## Definindo a Classe de Configuração
 
 Crie uma classe simples (POCO) que represente a seção de configuração desejada.

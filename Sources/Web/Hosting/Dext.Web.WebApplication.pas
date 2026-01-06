@@ -81,6 +81,7 @@ uses
   Dext.Web.Indy.SSL.Taurus,
   Dext.Configuration.Core,
   Dext.Configuration.Json,
+  Dext.Configuration.Yaml,
   Dext.Configuration.EnvironmentVariables,
   Dext.HealthChecks,
   Dext.Hosting.ApplicationLifetime,
@@ -104,15 +105,21 @@ begin
   // Initialize Configuration
   ConfigBuilder := TConfigurationBuilder.Create;
   
-  // 1. Base appsettings.json
+  // 1. Base appsettings
   ConfigBuilder.Add(TJsonConfigurationSource.Create('appsettings.json', True));
+  ConfigBuilder.Add(TYamlConfigurationSource.Create('appsettings.yaml', True));
+  ConfigBuilder.Add(TYamlConfigurationSource.Create('appsettings.yml', True));
 
-  // 2. Environment specific appsettings.{Env}.json
+  // 2. Environment specific appsettings.{Env}
   var Env := GetEnvironmentVariable('DEXT_ENVIRONMENT');
   if Env = '' then Env := 'Production'; // Default to Production
   
   if Env <> '' then
+  begin
     ConfigBuilder.Add(TJsonConfigurationSource.Create('appsettings.' + Env + '.json', True));
+    ConfigBuilder.Add(TYamlConfigurationSource.Create('appsettings.' + Env + '.yaml', True));
+    ConfigBuilder.Add(TYamlConfigurationSource.Create('appsettings.' + Env + '.yml', True));
+  end;
 
   // 3. Environment Variables
   ConfigBuilder.Add(TEnvironmentVariablesConfigurationSource.Create);
