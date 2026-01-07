@@ -44,18 +44,65 @@ type
   ///   e.g., Age > 18, Name = 'John'
   /// </summary>
   TBinaryOperator = (boEqual, boNotEqual, boGreaterThan, boGreaterThanOrEqual, 
-    boLessThan, boLessThanOrEqual, boLike, boNotLike, boIn, boNotIn);
+    boLessThan, boLessThanOrEqual, boLike, boNotLike, boIn, boNotIn,
+    boBitwiseAnd, boBitwiseOr, boBitwiseXor);
+
+  /// <summary>
+  ///   Represents an arithmetic operator (+, -, *, /).
+  /// </summary>
+  TArithmeticOperator = (aoAdd, aoSubtract, aoMultiply, aoDivide, aoModulus, aoIntDivide);
 
   TBinaryExpression = class(TAbstractExpression)
   private
-    FPropertyName: string;
-    FValue: TValue;
+    FLeft: IExpression;
+    FRight: IExpression;
     FOperator: TBinaryOperator;
   public
-    constructor Create(const APropertyName: string; AOperator: TBinaryOperator; const AValue: TValue);
-    property PropertyName: string read FPropertyName;
-    property Value: TValue read FValue;
+    constructor Create(const ALeft, ARight: IExpression; AOperator: TBinaryOperator); overload;
+    constructor Create(const APropertyName: string; AOperator: TBinaryOperator; const AValue: TValue); overload;
+    property Left: IExpression read FLeft;
+    property Right: IExpression read FRight;
     property BinaryOperator: TBinaryOperator read FOperator;
+    function ToString: string; override;
+  end;
+
+  /// <summary>
+  ///   Represents an arithmetic expression (Left mathOp Right).
+  /// </summary>
+  TArithmeticExpression = class(TAbstractExpression)
+  private
+    FLeft: IExpression;
+    FRight: IExpression;
+    FOperator: TArithmeticOperator;
+  public
+    constructor Create(const ALeft, ARight: IExpression; AOperator: TArithmeticOperator);
+    property Left: IExpression read FLeft;
+    property Right: IExpression read FRight;
+    property ArithmeticOperator: TArithmeticOperator read FOperator;
+    function ToString: string; override;
+  end;
+
+  /// <summary>
+  ///   Represents a reference to a property/column in an expression.
+  /// </summary>
+  TPropertyExpression = class(TAbstractExpression)
+  private
+    FPropertyName: string;
+  public
+    constructor Create(const APropertyName: string);
+    property PropertyName: string read FPropertyName;
+    function ToString: string; override;
+  end;
+
+  /// <summary>
+  ///   Represents a literal value in an expression.
+  /// </summary>
+  TLiteralExpression = class(TAbstractExpression)
+  private
+    FValue: TValue;
+  public
+    constructor Create(const AValue: TValue);
+    property Value: TValue read FValue;
     function ToString: string; override;
   end;
 
@@ -195,18 +242,67 @@ end;
 
 { TBinaryExpression }
 
+constructor TBinaryExpression.Create(const ALeft, ARight: IExpression; AOperator: TBinaryOperator);
+begin
+  inherited Create;
+  FLeft := ALeft;
+  FRight := ARight;
+  FOperator := AOperator;
+end;
+
 constructor TBinaryExpression.Create(const APropertyName: string;
   AOperator: TBinaryOperator; const AValue: TValue);
 begin
   inherited Create;
-  FPropertyName := APropertyName;
+  FLeft := TPropertyExpression.Create(APropertyName);
+  FRight := TLiteralExpression.Create(AValue);
   FOperator := AOperator;
-  FValue := AValue;
 end;
 
 function TBinaryExpression.ToString: string;
 begin
-  Result := Format('(%s %d %s)', [FPropertyName, Ord(FOperator), FValue.ToString]);
+  Result := Format('(%s %d %s)', [FLeft.ToString, Ord(FOperator), FRight.ToString]);
+end;
+
+{ TArithmeticExpression }
+
+constructor TArithmeticExpression.Create(const ALeft, ARight: IExpression; AOperator: TArithmeticOperator);
+begin
+  inherited Create;
+  FLeft := ALeft;
+  FRight := ARight;
+  FOperator := AOperator;
+end;
+
+function TArithmeticExpression.ToString: string;
+begin
+  Result := Format('(%s %d %s)', [FLeft.ToString, Ord(FOperator), FRight.ToString]);
+end;
+
+{ TPropertyExpression }
+
+constructor TPropertyExpression.Create(const APropertyName: string);
+begin
+  inherited Create;
+  FPropertyName := APropertyName;
+end;
+
+function TPropertyExpression.ToString: string;
+begin
+  Result := FPropertyName;
+end;
+
+{ TLiteralExpression }
+
+constructor TLiteralExpression.Create(const AValue: TValue);
+begin
+  inherited Create;
+  FValue := AValue;
+end;
+
+function TLiteralExpression.ToString: string;
+begin
+  Result := FValue.ToString;
 end;
 
 { TLogicalExpression }

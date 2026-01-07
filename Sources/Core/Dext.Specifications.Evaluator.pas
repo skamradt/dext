@@ -53,8 +53,10 @@ type
     FResult: Boolean;
     FCtx: TRttiContext;
     
-    function GetValue(const APropertyName: string): TValue;
+    function GetPropertyValue(const APropertyName: string): TValue;
+    function ResolveValue(const AExpression: IExpression): TValue;
     function Compare(const Left, Right: TValue; Op: TBinaryOperator): Boolean;
+    function Calculate(const Left, Right: TValue; Op: TArithmeticOperator): TValue;
   public
     constructor Create(AObject: TObject);
     procedure Visit(const AExpression: IExpression);
@@ -86,16 +88,45 @@ begin
   FCtx := TRttiContext.Create;
 end;
 
-function TEvaluatorVisitor.GetValue(const APropertyName: string): TValue;
+function TEvaluatorVisitor.GetPropertyValue(const APropertyName: string): TValue;
 var
   Typ: TRttiType;
   Prop: TRttiProperty;
+  Val: TValue;
 begin
   Typ := FCtx.GetType(FObject.ClassType);
   Prop := Typ.GetProperty(APropertyName);
   if Prop = nil then
     raise Exception.CreateFmt('Property "%s" not found on class "%s"', [APropertyName, FObject.ClassName]);
-  Result := Prop.GetValue(FObject);
+  
+  Val := Prop.GetValue(FObject);
+  
+  // Unwrap Smart Types (Prop<T>)
+  if (Val.Kind = tkRecord) and string(Val.TypeInfo.Name).StartsWith('Prop<') then
+  begin
+    var ValueField := FCtx.GetType(Val.TypeInfo).GetField('FValue');
+    if ValueField <> nil then
+      Val := ValueField.GetValue(Val.GetReferenceToRawData);
+  end;
+  
+  Result := Val;
+end;
+
+function TEvaluatorVisitor.ResolveValue(const AExpression: IExpression): TValue;
+begin
+  if AExpression = nil then Exit(TValue.Empty);
+
+  if AExpression is TPropertyExpression then
+    Result := GetPropertyValue(TPropertyExpression(AExpression).PropertyName)
+  else if AExpression is TLiteralExpression then
+    Result := TLiteralExpression(AExpression).Value
+  else if AExpression is TArithmeticExpression then
+  begin
+    var Math := TArithmeticExpression(AExpression);
+    Result := Calculate(ResolveValue(Math.Left), ResolveValue(Math.Right), Math.ArithmeticOperator);
+  end
+  else
+    Result := TValue.Empty;
 end;
 
 function TEvaluatorVisitor.Compare(const Left, Right: TValue; Op: TBinaryOperator): Boolean;
@@ -156,7 +187,27 @@ begin
         end;
       end;
     boNotIn: Result := not Compare(Left, Right, boIn);
+    boBitwiseAnd: Result := (Integer(L) and Integer(R)) <> 0;
+    boBitwiseOr: Result := (Integer(L) or Integer(R)) <> 0;
+    boBitwiseXor: Result := (Integer(L) xor Integer(R)) <> 0;
     else Result := False;
+  end;
+end;
+
+function TEvaluatorVisitor.Calculate(const Left, Right: TValue; Op: TArithmeticOperator): TValue;
+var
+  L, R: Variant;
+begin
+  L := Left.AsVariant;
+  R := Right.AsVariant;
+  case Op of
+    aoAdd: Result := TValue.FromVariant(L + R);
+    aoSubtract: Result := TValue.FromVariant(L - R);
+    aoMultiply: Result := TValue.FromVariant(L * R);
+    aoDivide: Result := TValue.FromVariant(L / R);
+    aoModulus: Result := TValue.FromVariant(L mod R);
+    aoIntDivide: Result := TValue.FromVariant(L div R);
+    else Result := TValue.Empty;
   end;
 end;
 
@@ -165,8 +216,9 @@ begin
   if AExpression is TBinaryExpression then
   begin
     var Bin := TBinaryExpression(AExpression);
-    var PropVal := GetValue(Bin.PropertyName);
-    FResult := Compare(PropVal, Bin.Value, Bin.BinaryOperator);
+    var L := ResolveValue(Bin.Left);
+    var R := ResolveValue(Bin.Right);
+    FResult := Compare(L, R, Bin.BinaryOperator);
   end
   else if AExpression is TLogicalExpression then
   begin
@@ -207,12 +259,12 @@ begin
     end
     else if Un.UnaryOperator = uoIsNull then
     begin
-      var Val := GetValue(Un.PropertyName);
+      var Val := GetPropertyValue(Un.PropertyName);
       FResult := Val.IsEmpty or (Val.Kind = tkClass) and (Val.AsObject = nil) or (Val.Kind = tkInterface) and (Val.AsInterface = nil);
     end
     else if Un.UnaryOperator = uoIsNotNull then
     begin
-      var Val := GetValue(Un.PropertyName);
+      var Val := GetPropertyValue(Un.PropertyName);
       FResult := not (Val.IsEmpty or (Val.Kind = tkClass) and (Val.AsObject = nil) or (Val.Kind = tkInterface) and (Val.AsInterface = nil));
     end;
   end

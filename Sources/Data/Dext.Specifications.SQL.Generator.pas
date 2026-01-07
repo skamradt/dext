@@ -61,14 +61,19 @@ type
     FDialect: ISQLDialect;
     FColumnMapper: ISQLColumnMapper;
     
-    procedure Process(const AExpression: IExpression);
     procedure ProcessBinary(const C: TBinaryExpression);
+    procedure ProcessArithmetic(const C: TArithmeticExpression);
     procedure ProcessLogical(const C: TLogicalExpression);
     procedure ProcessUnary(const C: TUnaryExpression);
     procedure ProcessConstant(const C: TConstantExpression);
+    procedure ProcessProperty(const C: TPropertyExpression);
+    procedure ProcessLiteral(const C: TLiteralExpression);
+
+    procedure ResolveSQL(const AExpression: IExpression);
     
     function GetNextParamName: string;
     function GetBinaryOpSQL(Op: TBinaryOperator): string;
+    function GetArithmeticOpSQL(Op: TArithmeticOperator): string;
     function GetLogicalOpSQL(Op: TLogicalOperator): string;
     function GetUnaryOpSQL(Op: TUnaryOperator): string;
 
@@ -272,7 +277,7 @@ begin
   if AExpression = nil then
     Exit('');
     
-  Process(AExpression);
+  ResolveSQL(AExpression);
   Result := FSQL.ToString;
 end;
 
@@ -282,16 +287,22 @@ begin
   Result := 'p' + IntToStr(FParamCount);
 end;
 
-procedure TSQLWhereGenerator.Process(const AExpression: IExpression);
+procedure TSQLWhereGenerator.ResolveSQL(const AExpression: IExpression);
 begin
   if AExpression is TBinaryExpression then
     ProcessBinary(TBinaryExpression(AExpression))
+  else if AExpression is TArithmeticExpression then
+    ProcessArithmetic(TArithmeticExpression(AExpression))
   else if AExpression is TLogicalExpression then
     ProcessLogical(TLogicalExpression(AExpression))
   else if AExpression is TUnaryExpression then
     ProcessUnary(TUnaryExpression(AExpression))
   else if AExpression is TConstantExpression then
     ProcessConstant(TConstantExpression(AExpression))
+  else if AExpression is TPropertyExpression then
+    ProcessProperty(TPropertyExpression(AExpression))
+  else if AExpression is TLiteralExpression then
+    ProcessLiteral(TLiteralExpression(AExpression))
   else
     raise Exception.Create('Unknown expression type: ' + AExpression.ToString);
 end;
@@ -310,28 +321,22 @@ begin
   // Special handling for IN and NOT IN operators
   if (C.BinaryOperator = boIn) or (C.BinaryOperator = boNotIn) then
   begin
-    ArrayValue := C.Value;
-    
-    // Check if value is an array
-    if ArrayValue.IsArray then
+    if (C.Right is TLiteralExpression) and TLiteralExpression(C.Right).Value.IsArray then
     begin
+      ArrayValue := TLiteralExpression(C.Right).Value;
       ParamNames := TStringBuilder.Create;
       try
-        // Generate parameter for each array element
         for I := 0 to ArrayValue.GetArrayLength - 1 do
         begin
           ParamName := GetNextParamName;
           FParams.Add(ParamName, ArrayValue.GetArrayElement(I));
-          
-          if I > 0 then
-            ParamNames.Append(', ');
+          if I > 0 then ParamNames.Append(', ');
           ParamNames.Append(':').Append(ParamName);
         end;
         
-        // Generate SQL: (Column IN (:p1, :p2, :p3))
-        FSQL.Append('(')
-            .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
-            .Append(' ')
+        FSQL.Append('(');
+        ResolveSQL(C.Left);
+        FSQL.Append(' ')
             .Append(GetBinaryOpSQL(C.BinaryOperator))
             .Append(' (')
             .Append(ParamNames.ToString)
@@ -339,39 +344,24 @@ begin
       finally
         ParamNames.Free;
       end;
-    end
-    else
-    begin
-      // Fallback: treat as single value (shouldn't happen, but just in case)
-      ParamName := GetNextParamName;
-      FParams.Add(ParamName, C.Value);
-      
-      FSQL.Append('(')
-          .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
-          .Append(' ')
-          .Append(GetBinaryOpSQL(C.BinaryOperator))
-          .Append(' (:')
-          .Append(ParamName)
-          .Append('))');
+      Exit;
     end;
-  end
-  else
-  begin
-    // Standard binary operator handling
-    ParamName := GetNextParamName;
-    
-    // Store parameter value
-    FParams.Add(ParamName, C.Value);
-    
-    // Generate SQL: (Column Op :Param)
-    FSQL.Append('(')
-        .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
-        .Append(' ')
-        .Append(GetBinaryOpSQL(C.BinaryOperator))
-        .Append(' ');
+  end;
 
+  FSQL.Append('(');
+  ResolveSQL(C.Left);
+  FSQL.Append(' ')
+      .Append(GetBinaryOpSQL(C.BinaryOperator))
+      .Append(' ');
+
+  if C.Right is TLiteralExpression then
+  begin
+    var Lit := TLiteralExpression(C.Right);
+    ParamName := GetNextParamName;
+    FParams.Add(ParamName, Lit.Value);
+    
     // Type converter support for SQL casting in WHERE clause
-    Converter := TTypeConverterRegistry.Instance.GetConverter(C.Value.TypeInfo);
+    Converter := TTypeConverterRegistry.Instance.GetConverter(Lit.Value.TypeInfo);
     
     // Determine Dialect Enum
     DialectEnum := ddUnknown;
@@ -384,14 +374,12 @@ begin
        else DialectEnum := ddSQLite;
     end;
     
-    // Explicit casting for PostgreSQL UUIDs to avoid "operator does not exist" errors
-    // Handle TGUID, TUUID types AND string-formatted GUIDs
     if (DialectEnum = ddPostgreSQL) and 
-       ((C.Value.TypeInfo = TypeInfo(TGUID)) or 
-        (C.Value.TypeInfo = TypeInfo(TUUID)) or
-        ((C.Value.Kind in [tkString, tkUString, tkWString]) and
-         ((Length(C.Value.AsString) = 36) or (Length(C.Value.AsString) = 38)) and
-         (C.Value.AsString.IndexOf('-') > 0))) then
+       ((Lit.Value.TypeInfo = TypeInfo(TGUID)) or 
+        (Lit.Value.TypeInfo = TypeInfo(TUUID)) or
+        ((Lit.Value.Kind in [tkString, tkUString, tkWString]) and
+         ((Length(Lit.Value.AsString) = 36) or (Length(Lit.Value.AsString) = 38)) and
+         (Lit.Value.AsString.IndexOf('-') > 0))) then
     begin
        SQLCast := ':' + ParamName + '::uuid';
     end
@@ -402,18 +390,33 @@ begin
     else
       SQLCast := ':' + ParamName;
 
-    FSQL.Append(SQLCast).Append(')');
-  end;
+    FSQL.Append(SQLCast);
+  end
+  else
+    ResolveSQL(C.Right);
+
+  FSQL.Append(')');
+end;
+
+procedure TSQLWhereGenerator.ProcessArithmetic(const C: TArithmeticExpression);
+begin
+  FSQL.Append('(');
+  ResolveSQL(C.Left);
+  FSQL.Append(' ')
+      .Append(GetArithmeticOpSQL(C.ArithmeticOperator))
+      .Append(' ');
+  ResolveSQL(C.Right);
+  FSQL.Append(')');
 end;
 
 procedure TSQLWhereGenerator.ProcessLogical(const C: TLogicalExpression);
 begin
   FSQL.Append('(');
-  Process(C.Left);
+  ResolveSQL(C.Left);
   FSQL.Append(' ')
       .Append(GetLogicalOpSQL(C.LogicalOperator))
       .Append(' ');
-  Process(C.Right);
+  ResolveSQL(C.Right);
   FSQL.Append(')');
 end;
 
@@ -422,7 +425,7 @@ begin
   if C.UnaryOperator = uoNot then
   begin
     FSQL.Append('(NOT ');
-    Process(C.Expression);
+    ResolveSQL(C.Expression);
     FSQL.Append(')');
   end
   else
@@ -434,6 +437,20 @@ begin
         .Append(GetUnaryOpSQL(C.UnaryOperator))
         .Append(')');
   end;
+end;
+
+procedure TSQLWhereGenerator.ProcessProperty(const C: TPropertyExpression);
+begin
+  FSQL.Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)));
+end;
+
+procedure TSQLWhereGenerator.ProcessLiteral(const C: TLiteralExpression);
+var
+  ParamName: string;
+begin
+  ParamName := GetNextParamName;
+  FParams.Add(ParamName, C.Value);
+  FSQL.Append(':').Append(ParamName);
 end;
 
 procedure TSQLWhereGenerator.ProcessConstant(const C: TConstantExpression);
@@ -457,8 +474,25 @@ begin
     boNotLike: Result := 'NOT LIKE';
     boIn: Result := 'IN';
     boNotIn: Result := 'NOT IN';
+    boBitwiseAnd: Result := '&';
+    boBitwiseOr: Result := '|';
+    boBitwiseXor: Result := '#';
   else
     Result := '=';
+  end;
+end;
+
+function TSQLWhereGenerator.GetArithmeticOpSQL(Op: TArithmeticOperator): string;
+begin
+  case Op of
+    aoAdd: Result := '+';
+    aoSubtract: Result := '-';
+    aoMultiply: Result := '*';
+    aoDivide: Result := '/';
+    aoModulus: Result := '%';
+    aoIntDivide: Result := '/';
+  else
+    Result := '+';
   end;
 end;
 

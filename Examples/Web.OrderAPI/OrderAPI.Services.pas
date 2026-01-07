@@ -312,8 +312,8 @@ begin
   Table := FDbContext.Entities<TRestaurantTable>.Find(Request.TableId); // Auto-boxing Integer->Variant or Int64 find
   if Table = nil then
     raise Exception.Create('Table not found');
-    
-  if Table.Status.Value <> TTableStatus.tsAvailable then // Explicit .Value check
+
+  if Table.Status <> TTableStatus.tsAvailable then
     raise Exception.Create('Table is not available');
   
   Table.Status := TTableStatus.tsOccupied;
@@ -340,14 +340,14 @@ begin
   if Order = nil then
     raise Exception.Create('Order not found');
     
-  if Order.Status.Value <> TOrderStatus.osOpen then // Explicit .Value check
+  if Order.Status <> TOrderStatus.osOpen then
     raise Exception.Create('Order is not open');
   
   Product := FDbContext.Entities<TProduct>.Find(Request.ProductId);
   if Product = nil then
     raise Exception.Create('Product not found');
     
-  if not Product.Available.Value then // Explicit .Value check
+  if not Product.Available then
     raise Exception.Create('Product is not available');
   
   Result := TOrderItem.Create;
@@ -386,7 +386,7 @@ begin
   if Order = nil then
     raise Exception.Create('Order not found');
     
-  if Order.Status.Value <> TOrderStatus.osOpen then // Explicit .Value
+  if Order.Status <> TOrderStatus.osOpen then
     raise Exception.Create('Order is not open');
   
   Order.Status := TOrderStatus.osClosed;
@@ -412,7 +412,7 @@ begin
   if Order = nil then
     raise Exception.Create('Order not found');
     
-  if Order.Status.Value <> TOrderStatus.osOpen then // Explicit .Value
+  if Order.Status <> TOrderStatus.osOpen then
     raise Exception.Create('Order is not open');
   
   Order.Status := TOrderStatus.osCancelled;
@@ -458,8 +458,8 @@ begin
   OccupiedCount := 0;
   for Tbl in Tables do
   begin
-    if Tbl.Status.Value = TTableStatus.tsAvailable then Inc(AvailCount); // Explicit .Value
-    if Tbl.Status.Value = TTableStatus.tsOccupied then Inc(OccupiedCount); // Explicit .Value
+    if Tbl.Status = TTableStatus.tsAvailable then Inc(AvailCount);
+    if Tbl.Status = TTableStatus.tsOccupied then Inc(OccupiedCount);
   end;
   
   var o := Prototype.Entity<TOrder>;
@@ -496,7 +496,7 @@ begin
   ClosedCount := 0;
   for Order in Orders do
   begin
-    if Trunc(Order.ClosedAt.Value) = Trunc(Date) then // Explicit .Value
+    if Trunc(Order.ClosedAt.Value) = Trunc(Date) then
     begin
       Inc(ClosedCount);
       TotalRevenue := TotalRevenue + Order.TotalAmount.Value;
