@@ -18,13 +18,7 @@
 {           License.                                                        }
 {                                                                           }
 {***************************************************************************}
-{                                                                           }
-{  Author:  Cesar Romero                                                    }
-{  Created: 2026-01-03                                                      }
-{                                                                           }
-{  Dext.Mocks.Interceptor - Mock interceptor implementation.                }
-{                                                                           }
-{***************************************************************************}
+
 unit Dext.Mocks.Interceptor;
 
 interface
@@ -35,24 +29,12 @@ uses
   System.TypInfo,
   System.Generics.Collections,
   Dext.Interception,
+  Dext.Interception.ClassProxy,
   Dext.Mocks;
 
 type
-  /// <summary>
-  ///   Internal state for mock operation.
-  /// </summary>
-  TMockState = (
-    /// <summary>Normal operation - execute setups and record calls.</summary>
-    Acting,
-    /// <summary>Setting up behavior.</summary>
-    Arranging,
-    /// <summary>Verifying calls.</summary>
-    Asserting
-  );
+  TMockState = (Acting, Arranging, Asserting);
 
-  /// <summary>
-  ///   Represents a configured method behavior.
-  /// </summary>
   TMethodSetup = class
   private
     FName: string;
@@ -64,10 +46,8 @@ type
     FArgumentMatchers: TArray<TPredicate<TValue>>;
   public
     constructor Create(const AName: string);
-
     function MatchesArguments(const Args: TArray<TValue>): Boolean;
     function GetNextReturnValue: TValue;
-
     property Name: string read FName;
     property ReturnValues: TArray<TValue> read FReturnValues write FReturnValues;
     property ExceptionClass: ExceptClass read FExceptionClass write FExceptionClass;
@@ -76,9 +56,6 @@ type
     property ArgumentMatchers: TArray<TPredicate<TValue>> read FArgumentMatchers write FArgumentMatchers;
   end;
 
-  /// <summary>
-  ///   Represents a recorded method call.
-  /// </summary>
   TMethodCall = class
   private
     FName: string;
@@ -86,15 +63,11 @@ type
     FVerified: Boolean;
   public
     constructor Create(const AName: string; const AArguments: TArray<TValue>);
-
     property Name: string read FName;
     property Arguments: TArray<TValue> read FArguments;
     property Verified: Boolean read FVerified write FVerified;
   end;
 
-  /// <summary>
-  ///   Mock interceptor that handles behavior setup and call verification.
-  /// </summary>
   TMockInterceptor = class(TInterfacedObject, IInterceptor)
   private
     FBehavior: TMockBehavior;
@@ -107,77 +80,72 @@ type
   public
     constructor Create(ABehavior: TMockBehavior);
     destructor Destroy; override;
-
+    procedure ClearInterceptors;
     procedure Intercept(const Invocation: IInvocation);
-
     procedure BeginSetup(ASetup: TMethodSetup);
     procedure BeginVerify(const ATimes: Times);
     procedure VerifyNoOtherCalls;
     procedure Reset;
-
     property Behavior: TMockBehavior read FBehavior write FBehavior;
     property State: TMockState read FState;
     property Setups: TObjectList<TMethodSetup> read FSetups;
     property ReceivedCalls: TObjectList<TMethodCall> read FReceivedCalls;
-    /// <summary>When true, calls the base implementation if no setup matches.</summary>
     property CallBase: Boolean read FCallBase write FCallBase;
   end;
 
-  /// <summary>
-  ///   Implementation of ISetup.
-  /// </summary>
   TSetup<T> = class(TInterfacedObject, ISetup<T>)
   private
+    FMock: IMock<T>;
     FInterceptor: TMockInterceptor;
     FProxy: T;
   public
-    constructor Create(AInterceptor: TMockInterceptor; const AProxy: T);
-
+    constructor Create(const AMock: IMock<T>; AInterceptor: TMockInterceptor; const AProxy: T);
     function Returns(const Value: TValue): IWhen<T>; overload;
     function Returns(const Values: TArray<TValue>): IWhen<T>; overload;
-    
     function ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<string>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<Boolean>): IWhen<T>; overload;
-    
     function Returns(Value: Integer): IWhen<T>; overload;
     function Returns(const Value: string): IWhen<T>; overload;
     function Returns(Value: Boolean): IWhen<T>; overload;
     function Returns(Value: Double): IWhen<T>; overload;
     function Returns(Value: Int64): IWhen<T>; overload;
-    
     function Throws(ExceptionClass: ExceptClass; const Msg: string = ''): IWhen<T>;
     function Executes(const Action: TProc<IInvocation>): IWhen<T>;
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
   end;
 
-  /// <summary>
-  ///   Implementation of IWhen.
-  /// </summary>
   TWhen<T> = class(TInterfacedObject, IWhen<T>)
   private
-    FProxyRef: IInterface;  // Holds ref to keep proxy alive (for interfaces)
+    FMock: IMock<T>;
+    FProxyRef: IInterface;
     FProxy: T;
   public
-    constructor Create(const AProxy: T);
+    constructor Create(const AMock: IMock<T>; const AProxy: T);
     function When: T;
   end;
 
-  /// <summary>
-  ///   Internal mock implementation.
-  /// </summary>
-  TMock<T> = class(TInterfacedObject, IMock<T>)
+  TMock<T> = class(TInterfacedObject, IMock, IMock<T>)
   private
     FInterceptorObj: TMockInterceptor;
     FInterceptor: IInterceptor;
     FInstance: T;
-    FClassProxy: TObject; // Keep alive for class proxies
+    FClassProxy: TClassProxy;
+    FOwnsProxy: Boolean;
   public
     constructor Create(ABehavior: TMockBehavior); overload;
     constructor Create(AInterceptor: TMockInterceptor); overload;
+    constructor Create(AInterceptor: TMockInterceptor; AClassProxy: TClassProxy; AOwnsProxy: Boolean); overload;
     destructor Destroy; override;
 
+    // IMock
+    function GetInstanceValue: TValue;
+    procedure Verify;
+    procedure VerifyNoOtherCalls;
+    procedure Reset;
+
+    // IMock<T>
     function GetInstance: T;
     function GetBehavior: TMockBehavior;
     procedure SetBehavior(Value: TMockBehavior);
@@ -185,9 +153,6 @@ type
     function Received: T; overload;
     function Received(const ATimes: Times): T; overload;
     function DidNotReceive: T;
-    procedure Reset;
-    procedure Verify;
-    procedure VerifyNoOtherCalls;
     procedure SetCallBase(Value: Boolean);
 
     property Instance: T read GetInstance;
@@ -196,8 +161,8 @@ type
 implementation
 
 uses
-  Dext.Interception.ClassProxy,
-  Dext.Mocks.Matching;
+  Dext.Mocks.Matching,
+  Dext.Interception.Proxy;
 
 { TMethodSetup }
 
@@ -212,32 +177,18 @@ function TMethodSetup.MatchesArguments(const Args: TArray<TValue>): Boolean;
 var
   I: Integer;
 begin
-  // If no matchers, match any arguments
-  if Length(FArgumentMatchers) = 0 then
-    Exit(True);
-
-  // If argument count doesn't match matchers, no match
-  if Length(Args) <> Length(FArgumentMatchers) then
-    Exit(False);
-
-  // Check each argument against its matcher
+  if Length(FArgumentMatchers) = 0 then Exit(True);
+  if Length(Args) <> Length(FArgumentMatchers) then Exit(False);
   for I := 0 to High(Args) do
-  begin
-    if Assigned(FArgumentMatchers[I]) and not FArgumentMatchers[I](Args[I]) then
-      Exit(False);
-  end;
-
+    if Assigned(FArgumentMatchers[I]) and not FArgumentMatchers[I](Args[I]) then Exit(False);
   Result := True;
 end;
 
 function TMethodSetup.GetNextReturnValue: TValue;
 begin
-  if Length(FReturnValues) = 0 then
-    Exit(TValue.Empty);
-
+  if Length(FReturnValues) = 0 then Exit(TValue.Empty);
   Result := FReturnValues[FCurrentValueIndex];
-  if FCurrentValueIndex < High(FReturnValues) then
-    Inc(FCurrentValueIndex);
+  if FCurrentValueIndex < High(FReturnValues) then Inc(FCurrentValueIndex);
 end;
 
 { TMethodCall }
@@ -272,66 +223,46 @@ procedure TMockInterceptor.Intercept(const Invocation: IInvocation);
 var
   MethodName: string;
   Setup: TMethodSetup;
-  CallCount: Integer;
+  I: Integer;
   MatchingCall: TMethodCall;
+  CallCount: Integer;
   Matchers: TArray<TPredicate<TValue>>;
+  AllMatch: Boolean;
 begin
   MethodName := Invocation.Method.Name;
-
   case FState of
     TMockState.Arranging:
     begin
-      // Capture method setup
       if Assigned(FPendingSetup) then
       begin
         FPendingSetup.FName := MethodName;
-        // Capture any argument matchers from thread-local stack
         Matchers := TMatcherFactory.GetMatchers;
-        if Length(Matchers) > 0 then
-          FPendingSetup.FArgumentMatchers := Matchers;
+        if Length(Matchers) > 0 then FPendingSetup.FArgumentMatchers := Matchers;
         FSetups.Add(FPendingSetup);
         FPendingSetup := nil;
       end;
       FState := TMockState.Acting;
     end;
-
     TMockState.Acting:
     begin
-      // Record the call
       FReceivedCalls.Add(TMethodCall.Create(MethodName, Copy(Invocation.Arguments)));
-
-      // Find matching setup (reverse order to use most recent)
-      for var I := FSetups.Count - 1 downto 0 do
+      for I := FSetups.Count - 1 downto 0 do
       begin
         Setup := FSetups[I];
         if SameText(Setup.Name, MethodName) and Setup.MatchesArguments(Invocation.Arguments) then
         begin
-          // Execute custom action if configured
-          if Assigned(Setup.Action) then
-            Setup.Action(Invocation);
-
-          // Throw exception if configured
-          if Setup.ExceptionClass <> nil then
-            raise Setup.ExceptionClass.Create(Setup.ExceptionMessage);
-
-          // Return configured value
+          if Assigned(Setup.Action) then Setup.Action(Invocation);
+          if Setup.ExceptionClass <> nil then raise Setup.ExceptionClass.Create(Setup.ExceptionMessage);
           Invocation.Result := Setup.GetNextReturnValue;
           Exit;
         end;
       end;
-
-      // No matching setup - handle based on behavior
-      if FBehavior = TMockBehavior.Strict then
-        raise EMockException.CreateFmt('Unexpected call to %s', [MethodName]);
-      // Loose: return default/empty value (already set by TValue.Empty)
+      if FBehavior = TMockBehavior.Strict then raise EMockException.CreateFmt('Unexpected call to %s', [MethodName]);
     end;
-
     TMockState.Asserting:
     begin
-      // Count matching calls
       CallCount := 0;
       Matchers := TMatcherFactory.GetMatchers;
-
       for MatchingCall in FReceivedCalls do
       begin
         if SameText(MatchingCall.Name, MethodName) then
@@ -343,17 +274,13 @@ begin
           end
           else
           begin
-            // Check if arguments match using matchers
-            var AllMatch := True;
-            for var I := 0 to High(Matchers) do
+            AllMatch := True;
+            for I := 0 to High(Matchers) do
             begin
-              if I < Length(MatchingCall.Arguments) then
+              if (I < Length(MatchingCall.Arguments)) and Assigned(Matchers[I]) and not Matchers[I](MatchingCall.Arguments[I]) then
               begin
-                if Assigned(Matchers[I]) and not Matchers[I](MatchingCall.Arguments[I]) then
-                begin
-                  AllMatch := False;
-                  Break;
-                end;
+                AllMatch := False;
+                Break;
               end;
             end;
             if AllMatch then
@@ -364,10 +291,7 @@ begin
           end;
         end;
       end;
-
       FState := TMockState.Acting;
-
-      // Verify count matches expectation
       if not FVerifyTimes.Matches(CallCount) then
         raise EMockException.Create(FVerifyTimes.ToString(CallCount) + ' for ' + MethodName);
     end;
@@ -391,10 +315,7 @@ var
   Call: TMethodCall;
 begin
   for Call in FReceivedCalls do
-  begin
-    if not Call.Verified then
-      raise EMockException.CreateFmt('Unverified call to %s', [Call.Name]);
-  end;
+    if not Call.Verified then raise EMockException.CreateFmt('Unverified call to %s', [Call.Name]);
 end;
 
 procedure TMockInterceptor.Reset;
@@ -405,33 +326,41 @@ begin
   FState := TMockState.Acting;
 end;
 
+procedure TMockInterceptor.ClearInterceptors;
+begin
+  FSetups.Clear;
+  FReceivedCalls.Clear;
+  FPendingSetup := nil;
+end;
+
 { TSetup<T> }
 
-constructor TSetup<T>.Create(AInterceptor: TMockInterceptor; const AProxy: T);
+constructor TSetup<T>.Create(const AMock: IMock<T>; AInterceptor: TMockInterceptor; const AProxy: T);
 begin
   inherited Create;
+  FMock := AMock;
   FInterceptor := AInterceptor;
   FProxy := AProxy;
 end;
 
 function TSetup<T>.Returns(const Value: TValue): IWhen<T>;
 var
-  Setup: TMethodSetup;
+  S: TMethodSetup;
 begin
-  Setup := TMethodSetup.Create('');
-  Setup.ReturnValues := [Value];
-  FInterceptor.BeginSetup(Setup);
-  Result := TWhen<T>.Create(FProxy);
+  S := TMethodSetup.Create('');
+  S.ReturnValues := [Value];
+  FInterceptor.BeginSetup(S);
+  Result := TWhen<T>.Create(FMock, FProxy);
 end;
 
 function TSetup<T>.Returns(const Values: TArray<TValue>): IWhen<T>;
 var
-  Setup: TMethodSetup;
+  S: TMethodSetup;
 begin
-  Setup := TMethodSetup.Create('');
-  Setup.ReturnValues := Values;
-  FInterceptor.BeginSetup(Setup);
-  Result := TWhen<T>.Create(FProxy);
+  S := TMethodSetup.Create('');
+  S.ReturnValues := Values;
+  FInterceptor.BeginSetup(S);
+  Result := TWhen<T>.Create(FMock, FProxy);
 end;
 
 function TSetup<T>.Returns(Value: Integer): IWhen<T>;
@@ -461,29 +390,26 @@ end;
 
 function TSetup<T>.Throws(ExceptionClass: ExceptClass; const Msg: string): IWhen<T>;
 var
-  Setup: TMethodSetup;
+  S: TMethodSetup;
 begin
-  Setup := TMethodSetup.Create('');
-  Setup.ExceptionClass := ExceptionClass;
-  Setup.ExceptionMessage := Msg;
-  FInterceptor.BeginSetup(Setup);
-  Result := TWhen<T>.Create(FProxy);
+  S := TMethodSetup.Create('');
+  S.ExceptionClass := ExceptionClass;
+  S.ExceptionMessage := Msg;
+  FInterceptor.BeginSetup(S);
+  Result := TWhen<T>.Create(FMock, FProxy);
 end;
 
 function TSetup<T>.Executes(const Action: TProc<IInvocation>): IWhen<T>;
 var
-  Setup: TMethodSetup;
+  S: TMethodSetup;
 begin
-  Setup := TMethodSetup.Create('');
-  Setup.Action := Action;
-  FInterceptor.BeginSetup(Setup);
-  Result := TWhen<T>.Create(FProxy);
+  S := TMethodSetup.Create('');
+  S.Action := Action;
+  FInterceptor.BeginSetup(S);
+  Result := TWhen<T>.Create(FMock, FProxy);
 end;
 
-function TSetup<T>.ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>;
-begin
-  Result := Returns(Values);
-end;
+function TSetup<T>.ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; begin Result := Returns(Values); end;
 
 function TSetup<T>.ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>;
 var
@@ -491,8 +417,7 @@ var
   I: Integer;
 begin
   SetLength(V, Length(Values));
-  for I := 0 to High(Values) do
-    V[I] := TValue.From<Integer>(Values[I]);
+  for I := 0 to High(Values) do V[I] := TValue.From<Integer>(Values[I]);
   Result := Returns(V);
 end;
 
@@ -502,8 +427,7 @@ var
   I: Integer;
 begin
   SetLength(V, Length(Values));
-  for I := 0 to High(Values) do
-    V[I] := TValue.From<string>(Values[I]);
+  for I := 0 to High(Values) do V[I] := TValue.From<string>(Values[I]);
   Result := Returns(V);
 end;
 
@@ -513,8 +437,7 @@ var
   I: Integer;
 begin
   SetLength(V, Length(Values));
-  for I := 0 to High(Values) do
-    V[I] := TValue.From<Boolean>(Values[I]);
+  for I := 0 to High(Values) do V[I] := TValue.From<Boolean>(Values[I]);
   Result := Returns(V);
 end;
 
@@ -522,47 +445,39 @@ function TSetup<T>.Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
 begin
   Result := Executes(procedure(Inv: IInvocation)
     begin
-      if Assigned(Action) then
-        Action(Inv.Arguments);
+      if Assigned(Action) then Action(Inv.Arguments);
     end);
 end;
 
 { TWhen<T> }
 
-constructor TWhen<T>.Create(const AProxy: T);
+constructor TWhen<T>.Create(const AMock: IMock<T>; const AProxy: T);
 begin
   inherited Create;
+  FMock := AMock;
   FProxy := AProxy;
-  if GetTypeKind(T) = tkInterface then
-    FProxyRef := PInterface(@AProxy)^
-  else
-    FProxyRef := nil;
+  if GetTypeKind(T) = tkInterface then FProxyRef := PInterface(@AProxy)^ else FProxyRef := nil;
 end;
 
-function TWhen<T>.When: T;
-begin
-  Result := FProxy;
-end;
+function TWhen<T>.When: T; begin Result := FProxy; end;
 
 { TMock<T> }
 
 constructor TMock<T>.Create(ABehavior: TMockBehavior);
 var
   Info: PTypeInfo;
+  Proxy: TClassProxy;
 begin
   inherited Create;
   FInterceptorObj := TMockInterceptor.Create(ABehavior);
   FInterceptor := FInterceptorObj;
-  FClassProxy := nil;
-  
   Info := TypeInfo(T);
+  FOwnsProxy := True;
   if Info.Kind = tkInterface then
-  begin
-    FInstance := TProxy.CreateInterface<T>(FInterceptor);
-  end
+    FInstance := TProxy.CreateInterface<T>(FInterceptor)
   else if Info.Kind = tkClass then
   begin
-    var Proxy := TClassProxy.Create(GetTypeData(Info).ClassType, [FInterceptor]);
+    Proxy := TClassProxy.Create(Info.TypeData.ClassType, [FInterceptor]);
     FClassProxy := Proxy;
     FInstance := TValue.From(Proxy.Instance).AsType<T>;
   end
@@ -573,29 +488,58 @@ end;
 constructor TMock<T>.Create(AInterceptor: TMockInterceptor);
 var
   Info: PTypeInfo;
+  Proxy: TClassProxy;
 begin
   inherited Create;
   FInterceptorObj := AInterceptor;
   FInterceptor := FInterceptorObj;
-  FClassProxy := nil;
-  
   Info := TypeInfo(T);
+  FOwnsProxy := True;
   if Info.Kind = tkInterface then
-  begin
-    FInstance := TProxy.CreateInterface<T>(FInterceptor);
-  end
+    FInstance := TProxy.CreateInterface<T>(FInterceptor)
   else if Info.Kind = tkClass then
   begin
-    var Proxy := TClassProxy.Create(GetTypeData(Info).ClassType, [FInterceptor]);
+    Proxy := TClassProxy.Create(Info.TypeData.ClassType, [FInterceptor]);
     FClassProxy := Proxy;
     FInstance := TValue.From(Proxy.Instance).AsType<T>;
   end;
 end;
 
+constructor TMock<T>.Create(AInterceptor: TMockInterceptor; AClassProxy: TClassProxy; AOwnsProxy: Boolean);
+begin
+  inherited Create;
+  FInterceptorObj := AInterceptor;
+  FInterceptor := FInterceptorObj;
+  FClassProxy := AClassProxy;
+  FOwnsProxy := AOwnsProxy;
+  FInstance := TValue.From(FClassProxy.Instance).AsType<T>;
+end;
+
 destructor TMock<T>.Destroy;
 begin
-  FClassProxy.Free;
+  if FOwnsProxy then 
+    FreeAndNil(FClassProxy);
   inherited;
+end;
+
+
+function TMock<T>.GetInstanceValue: TValue;
+begin
+  Result := TValue.From<T>(FInstance);
+end;
+
+procedure TMock<T>.Verify;
+begin
+end;
+
+procedure TMock<T>.VerifyNoOtherCalls;
+begin
+  FInterceptorObj.VerifyNoOtherCalls;
+end;
+
+procedure TMock<T>.Reset;
+begin
+  FInterceptorObj.Reset;
 end;
 
 function TMock<T>.GetInstance: T;
@@ -615,7 +559,7 @@ end;
 
 function TMock<T>.Setup: ISetup<T>;
 begin
-  Result := TSetup<T>.Create(FInterceptorObj, FInstance);
+  Result := TSetup<T>.Create(Self, FInterceptorObj, FInstance);
 end;
 
 function TMock<T>.Received: T;
@@ -632,22 +576,6 @@ end;
 function TMock<T>.DidNotReceive: T;
 begin
   Result := Received(Times.Never);
-end;
-
-procedure TMock<T>.Reset;
-begin
-  FInterceptorObj.Reset;
-end;
-
-procedure TMock<T>.Verify;
-begin
-  // All setups should have been called at least once
-  // (For strict mode verification)
-end;
-
-procedure TMock<T>.VerifyNoOtherCalls;
-begin
-  FInterceptorObj.VerifyNoOtherCalls;
 end;
 
 procedure TMock<T>.SetCallBase(Value: Boolean);

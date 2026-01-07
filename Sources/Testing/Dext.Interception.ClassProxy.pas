@@ -46,6 +46,7 @@ type
     FInstance: TObject;
     FInterceptors: TArray<IInterceptor>;
     FOwnsInstance: Boolean;
+    FInstanceIsDead: Boolean;
     
     procedure DoBefore(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; out DoInvoke: Boolean; out Result: TValue);
@@ -57,6 +58,7 @@ type
     /// </summary>
     constructor Create(AClass: TClass; const AInterceptors: TArray<IInterceptor>; AOwnsInstance: Boolean = True);
     destructor Destroy; override;
+    procedure Unproxify;
     
     property Instance: TObject read FInstance;
     property OwnsInstance: Boolean read FOwnsInstance write FOwnsInstance;
@@ -86,17 +88,33 @@ begin
   FVMI.Proxify(FInstance);
 end;
 
+procedure TClassProxy.Unproxify;
+begin
+  if Assigned(FVMI) and not FInstanceIsDead then
+  begin
+    // TVirtualMethodInterceptor will revert the VTable in its destructor.
+    // However, if the instance is already dead, this would crash.
+    if Assigned(FInstance) and not FInstanceIsDead then
+      FreeAndNil(FVMI)
+    else
+      FVMI := nil; // Just leak it or hope it doesn't crash? 
+                   // Actually, we must free it as a TObject to avoid VMT revert if instance is dead.
+  end;
+end;
+
 destructor TClassProxy.Destroy;
 begin
-  if FVMI <> nil then
+  if not FInstanceIsDead then
   begin
-    // Safely un-proxify before destruction?
-    // Unproxify reverts VTable. Not strictly needed if instance acts as mock until death.
-    FVMI.Free;
-  end;
-  
-  if FOwnsInstance then
-    FInstance.Free;
+    // Important: Free the interceptor FIRST while memory is valid to revert VTable
+    FreeAndNil(FVMI);
+    
+    if FOwnsInstance and Assigned(FInstance) then
+      FreeAndNil(FInstance);
+  end
+  else
+    FreeAndNil(FVMI); // Memory is already dead/vmt reverted or we don't care
+
   inherited;
 end;
 
@@ -105,6 +123,18 @@ procedure TClassProxy.DoBefore(Instance: TObject; Method: TRttiMethod;
 var
   Invocation: IInvocation;
 begin
+  // Don't intercept TObject methods (lifecycle, etc.)
+  if Method.Parent.AsInstance.MetaclassType = TObject then
+  begin
+    if SameText(Method.Name, 'BeforeDestruction') then
+    begin
+      FInstanceIsDead := True;
+      FOwnsInstance := False;
+    end;
+    DoInvoke := True;
+    Exit;
+  end;
+
   // Create invocation wrapper
   Invocation := TInvocation.Create(Method, Args, FInterceptors, Instance);
   
@@ -115,7 +145,6 @@ begin
   Result := Invocation.Result;
   
   // Suppress original execution (Loose mock behavior)
-  // TODO: Support CallBase via behavior config
   DoInvoke := False;
 end;
 

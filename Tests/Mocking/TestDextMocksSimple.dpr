@@ -17,6 +17,7 @@ uses
   Dext.Mocks.Matching;
 
 type
+  {$M+}
   ICalculator = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
     function Add(A, B: Integer): Integer;

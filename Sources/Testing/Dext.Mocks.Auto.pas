@@ -18,13 +18,7 @@
 {           License.                                                        }
 {                                                                           }
 {***************************************************************************}
-{                                                                           }
-{  Author:  Cesar Romero                                                    }
-{  Created: 2026-01-03                                                      }
-{                                                                           }
-{  Dext.Mocks.Auto - Auto-mocking container for constructor injection.      }
-{                                                                           }
-{***************************************************************************}
+
 unit Dext.Mocks.Auto;
 
 interface
@@ -41,28 +35,17 @@ uses
   Dext.Mocks.Interceptor;
 
 type
-  /// <summary>
-  ///   Container that automatically creates and injects mocks into the constructor
-  ///   of the system under test (SUT).
-  /// </summary>
   TAutoMocker = class
   private
     FInterceptors: TDictionary<PTypeInfo, IInterceptor>;
-    FClassProxies: TObjectList<TObject>;
+    FClassProxies: TObjectDictionary<PTypeInfo, TObject>; // OwnsProxies
+    FMocks: TDictionary<PTypeInfo, IMock>;
     FContext: TRttiContext;
-    function GetMockInterceptor(TypeInfo: PTypeInfo): TMockInterceptor;
+    function GetMockInterceptor(Info: PTypeInfo): IInterceptor;
   public
     constructor Create;
     destructor Destroy; override;
-
-    /// <summary>
-    ///   Creates an instance of T, automatically injecting mocks for all interface parameters.
-    /// </summary>
     function CreateInstance<T: class>: T;
-
-    /// <summary>
-    ///   Retrieves the mock instance for a specific interface type used in injection.
-    /// </summary>
     function GetMock<T>: Mock<T>;
   end;
 
@@ -73,69 +56,77 @@ implementation
 constructor TAutoMocker.Create;
 begin
   FInterceptors := TDictionary<PTypeInfo, IInterceptor>.Create;
-  FClassProxies := TObjectList<TObject>.Create(True); // Owns proxies
+  FClassProxies := TObjectDictionary<PTypeInfo, TObject>.Create([doOwnsValues]);
+  FMocks := TDictionary<PTypeInfo, IMock>.Create;
   FContext := TRttiContext.Create;
 end;
 
 destructor TAutoMocker.Destroy;
 begin
+  FMocks.Free;
   FClassProxies.Free;
   FInterceptors.Free;
   FContext.Free;
   inherited;
 end;
 
-function TAutoMocker.GetMockInterceptor(TypeInfo: PTypeInfo): TMockInterceptor;
-var
-  Intf: IInterceptor;
-  Obj: TMockInterceptor;
+function TAutoMocker.GetMockInterceptor(Info: PTypeInfo): IInterceptor;
 begin
-  if FInterceptors.TryGetValue(TypeInfo, Intf) then
-    Exit(Intf as TMockInterceptor);
-
-  // Create new interceptor with Loose behavior (returns defaults)
-  Obj := TMockInterceptor.Create(TMockBehavior.Loose);
-  Intf := Obj; // Interface reference needed for storage
-  FInterceptors.Add(TypeInfo, Intf);
-  Result := Obj;
+  if not FInterceptors.TryGetValue(Info, Result) then
+  begin
+    Result := TMockInterceptor.Create(TMockBehavior.Loose);
+    FInterceptors.Add(Info, Result);
+  end;
 end;
 
 function TAutoMocker.GetMock<T>: Mock<T>;
 var
   Info: PTypeInfo;
-  Interceptor: TMockInterceptor;
+  MockRef: IMock;
+  Interceptor: IInterceptor;
+  CProxy: TObject;
 begin
   Info := TypeInfo(T);
   if not (Info.Kind in [tkInterface, tkClass]) then
     raise Exception.Create('T must be an interface or class');
+    
+  if FMocks.TryGetValue(Info, MockRef) then
+    Exit(Mock<T>.FromInterface(MockRef as IMock<T>));
 
   Interceptor := GetMockInterceptor(Info);
-  
-  // This creates a new proxy instance connected to the same interceptor
-  Result := Mock<T>.Create(Interceptor);
+  if Info.Kind = tkClass then
+  begin
+    if not FClassProxies.TryGetValue(Info, CProxy) then
+    begin
+      CProxy := TClassProxy.Create(Info.TypeData.ClassType, [Interceptor], False);
+      FClassProxies.Add(Info, CProxy);
+    end;
+    Result := Mock<T>.FromInterface(TMock<T>.Create(TMockInterceptor(Interceptor), TClassProxy(CProxy), False));
+  end
+  else
+    Result := Mock<T>.FromInterface(TMock<T>.Create(TMockInterceptor(Interceptor)));
+
+  FMocks.Add(Info, Result.ProxyInterface);
 end;
 
 function TAutoMocker.CreateInstance<T>: T;
 var
   RttiType: TRttiType;
-  Method: TRttiMethod;
-  ConstructorMethod: TRttiMethod;
+  Method, ConstructorMethod: TRttiMethod;
   Params: TArray<TRttiParameter>;
   Args: TArray<TValue>;
-  I: Integer;
   ParamType: TRttiType;
+  ParamInfo: PTypeInfo;
   Interceptor: IInterceptor;
+  CProxy: TObject;
   ProxyObj: TInterfaceProxy;
   ProxyIntf: IInterface;
-  ParamInfo: PTypeInfo;
-  GuidValue: TGUID;
-  ObjRef: Pointer;
+  I: Integer;
 begin
   RttiType := FContext.GetType(TypeInfo(T));
   if RttiType = nil then
     raise Exception.Create('Type not found in RTTI: ' + T.ClassName);
 
-  // Find constructor with most parameters
   ConstructorMethod := nil;
   for Method in RttiType.GetMethods do
   begin
@@ -155,37 +146,29 @@ begin
   for I := 0 to High(Params) do
   begin
     ParamType := Params[I].ParamType;
-    if ParamType.TypeKind = tkInterface then
+    ParamInfo := ParamType.Handle;
+    if (ParamType.TypeKind in [tkInterface, tkClass]) then
     begin
-       ParamInfo := ParamType.Handle;
        Interceptor := GetMockInterceptor(ParamInfo);
-       
-       // Create Proxy manually
-       ProxyObj := TInterfaceProxy.Create(ParamInfo, [Interceptor], TValue.Empty);
-       
-       // Get Interface
-       GuidValue := ParamInfo.TypeData.Guid;
-       if ProxyObj.QueryInterface(GuidValue, ProxyIntf) <> S_OK then
-         raise Exception.Create('Failed to query interface for mock: ' + ParamType.Name);
-         
-       Args[I] := TValue.From(ParamInfo, ProxyIntf);
-    end
-    else if ParamType.TypeKind = tkClass then
-    begin
-       ParamInfo := ParamType.Handle;
-       Interceptor := GetMockInterceptor(ParamInfo);
-       
-       // Create Class Proxy
-       // OwnsInstance=False because usually SUT takes ownership of dependencies injected into constructor.
-       var CProxy := TClassProxy.Create(ParamInfo.TypeData.ClassType, [Interceptor], False);
-       FClassProxies.Add(CProxy);
-       
-       ObjRef := CProxy.Instance;
-       TValue.Make(@ObjRef, ParamInfo, Args[I]);
+       if ParamType.TypeKind = tkClass then
+       begin
+         if not FClassProxies.TryGetValue(ParamInfo, CProxy) then
+         begin
+           CProxy := TClassProxy.Create(ParamInfo.TypeData.ClassType, [Interceptor], False);
+           FClassProxies.Add(ParamInfo, CProxy);
+         end;
+         Args[I] := TValue.From<TObject>(TClassProxy(CProxy).Instance);
+       end
+       else
+       begin
+         ProxyObj := TInterfaceProxy.Create(ParamInfo, [Interceptor], TValue.Empty);
+         if ProxyObj.QueryInterface(ParamInfo.TypeData.Guid, ProxyIntf) <> S_OK then
+           raise Exception.Create('Failed to query interface for mock: ' + ParamType.Name);
+         Args[I] := TValue.From(ParamInfo, ProxyIntf);
+       end;
     end
     else
     begin
-       // Use default value for non-interface types
        Args[I] := TValue.FromOrdinal(ParamType.Handle, 0); 
     end;
   end;

@@ -18,23 +18,7 @@
 {           License.                                                        }
 {                                                                           }
 {***************************************************************************}
-{                                                                           }
-{  Author:  Cesar Romero                                                    }
-{  Created: 2026-01-03                                                      }
-{                                                                           }
-{  Dext.Mocks - Mocking framework inspired by Moq (.NET)                    }
-{                                                                           }
-{  Usage:                                                                   }
-{    var                                                                    }
-{      Calculator: Mock<ICalculator>;                                       }
-{    begin                                                                  }
-{      Calculator := Mock<ICalculator>.Create;                              }
-{      Calculator.Setup.Returns(42).When.Add(Arg.Any<Integer>, 10);         }
-{      SafeWriteLn(Calculator.Instance.Add(5, 10)); // 42                   }
-{      Calculator.Received(Times.Once).Add(5, 10);                          }
-{    end;                                                                   }
-{                                                                           }
-{***************************************************************************}
+
 unit Dext.Mocks;
 
 interface
@@ -47,24 +31,10 @@ uses
   Dext.Interception;
 
 type
-  /// <summary>
-  ///   Exception raised for mock-related errors.
-  /// </summary>
   EMockException = class(Exception);
 
-  /// <summary>
-  ///   Mock behavior mode.
-  /// </summary>
-  TMockBehavior = (
-    /// <summary>Never throws for unexpected calls, returns default values.</summary>
-    Loose,
-    /// <summary>Throws for any call that wasn't explicitly set up.</summary>
-    Strict
-  );
+  TMockBehavior = (Loose, Strict);
 
-  /// <summary>
-  ///   Specifies the number of times a method should be called.
-  /// </summary>
   Times = record
   private
     FMin: Integer;
@@ -78,21 +48,28 @@ type
     class function AtMost(Count: Integer): Times; static;
     class function Exactly(Count: Integer): Times; static;
     class function Between(Min, Max: Integer): Times; static;
-
     function Matches(Count: Integer): Boolean;
     function ToString(ActualCount: Integer): string;
   end;
 
-  // Forward declarations
-  // Forward declarations
-  IMock<T> = interface;
   ISetup<T> = interface;
   IWhen<T> = interface;
 
   /// <summary>
-  ///   Internal mock interface.
+  ///   Base non-generic mock interface.
   /// </summary>
-  IMock<T> = interface
+  IMock = interface
+    ['{C6D7E8F9-0A1B-2C3D-4E5F-6A7B8C9D0E1F}']
+    function GetInstanceValue: TValue;
+    procedure Verify;
+    procedure VerifyNoOtherCalls;
+    procedure Reset;
+  end;
+
+  /// <summary>
+  ///   Generic mock interface.
+  /// </summary>
+  IMock<T> = interface(IMock)
     ['{D7E8F9A0-1B2C-3D4E-5F6A-7B8C9D0E1F2A}']
     function GetInstance: T;
     function GetBehavior: TMockBehavior;
@@ -101,103 +78,58 @@ type
     function Received: T; overload;
     function Received(const ATimes: Times): T; overload;
     function DidNotReceive: T;
-    procedure Reset;
-    procedure Verify;
-    procedure VerifyNoOtherCalls;
     procedure SetCallBase(Value: Boolean);
 
     property Instance: T read GetInstance;
     property Behavior: TMockBehavior read GetBehavior write SetBehavior;
   end;
 
-  /// <summary>
-  ///   Setup interface for configuring mock behavior.
-  /// </summary>
   ISetup<T> = interface
     ['{E8F9A0B1-2C3D-4E5F-6A7B-8C9D0E1F2A3B}']
-    /// <summary>Configure the mock to return a specific value.</summary>
     function Returns(const Value: TValue): IWhen<T>; overload;
-    /// <summary>Configure the mock to return multiple values in sequence.</summary>
     function ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<string>): IWhen<T>; overload;
     function ReturnsInSequence(const Values: TArray<Boolean>): IWhen<T>; overload;
-    
-    // Typed overloads for common types (avoid TValue.From<T>)
-    /// <summary>Configure the mock to return an integer value.</summary>
     function Returns(Value: Integer): IWhen<T>; overload;
-    /// <summary>Configure the mock to return a string value.</summary>
     function Returns(const Value: string): IWhen<T>; overload;
-    /// <summary>Configure the mock to return a boolean value.</summary>
     function Returns(Value: Boolean): IWhen<T>; overload;
-    /// <summary>Configure the mock to return a double value.</summary>
     function Returns(Value: Double): IWhen<T>; overload;
-    /// <summary>Configure the mock to return an Int64 value.</summary>
     function Returns(Value: Int64): IWhen<T>; overload;
-    
-    /// <summary>Configure the mock to throw an exception.</summary>
     function Throws(ExceptionClass: ExceptClass; const Msg: string = ''): IWhen<T>;
-    /// <summary>Configure the mock to execute a custom action with full invocation context.</summary>
     function Executes(const Action: TProc<IInvocation>): IWhen<T>;
-    /// <summary>Configure the mock to execute a custom callback with arguments.</summary>
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
   end;
 
-  /// <summary>
-  ///   When interface - chain to specify which method call triggers the behavior.
-  /// </summary>
   IWhen<T> = interface
     ['{F9A0B1C2-3D4E-5F6A-7B8C-9D0E1F2A3B4C}']
-    /// <summary>Returns the mock for calling the method to set up.</summary>
     function When: T;
   end;
 
-  /// <summary>
-  ///   Main mock record with fluent API inspired by Moq.
-  /// </summary>
   Mock<T> = record
   private
     FMock: IMock<T>;
     procedure EnsureCreated;
     function GetInstance: T;
   public
-    /// <summary>Creates a new mock with the specified behavior.</summary>
     class function Create(Behavior: TMockBehavior = TMockBehavior.Loose): Mock<T>; overload; static;
     class function Create(Interceptor: TObject): Mock<T>; overload; static;
+    class function FromInterface(const Intf: IMock<T>): Mock<T>; static;
 
-    /// <summary>The mock instance - use this with your SUT.</summary>
     property Instance: T read GetInstance;
-
-    /// <summary>Configure mock behavior.</summary>
     function Setup: ISetup<T>;
-
-    /// <summary>Verify the method was called (default: at least once).</summary>
     function Received: T; overload;
-    /// <summary>Verify the method was called a specific number of times.</summary>
     function Received(const ATimes: Times): T; overload;
-    /// <summary>Verify the method was never called.</summary>
     function DidNotReceive: T;
-
-    /// <summary>Reset all setups and recorded calls.</summary>
     procedure Reset;
-
-    /// <summary>Verify all expectations were met.</summary>
     procedure Verify; overload;
-
-    /// <summary>Verify the method was called a specific number of times (Alias for Received).</summary>
     function Verify(const ATimes: Times): T; overload;
-    
-    /// <summary>Verify no other calls were made besides those already verified.</summary>
     procedure VerifyNoOtherCalls;
-    
-    /// <summary>Enable calling the base implementation for methods without setups (class mocks only).</summary>
     function CallsBaseForUnconfiguredMembers: Mock<T>;
 
-    /// <summary>Allows using mock directly where T is expected.</summary>
     class operator Implicit(const AMock: Mock<T>): T;
-
-    /// <summary>Access to the mock object for verification (Moq-style .Object).</summary>
     property Object_: T read GetInstance;
+    function ProxyInterface: IMock<T>;
   end;
 
 implementation
@@ -209,51 +141,37 @@ uses
 
 class function Times.Never: Times;
 begin
-  Result.FMin := 0;
-  Result.FMax := 0;
-  Result.FDescription := 'never';
+  Result.FMin := 0; Result.FMax := 0; Result.FDescription := 'never';
 end;
 
 class function Times.Once: Times;
 begin
-  Result.FMin := 1;
-  Result.FMax := 1;
-  Result.FDescription := 'once';
+  Result.FMin := 1; Result.FMax := 1; Result.FDescription := 'once';
 end;
 
 class function Times.AtLeastOnce: Times;
 begin
-  Result.FMin := 1;
-  Result.FMax := MaxInt;
-  Result.FDescription := 'at least once';
+  Result.FMin := 1; Result.FMax := MaxInt; Result.FDescription := 'at least once';
 end;
 
 class function Times.AtLeast(Count: Integer): Times;
 begin
-  Result.FMin := Count;
-  Result.FMax := MaxInt;
-  Result.FDescription := Format('at least %d times', [Count]);
+  Result.FMin := Count; Result.FMax := MaxInt; Result.FDescription := Format('at least %d times', [Count]);
 end;
 
 class function Times.AtMost(Count: Integer): Times;
 begin
-  Result.FMin := 0;
-  Result.FMax := Count;
-  Result.FDescription := Format('at most %d times', [Count]);
+  Result.FMin := 0; Result.FMax := Count; Result.FDescription := Format('at most %d times', [Count]);
 end;
 
 class function Times.Exactly(Count: Integer): Times;
 begin
-  Result.FMin := Count;
-  Result.FMax := Count;
-  Result.FDescription := Format('exactly %d times', [Count]);
+  Result.FMin := Count; Result.FMax := Count; Result.FDescription := Format('exactly %d times', [Count]);
 end;
 
 class function Times.Between(Min, Max: Integer): Times;
 begin
-  Result.FMin := Min;
-  Result.FMax := Max;
-  Result.FDescription := Format('between %d and %d times', [Min, Max]);
+  Result.FMin := Min; Result.FMax := Max; Result.FDescription := Format('between %d and %d times', [Min, Max]);
 end;
 
 function Times.Matches(Count: Integer): Boolean;
@@ -276,6 +194,11 @@ end;
 class function Mock<T>.Create(Interceptor: TObject): Mock<T>;
 begin
   Result.FMock := TMock<T>.Create(TMockInterceptor(Interceptor));
+end;
+
+class function Mock<T>.FromInterface(const Intf: IMock<T>): Mock<T>;
+begin
+  Result.FMock := Intf;
 end;
 
 procedure Mock<T>.EnsureCreated;
@@ -316,38 +239,37 @@ end;
 
 procedure Mock<T>.Reset;
 begin
-  if FMock <> nil then
-    FMock.Reset;
+  if FMock <> nil then FMock.Reset;
 end;
 
 procedure Mock<T>.Verify;
 begin
-  EnsureCreated;
-  FMock.Verify;
+  EnsureCreated; FMock.Verify;
 end;
 
 function Mock<T>.Verify(const ATimes: Times): T;
 begin
-  EnsureCreated;
-  Result := FMock.Received(ATimes);
+  EnsureCreated; Result := FMock.Received(ATimes);
 end;
 
 procedure Mock<T>.VerifyNoOtherCalls;
 begin
-  EnsureCreated;
-  FMock.VerifyNoOtherCalls;
+  EnsureCreated; FMock.VerifyNoOtherCalls;
 end;
 
 function Mock<T>.CallsBaseForUnconfiguredMembers: Mock<T>;
 begin
-  EnsureCreated;
-  FMock.SetCallBase(True);
-  Result := Self;
+  EnsureCreated; FMock.SetCallBase(True); Result := Self;
 end;
 
 class operator Mock<T>.Implicit(const AMock: Mock<T>): T;
 begin
   Result := AMock.Instance;
+end;
+
+function Mock<T>.ProxyInterface: IMock<T>;
+begin
+  EnsureCreated; Result := FMock;
 end;
 
 end.

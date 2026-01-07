@@ -5,11 +5,13 @@ program TestSequenceAndCallback;
 uses
   System.SysUtils,
   System.Rtti,
+  Dext.Utils,
   Dext.Mocks,
   Dext.Mocks.Matching,
   Dext.Assertions;
 
 type
+  {$M+}
   ICalculator = interface
     ['{20B11EE2-7F01-4470-9883-8472570F4229}']
     function Add(A, B: Integer): Integer;
@@ -118,4 +120,5 @@ begin
     on E: Exception do
       WriteLn(E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

@@ -371,7 +371,7 @@ end;
 
 class operator BooleanExpression.BitwiseXor(const Left, Right: BooleanExpression): BooleanExpression;
 begin
-  Result := LogicalXor(Left, Right);
+  Result := Left xor Right;
 end;
 
 class operator BooleanExpression.LogicalNot(const Value: BooleanExpression): BooleanExpression;
@@ -682,11 +682,6 @@ begin
   Result := RHS + LHS;
 end;
 
-class operator Prop<T>.Add(const LHS: T; const RHS: Prop<T>): Prop<T>;
-begin
-  Result := RHS + LHS;
-end;
-
 class operator Prop<T>.Subtract(const LHS: Prop<T>; const RHS: T): Prop<T>;
 begin
   if LHS.IsQueryMode then
@@ -707,19 +702,6 @@ begin
   else
   begin
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
-    var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
-    Result.FInfo := nil;
-  end;
-end;
-
-class operator Prop<T>.Subtract(const LHS: T; const RHS: Prop<T>): Prop<T>;
-begin
-  if RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(TLiteralExpression.Create(TValue.From<T>(LHS)), RHS.GetExpression, aoSubtract))
-  else
-  begin
-    var V1: Variant := TValue.From<T>(LHS).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
     Result.FInfo := nil;
@@ -770,11 +752,6 @@ begin
   Result := RHS * LHS;
 end;
 
-class operator Prop<T>.Multiply(const LHS: T; const RHS: Prop<T>): Prop<T>;
-begin
-  Result := RHS * LHS;
-end;
-
 class operator Prop<T>.Divide(const LHS: Prop<T>; const RHS: T): Prop<T>;
 begin
   if LHS.IsQueryMode then
@@ -795,19 +772,6 @@ begin
   else
   begin
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
-    var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
-    Result.FInfo := nil;
-  end;
-end;
-
-class operator Prop<T>.Divide(const LHS: T; const RHS: Prop<T>): Prop<T>;
-begin
-  if RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(TLiteralExpression.Create(TValue.From<T>(LHS)), RHS.GetExpression, aoDivide))
-  else
-  begin
-    var V1: Variant := TValue.From<T>(LHS).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
     Result.FInfo := nil;
