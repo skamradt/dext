@@ -1,0 +1,156 @@
+# Querying
+
+Fluent query API for retrieving data.
+
+## Basic Queries
+
+### Get All
+
+```pascal
+var Users := Context.Users.ToList;
+```
+
+### Find by ID
+
+```pascal
+var User := Context.Users.Find(1);
+if User <> nil then
+  WriteLn('Found: ', User.Name);
+```
+
+### First / FirstOrDefault
+
+```pascal
+// Throws if not found
+var User := Context.Users.First;
+
+// Returns nil if not found
+var User := Context.Users.FirstOrDefault;
+```
+
+## Filtering (Where)
+
+### Lambda Expression
+
+```pascal
+var ActiveUsers := Context.Users
+  .Where(function(U: TUser): Boolean
+    begin
+      Result := U.IsActive;
+    end)
+  .ToList;
+```
+
+### Smart Properties (Recommended)
+
+```pascal
+var ActiveUsers := Context.Users
+  .Where(TUser.Props.IsActive = True)
+  .ToList;
+
+// Multiple conditions
+var Results := Context.Users
+  .Where(
+    (TUser.Props.Age >= 18) and 
+    (TUser.Props.Status = 'active')
+  )
+  .ToList;
+```
+
+## Ordering
+
+```pascal
+// Ascending
+var Users := Context.Users
+  .OrderBy(TUser.Props.Name)
+  .ToList;
+
+// Descending
+var Users := Context.Users
+  .OrderByDescending(TUser.Props.CreatedAt)
+  .ToList;
+
+// Multiple columns
+var Users := Context.Users
+  .OrderBy(TUser.Props.LastName)
+  .ThenBy(TUser.Props.FirstName)
+  .ToList;
+```
+
+## Pagination
+
+```pascal
+var Page := Context.Users
+  .OrderBy(TUser.Props.Id)
+  .Skip(20)   // Skip first 20
+  .Take(10)   // Take next 10
+  .ToList;
+```
+
+## Projection (Select)
+
+```pascal
+type
+  TUserDto = record
+    Name: string;
+    Email: string;
+  end;
+
+var Dtos := Context.Users
+  .Select<TUserDto>(function(U: TUser): TUserDto
+    begin
+      Result.Name := U.Name;
+      Result.Email := U.Email;
+    end)
+  .ToList;
+```
+
+## Aggregates
+
+```pascal
+// Count
+var Total := Context.Users.Count;
+var ActiveCount := Context.Users
+  .Where(TUser.Props.IsActive = True)
+  .Count;
+
+// Any / Exists
+var HasAdmin := Context.Users
+  .Where(TUser.Props.Role = 'admin')
+  .Any;
+```
+
+## Raw SQL
+
+For complex queries:
+
+```pascal
+var Users := Context.FromSql<TUser>(
+  'SELECT * FROM users WHERE created_at > $1',
+  [DateToISO(Yesterday)]
+).ToList;
+```
+
+## Query Execution
+
+Queries are lazy - executed only when you:
+
+| Method | Effect |
+|--------|--------|
+| `.ToList` | Execute and return list |
+| `.First` / `.FirstOrDefault` | Execute and return one |
+| `.Count` | Execute and return count |
+| `.Any` | Execute and return boolean |
+| `.Find(id)` | Execute and return by PK |
+
+```pascal
+// Query NOT executed yet
+var Query := Context.Users.Where(TUser.Props.Age > 18);
+
+// Query executed HERE
+var Users := Query.ToList;
+```
+
+---
+
+[← Entities](entities.md) | [Next: Smart Properties →](smart-properties.md)

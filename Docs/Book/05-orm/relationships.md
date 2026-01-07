@@ -1,0 +1,162 @@
+# Relationships
+
+Define relationships between entities with lazy loading support.
+
+## One-to-Many (1:N)
+
+A user has many orders:
+
+```pascal
+type
+  TUser = class;
+  
+  [Table('orders')]
+  TOrder = class
+  private
+    FId: Integer;
+    FUserId: Integer;
+    FUser: ILazy<TUser>;
+    function GetUser: TUser;
+    procedure SetUser(Value: TUser);
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    
+    [ForeignKey('user_id')]
+    property UserId: Integer read FUserId write FUserId;
+    
+    // Lazy-loaded navigation
+    property User: TUser read GetUser write SetUser;
+  end;
+  
+  [Table('users')]
+  TUser = class
+  private
+    FId: Integer;
+    FName: string;
+    FOrders: ILazy<TList<TOrder>>;
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
+    
+    [InverseProperty('User')]
+    property Orders: TList<TOrder> read GetOrders;
+  end;
+```
+
+## Lazy Loading
+
+Navigation properties are loaded on first access:
+
+```pascal
+var Order := Context.Orders.Find(1);
+
+// User NOT loaded yet
+WriteLn('Order ID: ', Order.Id);
+
+// User loaded HERE (on first access)
+WriteLn('User: ', Order.User.Name);
+```
+
+### ILazy<T> Implementation
+
+```pascal
+function TOrder.GetUser: TUser;
+begin
+  if FUser = nil then
+    FUser := TLazy<TUser>.Create;
+  Result := FUser.Value;  // Loads from DB if needed
+end;
+
+procedure TOrder.SetUser(Value: TUser);
+begin
+  if FUser = nil then
+    FUser := TLazy<TUser>.Create;
+  FUser.Value := Value;
+  if Value <> nil then
+    FUserId := Value.Id;
+end;
+```
+
+## Many-to-One (N:1)
+
+Many orders belong to one user (inverse of above):
+
+```pascal
+[Table('orders')]
+TOrder = class
+public
+  [ForeignKey('user_id')]
+  property User: TUser read GetUser write SetUser;
+end;
+```
+
+## One-to-One (1:1)
+
+User has one profile:
+
+```pascal
+[Table('profiles')]
+TProfile = class
+public
+  [PK]  // Same ID as User (shared primary key)
+  property UserId: Integer;
+  
+  [ForeignKey('user_id')]
+  property User: TUser;
+end;
+
+[Table('users')]
+TUser = class
+public
+  property Profile: TProfile;
+end;
+```
+
+## Include (Eager Loading)
+
+Load related entities upfront to avoid N+1 queries:
+
+```pascal
+// Without Include: N+1 queries
+var Orders := Context.Orders.ToList;
+for var O in Orders do
+  WriteLn(O.User.Name);  // Each access = 1 query!
+
+// With Include: 2 queries total
+var Orders := Context.Orders
+  .Include('User')
+  .ToList;
+for var O in Orders do
+  WriteLn(O.User.Name);  // Already loaded!
+```
+
+### Multiple Includes
+
+```pascal
+var Orders := Context.Orders
+  .Include('User')
+  .Include('Items')
+  .Include('Items.Product')  // Nested
+  .ToList;
+```
+
+## Cascade Delete
+
+Configure cascade behavior:
+
+```pascal
+[ForeignKey('user_id'), OnDeleteCascade]
+property UserId: Integer;
+
+// Or in fluent mapping
+Builder.Entity<TOrder>
+  .HasOne('User')
+  .WithMany('Orders')
+  .OnDeleteCascade;
+```
+
+---
+
+[← Specifications](specifications.md) | [Next: Migrations →](migrations.md)
