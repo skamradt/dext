@@ -121,4 +121,4 @@ if Ctx.User.IsInRole('admin') then
 
 ---
 
-[← Autenticação](README.md) | [Próximo: Claims Builder →](claims-builder.md)
+[← Autenticação Basic](basic-auth.md) | [Próximo: Claims Builder →](claims-builder.md)

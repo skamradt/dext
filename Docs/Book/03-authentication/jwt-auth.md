@@ -148,4 +148,4 @@ Tokens are automatically validated by the `UseAuthentication` middleware:
 
 ---
 
-[← Authentication](README.md) | [Next: Claims Builder →](claims-builder.md)
+[← Basic Authentication](basic-auth.md) | [Next: Claims Builder →](claims-builder.md)

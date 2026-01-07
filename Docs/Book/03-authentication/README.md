@@ -4,8 +4,9 @@ Protect your APIs with JWT authentication and authorization.
 
 ## Chapters
 
-1. [JWT Authentication](jwt-auth.md) - Token-based authentication
-2. [Claims Builder](claims-builder.md) - User claims and roles
+1. [Basic Authentication](basic-auth.md) - Simple HTTP authentication
+2. [JWT Authentication](jwt-auth.md) - Token-based authentication
+3. [Claims Builder](claims-builder.md) - User claims and roles
 
 > 📦 **Example**: [Web.JwtAuthDemo](../../../Examples/Web.JwtAuthDemo/)
 
