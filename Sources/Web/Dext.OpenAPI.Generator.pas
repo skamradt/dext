@@ -27,6 +27,10 @@ type
     LicenseName: string;
     LicenseUrl: string;
     
+    // Swagger UI paths
+    SwaggerPath: string;      // Default: '/swagger'
+    SwaggerJsonPath: string;  // Default: '/swagger.json'
+    
     // Security configuration
     EnableBearerAuth: Boolean;
     BearerFormat: string;  // e.g., 'JWT'
@@ -144,6 +148,10 @@ begin
   Result.ContactEmail := '';
   Result.LicenseName := 'MIT';
   Result.LicenseUrl := 'https://opensource.org/licenses/MIT';
+  
+  // Swagger UI paths defaults
+  Result.SwaggerPath := '/swagger';
+  Result.SwaggerJsonPath := '/swagger.json';
   
   // Security defaults
   Result.EnableBearerAuth := False;
@@ -348,6 +356,38 @@ begin
   // Handle complex types (Record/Class) with References
   if (ATypeInfo.Kind in [tkRecord, tkMRecord, tkClass]) then
   begin
+    // Special handling for Dext Smart Types (Prop<T>) - Unwrap value
+    var LTypeName := string(ATypeInfo.Name);
+    if (ATypeInfo.Kind in [tkRecord, tkMRecord]) and 
+       (LTypeName.Contains('Prop<')) then
+    begin
+      RttiContext := TRttiContext.Create;
+      try
+        RttiType := RttiContext.GetType(ATypeInfo);
+        if Assigned(RttiType) then
+        begin
+          // For SmartTypes, we want to return the schema of the inner 'Value' property/field
+          var ValueProp := RttiType.GetProperty('Value');
+          if Assigned(ValueProp) then
+          begin
+            Result := TypeToSchema(ValueProp.PropertyType.Handle);
+            Exit;
+          end;
+          
+          // Fallback to FValue field if property not found
+          var ValueField := RttiType.GetField('FValue');
+          if Assigned(ValueField) then
+          begin
+            Result := TypeToSchema(ValueField.FieldType.Handle);
+            Exit;
+          end;
+        end;
+      finally
+        RttiContext.Free;
+      end;
+    end;
+
+    // Check if we already know this type
     // Check if we already know this type
     if FKnownTypes.TryGetValue(ATypeInfo, SchemaName) then
     begin

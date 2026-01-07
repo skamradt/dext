@@ -1,3 +1,4 @@
+  Dext.Auth.BasicAuth,
   Dext.Auth.JWT,
   Dext.Auth.Attributes,
   Dext.Auth.Identity,
@@ -45,4 +46,6 @@
   Dext.Web.StaticFiles,
   Dext.Web.Versioning,
   Dext.Web.WebApplication,
-  Dext.WebHost
+  Dext.WebHost,
+  Dext.Web.StatusCodes,
+  Dext.Web.ResponseHelper

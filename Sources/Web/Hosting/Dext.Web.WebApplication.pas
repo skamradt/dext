@@ -300,7 +300,6 @@ begin
   if StateControl <> nil then
     StateControl.SetState(asRunning);
 
-
   // Start Hosted Services
   HostedManager := nil;
   try

@@ -1,4 +1,20 @@
 // Auto-generated Aliases
+  // Dext.Core.SmartTypes
+  IPropInfo = Dext.Core.SmartTypes.IPropInfo;
+  BooleanExpression = Dext.Core.SmartTypes.BooleanExpression;
+  // Prop<T> = Dext.Core.SmartTypes.Prop<T>;
+  TPropInfo = Dext.Core.SmartTypes.TPropInfo;
+  StringType = Dext.Core.SmartTypes.StringType;
+  IntType = Dext.Core.SmartTypes.IntType;
+  Int64Type = Dext.Core.SmartTypes.Int64Type;
+  BoolType = Dext.Core.SmartTypes.BoolType;
+  FloatType = Dext.Core.SmartTypes.FloatType;
+  CurrencyType = Dext.Core.SmartTypes.CurrencyType;
+  DateTimeType = Dext.Core.SmartTypes.DateTimeType;
+  DateType = Dext.Core.SmartTypes.DateType;
+  TimeType = Dext.Core.SmartTypes.TimeType;
+  BoolExpr = Dext.Core.SmartTypes.BoolExpr;
+
 
   // Dext.Entity.Attributes
   TInheritanceStrategy = Dext.Entity.Attributes.TInheritanceStrategy;
@@ -86,6 +102,10 @@
   // FCurrentInnerList = Dext.Entity.Joining.FCurrentInnerList;
   // FCurrentInnerIndex = Dext.Entity.Joining.FCurrentInnerIndex;
   TJoining = Dext.Entity.Joining.TJoining;
+  
+  // Dext.Entity.Prototype
+  Prototype = Dext.Entity.Prototype.Prototype;
+  Build = Dext.Entity.Prototype.Build;
 
   // Dext.Entity.LazyLoading
   TLazyInjector = Dext.Entity.LazyLoading.TLazyInjector;
@@ -99,6 +119,7 @@
   // Dext.Entity.Mapping
   TPropertyMap = Dext.Entity.Mapping.TPropertyMap;
   TEntityMap = Dext.Entity.Mapping.TEntityMap;
+  TModelBuilder = Dext.Entity.Mapping.TModelBuilder;
   // FIsSoftDelete = Dext.Entity.Mapping.FIsSoftDelete;
   // FSoftDeleteProp = Dext.Entity.Mapping.FSoftDeleteProp;
   // FSoftDeleteDeletedValue = Dext.Entity.Mapping.FSoftDeleteDeletedValue;

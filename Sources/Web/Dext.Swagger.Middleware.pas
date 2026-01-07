@@ -61,8 +61,17 @@ type
   /// <summary>
   ///   Extension methods for adding Swagger to the application.
   /// </summary>
+  /// <summary>
+  ///   Extension methods for adding Swagger to the application.
+  /// </summary>
+  /// <summary>
+  ///   Extension methods for adding Swagger to the application.
+  /// </summary>
   TSwaggerExtensions = class
   public
+    /// <summary>
+    ///   Adds Swagger middleware to the application pipeline.
+    /// </summary>
     /// <summary>
     ///   Adds Swagger middleware to the application pipeline.
     /// </summary>
@@ -84,8 +93,18 @@ var
 begin
   inherited Create;
   FOptions := AOptions;
-  FSwaggerPath := ASwaggerPath;
-  FJsonPath := AJsonPath;
+  
+  // Use paths from options if provided, otherwise use parameters (for backward compatibility)
+  if (ASwaggerPath = '/swagger') and (AOptions.SwaggerPath <> '') then
+    FSwaggerPath := AOptions.SwaggerPath
+  else
+    FSwaggerPath := ASwaggerPath;
+    
+  if (AJsonPath = '/swagger.json') and (AOptions.SwaggerJsonPath <> '') then
+    FJsonPath := AOptions.SwaggerJsonPath
+  else
+    FJsonPath := AJsonPath;
+    
   FGenerator := TOpenAPIGenerator.Create(AOptions);
   
   // Cache routes and generate JSON immediately to avoid holding AppBuilder reference

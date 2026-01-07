@@ -66,12 +66,15 @@ type
     FStatusCode: Integer;
     FDescription: string;
     FContentType: string;
+    FSchemaClass: TClass;
   public
-    constructor Create(AStatusCode: Integer; const ADescription: string; const AContentType: string = 'application/json');
+    constructor Create(AStatusCode: Integer; const ADescription: string; const AContentType: string = 'application/json'); overload;
+    constructor Create(AStatusCode: Integer; ASchemaClass: TClass; const ADescription: string = ''; const AContentType: string = 'application/json'); overload;
     
     property StatusCode: Integer read FStatusCode;
     property Description: string read FDescription;
     property ContentType: string read FContentType;
+    property SchemaClass: TClass read FSchemaClass;
   end;
 
   /// <summary>
@@ -158,6 +161,67 @@ type
   end;
 
   /// <summary>
+  ///   Specifies the location of an OpenAPI parameter.
+  /// </summary>
+  TSwaggerParamLocation = (
+    /// <summary>Parameter is part of the URL path (e.g., /users/{id})</summary>
+    Path,
+    /// <summary>Parameter is from the query string (e.g., ?page=1)</summary>
+    Query,
+    /// <summary>Parameter is from HTTP headers</summary>
+    Header,
+    /// <summary>Parameter is from cookies</summary>
+    Cookie
+  );
+
+  /// <summary>
+  ///   Documents a parameter for an endpoint in Swagger/OpenAPI.
+  ///   The parameter type is inferred from the method signature via RTTI.
+  /// </summary>
+  /// <example>
+  ///   [SwaggerParam('id', 'Customer unique identifier')]
+  ///   procedure GetCustomer(Ctx: IHttpContext; [FromRoute] Id: Integer);
+  /// </example>
+  SwaggerParamAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+    FDescription: string;
+    FLocation: TSwaggerParamLocation;
+    FRequired: Boolean;
+    FExample: string;
+    FDeprecated: Boolean;
+  public
+    /// <summary>
+    ///   Creates a parameter documentation with name only.
+    ///   Location and type are inferred from method signature.
+    /// </summary>
+    constructor Create(const AName: string); overload;
+    
+    /// <summary>
+    ///   Creates a parameter documentation with name and description.
+    /// </summary>
+    constructor Create(const AName, ADescription: string); overload;
+    
+    /// <summary>
+    ///   Creates a parameter documentation with explicit location.
+    /// </summary>
+    constructor Create(const AName, ADescription: string; ALocation: TSwaggerParamLocation); overload;
+    
+    /// <summary>Parameter name (should match the method parameter name)</summary>
+    property Name: string read FName;
+    /// <summary>Human-readable description for the parameter</summary>
+    property Description: string read FDescription write FDescription;
+    /// <summary>Where the parameter is located (Path, Query, Header, Cookie)</summary>
+    property Location: TSwaggerParamLocation read FLocation write FLocation;
+    /// <summary>Whether this parameter is required</summary>
+    property Required: Boolean read FRequired write FRequired;
+    /// <summary>Example value for documentation</summary>
+    property Example: string read FExample write FExample;
+    /// <summary>Marks the parameter as deprecated</summary>
+    property Deprecated: Boolean read FDeprecated write FDeprecated;
+  end;
+
+  /// <summary>
   ///   Marks an endpoint as requiring authentication.
   /// </summary>
   AuthorizeAttribute = class(Dext.Auth.Attributes.AuthorizeAttribute)
@@ -200,6 +264,16 @@ begin
   FStatusCode := AStatusCode;
   FDescription := ADescription;
   FContentType := AContentType;
+  FSchemaClass := nil;
+end;
+
+constructor SwaggerResponseAttribute.Create(AStatusCode: Integer; ASchemaClass: TClass; const ADescription, AContentType: string);
+begin
+  inherited Create;
+  FStatusCode := AStatusCode;
+  FDescription := ADescription;
+  FContentType := AContentType;
+  FSchemaClass := ASchemaClass;
 end;
 
 { SwaggerSchemaAttribute }
@@ -254,6 +328,34 @@ constructor SwaggerTagAttribute.Create(const ATag: string);
 begin
   inherited Create;
   FTag := ATag;
+end;
+
+{ SwaggerParamAttribute }
+
+constructor SwaggerParamAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
+  FLocation := TSwaggerParamLocation.Path;
+  FRequired := True;
+end;
+
+constructor SwaggerParamAttribute.Create(const AName, ADescription: string);
+begin
+  inherited Create;
+  FName := AName;
+  FDescription := ADescription;
+  FLocation := TSwaggerParamLocation.Path;
+  FRequired := True;
+end;
+
+constructor SwaggerParamAttribute.Create(const AName, ADescription: string; ALocation: TSwaggerParamLocation);
+begin
+  inherited Create;
+  FName := AName;
+  FDescription := ADescription;
+  FLocation := ALocation;
+  FRequired := ALocation = TSwaggerParamLocation.Path; // Path params are always required
 end;
 
 { AuthorizeAttribute }

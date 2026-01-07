@@ -125,6 +125,7 @@
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Dext.EF.Core.dcp"/>
         <DCCReference Include="Dext.Web.Core.dcp"/>
+        <DCCReference Include="Dext.Web.Hubs.dcp"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Args.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateDown.pas"/>

@@ -102,7 +102,7 @@ end;
 ### Installation
 The testing framework is part of the core Dext distribution.
 1. Ensure `Dext.Testing.dpk` is compiled.
-2. Add `Dext.Mocks`, `Dext.Assertions`, and `Dext.Interception` to your unit uses clause.
+2. Add `Dext.Testing` to your unit uses clause. This single unit provides access to Assertions, Mocks, and the Test Runner.
 
 > ⚠️ **Important:** Interfaces to be mocked MUST have the `{$M+}` directive (RTTI generation) enabled.
 
@@ -115,8 +115,7 @@ program MyTests;
 
 uses
   System.SysUtils,
-  Dext.Assertions,
-  Dext.Mocks;
+  Dext.Testing;
 
 type
   {$M+} // Enable RTTI for mocking
@@ -332,7 +331,7 @@ To update snapshots, set environment variable `SNAPSHOT_UPDATE=1`.
 Reduce boilerplate in your tests by automatically creating mocks and injecting them into your System Under Test (SUT) constructor.
 
 ```pascal
-uses Dext.Mocks.Auto;
+uses Dext.Testing;
 
 var
   Mocker: TAutoMocker;
@@ -358,7 +357,7 @@ end;
 Use `TTestServiceProvider` to create a mock-aware dependency injection container:
 
 ```pascal
-uses Dext.Testing.DI;
+uses Dext.Testing;
 
 var
   Provider: TTestServiceProvider;
@@ -394,9 +393,7 @@ Write tests without base class inheritance using NUnit/xUnit-style attributes:
 
 ```pascal
 uses
-  Dext.Testing.Attributes,
-  Dext.Testing.Runner,
-  Dext.Testing.Fluent;
+  Dext.Testing;
 
 type
   [TestFixture('Calculator Tests')]

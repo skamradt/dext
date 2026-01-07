@@ -406,7 +406,10 @@ begin
             RespMeta.StatusCode := RespAttr.StatusCode;
             RespMeta.Description := RespAttr.Description;
             RespMeta.MediaType := RespAttr.ContentType;
-            RespMeta.SchemaType := nil; // Atributo não tem TypeInfo
+            if RespAttr.SchemaClass <> nil then
+              RespMeta.SchemaType := RespAttr.SchemaClass.ClassInfo
+            else
+              RespMeta.SchemaType := nil;
             SetLength(ResponsesList, Length(ResponsesList) + 1);
             ResponsesList[High(ResponsesList)] := RespMeta;
             Updated := True;

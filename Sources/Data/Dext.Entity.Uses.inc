@@ -1,4 +1,7 @@
+  Dext.Collections,
+  Dext.Core.SmartTypes,
   Dext.Entity.Attributes,
+  Dext.Entity.Prototype,
   Dext.Entity.Context,
   Dext.Entity.Core,
   Dext.Entity.DbSet,

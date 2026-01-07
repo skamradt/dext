@@ -118,6 +118,31 @@ type
     function UseJwtAuthentication(const ASecretKey: string; AConfigurator: TProc<TJwtOptionsBuilder>): TDextAppBuilder; overload;
     
     /// <summary>
+    ///   Adds Basic Authentication middleware with a simple validation function.
+    /// </summary>
+    function UseBasicAuthentication(const ARealm: string; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder; overload;
+    
+    /// <summary>
+    ///   Adds Basic Authentication middleware with role support.
+    /// </summary>
+    function UseBasicAuthentication(const ARealm: string; AValidateFunc: TBasicAuthValidateWithRolesFunc): TDextAppBuilder; overload;
+    
+    /// <summary>
+    ///   Adds Basic Authentication middleware with custom options.
+    /// </summary>
+    function UseBasicAuthentication(const AOptions: TBasicAuthOptions; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder; overload;
+    
+    /// <summary>
+    ///   Adds Swagger middleware to the application pipeline using the provided options.
+    /// </summary>
+    function UseSwagger(const AOptions: TOpenAPIOptions): TDextAppBuilder; overload;
+
+    /// <summary>
+    ///   Adds Swagger middleware to the application pipeline with default options.
+    /// </summary>
+    function UseSwagger: TDextAppBuilder; overload;
+    
+    /// <summary>
     ///   Adds Static Files middleware to the pipeline using the provided options.
     /// </summary>
     function UseStaticFiles(const AOptions: TStaticFileOptions): TDextAppBuilder; overload;
@@ -266,7 +291,48 @@ type
     function MapDelete<T1, T2, T3, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, T3, TResult>): TDextAppBuilder; overload;
   end;
 
+// ===========================================================================
+// 🛠️ Global Response Helpers
+// ===========================================================================
+
+procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
+procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const); overload;
+procedure RespondError(const AContext: IHttpContext; AStatusCode: Integer; const AMessage: string);
+procedure RespondOk(const AContext: IHttpContext; const AJson: string);
+procedure RespondCreated(const AContext: IHttpContext; const AJson: string);
+procedure RespondNoContent(const AContext: IHttpContext);
+
 implementation
+
+procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string);
+begin
+  Dext.Web.ResponseHelper.RespondJson(AContext, AStatusCode, AJson);
+end;
+
+procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const);
+begin
+  Dext.Web.ResponseHelper.RespondJson(AContext, AStatusCode, AFormat, AArgs);
+end;
+
+procedure RespondError(const AContext: IHttpContext; AStatusCode: Integer; const AMessage: string);
+begin
+  Dext.Web.ResponseHelper.RespondError(AContext, AStatusCode, AMessage);
+end;
+
+procedure RespondOk(const AContext: IHttpContext; const AJson: string);
+begin
+  Dext.Web.ResponseHelper.RespondOk(AContext, AJson);
+end;
+
+procedure RespondCreated(const AContext: IHttpContext; const AJson: string);
+begin
+  Dext.Web.ResponseHelper.RespondCreated(AContext, AJson);
+end;
+
+procedure RespondNoContent(const AContext: IHttpContext);
+begin
+  Dext.Web.ResponseHelper.RespondNoContent(AContext);
+end;
 
 { TDextHttpServicesHelper }
 
@@ -375,6 +441,36 @@ end;
 function TDextHttpAppBuilderHelper.UseJwtAuthentication(const ASecretKey: string; AConfigurator: TProc<TJwtOptionsBuilder>): TDextAppBuilder;
 begin
   TApplicationBuilderJwtExtensions.UseJwtAuthentication(Self.Unwrap, ASecretKey, AConfigurator);
+  Result := Self;
+end;
+
+function TDextHttpAppBuilderHelper.UseBasicAuthentication(const ARealm: string; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder;
+begin
+  TApplicationBuilderBasicAuthExtensions.UseBasicAuthentication(Self.Unwrap, ARealm, AValidateFunc);
+  Result := Self;
+end;
+
+function TDextHttpAppBuilderHelper.UseBasicAuthentication(const ARealm: string; AValidateFunc: TBasicAuthValidateWithRolesFunc): TDextAppBuilder;
+begin
+  TApplicationBuilderBasicAuthExtensions.UseBasicAuthentication(Self.Unwrap, ARealm, AValidateFunc);
+  Result := Self;
+end;
+
+function TDextHttpAppBuilderHelper.UseBasicAuthentication(const AOptions: TBasicAuthOptions; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder;
+begin
+  TApplicationBuilderBasicAuthExtensions.UseBasicAuthentication(Self.Unwrap, AOptions, AValidateFunc);
+  Result := Self;
+end;
+
+function TDextHttpAppBuilderHelper.UseSwagger(const AOptions: TOpenAPIOptions): TDextAppBuilder;
+begin
+  TSwaggerExtensions.UseSwagger(Self.Unwrap, AOptions);
+  Result := Self;
+end;
+
+function TDextHttpAppBuilderHelper.UseSwagger: TDextAppBuilder;
+begin
+  TSwaggerExtensions.UseSwagger(Self.Unwrap);
   Result := Self;
 end;
 

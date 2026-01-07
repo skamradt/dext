@@ -7,6 +7,16 @@
   TJwtOptionsBuilder = Dext.Auth.JWT.TJwtOptionsBuilder;
   TJwtOptionsHelper = Dext.Auth.JWT.TJwtOptionsHelper;
   TJwtTokenHandler = Dext.Auth.JWT.TJwtTokenHandler;
+  
+  // Dext.Auth.BasicAuth
+  TBasicAuthMiddleware = Dext.Auth.BasicAuth.TBasicAuthMiddleware;
+  TBasicAuthOptions = Dext.Auth.BasicAuth.TBasicAuthOptions;
+  TBasicAuthValidateFunc = Dext.Auth.BasicAuth.TBasicAuthValidateFunc;
+  TBasicAuthValidateWithRolesFunc = Dext.Auth.BasicAuth.TBasicAuthValidateWithRolesFunc;
+  TApplicationBuilderBasicAuthExtensions = Dext.Auth.BasicAuth.TApplicationBuilderBasicAuthExtensions;
+
+  // Dext.Web.StatusCodes
+  HttpStatus = Dext.Web.StatusCodes.HttpStatus;
 
   // Dext.Auth.Attributes
   AuthorizeAttribute = Dext.Auth.Attributes.AuthorizeAttribute;
@@ -97,6 +107,8 @@
   SwaggerExampleAttribute = Dext.OpenAPI.Attributes.SwaggerExampleAttribute;
   SwaggerFormatAttribute = Dext.OpenAPI.Attributes.SwaggerFormatAttribute;
   SwaggerTagAttribute = Dext.OpenAPI.Attributes.SwaggerTagAttribute;
+  TSwaggerParamLocation = Dext.OpenAPI.Attributes.TSwaggerParamLocation;
+  SwaggerParamAttribute = Dext.OpenAPI.Attributes.SwaggerParamAttribute;
   // AuthorizeAttribute = Dext.OpenAPI.Attributes.AuthorizeAttribute;
   SwaggerAuthorizeAttribute = Dext.OpenAPI.Attributes.SwaggerAuthorizeAttribute;
 
