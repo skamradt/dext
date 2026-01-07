@@ -7,7 +7,7 @@ Essential features for building production-ready APIs.
 1. [OpenAPI / Swagger](openapi-swagger.md) - Auto-generated documentation
 2. [Rate Limiting](rate-limiting.md) - Request throttling
 3. [CORS](cors.md) - Cross-origin resource sharing
-4. [Response Caching](caching.md) - Cache headers & strategies
+4. [Response Caching](cache.md) - Cache headers & strategies
 5. [Health Checks](health-checks.md) - Monitoring endpoints
 
 ## Quick Examples

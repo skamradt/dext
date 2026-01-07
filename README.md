@@ -109,7 +109,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 ## 📚 Documentation Index
 
 ### 🚀 Getting Started
-
+- **📖 [The Dext Book](Docs/Book/README.md)** ⭐ NEW - Complete guide from installation to advanced topics | [🇧🇷 Português](Docs/Book.pt-br/README.md)
 
 ### 🌐 Web API
 - **Routing & Endpoints**

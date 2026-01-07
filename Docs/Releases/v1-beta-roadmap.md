@@ -129,7 +129,7 @@ For technical details and granular status of each module, check:
 The focus now is to create **one example for each feature** and unify the documentation.
 
 ### Documentation
-- [ ] **Create "The Dext Book"**: A single Markdown file (or Wiki) compiling all guides (similar to Laravel/Django documentation).
+- [x] **Create "The Dext Book"**: A comprehensive multi-file documentation covering all framework aspects. [English](../../Docs/Book/README.md) | [Português](../../Docs/Book.pt-br/README.md)
 - [ ] **API Reference**: Generate automatic code documentation (PasDoc or similar) if possible, or focus on practical guides.
 
 ### New Examples Needed

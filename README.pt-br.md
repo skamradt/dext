@@ -108,7 +108,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 ## 📚 Índice de Documentação
 
 ### 🚀 Começando
-
+- **📖 [O Livro do Dext](Docs/Book.pt-br/README.md)** ⭐ NOVO - Guia completo da instalação aos tópicos avançados | [🇺🇸 English](Docs/Book/README.md)
 
 ### 🌐 Web API
 - **Roteamento & Endpoints**
