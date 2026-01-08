@@ -140,12 +140,8 @@ begin
     WriteLn('🚀 Dext Entity ORM Demo Suite');
     WriteLn('=============================');
     WriteLn('');
-    //
-    // var Provider := dpSQLiteMemory; // Default
-    // var Provider := dpFirebird;
-    // var Provider := dpMySQL;
-    // var Provider := dpPostgreSQL;
-    var Provider := dpSQLServerWindowsAuthetication;
+
+    var Provider := dpSQLiteMemory; // Default
     if ParamCount > 0 then
     begin
       var Arg := ParamStr(1).ToLower;
