@@ -69,9 +69,7 @@ implementation
 
 uses
   System.SysUtils,
-  {$IF Defined(MSWINDOWS)}
   Dext.Utils,
-  {$ENDIF}
   Dext.DI.Core,
   Dext.Hosting.BackgroundService,
   Dext.Web.Core,
