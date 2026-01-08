@@ -135,6 +135,7 @@
         <DCCReference Include="Web\Dext.Web.Versioning.pas"/>
         <DCCReference Include="Web\Dext.Web.Cors.pas"/>
         <DCCReference Include="Web\Dext.Web.StaticFiles.pas"/>
+        <DCCReference Include="Web\Dext.Web.Indy.Types.pas"/>
         <DCCReference Include="Web\Dext.Web.Indy.pas"/>
         <DCCReference Include="Web\Dext.Web.Middleware.Logging.pas"/>
         <DCCReference Include="Web\Caching\Dext.Caching.pas"/>

@@ -3,7 +3,10 @@ unit Dext.Web.Middleware.Compression;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.ZLib,
+  System.Classes,
+  System.Rtti,
+  System.SysUtils,
+  System.ZLib,
   Dext.Web.Interfaces, Dext.Web.Core;
 
 type
@@ -13,6 +16,9 @@ type
   end;
 
 implementation
+
+uses
+  Dext.Json;
 
 type
   TBufferedResponse = class(TInterfacedObject, IHttpResponse)
@@ -24,6 +30,7 @@ type
     destructor Destroy; override;
 
     function GetStatusCode: Integer;
+    function GetContentType: string;
     function Status(AValue: Integer): IHttpResponse;
     procedure SetStatusCode(AValue: Integer);
     procedure SetContentType(const AValue: string);
@@ -31,12 +38,14 @@ type
     procedure Write(const AContent: string); overload;
     procedure Write(const ABuffer: TBytes); overload;
     procedure Write(const AStream: TStream); overload;
-    procedure Json(const AJson: string);
+    procedure Json(const AJson: string); overload;
+    procedure Json(const AValue: TValue); overload;
     procedure AddHeader(const AName, AValue: string);
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    property ContentType: string read GetContentType write SetContentType;
     property Buffer: TMemoryStream read FBuffer;
   end;
 
@@ -60,10 +69,16 @@ procedure TBufferedResponse.AppendCookie(const AName, AValue: string; const AOpt
 procedure TBufferedResponse.AppendCookie(const AName, AValue: string); begin FInner.AppendCookie(AName, AValue); end;
 procedure TBufferedResponse.DeleteCookie(const AName: string); begin FInner.DeleteCookie(AName); end;
 function TBufferedResponse.GetStatusCode: Integer; begin Result := FInner.StatusCode; end;
+function TBufferedResponse.GetContentType: string; begin Result := FInner.ContentType; end;
 procedure TBufferedResponse.Json(const AJson: string);
 begin
   SetContentType('application/json; charset=utf-8');
   Write(AJson);
+end;
+
+procedure TBufferedResponse.Json(const AValue: TValue);
+begin
+  Json(Dext.Json.TDextJson.Serialize(AValue));
 end;
 procedure TBufferedResponse.SetContentLength(const AValue: Int64); begin FInner.SetContentLength(AValue); end;
 procedure TBufferedResponse.SetContentType(const AValue: string); begin FInner.SetContentType(AValue); end;

@@ -80,6 +80,18 @@ type
     class function Default: TCookieOptions; static;
   end;
 
+  IFormFile = interface;
+
+  IFormFileCollection = interface
+    ['{F2B3C4D5-E6F7-4812-9012-3456789ABCDE}']
+    function GetCount: Integer;
+    function GetItem(AIndex: Integer): IFormFile;
+    function GetFile(const AName: string): IFormFile;
+    procedure Add(const AFile: IFormFile);
+    property Count: Integer read GetCount;
+    property Items[AIndex: Integer]: IFormFile read GetItem; default;
+  end;
+
   IFormFile = interface
     ['{B1A2C3D4-E5F6-4789-0123-456789ABCDEF}']
     function GetFileName: string;
@@ -111,7 +123,7 @@ type
     function GetHeader(const AName: string): string;
     function GetQueryParam(const AName: string): string;
     function GetCookies: TDictionary<string, string>;
-    function GetFiles: TList<IFormFile>;
+    function GetFiles: IFormFileCollection;
     property Method: string read GetMethod;
     property Path: string read GetPath;
     property Query: TStrings read GetQuery;
@@ -119,26 +131,29 @@ type
     property RouteParams: TDictionary<string, string> read GetRouteParams;
     property Headers: TDictionary<string, string> read GetHeaders;
     property Cookies: TDictionary<string, string> read GetCookies;
-    property Files: TList<IFormFile> read GetFiles;
+    property Files: IFormFileCollection read GetFiles;
     property RemoteIpAddress: string read GetRemoteIpAddress;
   end;
 
   IHttpResponse = interface
     ['{D4F9E2A1-5B8C-4D3A-8E7B-6F5A2D1C9E8F}']
     function GetStatusCode: Integer;
+    function GetContentType: string;
     function Status(AValue: Integer): IHttpResponse;
     procedure SetStatusCode(AValue: Integer);
     procedure SetContentType(const AValue: string);
-    procedure SetContentLength(const AValue: Int64); // ? Added
+    procedure SetContentLength(const AValue: Int64);
     procedure Write(const AContent: string); overload;
     procedure Write(const ABuffer: TBytes); overload;
     procedure Write(const AStream: TStream); overload;
-    procedure Json(const AJson: string);
+    procedure Json(const AJson: string); overload;
+    procedure Json(const AValue: TValue); overload;
     procedure AddHeader(const AName, AValue: string);
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    property ContentType: string read GetContentType write SetContentType;
   end;
 
   IHttpContext = interface
@@ -252,10 +267,63 @@ type
     class function CreateDefaultBuilder: IWebHostBuilder;
   end;
 
+  TFormFileCollection = class(TInterfacedObject, IFormFileCollection)
+  private
+    FItems: TList<IFormFile>;
+  public
+    constructor Create(AItems: TList<IFormFile>);
+    destructor Destroy; override;
+    function GetCount: Integer;
+    function GetItem(AIndex: Integer): IFormFile;
+    function GetFile(const AName: string): IFormFile;
+    procedure Add(const AFile: IFormFile);
+  end;
+
 implementation
 
 uses
   Dext.WebHost;
+
+{ TFormFileCollection }
+
+constructor TFormFileCollection.Create(AItems: TList<IFormFile>);
+begin
+  inherited Create;
+  FItems := AItems;
+end;
+
+destructor TFormFileCollection.Destroy;
+begin
+  FItems.Free;
+  inherited;
+end;
+
+function TFormFileCollection.GetCount: Integer;
+begin
+  Result := FItems.Count;
+end;
+
+procedure TFormFileCollection.Add(const AFile: IFormFile);
+begin
+  FItems.Add(AFile);
+end;
+
+function TFormFileCollection.GetFile(const AName: string): IFormFile;
+var
+  LFile: IFormFile;
+begin
+  for LFile in FItems do
+  begin
+    if SameText(LFile.Name, AName) then
+      Exit(LFile);
+  end;
+  Result := nil;
+end;
+
+function TFormFileCollection.GetItem(AIndex: Integer): IFormFile;
+begin
+  Result := FItems[AIndex];
+end;
 
 { TDextWebHost }
 

@@ -18,12 +18,12 @@ App.MapPost('/data', procedure(Ctx: IHttpContext)
     Ctx.Response.Json(Body);
   end);
 
-App.MapPut('/items/:id', procedure(Ctx: IHttpContext)
+App.MapPut('/items/{id}', procedure(Ctx: IHttpContext)
   begin
     // Lógica de atualização
   end);
 
-App.MapDelete('/items/:id', procedure(Ctx: IHttpContext)
+App.MapDelete('/items/{id}', procedure(Ctx: IHttpContext)
   begin
     // Lógica de exclusão
   end);
@@ -31,16 +31,19 @@ App.MapDelete('/items/:id', procedure(Ctx: IHttpContext)
 
 ## Parâmetros de Rota
 
+> [!IMPORTANT]
+> O Dext usa a sintaxe **`{param}`** para parâmetros de rota (como ASP.NET Core), não `:param` (estilo Express).
+
 ```pascal
 // Parâmetro único
-App.MapGet('/users/:id', procedure(Ctx: IHttpContext)
+App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
   begin
     var Id := Ctx.Request.RouteParam('id');
     Ctx.Response.Write('ID do Usuário: ' + Id);
   end);
 
 // Múltiplos parâmetros
-App.MapGet('/orders/:orderId/items/:itemId', procedure(Ctx: IHttpContext)
+App.MapGet('/orders/{orderId}/items/{itemId}', procedure(Ctx: IHttpContext)
   begin
     var OrderId := Ctx.Request.RouteParam('orderId');
     var ItemId := Ctx.Request.RouteParam('itemId');

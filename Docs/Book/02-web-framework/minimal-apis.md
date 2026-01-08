@@ -18,12 +18,12 @@ App.MapPost('/data', procedure(Ctx: IHttpContext)
     Ctx.Response.Json(Body);
   end);
 
-App.MapPut('/items/:id', procedure(Ctx: IHttpContext)
+App.MapPut('/items/{id}', procedure(Ctx: IHttpContext)
   begin
     // Update logic
   end);
 
-App.MapDelete('/items/:id', procedure(Ctx: IHttpContext)
+App.MapDelete('/items/{id}', procedure(Ctx: IHttpContext)
   begin
     // Delete logic
   end);
@@ -31,16 +31,19 @@ App.MapDelete('/items/:id', procedure(Ctx: IHttpContext)
 
 ## Route Parameters
 
+> [!IMPORTANT]
+> Dext uses **`{param}`** syntax for route parameters (like ASP.NET Core), not `:param` (Express style).
+
 ```pascal
 // Single parameter
-App.MapGet('/users/:id', procedure(Ctx: IHttpContext)
+App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
   begin
     var Id := Ctx.Request.RouteParam('id');
     Ctx.Response.Write('User ID: ' + Id);
   end);
 
 // Multiple parameters
-App.MapGet('/orders/:orderId/items/:itemId', procedure(Ctx: IHttpContext)
+App.MapGet('/orders/{orderId}/items/{itemId}', procedure(Ctx: IHttpContext)
   begin
     var OrderId := Ctx.Request.RouteParam('orderId');
     var ItemId := Ctx.Request.RouteParam('itemId');
@@ -94,7 +97,7 @@ App.MapPost('/users', procedure(Ctx: IHttpContext)
 ## Using IResult
 
 ```pascal
-App.MapGet('/users/:id', procedure(Ctx: IHttpContext)
+App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
   var
     Id: Integer;
     User: TUser;

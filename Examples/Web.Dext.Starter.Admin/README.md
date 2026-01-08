@@ -248,9 +248,10 @@ App.Run(8080); // Change to another port, e.g., 8081
 
 ## 📚 Further Reading
 
-- [Dext Framework Documentation](../../README.md)
-- [Dext ORM Guide](../../Docs/orm-guide.md)
-- [Dext Web Framework Guide](../../Docs/web-guide.md)
+- [The Dext Book](../../Docs/Book/README.md) - Complete Framework Documentation
+- [Application Startup Pattern](../../Docs/Book/01-getting-started/application-startup.md) - TStartup best practices
+- [JWT Authentication](../../Docs/Book/03-authentication/jwt-auth.md) - Token-based auth guide
+- [ORM Getting Started](../../Docs/Book/05-orm/getting-started.md) - Database integration
 - [Portuguese Version](README.pt-br.md)
 
 ---

@@ -55,6 +55,7 @@ contains
   Dext.Web.Versioning in 'Web\Dext.Web.Versioning.pas',
   Dext.Web.Cors in 'Web\Dext.Web.Cors.pas',
   Dext.Web.StaticFiles in 'Web\Dext.Web.StaticFiles.pas',
+  Dext.Web.Indy.Types in 'Web\Dext.Web.Indy.Types.pas',
   Dext.Web.Indy in 'Web\Dext.Web.Indy.pas',
   Dext.Web.Middleware.Logging in 'Web\Dext.Web.Middleware.Logging.pas',
   Dext.Caching in 'Web\Caching\Dext.Caching.pas',

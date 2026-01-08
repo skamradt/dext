@@ -150,6 +150,7 @@ type
     
     // IHttpResponse methods
     function GetStatusCode: Integer;
+    function GetContentType: string;
     procedure SetStatusCode(AValue: Integer);
     function Status(AValue: Integer): IHttpResponse;
     procedure SetContentType(const AValue: string);
@@ -157,12 +158,14 @@ type
     procedure Write(const AContent: string); overload;
     procedure Write(const ABuffer: TBytes); overload;
     procedure Write(const AStream: TStream); overload;
-    procedure Json(const AJson: string);
+    procedure Json(const AJson: string); overload;
+    procedure Json(const AValue: TValue); overload;
     procedure AddHeader(const AName, AValue: string);
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    property ContentType: string read GetContentType write SetContentType;
 
     // TResponseCaptureWrapper specific methods
     function GetCapturedBody: string;
@@ -269,7 +272,8 @@ type
 implementation
 
 uses
-  System.Hash;
+  System.Hash,
+  Dext.Json;
 
 { TMemoryCacheStore }
 
@@ -638,6 +642,13 @@ begin
   FOriginal.Json(AJson);
 end;
 
+procedure TResponseCaptureWrapper.Json(const AValue: TValue);
+begin
+  var JsonStr := Dext.Json.TDextJson.Serialize(AValue);
+  FBodyBuffer.Append(JsonStr);
+  FOriginal.Json(JsonStr);
+end;
+
 procedure TResponseCaptureWrapper.AddHeader(const AName, AValue: string);
 begin
   FOriginal.AddHeader(AName, AValue);
@@ -667,6 +678,11 @@ end;
 function TResponseCaptureWrapper.GetStatusCode: Integer;
 begin
   Result := FOriginal.StatusCode;
+end;
+
+function TResponseCaptureWrapper.GetContentType: string;
+begin
+  Result := FOriginal.ContentType;
 end;
 
 { TResponseCacheBuilder }

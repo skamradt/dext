@@ -248,9 +248,10 @@ App.Run(8080); // Mude para outra porta, ex: 8081
 
 ## 📚 Leitura Adicional
 
-- [Documentação do Dext Framework](../../README.md)
-- [Guia do Dext ORM](../../Docs/orm-guide.md)
-- [Guia do Dext Web Framework](../../Docs/web-guide.md)
+- [O Livro do Dext](../../Docs/Book.pt-br/README.md) - Documentação Completa do Framework
+- [Padrão Application Startup](../../Docs/Book.pt-br/01-primeiros-passos/inicializacao-aplicacao.md) - Melhores práticas com TStartup
+- [Autenticação JWT](../../Docs/Book.pt-br/03-autenticacao/jwt-auth.md) - Guia de auth baseada em tokens
+- [ORM Primeiros Passos](../../Docs/Book.pt-br/05-orm/primeiros-passos.md) - Integração com banco de dados
 - [English Version](README.md)
 
 ---
