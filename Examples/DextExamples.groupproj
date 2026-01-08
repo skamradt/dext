@@ -69,6 +69,12 @@
         <Projects Include="Web.StreamingDemo\Web.StreamingDemo.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -275,14 +281,32 @@
     <Target Name="Web_StreamingDemo:Make">
         <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Dext_Examples_MultiTenancy">
+        <MSBuild Projects="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj"/>
+    </Target>
+    <Target Name="Dext_Examples_MultiTenancy:Clean">
+        <MSBuild Projects="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Examples_MultiTenancy:Make">
+        <MSBuild Projects="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Dext_Examples_ComplexQuerying">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj"/>
+    </Target>
+    <Target Name="Dext_Examples_ComplexQuerying:Clean">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Examples_ComplexQuerying:Make">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DatabaseAsApi;Web_DextStore;Web_Dext_Starter_Admin;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_SwaggerExample;Web_SwaggerControllerExample;Web_TaskFlowAPI;Web_UUIDExample;Web_TUUIDBindingExample;Web_OrderAPI;Web_StreamingDemo"/>
+        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DatabaseAsApi;Web_DextStore;Web_Dext_Starter_Admin;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_SwaggerExample;Web_SwaggerControllerExample;Web_TaskFlowAPI;Web_UUIDExample;Web_TUUIDBindingExample;Web_OrderAPI;Web_StreamingDemo;Dext_Examples_MultiTenancy;Dext_Examples_ComplexQuerying"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DatabaseAsApi:Clean;Web_DextStore:Clean;Web_Dext_Starter_Admin:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_SwaggerExample:Clean;Web_SwaggerControllerExample:Clean;Web_TaskFlowAPI:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;Web_OrderAPI:Clean;Web_StreamingDemo:Clean"/>
+        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DatabaseAsApi:Clean;Web_DextStore:Clean;Web_Dext_Starter_Admin:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_SwaggerExample:Clean;Web_SwaggerControllerExample:Clean;Web_TaskFlowAPI:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;Web_OrderAPI:Clean;Web_StreamingDemo:Clean;Dext_Examples_MultiTenancy:Clean;Dext_Examples_ComplexQuerying:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DatabaseAsApi:Make;Web_DextStore:Make;Web_Dext_Starter_Admin:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_SwaggerExample:Make;Web_SwaggerControllerExample:Make;Web_TaskFlowAPI:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;Web_OrderAPI:Make;Web_StreamingDemo:Make"/>
+        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DatabaseAsApi:Make;Web_DextStore:Make;Web_Dext_Starter_Admin:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_SwaggerExample:Make;Web_SwaggerControllerExample:Make;Web_TaskFlowAPI:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;Web_OrderAPI:Make;Web_StreamingDemo:Make;Dext_Examples_MultiTenancy:Make;Dext_Examples_ComplexQuerying:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

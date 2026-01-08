@@ -10,12 +10,23 @@ Este documento centraliza as tarefas pendentes para o lançamento do V1 Beta. Ma
 
 ### Alta Prioridade
 - [x] **Dext.Examples.Streaming** - Upload/download de arquivos grandes (Stream Writing + Multipart)
-- [ ] **Dext.Examples.MultiTenancy** - Implementação SaaS completa (Schema per Tenant)
-- [ ] **Dext.Examples.ComplexQuerying** - Queries avançadas ORM com JSON, Arrays e relatórios
+- [x] **Dext.Examples.MultiTenancy** - Implementação SaaS completa (Schema per Tenant)
+- [x] **Dext.Examples.ComplexQuerying** - Queries avançadas ORM com JSON, Arrays e relatórios
 
 ### Atualização de Exemplos Existentes
 - [x] **Web.TaskFlowAPI** - Atualizar para usar Cookies e Compression
 - [x] **Web.Dext.Starter.Admin** - Revisar e alinhar com best practices atuais
+
+---
+
+## 🧪 Testes Pendentes de Exemplos
+
+> Projetos criados/atualizados que precisam de testes de funcionamento
+
+- [ ] **Web.Dext.Starter.Admin** - Testar compression middleware e JWT config
+- [ ] **Web.TaskFlowAPI** - Executar `Test.Web.TaskFlowAPI.ps1`
+- [ ] **Dext.Examples.MultiTenancy** - Executar `Test.MultiTenancy.ps1`
+- [ ] **Dext.Examples.ComplexQuerying** - Executar `Test.ComplexQuerying.ps1`
 
 ---
 

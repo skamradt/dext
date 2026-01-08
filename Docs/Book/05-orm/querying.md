@@ -2,6 +2,41 @@
 
 Fluent query API for retrieving data.
 
+## Return Types: IList<T>
+
+> [!IMPORTANT]
+> Dext uses `IList<T>` from `Dext.Collections`, not `TObjectList<T>` from `System.Generics.Collections`.
+
+```pascal
+uses
+  Dext.Collections;
+
+var Users: IList<TUser>;
+begin
+  Users := Context.Users.ToList;  // Returns IList<TUser>
+  
+  for var User in Users do
+    WriteLn(User.Name);
+end;
+```
+
+### Creating New Lists
+
+Use the `TCollections.CreateList<T>` factory:
+
+```pascal
+// Create a new list
+var MyList := TCollections.CreateList<TUser>;
+MyList.Add(User1);
+MyList.Add(User2);
+
+// Create with ownership (auto-free objects)
+var OwnedList := TCollections.CreateList<TUser>(True);
+```
+
+> [!TIP]
+> `IList<T>` is an interface, so no `try/finally Free` is needed!
+
 ## Basic Queries
 
 ### Get All

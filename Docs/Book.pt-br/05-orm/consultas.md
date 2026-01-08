@@ -2,6 +2,41 @@
 
 API fluente de queries para recuperar dados.
 
+## Tipos de Retorno: IList<T>
+
+> [!IMPORTANT]
+> O Dext usa `IList<T>` de `Dext.Collections`, não `TObjectList<T>` de `System.Generics.Collections`.
+
+```pascal
+uses
+  Dext.Collections;
+
+var Users: IList<TUser>;
+begin
+  Users := Context.Users.ToList;  // Retorna IList<TUser>
+  
+  for var User in Users do
+    WriteLn(User.Name);
+end;
+```
+
+### Criando Novas Listas
+
+Use a factory `TCollections.CreateList<T>`:
+
+```pascal
+// Criar nova lista
+var MinhaLista := TCollections.CreateList<TUser>;
+MinhaLista.Add(User1);
+MinhaLista.Add(User2);
+
+// Criar com ownership (auto-free de objetos)
+var ListaComOwner := TCollections.CreateList<TUser>(True);
+```
+
+> [!TIP]
+> `IList<T>` é uma interface, então não precisa de `try/finally Free`!
+
 ## Consultas Básicas
 
 ### Obter Todos
