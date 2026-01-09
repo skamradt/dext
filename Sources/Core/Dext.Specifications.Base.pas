@@ -29,6 +29,8 @@ interface
 
 uses
   System.Generics.Collections,
+  System.SysUtils,
+  System.TypInfo,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types;
   
@@ -80,6 +82,7 @@ type
     function GetSelectedColumns: TArray<string>;
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
+    function GetSignature: string; virtual;
   public
     constructor Create; overload; virtual;
     constructor Create(const AExpression: IExpression); overload; virtual;
@@ -268,6 +271,86 @@ end;
 function TSpecification<T>.GetGroupBy: TArray<string>;
 begin
   Result := FGroupBy.ToArray;
+end;
+
+function TSpecification<T>.GetSignature: string;
+var
+  SB: TStringBuilder;
+  I: Integer;
+begin
+  SB := TStringBuilder.Create;
+  try
+    // 1. Entity Type
+    SB.Append(PTypeInfo(TypeInfo(T)).Name);
+    
+    // 2. Select Columns
+    if FSelectedColumns.Count > 0 then
+    begin
+      SB.Append(':SELECT[');
+      for I := 0 to FSelectedColumns.Count - 1 do
+        SB.Append(FSelectedColumns[I]).Append(',');
+      SB.Append(']');
+    end;
+    
+    // 3. Includes
+    if FIncludes.Count > 0 then
+    begin
+      SB.Append(':INC[');
+      for I := 0 to FIncludes.Count - 1 do
+        SB.Append(FIncludes[I]).Append(',');
+      SB.Append(']');
+    end;
+    
+    // 4. Expression
+    if FExpression <> nil then
+      SB.Append(':WHERE[').Append(FExpression.ToString).Append(']');
+      
+    // 5. OrderBy
+    if FOrderBy.Count > 0 then
+    begin
+      SB.Append(':ORD[');
+      for I := 0 to FOrderBy.Count - 1 do
+      begin
+        SB.Append(FOrderBy[I].GetPropertyName);
+        if FOrderBy[I].GetAscending then SB.Append('+') else SB.Append('-');
+        SB.Append(',');
+      end;
+      SB.Append(']');
+    end;
+    
+    // 6. Joins
+    if FJoins.Count > 0 then
+    begin
+      SB.Append(':JOIN[');
+      for I := 0 to FJoins.Count - 1 do
+      begin
+        SB.Append(FJoins[I].GetTableName).Append('|').Append(FJoins[I].GetAlias);
+        // Note: Condition might be complex, currently ToString assumed consistent
+        SB.Append(',');
+      end;
+      SB.Append(']');
+    end;
+    
+    // 7. Paging
+    if FIsPagingEnabled then
+      SB.AppendFormat(':PAGE[%d,%d]', [FSkip, FTake]);
+      
+    // 8. GroupBy
+    if FGroupBy.Count > 0 then
+    begin
+      SB.Append(':GRP[');
+      for I := 0 to FGroupBy.Count - 1 do
+        SB.Append(FGroupBy[I]).Append(',');
+      SB.Append(']');
+    end;
+    
+    // 9. Tracking
+    if not FIsTracking then SB.Append(':NOTRACK');
+    
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
 end;
 
 { TJoin }

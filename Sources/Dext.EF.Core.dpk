@@ -71,6 +71,7 @@ contains
   Dext.Entity.LazyLoading in 'Data\Dext.Entity.LazyLoading.pas',
   Dext.Entity.Grouping in 'Data\Dext.Entity.Grouping.pas',
   Dext.Entity.Joining in 'Data\Dext.Entity.Joining.pas',
-  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas';
+  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas',
+  Dext.Entity.Cache in 'Data\Dext.Entity.Cache.pas';
 
 end.

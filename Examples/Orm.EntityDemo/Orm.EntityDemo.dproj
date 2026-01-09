@@ -165,7 +165,6 @@
         </DelphiCompile>
         <DCCReference Include="EntityDemo.DbConfig.pas"/>
         <DCCReference Include="EntityDemo.Tests.AdvancedQuery.pas"/>
-        <DCCReference Include="EntityDemo.Tests.Base.pas"/>
         <DCCReference Include="EntityDemo.Tests.Bulk.pas"/>
         <DCCReference Include="EntityDemo.Tests.CompositeKeys.pas"/>
         <DCCReference Include="EntityDemo.Tests.Concurrency.pas"/>
@@ -189,6 +188,10 @@
         <DCCReference Include="EntityDemo.Tests.Dialect.pas"/>
         <DCCReference Include="EntityDemo.TypeConverterExample.pas"/>
         <DCCReference Include="EntityDemo.Entities.Info.pas"/>
+        <DCCReference Include="EntityDemo.Tests.Base.pas"/>
+        <DCCReference Include="EntityDemo.Tests.SQLCache.pas"/>
+        <DCCReference Include="EntityDemo.Tests.CustomDialect.pas"/>
+        <DCCReference Include="EntityDemo.CustomDialect.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

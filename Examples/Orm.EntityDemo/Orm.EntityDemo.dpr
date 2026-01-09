@@ -10,7 +10,6 @@ uses
   FireDAC.Comp.Client,
   EntityDemo.DbConfig in 'EntityDemo.DbConfig.pas',
   EntityDemo.Tests.AdvancedQuery in 'EntityDemo.Tests.AdvancedQuery.pas',
-  EntityDemo.Tests.Base in 'EntityDemo.Tests.Base.pas',
   EntityDemo.Tests.Bulk in 'EntityDemo.Tests.Bulk.pas',
   EntityDemo.Tests.CompositeKeys in 'EntityDemo.Tests.CompositeKeys.pas',
   EntityDemo.Tests.Concurrency in 'EntityDemo.Tests.Concurrency.pas',
@@ -33,7 +32,11 @@ uses
   EntityDemo.Tests.TypeConverter in 'EntityDemo.Tests.TypeConverter.pas',
   EntityDemo.Tests.Dialect in 'EntityDemo.Tests.Dialect.pas',
   EntityDemo.TypeConverterExample in 'EntityDemo.TypeConverterExample.pas',
-  EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas';
+  EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas',
+  EntityDemo.Tests.Base in 'EntityDemo.Tests.Base.pas',
+  EntityDemo.Tests.SQLCache in 'EntityDemo.Tests.SQLCache.pas',
+  EntityDemo.Tests.CustomDialect in 'EntityDemo.Tests.CustomDialect.pas',
+  EntityDemo.CustomDialect in 'EntityDemo.CustomDialect.pas';
 
 procedure ConfigureDatabase(Provider: TDatabaseProvider);
 begin
@@ -135,6 +138,10 @@ begin
   RunTest(TTypeConverterTest);
   // 20. Dialect Tests
   RunTest(TDialectTest);
+  // 21. Custom Dialect Tests
+  RunTest(TCustomDialectTest);
+  // 22. SQL Cache Tests
+  RunTest(TSQLCacheTest);
   // Print summary at the end
 
   TBaseTest.PrintSummary;

@@ -24,6 +24,9 @@
         <Projects Include="..\Apps\CLI\DextTool.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -95,14 +98,23 @@
     <Target Name="DextTool:Make">
         <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Orm_EntityDemo">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj"/>
+    </Target>
+    <Target Name="Orm_EntityDemo:Clean">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Orm_EntityDemo:Make">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;DextTool"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;DextTool;Orm_EntityDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;DextTool:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;DextTool:Clean;Orm_EntityDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;DextTool:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;DextTool:Make;Orm_EntityDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

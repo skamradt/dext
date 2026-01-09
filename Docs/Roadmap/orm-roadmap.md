@@ -197,6 +197,19 @@ Foco em otimização extrema, gerenciamento de memória e observabilidade.
   - *Status*: ✅ **Implementado e Validado**
   - *Documentação*: [NO_TRACKING.md](NO_TRACKING.md)
 
+#### 4. Critical Performance & Scalability (✅ Completed)
+- [x] **SQL Cache (AST Reuse)**: Cache thread-safe de geração de SQL.
+  - Reutiliza estrutura da query (AST) evitando alocações e processamento repetitivo.
+  - Suporte a flag `Enabled` para debugging.
+  - *Status*: ✅ **Implementado e Validado**
+- [x] **Custom SQL Dialect Generator**: Mecanismo flexível para override de geração SQL.
+  - Permite correções e adaptações sem alterar o núcleo.
+  - *Status*: ✅ **Implementado e Validado**
+- [x] **Singleton Thread Safety Audit**: Auditoria e Hardening de singletons críticos.
+  - `TTypeConverterRegistry`: Protegido com `TCriticalSection` (Fix).
+  - `TSQLCache` e `TDextFireDACManager`: Validados.
+  - *Status*: ✅ **Auditado e Seguro**
+
 #### 3. Framework Garbage Collector
 - [ ] **Background Disposal**: Serviço que coleta objetos marcados para destruição.
 - [ ] **Deferred Destruction**: Remove o peso da destruição do thread principal.

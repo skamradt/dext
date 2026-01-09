@@ -28,8 +28,9 @@ unit Dext.Entity.TypeConverters;
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
+  System.SyncObjs,
+  System.SysUtils,
   System.Rtti,
   System.TypInfo,
   System.Generics.Collections,
@@ -223,6 +224,7 @@ type
   TTypeConverterRegistry = class
   private
     class var FInstance: TTypeConverterRegistry;
+    FLock: TCriticalSection;
     FConverters: TList<ITypeConverter>;
     FCustomConverters: TDictionary<PTypeInfo, ITypeConverter>; // For property-specific converters
     class constructor Create;
@@ -251,7 +253,6 @@ implementation
 uses
   System.Variants,
   Dext.Core.ValueConverters,
-  System.SyncObjs,
   Dext.Json;
 
 { ColumnTypeAttribute }
@@ -641,6 +642,7 @@ end;
 constructor TTypeConverterRegistry.Create;
 begin
   inherited Create;
+  FLock := TCriticalSection.Create;
   FConverters := TList<ITypeConverter>.Create;
   FCustomConverters := TDictionary<PTypeInfo, ITypeConverter>.Create;
   
@@ -658,6 +660,8 @@ end;
 
 destructor TTypeConverterRegistry.Destroy;
 begin
+  FLock.Free;
+
   // Clear the lists first to release interface references properly
   // before destroying the container objects
   FCustomConverters.Clear;
@@ -670,17 +674,32 @@ end;
 
 procedure TTypeConverterRegistry.RegisterConverter(AConverter: ITypeConverter);
 begin
-  FConverters.Add(AConverter);
+  FLock.Enter;
+  try
+    FConverters.Add(AConverter);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TTypeConverterRegistry.RegisterConverterForType(ATypeInfo: PTypeInfo; AConverter: ITypeConverter);
 begin
-  FCustomConverters.AddOrSetValue(ATypeInfo, AConverter);
+  FLock.Enter;
+  try
+    FCustomConverters.AddOrSetValue(ATypeInfo, AConverter);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TTypeConverterRegistry.ClearCustomConverters;
 begin
-  FCustomConverters.Clear;
+  FLock.Enter;
+  try
+    FCustomConverters.Clear;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TTypeConverterRegistry.GetConverter(ATypeInfo: PTypeInfo): ITypeConverter;
@@ -692,15 +711,23 @@ begin
   if ATypeInfo = nil then
     Exit;
   
-  // Check custom converters first (highest priority)
-  if FCustomConverters.TryGetValue(ATypeInfo, Result) then
-    Exit;
-  
-  // Find global converter
-  for Converter in FConverters do
-  begin
-    if Converter.CanConvert(ATypeInfo) then
-      Exit(Converter);
+  FLock.Enter;
+  try
+    // Check custom converters first (highest priority)
+    if FCustomConverters.TryGetValue(ATypeInfo, Result) then
+      Exit;
+    
+    // Find global converter
+    for Converter in FConverters do
+    begin
+      if Converter.CanConvert(ATypeInfo) then
+      begin
+        Result := Converter;
+        Exit;
+      end;
+    end;
+  finally
+    FLock.Leave;
   end;
 end;
 

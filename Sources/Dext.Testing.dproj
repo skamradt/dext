@@ -135,6 +135,7 @@
         <DCCReference Include="Testing\Dext.Testing.History.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Report.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Runner.pas"/>
+        <DCCReference Include="Testing\Dext.Testing.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

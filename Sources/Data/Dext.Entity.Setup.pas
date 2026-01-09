@@ -52,6 +52,7 @@ type
     function UseConnectionDef(const ADefName: string): TDbContextOptions;
     function WithPooling(Enable: Boolean = True; MaxSize: Integer = 50): TDbContextOptions;
     function ConfigureOptimizations(AOpts: TFireDACOptimizations): TDbContextOptions;
+    function UseCustomDialect(const ADialect: ISQLDialect): TDbContextOptions;
   end;
 
   /// <summary>
@@ -120,6 +121,12 @@ end;
 function TDbContextOptions.ConfigureOptimizations(AOpts: TFireDACOptimizations): TDbContextOptions;
 begin
   FOptimizations := AOpts;
+  Result := Self;
+end;
+
+function TDbContextOptions.UseCustomDialect(const ADialect: ISQLDialect): TDbContextOptions;
+begin
+  FDialect := ADialect;
   Result := Self;
 end;
 

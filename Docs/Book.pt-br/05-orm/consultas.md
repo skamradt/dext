@@ -157,6 +157,25 @@ var Query := Context.Users.Where(TUser.Props.Age > 18);
 var Users := Query.ToList;
 ```
 
+
+## Performance & Caching
+
+### Cache de Geração SQL
+O Dext inclui um singleton `TSQLCache` que armazena o SQL gerado para consultas com base em sua estrutura (Assinatura AST). Isso melhora significativamente a performance de queries repetitivas, pulando a fase de geração de SQL.
+
+O cache é **ativado por padrão** e é thread-safe.
+
+#### Desativando o Cache
+Se precisar desativar o cache (ex: para debugging ou cenários dinâmicos específicos), você pode alterá-lo globalmente:
+
+```pascal
+uses
+  Dext.Entity.Cache;
+
+// Desativar globalmente
+TSQLCache.Instance.Enabled := False;
+```
+
 ---
 
 [← Entidades](entidades.md) | [Próximo: Smart Properties →](smart-properties.md)

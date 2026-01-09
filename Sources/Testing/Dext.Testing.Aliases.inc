@@ -1,11 +1,12 @@
   // Dext.Mocks
-  Mock<T> = Dext.Mocks.Mock<T>;
+  // Mock<T> = Dext.Mocks.Mock<T>;
+  // IMock<T> = Dext.Mocks.IMock<T>;
+  // ISetup<T> = Dext.Mocks.ISetup<T>;
+  // IWhen<T> = Dext.Mocks.IWhen<T>;
+  
+  Arg = Dext.Mocks.Matching.Arg; 
   Times = Dext.Mocks.Times;
   TMockBehavior = Dext.Mocks.TMockBehavior;
-  IMock<T> = Dext.Mocks.IMock<T>;
-  ISetup<T> = Dext.Mocks.ISetup<T>;
-  IWhen<T> = Dext.Mocks.IWhen<T>;
-  Arg = Dext.Mocks.Matching.Arg; 
   
   // Dext.Mocks.Auto
   TAutoMocker = Dext.Mocks.Auto.TAutoMocker;
@@ -32,4 +33,4 @@
   
   // Dext.Testing.Fluent
   TTest = Dext.Testing.Fluent.TTest;
-  ITestConfiguration = Dext.Testing.Fluent.ITestConfiguration;
+  TTestConfigurator = Dext.Testing.Fluent.TTestConfigurator;

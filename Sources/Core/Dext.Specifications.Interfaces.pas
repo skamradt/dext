@@ -80,6 +80,11 @@ type
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
     
+    /// <summary>
+    ///  Generates a unique signature for the query structure (excluding param values).
+    /// </summary>
+    function GetSignature: string;
+    
     property Expression: IExpression read GetExpression;
     
     // Fluent methods

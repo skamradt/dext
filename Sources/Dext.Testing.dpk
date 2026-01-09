@@ -54,6 +54,7 @@ contains
   Dext.Testing.Fluent in 'Testing\Dext.Testing.Fluent.pas',
   Dext.Testing.History in 'Testing\Dext.Testing.History.pas',
   Dext.Testing.Report in 'Testing\Dext.Testing.Report.pas',
-  Dext.Testing.Runner in 'Testing\Dext.Testing.Runner.pas';
+  Dext.Testing.Runner in 'Testing\Dext.Testing.Runner.pas',
+  Dext.Testing in 'Testing\Dext.Testing.pas';
 
 end.

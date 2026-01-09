@@ -127,8 +127,8 @@
         <DCCReference Include="Data\Dext.Entity.Core.pas"/>
         <DCCReference Include="Data\Dext.Entity.Drivers.FireDAC.Phys.pas"/>
         <DCCReference Include="Data\Dext.Entity.Drivers.FireDAC.pas"/>
-        <DCCReference Include="Data\Dext.Entity.Drivers.Interfaces.pas"/>
         <DCCReference Include="Data\Dext.Entity.Dialects.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Drivers.Interfaces.pas"/>
         <DCCReference Include="Data\Dext.Specifications.SQL.Generator.pas"/>
         <DCCReference Include="Data\Dext.Entity.Tenancy.pas"/>
         <DCCReference Include="Data\Dext.Entity.TypeConverters.pas"/>
@@ -151,19 +151,8 @@
         <DCCReference Include="Data\Dext.Entity.LazyLoading.pas"/>
         <DCCReference Include="Data\Dext.Entity.Grouping.pas"/>
         <DCCReference Include="Data\Dext.Entity.Joining.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Args.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateDown.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateGenerate.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateList.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateUp.pas"/>
         <DCCReference Include="Data\Dext.Entity.Prototype.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Registry.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Cache.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

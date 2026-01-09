@@ -105,6 +105,8 @@ type
     function Reference(const APropName: string): IReferenceEntry;
   end;
 
+
+
   /// <summary>
   ///   Concrete implementation of DbContext.
   ///   Manages database connection, transactions, and entity sets.
@@ -776,6 +778,8 @@ begin
     Nodes.Free;
   end;
 end;
+
+{ TEntityNode }
 
 { TEntityNode }
 

@@ -7,4 +7,6 @@
   Dext.Testing.DI,
   Dext.Testing.Fluent,
   Dext.Testing.Runner,
-  Dext.Testing.Report
+  Dext.Testing.Report,
+  Dext.Types.UUID
+
