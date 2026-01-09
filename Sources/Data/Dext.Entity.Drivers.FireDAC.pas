@@ -101,7 +101,7 @@ type
     procedure SetParamValue(Param: TFDParam; const AValue: TValue);
     function GetDialect: TDatabaseDialect;
   public
-    constructor Create(AConnection: TFDConnection);
+    constructor Create(AConnection: TFDConnection; ADialect: TDatabaseDialect);
     destructor Destroy; override;
     
     procedure SetSQL(const ASQL: string);
@@ -123,6 +123,8 @@ type
     FConnection: TFDConnection;
     FOwnsConnection: Boolean;
     FOnLog: TProc<string>;
+    FDialect: TDatabaseDialect;
+    procedure DetectDialect;
   public
     constructor Create(AConnection: TFDConnection; AOwnsConnection: Boolean = True);
     destructor Destroy; override;
@@ -139,6 +141,9 @@ type
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
     property ConnectionString: string read GetConnectionString write SetConnectionString;
+    
+    function GetDialect: TDatabaseDialect;
+    property Dialect: TDatabaseDialect read GetDialect;
     
     procedure SetOnLog(AValue: TProc<string>);
     function GetOnLog: TProc<string>;
@@ -275,10 +280,11 @@ end;
 
 { TFireDACCommand }
 
-constructor TFireDACCommand.Create(AConnection: TFDConnection);
+constructor TFireDACCommand.Create(AConnection: TFDConnection; ADialect: TDatabaseDialect);
 begin
   inherited Create;
   FConnection := AConnection;
+  FDialect := ADialect;
   FQuery := TFDQuery.Create(nil);
   FQuery.Connection := FConnection;
 end;
@@ -306,25 +312,7 @@ begin
 end;
 
 function TFireDACCommand.GetDialect: TDatabaseDialect;
-var
-  DriverID: string;
 begin
-  if FDialect <> ddUnknown then
-    Exit(FDialect);
-    
-  DriverID := FConnection.DriverName.ToLower;
-  
-  if DriverID.Contains('pg') or DriverID.Contains('postgres') then
-    FDialect := ddPostgreSQL
-  else if DriverID.Contains('mysql') or DriverID.Contains('maria') then
-    FDialect := ddMySQL
-  else if DriverID.Contains('mssql') or DriverID.Contains('sqlserver') then
-    FDialect := ddSQLServer
-  else if DriverID.Contains('sqlite') then
-    FDialect := ddSQLite
-  else
-    FDialect := ddUnknown;
-    
   Result := FDialect;
 end;
 
@@ -891,7 +879,7 @@ function TFireDACConnection.CreateCommand(const ASQL: string): IDbCommand;
 var
   LCmd: TFireDACCommand;
 begin
-  LCmd := TFireDACCommand.Create(FConnection);
+  LCmd := TFireDACCommand.Create(FConnection, GetDialect);
   LCmd.FOnLog := FOnLog;
   if ASQL <> '' then
     LCmd.SetSQL(ASQL);
@@ -975,6 +963,24 @@ begin
   if FConnection.Connected then
     FConnection.Connected := False;
   FConnection.ConnectionString := AValue;
+end;
+
+procedure TFireDACConnection.DetectDialect;
+var
+  DriverID: string;
+begin
+  if FDialect <> ddUnknown then Exit;
+
+  DriverID := FConnection.DriverName.ToLower;
+  
+  FDialect := TDialectFactory.DetectDialect(DriverID);
+end;
+
+function TFireDACConnection.GetDialect: TDatabaseDialect;
+begin
+  if FDialect = ddUnknown then
+    DetectDialect;
+  Result := FDialect;
 end;
 
 end.

@@ -185,6 +185,9 @@
         <DCCReference Include="EntityDemo.Tests.SoftDelete.pas"/>
         <DCCReference Include="EntityDemo.Tests.Async.pas"/>
         <DCCReference Include="EntityDemo.Tests.TypeSystem.pas"/>
+        <DCCReference Include="EntityDemo.Tests.TypeConverter.pas"/>
+        <DCCReference Include="EntityDemo.Tests.Dialect.pas"/>
+        <DCCReference Include="EntityDemo.TypeConverterExample.pas"/>
         <DCCReference Include="EntityDemo.Entities.Info.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

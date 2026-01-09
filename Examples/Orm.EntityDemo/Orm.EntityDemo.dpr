@@ -1,5 +1,4 @@
-﻿
-program Orm.EntityDemo;
+﻿program Orm.EntityDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -32,6 +31,7 @@ uses
   EntityDemo.Tests.Async in 'EntityDemo.Tests.Async.pas',
   EntityDemo.Tests.TypeSystem in 'EntityDemo.Tests.TypeSystem.pas',
   EntityDemo.Tests.TypeConverter in 'EntityDemo.Tests.TypeConverter.pas',
+  EntityDemo.Tests.Dialect in 'EntityDemo.Tests.Dialect.pas',
   EntityDemo.TypeConverterExample in 'EntityDemo.TypeConverterExample.pas',
   EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas';
 
@@ -133,6 +133,8 @@ begin
   RunTest(TTypeSystemTest);
   // 19. TypeConverter Tests
   RunTest(TTypeConverterTest);
+  // 20. Dialect Tests
+  RunTest(TDialectTest);
   // Print summary at the end
 
   TBaseTest.PrintSummary;

@@ -53,6 +53,8 @@ type
 
   TReturningPosition = (rpAtEnd, rpBeforeValues);
 
+
+
   /// <summary>
   ///   Abstracts database-specific SQL syntax differences.
   /// </summary>
@@ -87,6 +89,15 @@ type
 
     // Explicit Dialect Identification
     function GetDialect: TDatabaseDialect;
+  end;
+
+  /// <summary>
+  ///   Factory for creating ISQLDialect instances from TDatabaseDialect enum.
+  /// </summary>
+  TDialectFactory = class
+  public
+    class function CreateDialect(const ADialect: TDatabaseDialect): ISQLDialect;
+    class function DetectDialect(const ADriverName: string): TDatabaseDialect;
   end;
 
   /// <summary>
@@ -245,6 +256,48 @@ type
   end;
 
 implementation
+  
+{ TDialectFactory }
+
+class function TDialectFactory.CreateDialect(const ADialect: TDatabaseDialect): ISQLDialect;
+begin
+  case ADialect of
+    ddSQLite: Result := TSQLiteDialect.Create;
+    ddPostgreSQL: Result := TPostgreSQLDialect.Create;
+    ddMySQL: Result := TMySQLDialect.Create;
+    ddSQLServer: Result := TSQLServerDialect.Create;
+    ddFirebird: Result := TFirebirdDialect.Create;
+    ddInterbase: Result := TInterBaseDialect.Create;
+    ddOracle: Result := TOracleDialect.Create;
+    else
+      // ddUnknown or fallback
+      Result := nil;
+  end;
+end;
+
+class function TDialectFactory.DetectDialect(const ADriverName: string): TDatabaseDialect;
+var
+  LDriver: string;
+begin
+  LDriver := ADriverName.ToLower;
+  
+  if LDriver.Contains('pg') or LDriver.Contains('postgres') then
+    Result := ddPostgreSQL
+  else if LDriver.Contains('mysql') or LDriver.Contains('maria') then
+    Result := ddMySQL
+  else if LDriver.Contains('mssql') or LDriver.Contains('sqlserver') then
+    Result := ddSQLServer
+  else if LDriver.Contains('sqlite') then
+    Result := ddSQLite
+  else if LDriver.Contains('fb') or LDriver.Contains('firebird') then
+    Result := ddFirebird
+  else if LDriver.Contains('ib') or LDriver.Contains('interbase') then
+    Result := ddInterbase
+  else if LDriver.Contains('oracle') or LDriver.Contains('ora') then
+    Result := ddOracle
+  else
+    Result := ddUnknown;
+end;
 
 { TBaseDialect }
 

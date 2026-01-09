@@ -152,7 +152,7 @@ type
     class var FModelCache: TObjectDictionary<TClass, TModelBuilder>;
     class var FCriticalSection: TObject; // For thread safety
     
-    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
+    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect = nil; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
     constructor Create(const AOptions: TDbContextOptions; const ATenantProvider: ITenantProvider = nil); overload;
     destructor Destroy; override;
     
@@ -305,11 +305,24 @@ begin
   FreeAndNil(FCriticalSection);
 end;
 
-constructor TDbContext.Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil);
+constructor TDbContext.Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy; const ATenantProvider: ITenantProvider);
 begin
   inherited Create;
   FConnection := AConnection;
-  FDialect := ADialect;
+  
+  if ADialect <> nil then
+    FDialect := ADialect
+  else if (FConnection <> nil) and (FConnection.Dialect <> ddUnknown) then
+    FDialect := TDialectFactory.CreateDialect(FConnection.Dialect)
+  else
+    FDialect := nil; // Will likely cause issues if query generation is attempted without dialect
+
+  if FDialect = nil then
+  begin
+     // Optional: Raise warning or default to generic?
+     // We leave it nil, it might be set later or cause runtime error if used.
+  end;
+  
   if ANamingStrategy <> nil then
     FNamingStrategy := ANamingStrategy
   else

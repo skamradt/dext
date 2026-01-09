@@ -102,7 +102,7 @@ type
     procedure SetParamValue(Param: TFDParam; const AValue: TValue);
     function GetDialect: TDatabaseDialect;
   public
-    constructor Create(AConnection: IFDPhysConnection);
+    constructor Create(AConnection: IFDPhysConnection; ADialect: TDatabaseDialect);
     destructor Destroy; override;
     
     procedure SetSQL(const ASQL: string);
@@ -128,6 +128,8 @@ type
     FConnection: IFDPhysConnection;
     FDatSManager: TFDDatSManager;
     FOnLog: TProc<string>;
+    FDialect: TDatabaseDialect;
+    procedure DetectDialect;
   public
     constructor Create(AConnection: IFDPhysConnection);
     destructor Destroy; override;
@@ -148,6 +150,9 @@ type
     procedure SetOnLog(AValue: TProc<string>);
     function GetOnLog: TProc<string>;
     property OnLog: TProc<string> read GetOnLog write SetOnLog;
+    
+    function GetDialect: TDatabaseDialect;
+    property Dialect: TDatabaseDialect read GetDialect;
     
     property PhysConnection: IFDPhysConnection read FConnection;
   end;
@@ -284,7 +289,7 @@ end;
 
 { TFireDACPhysCommand }
 
-constructor TFireDACPhysCommand.Create(AConnection: IFDPhysConnection);
+constructor TFireDACPhysCommand.Create(AConnection: IFDPhysConnection; ADialect: TDatabaseDialect);
 begin
   inherited Create;
   FConnection := AConnection;
@@ -310,7 +315,7 @@ begin
   // FCmd.Params[0].AsInteger := ...
   // So yes, Params should be available.
   
-  FDialect := ddUnknown; 
+  FDialect := ADialect;
 end;
 
 destructor TFireDACPhysCommand.Destroy;
@@ -358,30 +363,8 @@ begin
 end;
 
 function TFireDACPhysCommand.GetDialect: TDatabaseDialect;
-var
-  Meta: IFDPhysConnectionMetadata;
 begin
-  if FDialect <> ddUnknown then Exit(FDialect);
-
-  if FConnection <> nil then
-  begin
-     // Use Metadata to get RDBMS Kind
-     FConnection.CreateMetadata(Meta);
-     case Meta.Kind of
-       TFDRDBMSKinds.PostgreSQL: Result := ddPostgreSQL;
-       TFDRDBMSKinds.MySQL: Result := ddMySQL;
-       TFDRDBMSKinds.MSSQL: Result := ddSQLServer;
-       TFDRDBMSKinds.Firebird: Result := ddFirebird;
-       TFDRDBMSKinds.Interbase: Result := ddInterbase;
-       TFDRDBMSKinds.SQLite: Result := ddSQLite;
-       TFDRDBMSKinds.Oracle: Result := ddOracle;
-       else Result := ddUnknown;
-     end;
-  end
-  else
-    Result := ddUnknown;
-
-  FDialect := Result;
+  Result := FDialect;
 end;
 
 
@@ -523,7 +506,7 @@ function TFireDACPhysConnection.CreateCommand(const ASQL: string): IDbCommand;
 var
   LCmd: TFireDACPhysCommand;
 begin
-  LCmd := TFireDACPhysCommand.Create(FConnection);
+  LCmd := TFireDACPhysCommand.Create(FConnection, GetDialect);
   LCmd.FOnLog := FOnLog;
   if ASQL <> '' then
     LCmd.SetSQL(ASQL);
@@ -723,8 +706,30 @@ end;
 
 procedure TFireDACPhysConnection.SetConnectionString(const AValue: string);
 begin
-  // For Phys connection, usually params are set before creation.
   // We don't support late-binding connection strings here yet.
+end;
+
+procedure TFireDACPhysConnection.DetectDialect;
+var
+  DriverID: string;
+begin
+  if FDialect <> ddUnknown then Exit;
+
+  // IFDPhysConnection doesn't expose DriverName directly as property, checking...
+  // Usually we can get it from Driver
+  if FConnection.Driver <> nil then
+    DriverID := FConnection.Driver.DriverID.ToLower
+  else
+    DriverID := ''; // Should not happen if connected
+
+  FDialect := TDialectFactory.DetectDialect(DriverID);
+end;
+
+function TFireDACPhysConnection.GetDialect: TDatabaseDialect;
+begin
+  if FDialect = ddUnknown then
+    DetectDialect;
+  Result := FDialect;
 end;
 
 end.

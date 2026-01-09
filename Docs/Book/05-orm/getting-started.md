@@ -94,15 +94,12 @@ begin
   // Wrap for Dext
   Connection := TFireDACConnection.Create(FDConn, True);
   
-  // Choose your dialect
-  Dialect := TSQLiteDialect.Create;
-  // OR
-  Dialect := TMySQLDialect.Create; // For MySQL/MariaDB
-  // OR
-  Dialect := TPostgreSQLDialect.Create; // For PostgreSQL
+  // Create context (Dialect is auto-detected from Connection)
+  Ctx := TAppDbContext.Create(Connection); 
   
-  // Create context
-  Ctx := TAppDbContext.Create(Connection, Dialect);
+  // Optional: Explicitly specifying dialect
+  // Dialect := TSQLiteDialect.Create;
+  // Ctx := TAppDbContext.Create(Connection, Dialect);
 end;
 ```
 

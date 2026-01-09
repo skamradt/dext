@@ -16,7 +16,7 @@ O núcleo do ORM está funcional, suportando operações CRUD, mapeamento básic
 - [x] **Entity Mapping**: Atributos `[Table]`, `[Column]`, `[PK]`, `[AutoInc]`, `[NotMapped]`.
 - [x] **Identity Map**: Cache de primeiro nível para garantir instância única por Contexto.
 - [x] **Database Drivers**: Abstração de driver (FireDAC implementado).
-- [x] **Dialects**: Suporte multi-banco (SQLite, PostgreSQL, **SQL Server**).
+- [x] **Dialects**: Suporte multi-banco (SQLite, PostgreSQL, MySQL/MariaDB, Firebird, SQL Server) com **Auto-Detecção via Enum**.
 - [x] **Schema Generation**: Geração automática de scripts `CREATE TABLE`.
 - [x] **Naming Strategies**: Convenções de nomenclatura configuráveis (SnakeCase, CamelCase).
 - [x] **Fluent Mapping**: Mapeamento externo via código (`TEntityMap<T>`) para isolamento do domínio.

@@ -90,6 +90,9 @@ type
 
 implementation
 
+uses
+  Dext.Entity.Dialects;
+
 { TComponentHelper }
 
 procedure TComponentHelper.SetUniqueName;
@@ -212,10 +215,10 @@ end;
 
 procedure TDextFireDACManager.ApplyResourceOptions(AConnection: TFDConnection);
 begin
-  var DriverID := AConnection.DriverName.ToLower;
+  var Dialect := TDialectFactory.DetectDialect(AConnection.DriverName);
   
   // PostgreSQL performance optimizations from Foundation
-  if DriverID.Contains('pg') or DriverID.Contains('postgres') then
+  if Dialect = ddPostgreSQL then
   begin
     AConnection.ResourceOptions.MacroCreate := False;
     AConnection.ResourceOptions.MacroExpand := False;

@@ -74,6 +74,7 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 | **Soft Delete** | ✅ Pronto | Atributo `[SoftDelete]` |
 | **Optimistic Concurrency** | ✅ Pronto | Atributo `[Version]` |
 | **FireDAC Phys Driver** | ✅ Pronto | Driver físico para integração transparente com FireDAC |
+| **Auto-Detecção de Dialeto** | ✅ Pronto | Identificação determinística via Enum (`ddPostgreSQL`, etc) |
 | **Field Mapping** | ✅ Pronto | Mapeamento por fields (além de properties) para evitar disparar setters ao carregar do banco |
 
 

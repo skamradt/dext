@@ -32,7 +32,8 @@ uses
   System.Classes,
   System.Rtti,
   System.Generics.Collections,
-  Data.DB;
+  Data.DB,
+  Dext.Entity.Dialects;
 
 type
   IDbReader = interface;
@@ -58,6 +59,9 @@ type
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
     property ConnectionString: string read GetConnectionString write SetConnectionString;
+
+    function GetDialect: TDatabaseDialect;
+    property Dialect: TDatabaseDialect read GetDialect;
 
     function TableExists(const ATableName: string): Boolean;
     

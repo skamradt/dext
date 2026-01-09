@@ -74,6 +74,7 @@ For technical details and granular status of each module, check:
 | **Soft Delete** | ✅ Ready | `[SoftDelete]` attribute |
 | **Optimistic Concurrency** | ✅ Ready | `[Version]` attribute |
 | **FireDAC Phys Driver** | ✅ Ready | Physical driver for transparent integration with FireDAC |
+| **Dialect Auto-Detection** | ✅ Ready | Enum-based deterministic dialect identification (`ddPostgreSQL`, etc) |
 | **Field Mapping** | ✅ Ready | Field-based mapping (in addition to properties) to avoid triggering setters when loading from database |
 
 

@@ -70,6 +70,7 @@ Um ORM moderno focado em produtividade e performance.
   - **Hydration Polimórfica**: Instanciação automática da subclasse correta durante a recuperação de dados.
   - **Mapeamento via Atributos**: Uso de `[Inheritance]`, `[DiscriminatorColumn]` e `[DiscriminatorValue]`.
 - **Multi-Database**: Suporte totalmente testado para **SQL Server, PostgreSQL, Firebird, MySQL/MariaDB** e **SQLite** (165 testes passando em todos). Oracle em beta.
+- **Auto-Detecção de Dialeto**: Identificação determinística via Enum (`ddPostgreSQL`, etc) para configuração zero.
 - **Drivers de Alta Performance**:
   - **Driver FireDAC Padrão**: Completo com compatibilidade TDataSet
   - **Driver FireDAC Phys**: Acesso "bare metal" sem TDataSet para máxima performance
