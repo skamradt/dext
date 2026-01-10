@@ -144,7 +144,7 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 - [Application Lifecycle & Integrity](Docs/application-lifecycle.md)
 - [Async Programming](Docs/async-api.md)
 - [Caching](Docs/caching.md)
-- [CLI Tool & Migrations](Docs/cli.md) ⭐ NEW - Includes **Web Dashboard** (`dext ui`) for visual management.
+- [CLI Tool & Migrations](Docs/cli.md) ⭐ NEW - Includes **Web Dashboard** (`dext ui`) and **Documentation Generator** (`dext doc`).
 
 ### 🧪 Testing
 - [Getting Started](Docs/testing.md)

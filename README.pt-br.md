@@ -141,7 +141,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - [Ciclo de Vida & Integridade](Docs/application-lifecycle.md)
 - [Async Programming](Docs/async-api.md)
 - [Caching](Docs/caching.md)
-- **Dext CLI Tool**: Ferramenta de linha de comando poderosa.
+- [Dext CLI Tool](Docs/cli.md) ⭐ NOVO - Inclui **Web Dashboard** (`dext ui`) e **Gerador de Documentação** (`dext doc`).
   - 🖥️ **Dashboard UI**: Interface visual web (`dext ui`) para gerenciamento de projetos, configurações e análise de testes.
   - 🛠️ **Environment Manager**: Detecção e configuração automática de versões do Delphi instaladas.
   - 🔍 **Test Discovery**: Encontra e executa testes automaticamente.

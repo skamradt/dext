@@ -124,3 +124,24 @@ Evitar dependências obrigatórias de todos os bancos de dados no package princi
 Facilitar o setup do ambiente e seleção de módulos.
 - [ ] **Modularity Web UI**: Gerador de projetos onde o dev seleciona os bancos e middlewares desejados.
 - [ ] **Library Path Manager**: Ferramenta CLI para configurar caminhos do Delphi automaticamente.
+
+## 📚 Documentation Generator (dext doc)
+
+Ferramenta para geração de sites estáticos de documentação a partir do código fonte (AST).
+
+### 1. Customization & Theming
+- [ ] **Metadata Customization**: Opções CLI/Config para definir Título do Site, Autor, Copyright e Footer personalizado.
+- [ ] **Custom CSS/JS**: Suporte a injeção de arquivos `.css` e `.js` do usuário para alterar o tema padrão.
+- [ ] **Templates**: Suporte a templates customizáveis (Mustache/Handlebars) para alterar o layout HTML.
+
+### 2. Navigation & Linking
+- [ ] **Type Hyperlinking**: Criar links navegáveis automaticamente entre tipos (ex: clicar no tipo de retorno de um método e ir para a página daquele tipo).
+- [ ] **Breadcrumbs**: Implementar navegação de migalhas de pão baseada em namespaces.
+- [ ] **"View Source" Link**: Link direto para o repositório (GitHub/GitLab) na linha exata da declaração.
+- [ ] **Dependency Graphs**: Diagrama Mermaid de dependências entre Units.
+
+### 3. Advanced Content & Parsing
+- [ ] **XML Documentation**: Suporte completo às tags XML (`<summary>`, `<param>`, `<returns>`, `<remarks>`, `<code`, `<see cref>`).
+- [ ] **Versioning**: Suporte a dropdown de versões (v1, v2) no cabeçalho.
+- [ ] **Intelligent Search**: Atalho (Ctrl+K), filtros por tipo (ex: `I:Service`) e busca fuzzy.
+- [ ] **Badges**: Badges de métricas (Linhas de código, número de métodos, estabilidade).

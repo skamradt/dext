@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} - Dext Documentation</title>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext Framework</h3>
+            <small>v1.0-beta</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            {{SIDEBAR_CONTENT}}
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">🌓</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            {{MAIN_CONTENT}}
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

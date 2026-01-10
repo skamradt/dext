@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DextJsonDataObjects - Dext Framework 1.0</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext Framework 1.0</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Dext.Assertions.html" class="nav-item">Dext.Assertions</a>
+<a href="Dext.Auth.Attributes.html" class="nav-item">Dext.Auth.Attributes</a>
+<a href="Dext.Auth.BasicAuth.html" class="nav-item">Dext.Auth.BasicAuth</a>
+<a href="Dext.Auth.Identity.html" class="nav-item">Dext.Auth.Identity</a>
+<a href="Dext.Auth.JWT.html" class="nav-item">Dext.Auth.JWT</a>
+<a href="Dext.Auth.Middleware.html" class="nav-item">Dext.Auth.Middleware</a>
+<a href="Dext.Caching.html" class="nav-item">Dext.Caching</a>
+<a href="Dext.Caching.Redis.html" class="nav-item">Dext.Caching.Redis</a>
+<a href="Dext.Collections.html" class="nav-item">Dext.Collections</a>
+<a href="Dext.Collections.Extensions.html" class="nav-item">Dext.Collections.Extensions</a>
+<a href="Dext.Configuration.Binder.html" class="nav-item">Dext.Configuration.Binder</a>
+<a href="Dext.Configuration.Core.html" class="nav-item">Dext.Configuration.Core</a>
+<a href="Dext.Configuration.EnvironmentVariables.html" class="nav-item">Dext.Configuration.EnvironmentVariables</a>
+<a href="Dext.Configuration.Interfaces.html" class="nav-item">Dext.Configuration.Interfaces</a>
+<a href="Dext.Configuration.Json.html" class="nav-item">Dext.Configuration.Json</a>
+<a href="Dext.Configuration.Yaml.html" class="nav-item">Dext.Configuration.Yaml</a>
+<a href="Dext.Core.Activator.html" class="nav-item">Dext.Core.Activator</a>
+<a href="Dext.Core.CancellationToken.html" class="nav-item">Dext.Core.CancellationToken</a>
+<a href="Dext.Core.DateUtils.html" class="nav-item">Dext.Core.DateUtils</a>
+<a href="Dext.Core.Extensions.html" class="nav-item">Dext.Core.Extensions</a>
+<a href="Dext.Core.Memory.html" class="nav-item">Dext.Core.Memory</a>
+<a href="Dext.Core.SmartTypes.html" class="nav-item">Dext.Core.SmartTypes</a>
+<a href="Dext.Core.Span.html" class="nav-item">Dext.Core.Span</a>
+<a href="Dext.Core.ValueConverters.html" class="nav-item">Dext.Core.ValueConverters</a>
+<a href="Dext.DI.Attributes.html" class="nav-item">Dext.DI.Attributes</a>
+<a href="Dext.DI.Comparers.html" class="nav-item">Dext.DI.Comparers</a>
+<a href="Dext.DI.Core.html" class="nav-item">Dext.DI.Core</a>
+<a href="Dext.DI.Extensions.html" class="nav-item">Dext.DI.Extensions</a>
+<a href="Dext.DI.Extensions.utf8.html" class="nav-item">Dext.DI.Extensions.utf8</a>
+<a href="Dext.DI.Interfaces.html" class="nav-item">Dext.DI.Interfaces</a>
+<a href="Dext.DI.Middleware.html" class="nav-item">Dext.DI.Middleware</a>
+<a href="Dext.Entity.Attributes.html" class="nav-item">Dext.Entity.Attributes</a>
+<a href="Dext.Entity.Cache.html" class="nav-item">Dext.Entity.Cache</a>
+<a href="Dext.Entity.Context.html" class="nav-item">Dext.Entity.Context</a>
+<a href="Dext.Entity.Core.html" class="nav-item">Dext.Entity.Core</a>
+<a href="Dext.Entity.DbSet.html" class="nav-item">Dext.Entity.DbSet</a>
+<a href="Dext.Entity.Dialects.html" class="nav-item">Dext.Entity.Dialects</a>
+<a href="Dext.Entity.Drivers.FireDAC.html" class="nav-item">Dext.Entity.Drivers.FireDAC</a>
+<a href="Dext.Entity.Drivers.FireDAC.Manager.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Manager</a>
+<a href="Dext.Entity.Drivers.FireDAC.Phys.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Phys</a>
+<a href="Dext.Entity.Drivers.Interfaces.html" class="nav-item">Dext.Entity.Drivers.Interfaces</a>
+<a href="Dext.Entity.Grouping.html" class="nav-item">Dext.Entity.Grouping</a>
+<a href="Dext.Entity.Joining.html" class="nav-item">Dext.Entity.Joining</a>
+<a href="Dext.Entity.LazyLoading.html" class="nav-item">Dext.Entity.LazyLoading</a>
+<a href="Dext.Entity.Mapping.html" class="nav-item">Dext.Entity.Mapping</a>
+<a href="Dext.Entity.Migrations.html" class="nav-item">Dext.Entity.Migrations</a>
+<a href="Dext.Entity.Migrations.Builder.html" class="nav-item">Dext.Entity.Migrations.Builder</a>
+<a href="Dext.Entity.Migrations.Differ.html" class="nav-item">Dext.Entity.Migrations.Differ</a>
+<a href="Dext.Entity.Migrations.Extractor.html" class="nav-item">Dext.Entity.Migrations.Extractor</a>
+<a href="Dext.Entity.Migrations.Generator.html" class="nav-item">Dext.Entity.Migrations.Generator</a>
+<a href="Dext.Entity.Migrations.Json.html" class="nav-item">Dext.Entity.Migrations.Json</a>
+<a href="Dext.Entity.Migrations.Model.html" class="nav-item">Dext.Entity.Migrations.Model</a>
+<a href="Dext.Entity.Migrations.Operations.html" class="nav-item">Dext.Entity.Migrations.Operations</a>
+<a href="Dext.Entity.Migrations.Runner.html" class="nav-item">Dext.Entity.Migrations.Runner</a>
+<a href="Dext.Entity.Migrations.Serializers.Json.html" class="nav-item">Dext.Entity.Migrations.Serializers.Json</a>
+<a href="Dext.Entity.Naming.html" class="nav-item">Dext.Entity.Naming</a>
+<a href="Dext.Entity.Prototype.html" class="nav-item">Dext.Entity.Prototype</a>
+<a href="Dext.Entity.Query.html" class="nav-item">Dext.Entity.Query</a>
+<a href="Dext.Entity.Scaffolding.html" class="nav-item">Dext.Entity.Scaffolding</a>
+<a href="Dext.Entity.Setup.html" class="nav-item">Dext.Entity.Setup</a>
+<a href="Dext.Entity.Tenancy.html" class="nav-item">Dext.Entity.Tenancy</a>
+<a href="Dext.Entity.TypeConverters.html" class="nav-item">Dext.Entity.TypeConverters</a>
+<a href="Dext.Entity.TypeSystem.html" class="nav-item">Dext.Entity.TypeSystem</a>
+<a href="Dext.Filters.html" class="nav-item">Dext.Filters</a>
+<a href="Dext.Filters.BuiltIn.html" class="nav-item">Dext.Filters.BuiltIn</a>
+<a href="Dext.HealthChecks.html" class="nav-item">Dext.HealthChecks</a>
+<a href="Dext.Hosting.AppState.html" class="nav-item">Dext.Hosting.AppState</a>
+<a href="Dext.Hosting.ApplicationLifetime.html" class="nav-item">Dext.Hosting.ApplicationLifetime</a>
+<a href="Dext.Hosting.BackgroundService.html" class="nav-item">Dext.Hosting.BackgroundService</a>
+<a href="Dext.Hosting.CLI.html" class="nav-item">Dext.Hosting.CLI</a>
+<a href="Dext.Hosting.CLI.Args.html" class="nav-item">Dext.Hosting.CLI.Args</a>
+<a href="Dext.Hosting.CLI.Commands.Configuration.html" class="nav-item">Dext.Hosting.CLI.Commands.Configuration</a>
+<a href="Dext.Hosting.CLI.Commands.Doc.html" class="nav-item">Dext.Hosting.CLI.Commands.Doc</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateDown.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateDown</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateGenerate.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateGenerate</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateList.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateList</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateUp.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateUp</a>
+<a href="Dext.Hosting.CLI.Commands.Scaffold.html" class="nav-item">Dext.Hosting.CLI.Commands.Scaffold</a>
+<a href="Dext.Hosting.CLI.Commands.Test.html" class="nav-item">Dext.Hosting.CLI.Commands.Test</a>
+<a href="Dext.Hosting.CLI.Commands.UI.html" class="nav-item">Dext.Hosting.CLI.Commands.UI</a>
+<a href="Dext.Hosting.CLI.Config.html" class="nav-item">Dext.Hosting.CLI.Config</a>
+<a href="Dext.Hosting.CLI.Hubs.Dashboard.html" class="nav-item">Dext.Hosting.CLI.Hubs.Dashboard</a>
+<a href="Dext.Hosting.CLI.Logger.html" class="nav-item">Dext.Hosting.CLI.Logger</a>
+<a href="Dext.Hosting.CLI.Registry.html" class="nav-item">Dext.Hosting.CLI.Registry</a>
+<a href="Dext.Hosting.CLI.Tools.CodeCoverage.html" class="nav-item">Dext.Hosting.CLI.Tools.CodeCoverage</a>
+<a href="Dext.Hosting.CLI.Tools.DocGen.html" class="nav-item">Dext.Hosting.CLI.Tools.DocGen</a>
+<a href="Dext.Hosting.CLI.Tools.Sonar.html" class="nav-item">Dext.Hosting.CLI.Tools.Sonar</a>
+<a href="Dext.Interception.html" class="nav-item">Dext.Interception</a>
+<a href="Dext.Interception.ClassProxy.html" class="nav-item">Dext.Interception.ClassProxy</a>
+<a href="Dext.Interception.Proxy.html" class="nav-item">Dext.Interception.Proxy</a>
+<a href="Dext.Json.html" class="nav-item">Dext.Json</a>
+<a href="Dext.Json.Driver.DextJsonDataObjects.html" class="nav-item">Dext.Json.Driver.DextJsonDataObjects</a>
+<a href="Dext.Json.Driver.SystemJson.html" class="nav-item">Dext.Json.Driver.SystemJson</a>
+<a href="Dext.Json.Types.html" class="nav-item">Dext.Json.Types</a>
+<a href="Dext.Json.Utf8.html" class="nav-item">Dext.Json.Utf8</a>
+<a href="Dext.Json.Utf8.Serializer.html" class="nav-item">Dext.Json.Utf8.Serializer</a>
+<a href="Dext.Logging.html" class="nav-item">Dext.Logging</a>
+<a href="Dext.Logging.Console.html" class="nav-item">Dext.Logging.Console</a>
+<a href="Dext.Logging.Extensions.html" class="nav-item">Dext.Logging.Extensions</a>
+<a href="Dext.MM.html" class="nav-item">Dext.MM</a>
+<a href="Dext.Mapper.html" class="nav-item">Dext.Mapper</a>
+<a href="Dext.Mocks.html" class="nav-item">Dext.Mocks</a>
+<a href="Dext.Mocks.Auto.html" class="nav-item">Dext.Mocks.Auto</a>
+<a href="Dext.Mocks.Interceptor.html" class="nav-item">Dext.Mocks.Interceptor</a>
+<a href="Dext.Mocks.Matching.html" class="nav-item">Dext.Mocks.Matching</a>
+<a href="Dext.MultiTenancy.html" class="nav-item">Dext.MultiTenancy</a>
+<a href="Dext.OpenAPI.Attributes.html" class="nav-item">Dext.OpenAPI.Attributes</a>
+<a href="Dext.OpenAPI.Extensions.html" class="nav-item">Dext.OpenAPI.Extensions</a>
+<a href="Dext.OpenAPI.Fluent.html" class="nav-item">Dext.OpenAPI.Fluent</a>
+<a href="Dext.OpenAPI.Generator.html" class="nav-item">Dext.OpenAPI.Generator</a>
+<a href="Dext.OpenAPI.Types.html" class="nav-item">Dext.OpenAPI.Types</a>
+<a href="Dext.Options.html" class="nav-item">Dext.Options</a>
+<a href="Dext.Options.Extensions.html" class="nav-item">Dext.Options.Extensions</a>
+<a href="Dext.RateLimiting.html" class="nav-item">Dext.RateLimiting</a>
+<a href="Dext.RateLimiting.Core.html" class="nav-item">Dext.RateLimiting.Core</a>
+<a href="Dext.RateLimiting.Limiters.html" class="nav-item">Dext.RateLimiting.Limiters</a>
+<a href="Dext.RateLimiting.Policy.html" class="nav-item">Dext.RateLimiting.Policy</a>
+<a href="Dext.Specifications.Base.html" class="nav-item">Dext.Specifications.Base</a>
+<a href="Dext.Specifications.Evaluator.html" class="nav-item">Dext.Specifications.Evaluator</a>
+<a href="Dext.Specifications.Fluent.html" class="nav-item">Dext.Specifications.Fluent</a>
+<a href="Dext.Specifications.Interfaces.html" class="nav-item">Dext.Specifications.Interfaces</a>
+<a href="Dext.Specifications.OrderBy.html" class="nav-item">Dext.Specifications.OrderBy</a>
+<a href="Dext.Specifications.SQL.Generator.html" class="nav-item">Dext.Specifications.SQL.Generator</a>
+<a href="Dext.Specifications.Types.html" class="nav-item">Dext.Specifications.Types</a>
+<a href="Dext.Swagger.Middleware.html" class="nav-item">Dext.Swagger.Middleware</a>
+<a href="Dext.Testing.Attributes.html" class="nav-item">Dext.Testing.Attributes</a>
+<a href="Dext.Testing.Console.html" class="nav-item">Dext.Testing.Console</a>
+<a href="Dext.Testing.DI.html" class="nav-item">Dext.Testing.DI</a>
+<a href="Dext.Testing.Dashboard.html" class="nav-item">Dext.Testing.Dashboard</a>
+<a href="Dext.Testing.Fluent.html" class="nav-item">Dext.Testing.Fluent</a>
+<a href="Dext.Testing.History.html" class="nav-item">Dext.Testing.History</a>
+<a href="Dext.Testing.Report.html" class="nav-item">Dext.Testing.Report</a>
+<a href="Dext.Testing.Runner.html" class="nav-item">Dext.Testing.Runner</a>
+<a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
+<a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
+<a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
+<a href="Dext.Types.UUID.html" class="nav-item">Dext.Types.UUID</a>
+<a href="Dext.Utils.html" class="nav-item">Dext.Utils</a>
+<a href="Dext.Validation.html" class="nav-item">Dext.Validation</a>
+<a href="Dext.Web.ApplicationBuilder.Extensions.html" class="nav-item">Dext.Web.ApplicationBuilder.Extensions</a>
+<a href="Dext.Web.ControllerScanner.html" class="nav-item">Dext.Web.ControllerScanner</a>
+<a href="Dext.Web.Controllers.html" class="nav-item">Dext.Web.Controllers</a>
+<a href="Dext.Web.Core.html" class="nav-item">Dext.Web.Core</a>
+<a href="Dext.Web.Cors.html" class="nav-item">Dext.Web.Cors</a>
+<a href="Dext.Web.DataApi.html" class="nav-item">Dext.Web.DataApi</a>
+<a href="Dext.Web.Extensions.html" class="nav-item">Dext.Web.Extensions</a>
+<a href="Dext.Web.Formatters.Interfaces.html" class="nav-item">Dext.Web.Formatters.Interfaces</a>
+<a href="Dext.Web.Formatters.Json.html" class="nav-item">Dext.Web.Formatters.Json</a>
+<a href="Dext.Web.Formatters.Selector.html" class="nav-item">Dext.Web.Formatters.Selector</a>
+<a href="Dext.Web.HandlerInvoker.html" class="nav-item">Dext.Web.HandlerInvoker</a>
+<a href="Dext.Web.Hubs.html" class="nav-item">Dext.Web.Hubs</a>
+<a href="Dext.Web.Hubs.Clients.html" class="nav-item">Dext.Web.Hubs.Clients</a>
+<a href="Dext.Web.Hubs.Connections.html" class="nav-item">Dext.Web.Hubs.Connections</a>
+<a href="Dext.Web.Hubs.Context.html" class="nav-item">Dext.Web.Hubs.Context</a>
+<a href="Dext.Web.Hubs.Extensions.html" class="nav-item">Dext.Web.Hubs.Extensions</a>
+<a href="Dext.Web.Hubs.Hub.html" class="nav-item">Dext.Web.Hubs.Hub</a>
+<a href="Dext.Web.Hubs.Interfaces.html" class="nav-item">Dext.Web.Hubs.Interfaces</a>
+<a href="Dext.Web.Hubs.Middleware.html" class="nav-item">Dext.Web.Hubs.Middleware</a>
+<a href="Dext.Web.Hubs.Protocol.Json.html" class="nav-item">Dext.Web.Hubs.Protocol.Json</a>
+<a href="Dext.Web.Hubs.Transport.SSE.html" class="nav-item">Dext.Web.Hubs.Transport.SSE</a>
+<a href="Dext.Web.Hubs.Types.html" class="nav-item">Dext.Web.Hubs.Types</a>
+<a href="Dext.Web.Indy.html" class="nav-item">Dext.Web.Indy</a>
+<a href="Dext.Web.Indy.SSL.Interfaces.html" class="nav-item">Dext.Web.Indy.SSL.Interfaces</a>
+<a href="Dext.Web.Indy.SSL.OpenSSL.html" class="nav-item">Dext.Web.Indy.SSL.OpenSSL</a>
+<a href="Dext.Web.Indy.SSL.Taurus.html" class="nav-item">Dext.Web.Indy.SSL.Taurus</a>
+<a href="Dext.Web.Indy.Server.html" class="nav-item">Dext.Web.Indy.Server</a>
+<a href="Dext.Web.Indy.Types.html" class="nav-item">Dext.Web.Indy.Types</a>
+<a href="Dext.Web.Injection.html" class="nav-item">Dext.Web.Injection</a>
+<a href="Dext.Web.Interfaces.html" class="nav-item">Dext.Web.Interfaces</a>
+<a href="Dext.Web.Middleware.html" class="nav-item">Dext.Web.Middleware</a>
+<a href="Dext.Web.Middleware.Compression.html" class="nav-item">Dext.Web.Middleware.Compression</a>
+<a href="Dext.Web.Middleware.Extensions.html" class="nav-item">Dext.Web.Middleware.Extensions</a>
+<a href="Dext.Web.Middleware.Logging.html" class="nav-item">Dext.Web.Middleware.Logging</a>
+<a href="Dext.Web.Middleware.StartupLock.html" class="nav-item">Dext.Web.Middleware.StartupLock</a>
+<a href="Dext.Web.ModelBinding.html" class="nav-item">Dext.Web.ModelBinding</a>
+<a href="Dext.Web.ModelBinding.Extensions.html" class="nav-item">Dext.Web.ModelBinding.Extensions</a>
+<a href="Dext.Web.MultiTenancy.html" class="nav-item">Dext.Web.MultiTenancy</a>
+<a href="Dext.Web.Pipeline.html" class="nav-item">Dext.Web.Pipeline</a>
+<a href="Dext.Web.ResponseHelper.html" class="nav-item">Dext.Web.ResponseHelper</a>
+<a href="Dext.Web.Results.html" class="nav-item">Dext.Web.Results</a>
+<a href="Dext.Web.Routing.html" class="nav-item">Dext.Web.Routing</a>
+<a href="Dext.Web.Routing.Attributes.html" class="nav-item">Dext.Web.Routing.Attributes</a>
+<a href="Dext.Web.RoutingMiddleware.html" class="nav-item">Dext.Web.RoutingMiddleware</a>
+<a href="Dext.Web.StaticFiles.html" class="nav-item">Dext.Web.StaticFiles</a>
+<a href="Dext.Web.StatusCodes.html" class="nav-item">Dext.Web.StatusCodes</a>
+<a href="Dext.Web.Versioning.html" class="nav-item">Dext.Web.Versioning</a>
+<a href="Dext.Web.WebApplication.html" class="nav-item">Dext.Web.WebApplication</a>
+<a href="Dext.WebHost.html" class="nav-item">Dext.WebHost</a>
+<a href="Dext.Yaml.html" class="nav-item">Dext.Yaml</a>
+<a href="DextJsonDataObjects.html" class="nav-item">DextJsonDataObjects</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit DextJsonDataObjects</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class EJsonException {}
+Exception <|-- EJsonException
+class EJsonCastException {}
+EJsonException <|-- EJsonCastException
+class EJsonPathException {}
+EJsonException <|-- EJsonPathException
+class EJsonParserException {    +CreateResFmt()
+    +CreateRes()
+    +LineNum
+    +Column
+    +Position
+}
+EJsonException <|-- EJsonParserException
+class TJsonSerializationConfig {    +InitDefaults()
+    +Default()
+}
+class TJsonReaderProgressRec {    +Init()
+}
+class TJsonOutputWriter {    +Grow()
+    +Init()
+    +Done()
+    +DoneConvertToString()
+    +FlushToBytes()
+    +FlushToMemoryStream()
+    +FlushToStringBuffer()
+    +FlushToString()
+    +Append()
+    +Append2()
+    +Append3()
+    +StreamFlushPossible()
+    +StreamFlush()
+    +ExpandIndents()
+    +AppendLine()
+    +FlushLastLine()
+    +StreamDone()
+    +LinesDone()
+    +Indent()
+    +Unindent()
+    +AppendIntro()
+    +AppendValue()
+    +AppendStrValue()
+    +AppendSeparator()
+    +FreeIndents()
+    +Len
+    +Data
+}
+class TJsonDataValue {    +GetValue()
+    +GetValueUTF8()
+    +GetIntValue()
+    +GetLongValue()
+    +GetULongValue()
+    +GetFloatValue()
+    +GetDateTimeValue()
+    +GetUtcDateTimeValue()
+    +GetBoolValue()
+    +GetArrayValue()
+    +GetObjectValue()
+    +GetVariantValue()
+    +SetValue()
+    +SetValueUTF8()
+    +SetIntValue()
+    +SetLongValue()
+    +SetULongValue()
+    +SetFloatValue()
+    +SetDateTimeValue()
+    +SetUtcDateTimeValue()
+    +SetBoolValue()
+    +SetArrayValue()
+    +SetObjectValue()
+    +SetVariantValue()
+    +InternToJSON()
+    +InternSetValue()
+    +InternSetValueTransfer()
+    +InternSetArrayValue()
+    +InternSetObjectValue()
+    +Clear()
+    +TypeCastError()
+    +IsNull()
+    +Assign()
+    +Typ
+    +Value
+    +ValueUTF8
+    +IntValue
+    +LongValue
+    +ULongValue
+    +FloatValue
+    +DateTimeValue
+    +UtcDateTimeValue
+    +BoolValue
+    +ArrayValue
+    +ObjectValue
+    +VariantValue
+}
+class TJsonDataValueHelper {    +GetValue()
+    +GetValueUTF8()
+    +GetIntValue()
+    +GetLongValue()
+    +GetULongValue()
+    +GetFloatValue()
+    +GetDateTimeValue()
+    +GetUtcDateTimeValue()
+    +GetBoolValue()
+    +GetArrayValue()
+    +GetObjectValue()
+    +GetVariantValue()
+    +SetValue()
+    +SetValueUTF8()
+    +SetIntValue()
+    +SetLongValue()
+    +SetULongValue()
+    +SetFloatValue()
+    +SetDateTimeValue()
+    +SetUtcDateTimeValue()
+    +SetBoolValue()
+    +SetArrayValue()
+    +SetObjectValue()
+    +SetVariantValue()
+    +GetArrayItem()
+    +GetArrayCount()
+    +GetObjectString()
+    +GetObjectUTF8String()
+    +GetObjectInt()
+    +GetObjectLong()
+    +GetObjectULong()
+    +GetObjectFloat()
+    +GetObjectDateTime()
+    +GetObjectUtcDateTime()
+    +GetObjectBool()
+    +GetArray()
+    +GetObj()
+    +GetObjectVariant()
+    +SetObjectString()
+    +SetObjectUTF8String()
+    +SetObjectInt()
+    +SetObjectLong()
+    +SetObjectULong()
+    +SetObjectFloat()
+    +SetObjectDateTime()
+    +SetObjectUtcDateTime()
+    +SetObjectBool()
+    +SetArray()
+    +SetObject()
+    +SetObjectVariant()
+    +GetObjectPath()
+    +SetObjectPath()
+    +GetTyp()
+    +ResolveName()
+    +InternClear()
+    +SetInternValue()
+    +Implicit()
+    +IsNull()
+    +Typ
+    +Value
+    +ValueUTF8
+    +IntValue
+    +LongValue
+    +ULongValue
+    +FloatValue
+    +DateTimeValue
+    +UtcDateTimeValue
+    +BoolValue
+    +ArrayValue
+    +ObjectValue
+    +VariantValue
+    +Count
+    +Items
+    +S
+    +UTF8
+    +I
+    +L
+    +U
+    +F
+    +D
+    +DUtc
+    +B
+    +A
+    +O
+    +V
+    +Path
+}
+class TJsonBaseObject {    +StrToJSONStr()
+    +EscapeStrToJSONStr()
+    +DateTimeToJSONStr()
+    +UtcDateTimeToJSONStr()
+    +InternInitAndAssignItem()
+    +GetStreamBytes()
+    +InternToJSON()
+    +NewInstance()
+    +ParseUtf8()
+    +ParseUtf8Bytes()
+    +Parse()
+    +ParseFromFile()
+    +ParseFromStream()
+    +LoadFromFile()
+    +LoadFromStream()
+    +SaveToFile()
+    +SaveToStream()
+    +SaveToLines()
+    +FromUtf8JSON()
+    +FromJSON()
+    +ToJSON()
+    +ToUtf8JSON()
+    +ToString()
+    +Clone()
+    +JSONToDateTime()
+    +DateTimeToJSON()
+    +UtcDateTimeToJSON()
+}
+TObject <|-- TJsonBaseObject
+class TJsonPrimitiveValue {    +GetValue()
+    +SetValue()
+    +GetItem()
+    +InternToJSON()
+    +Destroy()
+    +Clone()
+    +Assign()
+    +Item
+    +Value
+}
+TJsonBaseObject <|-- TJsonPrimitiveValue
+class TJsonArrayEnumerator {    +Create()
+    +GetCurrent()
+    +MoveNext()
+    +Current
+}
+class TJsonArray {    +GetString()
+    +GetUTF8String()
+    +GetInt()
+    +GetLong()
+    +GetULong()
+    +GetFloat()
+    +GetDateTime()
+    +GetUtcDateTime()
+    +GetBool()
+    +GetArray()
+    +GetObj()
+    +GetVariant()
+    +SetString()
+    +SetUTF8String()
+    +SetInt()
+    +SetLong()
+    +SetULong()
+    +SetFloat()
+    +SetDateTime()
+    +SetUtcDateTime()
+    +SetBool()
+    +SetArray()
+    +SetObject()
+    +SetVariant()
+    +GetItem()
+    +GetType()
+    +GetTypeEx()
+    +GetValue()
+    +SetValue()
+    +AddItem()
+    +InsertItem()
+    +Grow()
+    +InternApplyCapacity()
+    +SetCapacity()
+    +SetCount()
+    +InternToJSON()
+    +RaiseListError()
+    +Destroy()
+    +Clear()
+    +Delete()
+    +Extract()
+    +ExtractArray()
+    +ExtractObject()
+    +Assign()
+    +Clone()
+    +Add()
+    +AddUtf8()
+    +AddUtcDateTime()
+    +AddArray()
+    +AddObject()
+    +Insert()
+    +InsertUtcDateTime()
+    +InsertArray()
+    +InsertObject()
+    +GetEnumerator()
+    +IsNull()
+    +Types
+    +TypesEx
+    +Values
+    +S
+    +UTF8
+    +I
+    +L
+    +U
+    +F
+    +D
+    +DUtc
+    +B
+    +A
+    +O
+    +V
+    +Items
+    +Count
+    +Capacity
+}
+TJsonBaseObject <|-- TJsonArray
+class TJsonNameValuePair {}
+class TJsonObjectEnumerator {    +Create()
+    +GetCurrent()
+    +MoveNext()
+    +Current
+}
+class TJsonObject {    +UpdateLastValueItem()
+    +FindItem()
+    +RequireItem()
+    +GetString()
+    +GetUTF8String()
+    +GetBool()
+    +GetInt()
+    +GetLong()
+    +GetULong()
+    +GetFloat()
+    +GetDateTime()
+    +GetUtcDateTime()
+    +GetObj()
+    +GetArray()
+    +SetString()
+    +SetUTF8String()
+    +SetBool()
+    +SetInt()
+    +SetLong()
+    +SetULong()
+    +SetFloat()
+    +SetDateTime()
+    +SetUtcDateTime()
+    +SetObject()
+    +SetArray()
+    +GetType()
+    +GetTypeEx()
+    +GetName()
+    +GetItem()
+    +SetValue()
+    +GetValue()
+    +InternAdd()
+    +InternAddArray()
+    +InternAddObject()
+    +SortUnsortedNames()
+    +CompareSortedName()
+    +QuickSortNames()
+    +InternIndexOfSortedName()
+    +InternFindSortedNameInsertIndex()
+    +InternDeleteSortedName()
+    +InternAddItem()
+    +AddItem()
+    +Grow()
+    +InternApplyCapacity()
+    +SetCapacity()
+    +GetPath()
+    +SetPath()
+    +IndexOfPChar()
+    +PathError()
+    +PathNullError()
+    +PathIndexError()
+    +InternToJSON()
+    +FindCaseInsensitiveItem()
+    +Destroy()
+    +Assign()
+    +Clone()
+    +ToSimpleObject()
+    +FromSimpleObject()
+    +Clear()
+    +Remove()
+    +Delete()
+    +IndexOf()
+    +Contains()
+    +Extract()
+    +ExtractArray()
+    +ExtractObject()
+    +GetEnumerator()
+    +IsNull()
+    +Types
+    +TypesEx
+    +Values
+    +S
+    +UTF8
+    +I
+    +L
+    +U
+    +F
+    +D
+    +DUtc
+    +B
+    +A
+    +O
+    +Path
+    +Names
+    +Items
+    +Count
+    +Capacity
+}
+TJsonBaseObject <|-- TJsonObject
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>class EJsonException</h3><a name="EJsonException"></a><div class="ancestor">Inherits from: Exception</div></div>
+<hr>
+<div class="class-header">
+<h3>class EJsonCastException</h3><a name="EJsonCastException"></a><div class="ancestor">Inherits from: EJsonException</div></div>
+<hr>
+<div class="class-header">
+<h3>class EJsonPathException</h3><a name="EJsonPathException"></a><div class="ancestor">Inherits from: EJsonException</div></div>
+<hr>
+<div class="class-header">
+<h3>class EJsonParserException</h3><a name="EJsonParserException"></a><div class="ancestor">Inherits from: EJsonException</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor CreateResFmt(ResStringRec: PResStringRec; const const: array; ALineNum: NativeInt; AColumn: NativeInt; APosition: NativeInt)</div></div>
+<div class="api-item">
+<div class="api-signature">constructor CreateRes(ResStringRec: PResStringRec; ALineNum: NativeInt; AColumn: NativeInt; APosition: NativeInt)</div></div>
+<div class="api-item">
+<div class="api-signature">property LineNum: </div></div>
+<div class="api-item">
+<div class="api-signature">property Column: </div></div>
+<div class="api-item">
+<div class="api-signature">property Position: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonSerializationConfig</h3><a name="TJsonSerializationConfig"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure InitDefaults</div></div>
+<div class="api-item">
+<div class="api-signature">function Default: TJsonSerializationConfig</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonReaderProgressRec</h3><a name="TJsonReaderProgressRec"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function Init(AProgress: TJsonReaderProgressProc; AData: Pointer; AThreshold: NativeInt): PJsonReaderProgressRec</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonOutputWriter</h3><a name="TJsonOutputWriter"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure Init</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Done</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DoneConvertToString(var var: string)</div></div>
+<div class="api-item">
+<div class="api-signature">function FlushToBytes(var var: PByte; var var: NativeInt; Encoding: TEncoding): NativeInt</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FlushToMemoryStream(Stream: TMemoryStream; Encoding: TEncoding)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FlushToStringBuffer(var var: TJsonStringBuilder)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FlushToString(var var: string)</div></div>
+<div class="api-item">
+<div class="api-signature">function Append(const const: string): PJsonStringBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Append(P: PChar; Len: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function Append2(const const: string; S2: PChar; S2Len: Integer): PJsonStringBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Append2(Ch1: Char; Ch2: Char)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Append3(Ch1: Char; const const: string; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Append3(Ch1: Char; const const: string; Ch3: Char)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Append3(Ch1: Char; const const: PChar; P2Len: Integer; Ch3: Char)</div></div>
+<div class="api-item">
+<div class="api-signature">property Len: </div></div>
+<div class="api-item">
+<div class="api-signature">property Data: </div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">procedure Grow(MinLen: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure StreamFlushPossible</div></div>
+<div class="api-item">
+<div class="api-signature">procedure StreamFlush</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ExpandIndents</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendLine(AppendOn: TLastType; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendLine(AppendOn: TLastType; P: PChar; Len: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FlushLastLine</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Init(ACompact: Boolean; AStream: TStream; AEncoding: TEncoding; ALines: TStrings; const const: TJsonSerializationConfig)</div></div>
+<div class="api-item">
+<div class="api-signature">function Done: string</div></div>
+<div class="api-item">
+<div class="api-signature">procedure StreamDone</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LinesDone</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Indent(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Unindent(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendIntro(P: PChar; Len: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendValue(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendValue(P: PChar; Len: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendStrValue(P: PChar; Len: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AppendSeparator(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FreeIndents</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonDataValue</h3><a name="TJsonDataValue"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function IsNull: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Assign(AValue: PJsonDataValue)</div></div>
+<div class="api-item">
+<div class="api-signature">property Typ: </div></div>
+<div class="api-item">
+<div class="api-signature">property Value: </div></div>
+<div class="api-item">
+<div class="api-signature">property ValueUTF8: </div></div>
+<div class="api-item">
+<div class="api-signature">property IntValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property LongValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ULongValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property FloatValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property DateTimeValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property UtcDateTimeValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property BoolValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ArrayValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ObjectValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property VariantValue: </div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">function GetValue: string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetValueUTF8: UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function GetIntValue: Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetLongValue: Int64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetULongValue: UInt64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFloatValue: Double</div></div>
+<div class="api-item">
+<div class="api-signature">function GetDateTimeValue: TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUtcDateTimeValue: TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetBoolValue: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArrayValue: TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectValue: TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">function GetVariantValue: Variant</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValue(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValueUTF8(const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetIntValue(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetLongValue(const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetULongValue(const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFloatValue(const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetDateTimeValue(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUtcDateTimeValue(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBoolValue(const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetArrayValue(const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectValue(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetVariantValue(const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternToJSON(var var: TJsonOutputWriter)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternSetValue(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternSetValueTransfer(var var: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternSetArrayValue(const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternSetObjectValue(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Clear</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TypeCastError(ExpectedType: TJsonDataType)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonDataValueHelper</h3><a name="TJsonDataValueHelper"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure Implicit(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Extended)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Pointer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Implicit(const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function IsNull: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">property Typ: </div></div>
+<div class="api-item">
+<div class="api-signature">property Value: </div></div>
+<div class="api-item">
+<div class="api-signature">property ValueUTF8: </div></div>
+<div class="api-item">
+<div class="api-signature">property IntValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property LongValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ULongValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property FloatValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property DateTimeValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property UtcDateTimeValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property BoolValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ArrayValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property ObjectValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property VariantValue: </div></div>
+<div class="api-item">
+<div class="api-signature">property Count: </div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property S: </div></div>
+<div class="api-item">
+<div class="api-signature">property UTF8: </div></div>
+<div class="api-item">
+<div class="api-signature">property I: </div></div>
+<div class="api-item">
+<div class="api-signature">property L: </div></div>
+<div class="api-item">
+<div class="api-signature">property U: </div></div>
+<div class="api-item">
+<div class="api-signature">property F: </div></div>
+<div class="api-item">
+<div class="api-signature">property D: </div></div>
+<div class="api-item">
+<div class="api-signature">property DUtc: </div></div>
+<div class="api-item">
+<div class="api-signature">property B: </div></div>
+<div class="api-item">
+<div class="api-signature">property A: </div></div>
+<div class="api-item">
+<div class="api-signature">property O: </div></div>
+<div class="api-item">
+<div class="api-signature">property V: </div></div>
+<div class="api-item">
+<div class="api-signature">property Path: </div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">function GetValue: string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetValueUTF8: UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function GetIntValue: Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetLongValue: Int64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetULongValue: UInt64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFloatValue: Double</div></div>
+<div class="api-item">
+<div class="api-signature">function GetDateTimeValue: TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUtcDateTimeValue: TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetBoolValue: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArrayValue: TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectValue: TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">function GetVariantValue: Variant</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValue(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValueUTF8(const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetIntValue(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetLongValue(const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetULongValue(const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFloatValue(const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetDateTimeValue(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUtcDateTimeValue(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBoolValue(const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetArrayValue(const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectValue(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetVariantValue(const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArrayItem(Index: Integer): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArrayCount: Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectString(const const: string): string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectUTF8String(const const: string): UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectInt(const const: string): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectLong(const const: string): Int64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectULong(const const: string): UInt64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectFloat(const const: string): Double</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectDateTime(const const: string): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectUtcDateTime(const const: string): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectBool(const const: string): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArray(const const: string): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObj(const const: string): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectVariant(const const: string): Variant</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectString(const const: string; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectUTF8String(const const: string; const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectInt(const const: string; const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectLong(const const: string; const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectULong(const const: string; const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectFloat(const const: string; const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectDateTime(const const: string; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectUtcDateTime(const const: string; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectBool(const const: string; const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetArray(const const: string; const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObject(const const: string; const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectVariant(const const: string; const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObjectPath(const const: string): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObjectPath(const const: string; const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTyp: TJsonDataType</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ResolveName</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternClear(SkipClear: TInternSkipClearType)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetInternValue(Item: PJsonDataValue; const const: TJsonDataValueHelper)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TJsonBaseObject</h3><a name="TJsonBaseObject"></a><div class="ancestor">Inherits from: TObject</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function NewInstance: TObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ParseUtf8(S: PAnsiChar; Len: Integer; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ParseUtf8(const const: UTF8String; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ParseUtf8Bytes(S: PByte; Len: Integer; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function Parse(S: PWideChar; Len: Integer; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function Parse(const const: string; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function Parse(const const: TBytes; Encoding: TEncoding; ByteIndex: Integer; ByteCount: Integer; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ParseFromFile(const const: string; Utf8WithoutBOM: Boolean; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ParseFromStream(Stream: TStream; Encoding: TEncoding; Utf8WithoutBOM: Boolean; AProgress: PJsonReaderProgressRec): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromFile(const const: string; Utf8WithoutBOM: Boolean; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromStream(Stream: TStream; Encoding: TEncoding; Utf8WithoutBOM: Boolean; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToFile(const const: string; Compact: Boolean; Encoding: TEncoding; Utf8WithoutBOM: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToFile(const const: string; const const: TJsonSerializationConfig; Compact: Boolean; Encoding: TEncoding; Utf8WithoutBOM: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToStream(Stream: TStream; Compact: Boolean; Encoding: TEncoding; Utf8WithoutBOM: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToStream(Stream: TStream; const const: TJsonSerializationConfig; Compact: Boolean; Encoding: TEncoding; Utf8WithoutBOM: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToLines(Lines: TStrings)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SaveToLines(Lines: TStrings; const const: TJsonSerializationConfig)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromUtf8JSON(const const: UTF8String; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromUtf8JSON(S: PAnsiChar; Len: Integer; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromUtf8JSON(S: PByte; Len: Integer; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromJSON(const const: UnicodeString; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromJSON(S: PWideChar; Len: Integer; AProgress: PJsonReaderProgressRec)</div></div>
+<div class="api-item">
+<div class="api-signature">function ToJSON(Compact: Boolean): string</div></div>
+<div class="api-item">
+<div class="api-signature">function ToJSON(const const: TJsonSerializationConfig; Compact: Boolean): string</div></div>
+<div class="api-item">
+<div class="api-signature">function ToUtf8JSON(Compact: Boolean): UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function ToUtf8JSON(const const: TJsonSerializationConfig; Compact: Boolean): UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ToUtf8JSON(var var: TBytes; Compact: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ToUtf8JSON(var var: TBytes; const const: TJsonSerializationConfig; Compact: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">function ToString: string</div></div>
+<div class="api-item">
+<div class="api-signature">function Clone: TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function JSONToDateTime(const const: string; ConvertToLocalTime: Boolean): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function DateTimeToJSON(const const: TDateTime; UseUtcTime: Boolean): string</div></div>
+<div class="api-item">
+<div class="api-signature">function UtcDateTimeToJSON(const const: TDateTime): string</div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure InternToJSON(var var: TJsonOutputWriter)</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">procedure StrToJSONStr(const const: TWriterAppendMethod; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure EscapeStrToJSONStr(F: PChar; P: PChar; EndP: PChar; const const: TWriterAppendMethod)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DateTimeToJSONStr(const const: TWriterAppendMethod; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure UtcDateTimeToJSONStr(const const: TWriterAppendMethod; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternInitAndAssignItem(Dest: PJsonDataValue; Source: PJsonDataValue)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure GetStreamBytes(Stream: TStream; var var: TEncoding; Utf8WithoutBOM: Boolean; var var: TStreamInfo)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TJsonPrimitiveValue</h3><a name="TJsonPrimitiveValue"></a><div class="ancestor">Inherits from: TJsonBaseObject</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">destructor Destroy</div></div>
+<div class="api-item">
+<div class="api-signature">function Clone: TJsonPrimitiveValue</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Assign(ASource: TJsonPrimitiveValue)</div></div>
+<div class="api-item">
+<div class="api-signature">property Item: </div></div>
+<div class="api-item">
+<div class="api-signature">property Value: </div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure InternToJSON(var var: TJsonOutputWriter)</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">function GetValue: TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValue(const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetItem: PJsonDataValue</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonArrayEnumerator</h3><a name="TJsonArrayEnumerator"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(AArray: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetCurrent: TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">function MoveNext: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">property Current: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TJsonArray</h3><a name="TJsonArray"></a><div class="ancestor">Inherits from: TJsonBaseObject</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">destructor Destroy</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Clear</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Delete(Index: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function Extract(Index: Integer): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ExtractArray(Index: Integer): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function ExtractObject(Index: Integer): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Assign(ASource: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">function Clone: TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AddUtf8(const const: PAnsiChar; ALen: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AddUtcDateTime(const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Add(const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function AddArray: TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function AddObject: TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure AddObject(const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InsertUtcDateTime(Index: Integer; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Insert(Index: Integer; const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function InsertArray(Index: Integer): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function InsertObject(Index: Integer): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InsertObject(Index: Integer; const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetEnumerator: TJsonArrayEnumerator</div></div>
+<div class="api-item">
+<div class="api-signature">function IsNull(Index: Integer): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">property Types: </div></div>
+<div class="api-item">
+<div class="api-signature">property TypesEx: </div></div>
+<div class="api-item">
+<div class="api-signature">property Values: </div></div>
+<div class="api-item">
+<div class="api-signature">property S: </div></div>
+<div class="api-item">
+<div class="api-signature">property UTF8: </div></div>
+<div class="api-item">
+<div class="api-signature">property I: </div></div>
+<div class="api-item">
+<div class="api-signature">property L: </div></div>
+<div class="api-item">
+<div class="api-signature">property U: </div></div>
+<div class="api-item">
+<div class="api-signature">property F: </div></div>
+<div class="api-item">
+<div class="api-signature">property D: </div></div>
+<div class="api-item">
+<div class="api-signature">property DUtc: </div></div>
+<div class="api-item">
+<div class="api-signature">property B: </div></div>
+<div class="api-item">
+<div class="api-signature">property A: </div></div>
+<div class="api-item">
+<div class="api-signature">property O: </div></div>
+<div class="api-item">
+<div class="api-signature">property V: </div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property Count: </div></div>
+<div class="api-item">
+<div class="api-signature">property Capacity: </div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure InternToJSON(var var: TJsonOutputWriter)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RaiseListError(Index: Integer)</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">function GetString(Index: Integer): string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUTF8String(Index: Integer): UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function GetInt(Index: Integer): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetLong(Index: Integer): Int64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetULong(Index: Integer): UInt64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFloat(Index: Integer): Double</div></div>
+<div class="api-item">
+<div class="api-signature">function GetDateTime(Index: Integer): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUtcDateTime(Index: Integer): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetBool(Index: Integer): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArray(Index: Integer): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObj(Index: Integer): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">function GetVariant(Index: Integer): Variant</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetString(Index: Integer; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUTF8String(Index: Integer; const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetInt(Index: Integer; const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetLong(Index: Integer; const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetULong(Index: Integer; const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFloat(Index: Integer; const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetDateTime(Index: Integer; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUtcDateTime(Index: Integer; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBool(Index: Integer; const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetArray(Index: Integer; const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObject(Index: Integer; const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetVariant(Index: Integer; const const: Variant)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetItem(Index: Integer): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">function GetType(Index: Integer): TJsonDataType</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTypeEx(Index: Integer): TJsonDataType</div></div>
+<div class="api-item">
+<div class="api-signature">function GetValue(Index: Integer): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValue(Index: Integer; const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">function AddItem: PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">function InsertItem(Index: Integer): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Grow</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternApplyCapacity</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetCapacity(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetCount(const const: Integer)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TJsonNameValuePair</h3><a name="TJsonNameValuePair"></a></div>
+<hr>
+<div class="class-header">
+<h3>record TJsonObjectEnumerator</h3><a name="TJsonObjectEnumerator"></a></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(AObject: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetCurrent: TJsonNameValuePair</div></div>
+<div class="api-item">
+<div class="api-signature">function MoveNext: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">property Current: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TJsonObject</h3><a name="TJsonObject"></a><div class="ancestor">Inherits from: TJsonBaseObject</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">destructor Destroy</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Assign(ASource: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">function Clone: TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ToSimpleObject(AObject: TObject; ACaseSensitive: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FromSimpleObject(AObject: TObject; ALowerCamelCase: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Clear</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Remove(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Delete(Index: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function IndexOf(const const: string): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function Contains(const const: string): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function Extract(const const: string): TJsonBaseObject</div></div>
+<div class="api-item">
+<div class="api-signature">function ExtractArray(const const: string): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function ExtractObject(const const: string): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">function GetEnumerator: TJsonObjectEnumerator</div></div>
+<div class="api-item">
+<div class="api-signature">function IsNull(const const: string): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">property Types: </div></div>
+<div class="api-item">
+<div class="api-signature">property TypesEx: </div></div>
+<div class="api-item">
+<div class="api-signature">property Values: </div></div>
+<div class="api-item">
+<div class="api-signature">property S: </div></div>
+<div class="api-item">
+<div class="api-signature">property UTF8: </div></div>
+<div class="api-item">
+<div class="api-signature">property I: </div></div>
+<div class="api-item">
+<div class="api-signature">property L: </div></div>
+<div class="api-item">
+<div class="api-signature">property U: </div></div>
+<div class="api-item">
+<div class="api-signature">property F: </div></div>
+<div class="api-item">
+<div class="api-signature">property D: </div></div>
+<div class="api-item">
+<div class="api-signature">property DUtc: </div></div>
+<div class="api-item">
+<div class="api-signature">property B: </div></div>
+<div class="api-item">
+<div class="api-signature">property A: </div></div>
+<div class="api-item">
+<div class="api-signature">property O: </div></div>
+<div class="api-item">
+<div class="api-signature">property Path: </div></div>
+<div class="api-item">
+<div class="api-signature">property Names: </div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property Count: </div></div>
+<div class="api-item">
+<div class="api-signature">property Capacity: </div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure InternToJSON(var var: TJsonOutputWriter)</div></div>
+<div class="api-item">
+<div class="api-signature">function FindCaseInsensitiveItem(const const: string): PJsonDataValue</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">procedure UpdateLastValueItem(const const: string; Item: PJsonDataValue)</div></div>
+<div class="api-item">
+<div class="api-signature">function FindItem(const const: string; var var: PJsonDataValue): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function RequireItem(const const: string): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">function GetString(const const: string): string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUTF8String(const const: string): UTF8String</div></div>
+<div class="api-item">
+<div class="api-signature">function GetBool(const const: string): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetInt(const const: string): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetLong(const const: string): Int64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetULong(const const: string): UInt64</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFloat(const const: string): Double</div></div>
+<div class="api-item">
+<div class="api-signature">function GetDateTime(const const: string): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUtcDateTime(const const: string): TDateTime</div></div>
+<div class="api-item">
+<div class="api-signature">function GetObj(const const: string): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">function GetArray(const const: string): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetString(const const: string; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUTF8String(const const: string; const const: UTF8String)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBool(const const: string; const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetInt(const const: string; const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetLong(const const: string; const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetULong(const const: string; const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFloat(const const: string; const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetDateTime(const const: string; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetUtcDateTime(const const: string; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetObject(const const: string; const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetArray(const const: string; const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetType(const const: string): TJsonDataType</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTypeEx(const const: string): TJsonDataType</div></div>
+<div class="api-item">
+<div class="api-signature">function GetName(Index: Integer): string</div></div>
+<div class="api-item">
+<div class="api-signature">function GetItem(Index: Integer): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetValue(const const: string; const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetValue(const const: string): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: Int64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: UInt64)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: Double)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: TDateTime)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: TJsonArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternAdd(var var: string; const const: TJsonObject)</div></div>
+<div class="api-item">
+<div class="api-signature">function InternAddArray(var var: string): TJsonArray</div></div>
+<div class="api-item">
+<div class="api-signature">function InternAddObject(var var: string): TJsonObject</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SortUnsortedNames</div></div>
+<div class="api-item">
+<div class="api-signature">function CompareSortedName(SortIndex1: Integer; SortIndex2: Integer): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">procedure QuickSortNames(L: Integer; R: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function InternIndexOfSortedName(const const: string): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function InternFindSortedNameInsertIndex(NameIndex: Integer): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternDeleteSortedName(SortIndex: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function InternAddItem(var var: string): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">function AddItem(const const: string): PJsonDataValue</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Grow</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternApplyCapacity</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetCapacity(const const: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetPath(const const: string): TJsonDataValueHelper</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetPath(const const: string; const const: TJsonDataValueHelper)</div></div>
+<div class="api-item">
+<div class="api-signature">function IndexOfPChar(S: PChar; Len: Integer): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">procedure PathError(P: PChar; EndP: PChar)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure PathNullError(P: PChar; EndP: PChar)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure PathIndexError(P: PChar; EndP: PChar; Count: Integer)</div></div>
+</div>
+<hr>
+<h2>Global Routines</h2>
+<div class="visibility-group"><h5>Routines</h5><div class="api-item">
+<div class="api-signature">function IsValidJSON(const const: string): Boolean</div><div class="description">Result True if the string is a valid json object or json array starting with "{" or "[" and with valid json content</div></div>
+<div class="api-item">
+<div class="api-signature">function IsValidJSONObject(const const: string): Boolean</div><div class="description">Result True if the string is a valid json object starting with "{" and with valid json content</div></div>
+<div class="api-item">
+<div class="api-signature">function IsValidJSONArray(const const: string): Boolean</div><div class="description">Result True if the string is a valid json array starting with "[" and with valid json content</div></div>
+</div>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type TJsonBaseObject = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonObject = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonArray = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonReaderProgressProc = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type PJsonReaderProgressRec = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PJsonOutputWriter = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonDataType = enumeration</div><div class="enum-values">Values: jdtNone, jdtString, jdtInt, jdtLong, jdtULong, jdtFloat, jdtDateTime, jdtUtcDateTime, jdtBool, jdtArray, jdtObject</div></div>
+<div class="api-item">
+<div class="api-signature">type PJsonDataValue = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PJsonDataValueArray = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonDataValueArray = array</div></div>
+<div class="api-item">
+<div class="api-signature">type TJDOJsonBaseObject = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJDOJsonObject = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJDOJsonArray = Type</div></div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

@@ -3,7 +3,11 @@
 interface
 
 uses
-  System.SysUtils, System.IOUtils,
+{$IFDEF MSWINDOWS}
+  Winapi.Windows,
+{$ENDIF}
+  System.SysUtils,
+  System.IOUtils,
   Dext.Hosting.CLI,
   Dext.Hosting.CLI.Args,
   Dext.Utils;

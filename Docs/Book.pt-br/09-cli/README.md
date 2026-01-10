@@ -9,6 +9,7 @@ O CLI `dext` fornece comandos para migrations, testes, scaffolding e mais.
 3. [Scaffolding](scaffolding.md) - Gerar entidades a partir do BD
 4. [Testes](testes.md) - Executar testes com cobertura
 5. [Dashboard](dashboard.md) - Interface web para monitoramento
+6. [Documentação](documentacao.md) - Gerar documentação da API
 
 ## Referência Rápida
 
@@ -33,6 +34,10 @@ dext scaffold -c "meubanco.db" -d sqlite -o Entities.pas
 # Dashboard
 dext ui
 dext ui --port 8080
+
+# Documentação
+dext doc
+dext doc --output ./Docs
 ```
 
 ## Instalação

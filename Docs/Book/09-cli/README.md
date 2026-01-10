@@ -9,6 +9,7 @@ The `dext` CLI provides commands for migrations, testing, scaffolding, and more.
 3. [Scaffolding](scaffolding.md) - Generate entities from DB
 4. [Testing](testing.md) - Run tests with coverage
 5. [Dashboard](dashboard.md) - Web UI for monitoring
+6. [Documentation](documentation.md) - Generate API Docs
 
 ## Quick Reference
 
@@ -33,6 +34,10 @@ dext scaffold -c "mydb.db" -d sqlite -o Entities.pas
 # Dashboard
 dext ui
 dext ui --port 8080
+
+# Documentation
+dext doc
+dext doc --output ./Docs
 ```
 
 ## Installation

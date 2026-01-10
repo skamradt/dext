@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dext.Web.Hubs.Interfaces - Dext Framework 1.0</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext Framework 1.0</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Dext.Assertions.html" class="nav-item">Dext.Assertions</a>
+<a href="Dext.Auth.Attributes.html" class="nav-item">Dext.Auth.Attributes</a>
+<a href="Dext.Auth.BasicAuth.html" class="nav-item">Dext.Auth.BasicAuth</a>
+<a href="Dext.Auth.Identity.html" class="nav-item">Dext.Auth.Identity</a>
+<a href="Dext.Auth.JWT.html" class="nav-item">Dext.Auth.JWT</a>
+<a href="Dext.Auth.Middleware.html" class="nav-item">Dext.Auth.Middleware</a>
+<a href="Dext.Caching.html" class="nav-item">Dext.Caching</a>
+<a href="Dext.Caching.Redis.html" class="nav-item">Dext.Caching.Redis</a>
+<a href="Dext.Collections.html" class="nav-item">Dext.Collections</a>
+<a href="Dext.Collections.Extensions.html" class="nav-item">Dext.Collections.Extensions</a>
+<a href="Dext.Configuration.Binder.html" class="nav-item">Dext.Configuration.Binder</a>
+<a href="Dext.Configuration.Core.html" class="nav-item">Dext.Configuration.Core</a>
+<a href="Dext.Configuration.EnvironmentVariables.html" class="nav-item">Dext.Configuration.EnvironmentVariables</a>
+<a href="Dext.Configuration.Interfaces.html" class="nav-item">Dext.Configuration.Interfaces</a>
+<a href="Dext.Configuration.Json.html" class="nav-item">Dext.Configuration.Json</a>
+<a href="Dext.Configuration.Yaml.html" class="nav-item">Dext.Configuration.Yaml</a>
+<a href="Dext.Core.Activator.html" class="nav-item">Dext.Core.Activator</a>
+<a href="Dext.Core.CancellationToken.html" class="nav-item">Dext.Core.CancellationToken</a>
+<a href="Dext.Core.DateUtils.html" class="nav-item">Dext.Core.DateUtils</a>
+<a href="Dext.Core.Extensions.html" class="nav-item">Dext.Core.Extensions</a>
+<a href="Dext.Core.Memory.html" class="nav-item">Dext.Core.Memory</a>
+<a href="Dext.Core.SmartTypes.html" class="nav-item">Dext.Core.SmartTypes</a>
+<a href="Dext.Core.Span.html" class="nav-item">Dext.Core.Span</a>
+<a href="Dext.Core.ValueConverters.html" class="nav-item">Dext.Core.ValueConverters</a>
+<a href="Dext.DI.Attributes.html" class="nav-item">Dext.DI.Attributes</a>
+<a href="Dext.DI.Comparers.html" class="nav-item">Dext.DI.Comparers</a>
+<a href="Dext.DI.Core.html" class="nav-item">Dext.DI.Core</a>
+<a href="Dext.DI.Extensions.html" class="nav-item">Dext.DI.Extensions</a>
+<a href="Dext.DI.Extensions.utf8.html" class="nav-item">Dext.DI.Extensions.utf8</a>
+<a href="Dext.DI.Interfaces.html" class="nav-item">Dext.DI.Interfaces</a>
+<a href="Dext.DI.Middleware.html" class="nav-item">Dext.DI.Middleware</a>
+<a href="Dext.Entity.Attributes.html" class="nav-item">Dext.Entity.Attributes</a>
+<a href="Dext.Entity.Cache.html" class="nav-item">Dext.Entity.Cache</a>
+<a href="Dext.Entity.Context.html" class="nav-item">Dext.Entity.Context</a>
+<a href="Dext.Entity.Core.html" class="nav-item">Dext.Entity.Core</a>
+<a href="Dext.Entity.DbSet.html" class="nav-item">Dext.Entity.DbSet</a>
+<a href="Dext.Entity.Dialects.html" class="nav-item">Dext.Entity.Dialects</a>
+<a href="Dext.Entity.Drivers.FireDAC.html" class="nav-item">Dext.Entity.Drivers.FireDAC</a>
+<a href="Dext.Entity.Drivers.FireDAC.Manager.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Manager</a>
+<a href="Dext.Entity.Drivers.FireDAC.Phys.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Phys</a>
+<a href="Dext.Entity.Drivers.Interfaces.html" class="nav-item">Dext.Entity.Drivers.Interfaces</a>
+<a href="Dext.Entity.Grouping.html" class="nav-item">Dext.Entity.Grouping</a>
+<a href="Dext.Entity.Joining.html" class="nav-item">Dext.Entity.Joining</a>
+<a href="Dext.Entity.LazyLoading.html" class="nav-item">Dext.Entity.LazyLoading</a>
+<a href="Dext.Entity.Mapping.html" class="nav-item">Dext.Entity.Mapping</a>
+<a href="Dext.Entity.Migrations.html" class="nav-item">Dext.Entity.Migrations</a>
+<a href="Dext.Entity.Migrations.Builder.html" class="nav-item">Dext.Entity.Migrations.Builder</a>
+<a href="Dext.Entity.Migrations.Differ.html" class="nav-item">Dext.Entity.Migrations.Differ</a>
+<a href="Dext.Entity.Migrations.Extractor.html" class="nav-item">Dext.Entity.Migrations.Extractor</a>
+<a href="Dext.Entity.Migrations.Generator.html" class="nav-item">Dext.Entity.Migrations.Generator</a>
+<a href="Dext.Entity.Migrations.Json.html" class="nav-item">Dext.Entity.Migrations.Json</a>
+<a href="Dext.Entity.Migrations.Model.html" class="nav-item">Dext.Entity.Migrations.Model</a>
+<a href="Dext.Entity.Migrations.Operations.html" class="nav-item">Dext.Entity.Migrations.Operations</a>
+<a href="Dext.Entity.Migrations.Runner.html" class="nav-item">Dext.Entity.Migrations.Runner</a>
+<a href="Dext.Entity.Migrations.Serializers.Json.html" class="nav-item">Dext.Entity.Migrations.Serializers.Json</a>
+<a href="Dext.Entity.Naming.html" class="nav-item">Dext.Entity.Naming</a>
+<a href="Dext.Entity.Prototype.html" class="nav-item">Dext.Entity.Prototype</a>
+<a href="Dext.Entity.Query.html" class="nav-item">Dext.Entity.Query</a>
+<a href="Dext.Entity.Scaffolding.html" class="nav-item">Dext.Entity.Scaffolding</a>
+<a href="Dext.Entity.Setup.html" class="nav-item">Dext.Entity.Setup</a>
+<a href="Dext.Entity.Tenancy.html" class="nav-item">Dext.Entity.Tenancy</a>
+<a href="Dext.Entity.TypeConverters.html" class="nav-item">Dext.Entity.TypeConverters</a>
+<a href="Dext.Entity.TypeSystem.html" class="nav-item">Dext.Entity.TypeSystem</a>
+<a href="Dext.Filters.html" class="nav-item">Dext.Filters</a>
+<a href="Dext.Filters.BuiltIn.html" class="nav-item">Dext.Filters.BuiltIn</a>
+<a href="Dext.HealthChecks.html" class="nav-item">Dext.HealthChecks</a>
+<a href="Dext.Hosting.AppState.html" class="nav-item">Dext.Hosting.AppState</a>
+<a href="Dext.Hosting.ApplicationLifetime.html" class="nav-item">Dext.Hosting.ApplicationLifetime</a>
+<a href="Dext.Hosting.BackgroundService.html" class="nav-item">Dext.Hosting.BackgroundService</a>
+<a href="Dext.Hosting.CLI.html" class="nav-item">Dext.Hosting.CLI</a>
+<a href="Dext.Hosting.CLI.Args.html" class="nav-item">Dext.Hosting.CLI.Args</a>
+<a href="Dext.Hosting.CLI.Commands.Configuration.html" class="nav-item">Dext.Hosting.CLI.Commands.Configuration</a>
+<a href="Dext.Hosting.CLI.Commands.Doc.html" class="nav-item">Dext.Hosting.CLI.Commands.Doc</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateDown.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateDown</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateGenerate.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateGenerate</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateList.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateList</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateUp.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateUp</a>
+<a href="Dext.Hosting.CLI.Commands.Scaffold.html" class="nav-item">Dext.Hosting.CLI.Commands.Scaffold</a>
+<a href="Dext.Hosting.CLI.Commands.Test.html" class="nav-item">Dext.Hosting.CLI.Commands.Test</a>
+<a href="Dext.Hosting.CLI.Commands.UI.html" class="nav-item">Dext.Hosting.CLI.Commands.UI</a>
+<a href="Dext.Hosting.CLI.Config.html" class="nav-item">Dext.Hosting.CLI.Config</a>
+<a href="Dext.Hosting.CLI.Hubs.Dashboard.html" class="nav-item">Dext.Hosting.CLI.Hubs.Dashboard</a>
+<a href="Dext.Hosting.CLI.Logger.html" class="nav-item">Dext.Hosting.CLI.Logger</a>
+<a href="Dext.Hosting.CLI.Registry.html" class="nav-item">Dext.Hosting.CLI.Registry</a>
+<a href="Dext.Hosting.CLI.Tools.CodeCoverage.html" class="nav-item">Dext.Hosting.CLI.Tools.CodeCoverage</a>
+<a href="Dext.Hosting.CLI.Tools.DocGen.html" class="nav-item">Dext.Hosting.CLI.Tools.DocGen</a>
+<a href="Dext.Hosting.CLI.Tools.Sonar.html" class="nav-item">Dext.Hosting.CLI.Tools.Sonar</a>
+<a href="Dext.Interception.html" class="nav-item">Dext.Interception</a>
+<a href="Dext.Interception.ClassProxy.html" class="nav-item">Dext.Interception.ClassProxy</a>
+<a href="Dext.Interception.Proxy.html" class="nav-item">Dext.Interception.Proxy</a>
+<a href="Dext.Json.html" class="nav-item">Dext.Json</a>
+<a href="Dext.Json.Driver.DextJsonDataObjects.html" class="nav-item">Dext.Json.Driver.DextJsonDataObjects</a>
+<a href="Dext.Json.Driver.SystemJson.html" class="nav-item">Dext.Json.Driver.SystemJson</a>
+<a href="Dext.Json.Types.html" class="nav-item">Dext.Json.Types</a>
+<a href="Dext.Json.Utf8.html" class="nav-item">Dext.Json.Utf8</a>
+<a href="Dext.Json.Utf8.Serializer.html" class="nav-item">Dext.Json.Utf8.Serializer</a>
+<a href="Dext.Logging.html" class="nav-item">Dext.Logging</a>
+<a href="Dext.Logging.Console.html" class="nav-item">Dext.Logging.Console</a>
+<a href="Dext.Logging.Extensions.html" class="nav-item">Dext.Logging.Extensions</a>
+<a href="Dext.MM.html" class="nav-item">Dext.MM</a>
+<a href="Dext.Mapper.html" class="nav-item">Dext.Mapper</a>
+<a href="Dext.Mocks.html" class="nav-item">Dext.Mocks</a>
+<a href="Dext.Mocks.Auto.html" class="nav-item">Dext.Mocks.Auto</a>
+<a href="Dext.Mocks.Interceptor.html" class="nav-item">Dext.Mocks.Interceptor</a>
+<a href="Dext.Mocks.Matching.html" class="nav-item">Dext.Mocks.Matching</a>
+<a href="Dext.MultiTenancy.html" class="nav-item">Dext.MultiTenancy</a>
+<a href="Dext.OpenAPI.Attributes.html" class="nav-item">Dext.OpenAPI.Attributes</a>
+<a href="Dext.OpenAPI.Extensions.html" class="nav-item">Dext.OpenAPI.Extensions</a>
+<a href="Dext.OpenAPI.Fluent.html" class="nav-item">Dext.OpenAPI.Fluent</a>
+<a href="Dext.OpenAPI.Generator.html" class="nav-item">Dext.OpenAPI.Generator</a>
+<a href="Dext.OpenAPI.Types.html" class="nav-item">Dext.OpenAPI.Types</a>
+<a href="Dext.Options.html" class="nav-item">Dext.Options</a>
+<a href="Dext.Options.Extensions.html" class="nav-item">Dext.Options.Extensions</a>
+<a href="Dext.RateLimiting.html" class="nav-item">Dext.RateLimiting</a>
+<a href="Dext.RateLimiting.Core.html" class="nav-item">Dext.RateLimiting.Core</a>
+<a href="Dext.RateLimiting.Limiters.html" class="nav-item">Dext.RateLimiting.Limiters</a>
+<a href="Dext.RateLimiting.Policy.html" class="nav-item">Dext.RateLimiting.Policy</a>
+<a href="Dext.Specifications.Base.html" class="nav-item">Dext.Specifications.Base</a>
+<a href="Dext.Specifications.Evaluator.html" class="nav-item">Dext.Specifications.Evaluator</a>
+<a href="Dext.Specifications.Fluent.html" class="nav-item">Dext.Specifications.Fluent</a>
+<a href="Dext.Specifications.Interfaces.html" class="nav-item">Dext.Specifications.Interfaces</a>
+<a href="Dext.Specifications.OrderBy.html" class="nav-item">Dext.Specifications.OrderBy</a>
+<a href="Dext.Specifications.SQL.Generator.html" class="nav-item">Dext.Specifications.SQL.Generator</a>
+<a href="Dext.Specifications.Types.html" class="nav-item">Dext.Specifications.Types</a>
+<a href="Dext.Swagger.Middleware.html" class="nav-item">Dext.Swagger.Middleware</a>
+<a href="Dext.Testing.Attributes.html" class="nav-item">Dext.Testing.Attributes</a>
+<a href="Dext.Testing.Console.html" class="nav-item">Dext.Testing.Console</a>
+<a href="Dext.Testing.DI.html" class="nav-item">Dext.Testing.DI</a>
+<a href="Dext.Testing.Dashboard.html" class="nav-item">Dext.Testing.Dashboard</a>
+<a href="Dext.Testing.Fluent.html" class="nav-item">Dext.Testing.Fluent</a>
+<a href="Dext.Testing.History.html" class="nav-item">Dext.Testing.History</a>
+<a href="Dext.Testing.Report.html" class="nav-item">Dext.Testing.Report</a>
+<a href="Dext.Testing.Runner.html" class="nav-item">Dext.Testing.Runner</a>
+<a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
+<a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
+<a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
+<a href="Dext.Types.UUID.html" class="nav-item">Dext.Types.UUID</a>
+<a href="Dext.Utils.html" class="nav-item">Dext.Utils</a>
+<a href="Dext.Validation.html" class="nav-item">Dext.Validation</a>
+<a href="Dext.Web.ApplicationBuilder.Extensions.html" class="nav-item">Dext.Web.ApplicationBuilder.Extensions</a>
+<a href="Dext.Web.ControllerScanner.html" class="nav-item">Dext.Web.ControllerScanner</a>
+<a href="Dext.Web.Controllers.html" class="nav-item">Dext.Web.Controllers</a>
+<a href="Dext.Web.Core.html" class="nav-item">Dext.Web.Core</a>
+<a href="Dext.Web.Cors.html" class="nav-item">Dext.Web.Cors</a>
+<a href="Dext.Web.DataApi.html" class="nav-item">Dext.Web.DataApi</a>
+<a href="Dext.Web.Extensions.html" class="nav-item">Dext.Web.Extensions</a>
+<a href="Dext.Web.Formatters.Interfaces.html" class="nav-item">Dext.Web.Formatters.Interfaces</a>
+<a href="Dext.Web.Formatters.Json.html" class="nav-item">Dext.Web.Formatters.Json</a>
+<a href="Dext.Web.Formatters.Selector.html" class="nav-item">Dext.Web.Formatters.Selector</a>
+<a href="Dext.Web.HandlerInvoker.html" class="nav-item">Dext.Web.HandlerInvoker</a>
+<a href="Dext.Web.Hubs.html" class="nav-item">Dext.Web.Hubs</a>
+<a href="Dext.Web.Hubs.Clients.html" class="nav-item">Dext.Web.Hubs.Clients</a>
+<a href="Dext.Web.Hubs.Connections.html" class="nav-item">Dext.Web.Hubs.Connections</a>
+<a href="Dext.Web.Hubs.Context.html" class="nav-item">Dext.Web.Hubs.Context</a>
+<a href="Dext.Web.Hubs.Extensions.html" class="nav-item">Dext.Web.Hubs.Extensions</a>
+<a href="Dext.Web.Hubs.Hub.html" class="nav-item">Dext.Web.Hubs.Hub</a>
+<a href="Dext.Web.Hubs.Interfaces.html" class="nav-item">Dext.Web.Hubs.Interfaces</a>
+<a href="Dext.Web.Hubs.Middleware.html" class="nav-item">Dext.Web.Hubs.Middleware</a>
+<a href="Dext.Web.Hubs.Protocol.Json.html" class="nav-item">Dext.Web.Hubs.Protocol.Json</a>
+<a href="Dext.Web.Hubs.Transport.SSE.html" class="nav-item">Dext.Web.Hubs.Transport.SSE</a>
+<a href="Dext.Web.Hubs.Types.html" class="nav-item">Dext.Web.Hubs.Types</a>
+<a href="Dext.Web.Indy.html" class="nav-item">Dext.Web.Indy</a>
+<a href="Dext.Web.Indy.SSL.Interfaces.html" class="nav-item">Dext.Web.Indy.SSL.Interfaces</a>
+<a href="Dext.Web.Indy.SSL.OpenSSL.html" class="nav-item">Dext.Web.Indy.SSL.OpenSSL</a>
+<a href="Dext.Web.Indy.SSL.Taurus.html" class="nav-item">Dext.Web.Indy.SSL.Taurus</a>
+<a href="Dext.Web.Indy.Server.html" class="nav-item">Dext.Web.Indy.Server</a>
+<a href="Dext.Web.Indy.Types.html" class="nav-item">Dext.Web.Indy.Types</a>
+<a href="Dext.Web.Injection.html" class="nav-item">Dext.Web.Injection</a>
+<a href="Dext.Web.Interfaces.html" class="nav-item">Dext.Web.Interfaces</a>
+<a href="Dext.Web.Middleware.html" class="nav-item">Dext.Web.Middleware</a>
+<a href="Dext.Web.Middleware.Compression.html" class="nav-item">Dext.Web.Middleware.Compression</a>
+<a href="Dext.Web.Middleware.Extensions.html" class="nav-item">Dext.Web.Middleware.Extensions</a>
+<a href="Dext.Web.Middleware.Logging.html" class="nav-item">Dext.Web.Middleware.Logging</a>
+<a href="Dext.Web.Middleware.StartupLock.html" class="nav-item">Dext.Web.Middleware.StartupLock</a>
+<a href="Dext.Web.ModelBinding.html" class="nav-item">Dext.Web.ModelBinding</a>
+<a href="Dext.Web.ModelBinding.Extensions.html" class="nav-item">Dext.Web.ModelBinding.Extensions</a>
+<a href="Dext.Web.MultiTenancy.html" class="nav-item">Dext.Web.MultiTenancy</a>
+<a href="Dext.Web.Pipeline.html" class="nav-item">Dext.Web.Pipeline</a>
+<a href="Dext.Web.ResponseHelper.html" class="nav-item">Dext.Web.ResponseHelper</a>
+<a href="Dext.Web.Results.html" class="nav-item">Dext.Web.Results</a>
+<a href="Dext.Web.Routing.html" class="nav-item">Dext.Web.Routing</a>
+<a href="Dext.Web.Routing.Attributes.html" class="nav-item">Dext.Web.Routing.Attributes</a>
+<a href="Dext.Web.RoutingMiddleware.html" class="nav-item">Dext.Web.RoutingMiddleware</a>
+<a href="Dext.Web.StaticFiles.html" class="nav-item">Dext.Web.StaticFiles</a>
+<a href="Dext.Web.StatusCodes.html" class="nav-item">Dext.Web.StatusCodes</a>
+<a href="Dext.Web.Versioning.html" class="nav-item">Dext.Web.Versioning</a>
+<a href="Dext.Web.WebApplication.html" class="nav-item">Dext.Web.WebApplication</a>
+<a href="Dext.WebHost.html" class="nav-item">Dext.WebHost</a>
+<a href="Dext.Yaml.html" class="nav-item">Dext.Yaml</a>
+<a href="DextJsonDataObjects.html" class="nav-item">DextJsonDataObjects</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit Dext.Web.Hubs.Interfaces</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class IClientProxy {    +SendAsync()
+}
+class IHubClients {    +All()
+    +Client()
+    +Group()
+    +Groups()
+    +User()
+    +Users()
+    +AllExcept()
+    +GroupExcept()
+    +Caller()
+    +Others()
+    +OthersInGroup()
+}
+class IGroupManager {    +AddToGroupAsync()
+    +RemoveFromGroupAsync()
+    +RemoveFromAllGroupsAsync()
+    +GetGroupsForConnection()
+    +IsInGroup()
+}
+class IHubCallerContext {    +GetConnectionId()
+    +GetUserIdentifier()
+    +GetUser()
+    +GetItems()
+    +GetConnectionAborted()
+    +GetTransportType()
+    +Abort()
+    +ConnectionId
+    +UserIdentifier
+    +User
+    +Items
+    +ConnectionAborted
+    +TransportType
+}
+class IHubContext {    +GetClients()
+    +GetGroups()
+    +Clients
+    +Groups
+}
+class IHubConnection {    +GetConnectionId()
+    +GetTransportType()
+    +GetState()
+    +GetUser()
+    +GetUserIdentifier()
+    +GetItems()
+    +SendAsync()
+    +Close()
+    +GetAbortToken()
+    +ConnectionId
+    +TransportType
+    +State
+    +User
+    +UserIdentifier
+    +Items
+    +AbortToken
+}
+class IConnectionManager {    +Add()
+    +Remove()
+    +TryGet()
+    +Get()
+    +GetAll()
+    +GetByGroup()
+    +GetByUser()
+    +Count()
+    +Contains()
+}
+class THubMessage {    +Invocation()
+    +Completion()
+    +CompletionError()
+    +Ping()
+    +Close()
+}
+class IHubProtocol {    +GetName()
+    +GetVersion()
+    +GetTransferFormat()
+    +Serialize()
+    +Deserialize()
+    +IsCompleteMessage()
+    +Name
+    +Version
+    +TransferFormat
+}
+class IHubTransport {    +GetTransportType()
+    +IsAvailable()
+    +SendAsync()
+    +CloseConnection()
+    +SetOnMessageReceived()
+    +SetOnConnected()
+    +SetOnDisconnected()
+    +TransportType
+}
+class IHubLifecycle {    +OnConnectedAsync()
+    +OnDisconnectedAsync()
+}
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>interface IClientProxy</h3><a name="IClientProxy"></a><div class="description">Proxy interface for sending messages to connected clients. This is the primary interface developers use to push data. </summary> <remarks> Compatible with SignalR's IClientProxy. Example: Clients.All.SendAsync('ReceiveMessage', ['Hello']); </remarks></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure SendAsync(const const: string; const const: TArray)</div><div class="description">Sends a message to the client(s) represented by this proxy.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SendAsync(const const: string)</div><div class="description">Sends a message with no arguments.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SendAsync(const const: string; const const: TValue)</div><div class="description">Sends a message with a single argument (convenience overload).</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubClients</h3><a name="IHubClients"></a><div class="description">Provides access to client proxies for different client groups.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function All: IClientProxy</div><div class="description">Returns a proxy for all connected clients.</div></div>
+<div class="api-item">
+<div class="api-signature">function Client(const const: string): IClientProxy</div><div class="description">Returns a proxy for a specific client by connection ID.</div></div>
+<div class="api-item">
+<div class="api-signature">function Group(const const: string): IClientProxy</div><div class="description">Returns a proxy for all clients in a group.</div></div>
+<div class="api-item">
+<div class="api-signature">function Groups(const const: TArray): IClientProxy</div><div class="description">Returns a proxy for multiple groups.</div></div>
+<div class="api-item">
+<div class="api-signature">function User(const const: string): IClientProxy</div><div class="description">Returns a proxy for all connections of a specific user.</div></div>
+<div class="api-item">
+<div class="api-signature">function Users(const const: TArray): IClientProxy</div><div class="description">Returns a proxy for all connections of multiple users.</div></div>
+<div class="api-item">
+<div class="api-signature">function AllExcept(const const: TArray): IClientProxy</div><div class="description">Returns a proxy for all clients except specified ones.</div></div>
+<div class="api-item">
+<div class="api-signature">function GroupExcept(const const: string; const const: TArray): IClientProxy</div><div class="description">Returns a proxy for clients in a group except specified ones.</div></div>
+<div class="api-item">
+<div class="api-signature">function Caller: IClientProxy</div><div class="description">Gets the caller client (only valid during Hub method invocation).</div></div>
+<div class="api-item">
+<div class="api-signature">function Others: IClientProxy</div><div class="description">Gets all clients except the caller (only valid during Hub method invocation).</div></div>
+<div class="api-item">
+<div class="api-signature">function OthersInGroup(const const: string): IClientProxy</div><div class="description">Gets all clients in caller's groups except the caller.</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IGroupManager</h3><a name="IGroupManager"></a><div class="description">Manages client groups for targeted message broadcast. </summary></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure AddToGroupAsync(const const: string; const const: string)</div><div class="description">Adds a connection to a group.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RemoveFromGroupAsync(const const: string; const const: string)</div><div class="description">Removes a connection from a group.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RemoveFromAllGroupsAsync(const const: string)</div><div class="description">Removes a connection from all groups (called on disconnect).</div></div>
+<div class="api-item">
+<div class="api-signature">function GetGroupsForConnection(const const: string): TArray</div><div class="description">Gets all groups a connection belongs to.</div></div>
+<div class="api-item">
+<div class="api-signature">function IsInGroup(const const: string; const const: string): Boolean</div><div class="description">Checks if a connection is in a specific group.</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubCallerContext</h3><a name="IHubCallerContext"></a><div class="description">Provides information about the current Hub invocation context. Available within Hub methods during a client call. </summary></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function GetConnectionId: string</div><div class="description">Gets the unique identifier for the current connection.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUserIdentifier: string</div><div class="description">Gets the user identifier (from Claims, if authenticated).</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUser: IClaimsPrincipal</div><div class="description">Gets the authenticated user's claims principal.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetItems: TDictionary</div><div class="description">Gets a key-value store for the connection lifetime.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetConnectionAborted: ICancellationToken</div><div class="description">Gets a token that signals when the connection is aborted.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTransportType: TTransportType</div><div class="description">Gets the transport type being used.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Abort</div><div class="description">Aborts the connection immediately.</div></div>
+<div class="api-item">
+<div class="api-signature">property ConnectionId: </div></div>
+<div class="api-item">
+<div class="api-signature">property UserIdentifier: </div></div>
+<div class="api-item">
+<div class="api-signature">property User: </div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property ConnectionAborted: </div></div>
+<div class="api-item">
+<div class="api-signature">property TransportType: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubContext</h3><a name="IHubContext"></a><div class="description">Provides access to Hub functionality from outside a Hub class. Inject this interface to send messages from anywhere in the application. </summary> <remarks> Use case: Background services, event handlers, or controllers that need to push real-time updates to connected clients. </remarks></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function GetClients: IHubClients</div><div class="description">Gets access to client proxies.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetGroups: IGroupManager</div><div class="description">Gets access to group management.</div></div>
+<div class="api-item">
+<div class="api-signature">property Clients: </div></div>
+<div class="api-item">
+<div class="api-signature">property Groups: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubConnection</h3><a name="IHubConnection"></a><div class="description">Represents an individual client connection to a Hub. </summary></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function GetConnectionId: string</div><div class="description">Gets the unique connection identifier.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTransportType: TTransportType</div><div class="description">Gets the transport type for this connection.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetState: TConnectionState</div><div class="description">Gets the current connection state.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUser: IClaimsPrincipal</div><div class="description">Gets the authenticated user (if any).</div></div>
+<div class="api-item">
+<div class="api-signature">function GetUserIdentifier: string</div><div class="description">Gets the user identifier from claims.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetItems: TDictionary</div><div class="description">Gets custom items dictionary for this connection.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SendAsync(const const: string)</div><div class="description">Sends a raw message to this connection.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Close(const const: string)</div><div class="description">Closes the connection.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetAbortToken: ICancellationToken</div><div class="description">Gets the cancellation token for connection abort.</div></div>
+<div class="api-item">
+<div class="api-signature">property ConnectionId: </div></div>
+<div class="api-item">
+<div class="api-signature">property TransportType: </div></div>
+<div class="api-item">
+<div class="api-signature">property State: </div></div>
+<div class="api-item">
+<div class="api-signature">property User: </div></div>
+<div class="api-item">
+<div class="api-signature">property UserIdentifier: </div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property AbortToken: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IConnectionManager</h3><a name="IConnectionManager"></a><div class="description">Manages all active Hub connections.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure Add(const const: IHubConnection)</div><div class="description">Adds a new connection.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Remove(const const: string)</div><div class="description">Removes a connection by ID.</div></div>
+<div class="api-item">
+<div class="api-signature">function TryGet(const const: string; out out: IHubConnection): Boolean</div><div class="description">Tries to get a connection by ID.</div></div>
+<div class="api-item">
+<div class="api-signature">function Get(const const: string): IHubConnection</div><div class="description">Gets a connection by ID (raises if not found).</div></div>
+<div class="api-item">
+<div class="api-signature">function GetAll: TArray</div><div class="description">Gets all active connections.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetByGroup(const const: string): TArray</div><div class="description">Gets all connections in a specific group.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetByUser(const const: string): TArray</div><div class="description">Gets all connections for a user.</div></div>
+<div class="api-item">
+<div class="api-signature">function Count: Integer</div><div class="description">Gets the total count of active connections.</div></div>
+<div class="api-item">
+<div class="api-signature">function Contains(const const: string): Boolean</div><div class="description">Checks if a connection exists.</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record THubMessage</h3><a name="THubMessage"></a><div class="description">Represents a Hub protocol message.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function Invocation(const const: string; const const: TArray): THubMessage</div></div>
+<div class="api-item">
+<div class="api-signature">function Completion(const const: string; const const: TValue): THubMessage</div></div>
+<div class="api-item">
+<div class="api-signature">function CompletionError(const const: string; const const: string): THubMessage</div></div>
+<div class="api-item">
+<div class="api-signature">function Ping: THubMessage</div></div>
+<div class="api-item">
+<div class="api-signature">function Close(const const: string): THubMessage</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubProtocol</h3><a name="IHubProtocol"></a><div class="description">Protocol serializer interface. Default: JSON. Future: MessagePack.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function GetName: string</div><div class="description">Gets the protocol name ('json' or 'messagepack').</div></div>
+<div class="api-item">
+<div class="api-signature">function GetVersion: Integer</div><div class="description">Gets the protocol version.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetTransferFormat: string</div><div class="description">Gets the transfer format ('Text' for JSON, 'Binary' for MessagePack).</div></div>
+<div class="api-item">
+<div class="api-signature">function Serialize(const const: THubMessage): string</div><div class="description">Serializes a Hub message to string.</div></div>
+<div class="api-item">
+<div class="api-signature">function Deserialize(const const: string): THubMessage</div><div class="description">Deserializes a string to Hub message.</div></div>
+<div class="api-item">
+<div class="api-signature">function IsCompleteMessage(const const: string): Boolean</div><div class="description">Checks if data is a complete message (for streaming).</div></div>
+<div class="api-item">
+<div class="api-signature">property Name: </div></div>
+<div class="api-item">
+<div class="api-signature">property Version: </div></div>
+<div class="api-item">
+<div class="api-signature">property TransferFormat: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubTransport</h3><a name="IHubTransport"></a><div class="description">Base interface for Hub transports.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function GetTransportType: TTransportType</div><div class="description">Gets the transport type.</div></div>
+<div class="api-item">
+<div class="api-signature">function IsAvailable: Boolean</div><div class="description">Checks if the transport is available/supported.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SendAsync(const const: string; const const: string)</div><div class="description">Sends data to a specific connection.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure CloseConnection(const const: string; const const: string)</div><div class="description">Closes a connection.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetOnMessageReceived(const const: TOnMessageReceived)</div><div class="description">Event when message received from client.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetOnConnected(const const: TOnConnectionEvent)</div><div class="description">Event when client connects.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetOnDisconnected(const const: TOnConnectionEvent)</div><div class="description">Event when client disconnects.</div></div>
+<div class="api-item">
+<div class="api-signature">property TransportType: </div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>interface IHubLifecycle</h3><a name="IHubLifecycle"></a><div class="description">Interface for Hub lifecycle events. Implement in your Hub class. </summary></div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure OnConnectedAsync</div><div class="description">Called when a new client connects.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnDisconnectedAsync(const const: Exception)</div><div class="description">Called when a client disconnects.</div></div>
+</div>
+<hr>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type IClientProxy = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHubClients = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IGroupManager = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHubCallerContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHubConnection = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IConnectionManager = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHubProtocol = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TTransportType = enumeration</div><div class="enum-values">Values: ttWebSockets, ttServerSentEvents, ttLongPolling</div><div class="description">Available transport types for Hub connections. Order indicates fallback priority (WebSocket ? SSE ? LongPolling). </summary></div></div>
+<div class="api-item">
+<div class="api-signature">type TTransportTypes = set</div></div>
+<div class="api-item">
+<div class="api-signature">type TConnectionState = enumeration</div><div class="enum-values">Values: csConnecting, csConnected, csReconnecting, csDisconnected</div><div class="description">Connection state enumeration</div></div>
+<div class="api-item">
+<div class="api-signature">type THubMessageType = enumeration</div><div class="enum-values">Values: hmtInvocation, hmtStreamItem, hmtCompletion, hmtStreamInvocation, hmtCancelInvocation, hmtPing, hmtClose</div><div class="description">Message type enumeration (SignalR-compatible). </summary></div></div>
+<div class="api-item">
+<div class="api-signature">type TOnMessageReceived = Type</div><div class="description">Event handler for when data is received from a connection. </summary></div></div>
+<div class="api-item">
+<div class="api-signature">type TOnConnectionEvent = Type</div><div class="description">Event handler for connection lifecycle events.</div></div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

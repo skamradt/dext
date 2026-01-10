@@ -3,12 +3,13 @@ unit Dext.Hosting.CLI.Tools.CodeCoverage;
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
+  System.Generics.Collections,
   System.IOUtils,
-  System.Net.HttpClient,
-  System.Zip,
   System.JSON,
+  System.Net.HttpClient,
+  System.SysUtils,
+  System.Zip,
   Dext.Hosting.CLI.Config;
 
 type
