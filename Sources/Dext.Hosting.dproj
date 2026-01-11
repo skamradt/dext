@@ -67,7 +67,7 @@
         <VerInfo_Locale>1046</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);..\External\DelphiAST\Source;..\External\DelphiAST\Source\SimpleParser;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
@@ -130,22 +130,24 @@
         <DCCReference Include="FireDACCommonODBC.dcp"/>
         <DCCReference Include="FireDACIBDriver.dcp"/>
         <DCCReference Include="FireDACMSSQLDriver.dcp"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Args.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.pas"/>
+        <DCCReference Include="Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Doc.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateDown.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateGenerate.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateList.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.MigrateUp.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Registry.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Configuration.pas"/>
-        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas"/>
-        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas"/>
-        <DCCReference Include="Hosting\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas"/>
-        <DCCReference Include="Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas"/>
         <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Scaffold.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Test.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.UI.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Tools.DocGen.pas"/>
+        <DCCReference Include="Hosting\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Args.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Registry.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas"/>
+        <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
