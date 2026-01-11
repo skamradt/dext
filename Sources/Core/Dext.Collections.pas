@@ -50,6 +50,27 @@ type
     function GetEnumerator: IEnumerator<T>;
   end;
 
+  {$IF RTLVersion < 36.0}
+  THashSet<T> = class(TEnumerable<T>)
+  private
+    FDictionary: TDictionary<T, Byte>;
+  protected
+    function DoGetEnumerator: TEnumerator<T>; override;
+  public
+    constructor Create; overload;
+    constructor Create(const Comparer: IEqualityComparer<T>); overload;
+    destructor Destroy; override;
+
+    function Add(const Item: T): Boolean;
+    procedure Clear;
+    function Contains(const Item: T): Boolean;
+    function Remove(const Item: T): Boolean;
+    
+    function GetCount: Integer;
+    property Count: Integer read GetCount;
+  end;
+  {$IFEND}
+
   // IList<T> inherits from our clean IEnumerable<T>
   IList<T> = interface(IEnumerable<T>)
     ['{8877539D-3522-488B-933B-8C4581177699}']
@@ -159,6 +180,70 @@ type
   end;
 
 implementation
+
+{$IF RTLVersion < 36.0}
+{ THashSet<T> }
+
+constructor THashSet<T>.Create;
+begin
+  inherited Create;
+  FDictionary := TDictionary<T, Byte>.Create;
+end;
+
+constructor THashSet<T>.Create(const Comparer: IEqualityComparer<T>);
+begin
+  inherited Create;
+  FDictionary := TDictionary<T, Byte>.Create(Comparer);
+end;
+
+destructor THashSet<T>.Destroy;
+begin
+  FDictionary.Free;
+  inherited;
+end;
+
+function THashSet<T>.Add(const Item: T): Boolean;
+begin
+  if not FDictionary.ContainsKey(Item) then
+  begin
+    FDictionary.Add(Item, 0);
+    Result := True;
+  end
+  else
+    Result := False;
+end;
+
+procedure THashSet<T>.Clear;
+begin
+  FDictionary.Clear;
+end;
+
+function THashSet<T>.Contains(const Item: T): Boolean;
+begin
+  Result := FDictionary.ContainsKey(Item);
+end;
+
+function THashSet<T>.Remove(const Item: T): Boolean;
+begin
+  if FDictionary.ContainsKey(Item) then
+  begin
+    FDictionary.Remove(Item);
+    Result := True;
+  end
+  else
+    Result := False;
+end;
+
+function THashSet<T>.GetCount: Integer;
+begin
+  Result := FDictionary.Count;
+end;
+
+function THashSet<T>.DoGetEnumerator: TEnumerator<T>;
+begin
+  Result := FDictionary.Keys.GetEnumerator;
+end;
+{$IFEND}
 
 { TSmartEnumerator<T> }
 

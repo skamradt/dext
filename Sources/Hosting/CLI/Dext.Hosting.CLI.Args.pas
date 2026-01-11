@@ -5,7 +5,8 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
-  System.Classes;
+  System.Classes,
+  Dext.Collections;
 
 type
   TCommandLineArgs = class;
