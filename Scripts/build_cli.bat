@@ -15,7 +15,7 @@ set SOURCE_PATH=%~dp0..\Sources
 
 if not exist "%OUTPUT_PATH%" mkdir "%OUTPUT_PATH%"
 
-dcc32 "%~dp0..\Apps\CLI\DextTool.dpr" -B -E"%OUTPUT_PATH%" -N"%OUTPUT_PATH%" -I"%SOURCE_PATH%" -U"%SOURCE_PATH%;%SOURCE_PATH%\Core;%SOURCE_PATH%\Core\Base;%SOURCE_PATH%\Data;%SOURCE_PATH%\Hosting\CLI;%SOURCE_PATH%\Hosting\CLI\Commands;%SOURCE_PATH%\Core\Json" -NS"System;System.Generics;Data;Data.Win;Winapi"
+dcc32 "%~dp0..\Apps\CLI\DextTool.dpr" -B -E"%OUTPUT_PATH%" -N"%OUTPUT_PATH%" -I"%SOURCE_PATH%" -U"%SOURCE_PATH%;%SOURCE_PATH%\Core;%SOURCE_PATH%\Core\Base;%SOURCE_PATH%\Data;%SOURCE_PATH%\Hosting\CLI;%SOURCE_PATH%\Hosting\CLI\Commands;%SOURCE_PATH%\Core\Json;%SOURCE_PATH%\Hubs;%SOURCE_PATH%\Web;%SOURCE_PATH%\Web\Mvc;%SOURCE_PATH%\Web\Middleware;%SOURCE_PATH%\Web\Indy" -NS"System;System.Generics;Data;Data.Win;Winapi"
 
 if %ERRORLEVEL% NEQ 0 goto Error
 

@@ -49,6 +49,20 @@ Gera classes de entidade a partir de um banco de dados existente.
 dext scaffold -c "Server=localhost;Database=Vendas" -d mssql
 ```
 
+## Facade (`facade`)
+ 
+Gera uma "Unit Facade" (unit coringa) que re-exporta tipos e constantes de um conjunto de units de origem. Isso simplifica a cláusula `uses` para os usuários finais.
+ 
+```bash
+dext facade -p Sources\Data -t Sources\Data\Dext.Entity.pas -x Dext.Entity
+```
+ 
+Opções:
+- `-p, --path` - Diretório de origem para escanear units Pascal.
+- `-t, --target` - Arquivo de saída de destino (arquivo Pas).
+- `-x, --target-unit` - O nome da unit de destino (ex: `Dext.Entity`).
+- `--verbose` - Habilita logs detalhados.
+ 
 ## Dashboard (`ui`)
 
 Inicia o Dashboard administrativo web do Dext.

@@ -1,6 +1,8 @@
 # Dext.Persistence (Facade Unit)
 
-A unit `Dext.Persistence` atua como o ponto de entrada principal (Facade) para o framework Dext ORM. Seu objetivo é simplificar a cláusula `uses` das suas aplicações, centralizando os tipos mais comuns.
+A unit `Dext.Persistence` (ou similar, dependendo do módulo) atua como o ponto de entrada principal (Facade) para o framework. Seu objetivo é simplificar a cláusula `uses` das suas aplicações, centralizando os tipos mais comuns.
+ 
+> **Nota:** Estas units são geradas automaticamente através do comando `dext facade`. Consulte o [Capítulo 9 - CLI](Book/09-cli/commands.md) para mais detalhes sobre como regenerá-las se você estiver contribuindo com o framework.
 
 ## ✅ O que está incluído
 

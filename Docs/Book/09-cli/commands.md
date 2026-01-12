@@ -16,6 +16,7 @@ Overview of all `dext` CLI commands.
 | `ui` | Start web dashboard |
 | `config:init` | Initialize configuration |
 | `env:scan` | Scan for Delphi environments |
+| `facade` | Generate Facade Unit |
 
 ## Migration Commands
 
@@ -101,6 +102,20 @@ Options:
 - `--fluent` - Use fluent mapping
 - `-t, --tables` - Specific tables (comma-separated)
 
+## Facade Command
+ 
+Generate a "Facade Unit" (wildcard unit) that re-exports types and constants from a set of source units. This simplifies the `uses` clause for end-users.
+ 
+```bash
+dext facade -p Sources\Data -t Sources\Data\Dext.Entity.pas -x Dext.Entity
+```
+ 
+Options:
+- `-p, --path` - Source directory to scan for Pascal units.
+- `-t, --target` - Target output file (Pas file).
+- `-x, --target-unit` - The name of the target unit (e.g., `Dext.Entity`).
+- `--verbose` - Enable verbose logging.
+ 
 ## Dashboard
 
 Start the web monitoring UI:

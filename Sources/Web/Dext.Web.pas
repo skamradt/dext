@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -30,14 +30,498 @@ interface
 uses
   System.SysUtils,
   Dext,
-  {$I Dext.Web.Uses.inc};
+  Dext.Web.ResponseHelper,
+  // {BEGIN_DEXT_USES}
+  // Generated Uses
+  Dext.Auth.Attributes,
+  Dext.Auth.BasicAuth,
+  Dext.Auth.Identity,
+  Dext.Auth.JWT,
+  Dext.Auth.Middleware,
+  Dext.DI.Middleware,
+  Dext.Filters.BuiltIn,
+  Dext.Filters,
+  Dext.HealthChecks,
+  Dext.OpenAPI.Attributes,
+  Dext.OpenAPI.Extensions,
+  Dext.OpenAPI.Fluent,
+  Dext.OpenAPI.Generator,
+  Dext.OpenAPI.Types,
+  Dext.RateLimiting.Core,
+  Dext.RateLimiting.Limiters,
+  Dext.RateLimiting,
+  Dext.RateLimiting.Policy,
+  Dext.Swagger.Middleware,
+  Dext.Web.Core,
+  Dext.Web.Cors,
+  Dext.Web.DataApi,
+  Dext.Web.Extensions,
+  Dext.Web.Formatters.Interfaces,
+  Dext.Web.Formatters.Json,
+  Dext.Web.Formatters.Selector,
+  Dext.Web.Indy,
+  Dext.Web.Indy.Server,
+  Dext.Web.Indy.Types,
+  Dext.Web.Injection,
+  Dext.Web.Interfaces,
+  Dext.Web.Middleware.Extensions,
+  Dext.Web.Middleware.Logging,
+  Dext.Web.Middleware,
+  Dext.Web.MultiTenancy,
+  Dext.Web.Pipeline,
+  Dext.Web.Results,
+  Dext.Web.Routing,
+  Dext.Web.RoutingMiddleware,
+  Dext.Web.StaticFiles,
+  Dext.Web.StatusCodes,
+  Dext.Web.Versioning,
+  Dext.WebHost,
+  Dext.Caching,
+  Dext.Caching.Redis,
+  Dext.Web.ApplicationBuilder.Extensions,
+  Dext.Web.WebApplication,
+  Dext.Web.Indy.SSL.Interfaces,
+  Dext.Web.Indy.SSL.OpenSSL,
+  Dext.Web.Indy.SSL.Taurus,
+  Dext.Web.Middleware.Compression,
+  Dext.Web.Middleware.StartupLock,
+  Dext.Web.Controllers,
+  Dext.Web.ControllerScanner,
+  Dext.Web.HandlerInvoker,
+  Dext.Web.ModelBinding.Extensions,
+  Dext.Web.ModelBinding,
+  Dext.Web.Routing.Attributes
+  // {END_DEXT_USES}
+  ;
 
 type
   // ===========================================================================
-  // 🏷️ Aliases for Common Web Types
+  // ??? Aliases for Common Web Types
   // ===========================================================================
   
-  {$I Dext.Web.Aliases.inc}
+  // {BEGIN_DEXT_ALIASES}
+  // Generated Aliases
+
+  // Dext.Auth.Attributes
+  AuthorizeAttribute = Dext.Auth.Attributes.AuthorizeAttribute;
+  AllowAnonymousAttribute = Dext.Auth.Attributes.AllowAnonymousAttribute;
+
+  // Dext.Auth.BasicAuth
+  TBasicAuthOptions = Dext.Auth.BasicAuth.TBasicAuthOptions;
+  TBasicAuthValidateFunc = Dext.Auth.BasicAuth.TBasicAuthValidateFunc;
+  TBasicAuthValidateWithRolesFunc = Dext.Auth.BasicAuth.TBasicAuthValidateWithRolesFunc;
+  TBasicAuthMiddleware = Dext.Auth.BasicAuth.TBasicAuthMiddleware;
+  TApplicationBuilderBasicAuthExtensions = Dext.Auth.BasicAuth.TApplicationBuilderBasicAuthExtensions;
+
+  // Dext.Auth.Identity
+  IIdentity = Dext.Auth.Identity.IIdentity;
+  IClaimsPrincipal = Dext.Auth.Identity.IClaimsPrincipal;
+  TClaimsIdentity = Dext.Auth.Identity.TClaimsIdentity;
+  TClaimsPrincipal = Dext.Auth.Identity.TClaimsPrincipal;
+  TClaimTypes = Dext.Auth.Identity.TClaimTypes;
+  IClaimsBuilder = Dext.Auth.Identity.IClaimsBuilder;
+  TClaimsBuilder = Dext.Auth.Identity.TClaimsBuilder;
+
+  // Dext.Auth.JWT
+  TClaim = Dext.Auth.JWT.TClaim;
+  TJwtValidationResult = Dext.Auth.JWT.TJwtValidationResult;
+  IJwtTokenHandler = Dext.Auth.JWT.IJwtTokenHandler;
+  TJwtOptions = Dext.Auth.JWT.TJwtOptions;
+  TJwtOptionsBuilder = Dext.Auth.JWT.TJwtOptionsBuilder;
+  TJwtOptionsHelper = Dext.Auth.JWT.TJwtOptionsHelper;
+  TJwtTokenHandler = Dext.Auth.JWT.TJwtTokenHandler;
+
+  // Dext.Auth.Middleware
+  TJwtAuthenticationMiddleware = Dext.Auth.Middleware.TJwtAuthenticationMiddleware;
+  TApplicationBuilderJwtExtensions = Dext.Auth.Middleware.TApplicationBuilderJwtExtensions;
+
+  // Dext.Caching
+  ICacheStore = Dext.Caching.ICacheStore;
+  TCacheEntry = Dext.Caching.TCacheEntry;
+  TMemoryCacheStore = Dext.Caching.TMemoryCacheStore;
+  TResponseCacheOptions = Dext.Caching.TResponseCacheOptions;
+  TResponseCaptureWrapper = Dext.Caching.TResponseCaptureWrapper;
+  TResponseCacheMiddleware = Dext.Caching.TResponseCacheMiddleware;
+  TResponseCacheBuilder = Dext.Caching.TResponseCacheBuilder;
+  TApplicationBuilderCacheExtensions = Dext.Caching.TApplicationBuilderCacheExtensions;
+  TResponseCacheOptionsHelper = Dext.Caching.TResponseCacheOptionsHelper;
+
+  // Dext.Caching.Redis
+  TRedisCacheStore = Dext.Caching.Redis.TRedisCacheStore;
+
+  // Dext.DI.Middleware
+  TServiceScopeMiddleware = Dext.DI.Middleware.TServiceScopeMiddleware;
+  TApplicationBuilderScopeExtensions = Dext.DI.Middleware.TApplicationBuilderScopeExtensions;
+
+  // Dext.Filters
+  TActionDescriptor = Dext.Filters.TActionDescriptor;
+  IActionExecutingContext = Dext.Filters.IActionExecutingContext;
+  IActionExecutedContext = Dext.Filters.IActionExecutedContext;
+  IActionFilter = Dext.Filters.IActionFilter;
+  ActionFilterAttribute = Dext.Filters.ActionFilterAttribute;
+  TActionExecutingContext = Dext.Filters.TActionExecutingContext;
+  TActionExecutedContext = Dext.Filters.TActionExecutedContext;
+
+  // Dext.Filters.BuiltIn
+  LogActionAttribute = Dext.Filters.BuiltIn.LogActionAttribute;
+  RequireHeaderAttribute = Dext.Filters.BuiltIn.RequireHeaderAttribute;
+  ResponseCacheAttribute = Dext.Filters.BuiltIn.ResponseCacheAttribute;
+  ValidateModelAttribute = Dext.Filters.BuiltIn.ValidateModelAttribute;
+  AddHeaderAttribute = Dext.Filters.BuiltIn.AddHeaderAttribute;
+
+  // Dext.HealthChecks
+  THealthStatus = Dext.HealthChecks.THealthStatus;
+  THealthCheckResult = Dext.HealthChecks.THealthCheckResult;
+  IHealthCheck = Dext.HealthChecks.IHealthCheck;
+  IHealthCheckService = Dext.HealthChecks.IHealthCheckService;
+  THealthCheckService = Dext.HealthChecks.THealthCheckService;
+  THealthCheckMiddleware = Dext.HealthChecks.THealthCheckMiddleware;
+  THealthCheckBuilder = Dext.HealthChecks.THealthCheckBuilder;
+
+  // Dext.OpenAPI.Attributes
+  SwaggerIgnoreAttribute = Dext.OpenAPI.Attributes.SwaggerIgnoreAttribute;
+  SwaggerOperationAttribute = Dext.OpenAPI.Attributes.SwaggerOperationAttribute;
+  SwaggerResponseAttribute = Dext.OpenAPI.Attributes.SwaggerResponseAttribute;
+  SwaggerSchemaAttribute = Dext.OpenAPI.Attributes.SwaggerSchemaAttribute;
+  SwaggerIgnorePropertyAttribute = Dext.OpenAPI.Attributes.SwaggerIgnorePropertyAttribute;
+  SwaggerPropertyAttribute = Dext.OpenAPI.Attributes.SwaggerPropertyAttribute;
+  SwaggerRequiredAttribute = Dext.OpenAPI.Attributes.SwaggerRequiredAttribute;
+  SwaggerExampleAttribute = Dext.OpenAPI.Attributes.SwaggerExampleAttribute;
+  SwaggerFormatAttribute = Dext.OpenAPI.Attributes.SwaggerFormatAttribute;
+  SwaggerTagAttribute = Dext.OpenAPI.Attributes.SwaggerTagAttribute;
+  TSwaggerParamLocation = Dext.OpenAPI.Attributes.TSwaggerParamLocation;
+  SwaggerParamAttribute = Dext.OpenAPI.Attributes.SwaggerParamAttribute;
+  SwaggerAuthorizeAttribute = Dext.OpenAPI.Attributes.SwaggerAuthorizeAttribute;
+
+  // Dext.OpenAPI.Extensions
+  TEndpointMetadataExtensions = Dext.OpenAPI.Extensions.TEndpointMetadataExtensions;
+
+  // Dext.OpenAPI.Fluent
+  TEndpointBuilder = Dext.OpenAPI.Fluent.TEndpointBuilder;
+  SwaggerEndpoint = Dext.OpenAPI.Fluent.SwaggerEndpoint;
+
+  // Dext.OpenAPI.Generator
+  TOpenAPIOptions = Dext.OpenAPI.Generator.TOpenAPIOptions;
+  TOpenAPIGenerator = Dext.OpenAPI.Generator.TOpenAPIGenerator;
+
+  // Dext.OpenAPI.Types
+  TOpenAPIDataType = Dext.OpenAPI.Types.TOpenAPIDataType;
+  TOpenAPISchema = Dext.OpenAPI.Types.TOpenAPISchema;
+  TOpenAPIParameterLocation = Dext.OpenAPI.Types.TOpenAPIParameterLocation;
+  TOpenAPIParameter = Dext.OpenAPI.Types.TOpenAPIParameter;
+  TOpenAPIRequestBody = Dext.OpenAPI.Types.TOpenAPIRequestBody;
+  TOpenAPIResponse = Dext.OpenAPI.Types.TOpenAPIResponse;
+  TOpenAPIOperation = Dext.OpenAPI.Types.TOpenAPIOperation;
+  TOpenAPIPathItem = Dext.OpenAPI.Types.TOpenAPIPathItem;
+  TOpenAPIServer = Dext.OpenAPI.Types.TOpenAPIServer;
+  TOpenAPIContact = Dext.OpenAPI.Types.TOpenAPIContact;
+  TOpenAPILicense = Dext.OpenAPI.Types.TOpenAPILicense;
+  TOpenAPIInfo = Dext.OpenAPI.Types.TOpenAPIInfo;
+  TSecuritySchemeType = Dext.OpenAPI.Types.TSecuritySchemeType;
+  TApiKeyLocation = Dext.OpenAPI.Types.TApiKeyLocation;
+  TOpenAPISecurityScheme = Dext.OpenAPI.Types.TOpenAPISecurityScheme;
+  TOpenAPIDocument = Dext.OpenAPI.Types.TOpenAPIDocument;
+
+  // Dext.RateLimiting
+  TRateLimitMiddleware = Dext.RateLimiting.TRateLimitMiddleware;
+  TApplicationBuilderRateLimitExtensions = Dext.RateLimiting.TApplicationBuilderRateLimitExtensions;
+
+  // Dext.RateLimiting.Core
+  TPartitionKeyResolver = Dext.RateLimiting.Core.TPartitionKeyResolver;
+  TRateLimiterType = Dext.RateLimiting.Core.TRateLimiterType;
+  TPartitionStrategy = Dext.RateLimiting.Core.TPartitionStrategy;
+  TRateLimitResult = Dext.RateLimiting.Core.TRateLimitResult;
+  IRateLimiter = Dext.RateLimiting.Core.IRateLimiter;
+  TRateLimitConfig = Dext.RateLimiting.Core.TRateLimitConfig;
+
+  // Dext.RateLimiting.Limiters
+  TFixedWindowLimiter = Dext.RateLimiting.Limiters.TFixedWindowLimiter;
+  TSlidingWindowLimiter = Dext.RateLimiting.Limiters.TSlidingWindowLimiter;
+  TTokenBucketLimiter = Dext.RateLimiting.Limiters.TTokenBucketLimiter;
+  TConcurrencyLimiter = Dext.RateLimiting.Limiters.TConcurrencyLimiter;
+
+  // Dext.RateLimiting.Policy
+  TRateLimitPolicy = Dext.RateLimiting.Policy.TRateLimitPolicy;
+
+  // Dext.Swagger.Middleware
+  TSwaggerMiddleware = Dext.Swagger.Middleware.TSwaggerMiddleware;
+  TSwaggerExtensions = Dext.Swagger.Middleware.TSwaggerExtensions;
+
+  // Dext.Web.ApplicationBuilder.Extensions
+  TApplicationBuilderExtensions = Dext.Web.ApplicationBuilder.Extensions.TApplicationBuilderExtensions;
+  TDextAppBuilderHelper = Dext.Web.ApplicationBuilder.Extensions.TDextAppBuilderHelper;
+
+  // Dext.Web.Controllers
+  IHttpHandler = Dext.Web.Controllers.IHttpHandler;
+  TControllerClass = Dext.Web.Controllers.TControllerClass;
+  TController = Dext.Web.Controllers.TController;
+
+  // Dext.Web.ControllerScanner
+  TControllerMethod = Dext.Web.ControllerScanner.TControllerMethod;
+  TControllerInfo = Dext.Web.ControllerScanner.TControllerInfo;
+  TCachedMethod = Dext.Web.ControllerScanner.TCachedMethod;
+  IControllerScanner = Dext.Web.ControllerScanner.IControllerScanner;
+  TControllerScanner = Dext.Web.ControllerScanner.TControllerScanner;
+
+  // Dext.Web.Core
+  TMiddlewareRegistration = Dext.Web.Core.TMiddlewareRegistration;
+  TAnonymousMiddleware = Dext.Web.Core.TAnonymousMiddleware;
+  TApplicationBuilder = Dext.Web.Core.TApplicationBuilder;
+  TMiddleware = Dext.Web.Core.TMiddleware;
+
+  // Dext.Web.Cors
+  TCorsOptions = Dext.Web.Cors.TCorsOptions;
+  TStringArrayHelper = Dext.Web.Cors.TStringArrayHelper;
+  TCorsMiddleware = Dext.Web.Cors.TCorsMiddleware;
+  TCorsBuilder = Dext.Web.Cors.TCorsBuilder;
+  TApplicationBuilderCorsExtensions = Dext.Web.Cors.TApplicationBuilderCorsExtensions;
+  TCorsOptionsHelper = Dext.Web.Cors.TCorsOptionsHelper;
+
+  // Dext.Web.DataApi
+  TApiMethod = Dext.Web.DataApi.TApiMethod;
+  TApiMethods = Dext.Web.DataApi.TApiMethods;
+  // TDataApiOptions<T> = Dext.Web.DataApi.TDataApiOptions<T>;
+  // TDataApiHandler<T> = Dext.Web.DataApi.TDataApiHandler<T>;
+
+  // Dext.Web.Extensions
+  TWebDIHelpers = Dext.Web.Extensions.TWebDIHelpers;
+  TWebRouteHelpers = Dext.Web.Extensions.TWebRouteHelpers;
+  TDextServiceCollectionExtensions = Dext.Web.Extensions.TDextServiceCollectionExtensions;
+  TOutputFormatterRegistry = Dext.Web.Extensions.TOutputFormatterRegistry;
+
+  // Dext.Web.Formatters.Interfaces
+  IOutputFormatterContext = Dext.Web.Formatters.Interfaces.IOutputFormatterContext;
+  IOutputFormatter = Dext.Web.Formatters.Interfaces.IOutputFormatter;
+  IOutputFormatterSelector = Dext.Web.Formatters.Interfaces.IOutputFormatterSelector;
+  IOutputFormatterRegistry = Dext.Web.Formatters.Interfaces.IOutputFormatterRegistry;
+
+  // Dext.Web.Formatters.Json
+  TJsonOutputFormatter = Dext.Web.Formatters.Json.TJsonOutputFormatter;
+
+  // Dext.Web.Formatters.Selector
+  TMediaTypeHeaderValue = Dext.Web.Formatters.Selector.TMediaTypeHeaderValue;
+  TDefaultOutputFormatterSelector = Dext.Web.Formatters.Selector.TDefaultOutputFormatterSelector;
+
+  // Dext.Web.HandlerInvoker
+  THandlerInvoker = Dext.Web.HandlerInvoker.THandlerInvoker;
+  // THandlerProc<T> = Dext.Web.HandlerInvoker.THandlerProc<T>;
+  // THandlerProc<T> = Dext.Web.HandlerInvoker.THandlerProc<T>;
+  // THandlerProc<T> = Dext.Web.HandlerInvoker.THandlerProc<T>;
+  // THandlerResultFunc<T> = Dext.Web.HandlerInvoker.THandlerResultFunc<T>;
+  // THandlerResultFunc<T> = Dext.Web.HandlerInvoker.THandlerResultFunc<T>;
+  // THandlerResultFunc<T> = Dext.Web.HandlerInvoker.THandlerResultFunc<T>;
+  // THandlerResultFunc<T> = Dext.Web.HandlerInvoker.THandlerResultFunc<T>;
+  // THandlerFunc<T> = Dext.Web.HandlerInvoker.THandlerFunc<T>;
+  // THandlerFunc<T> = Dext.Web.HandlerInvoker.THandlerFunc<T>;
+  // THandlerFunc<T> = Dext.Web.HandlerInvoker.THandlerFunc<T>;
+  // THandlerFunc<T> = Dext.Web.HandlerInvoker.THandlerFunc<T>;
+  // THandlerProcWithContext<T> = Dext.Web.HandlerInvoker.THandlerProcWithContext<T>;
+  // THandlerProcWithContext<T> = Dext.Web.HandlerInvoker.THandlerProcWithContext<T>;
+  // THandlerFuncWithContext<T> = Dext.Web.HandlerInvoker.THandlerFuncWithContext<T>;
+
+  // Dext.Web.Indy
+  TIndyHttpResponse = Dext.Web.Indy.TIndyHttpResponse;
+  TIndyHttpRequest = Dext.Web.Indy.TIndyHttpRequest;
+  TIndyHttpContext = Dext.Web.Indy.TIndyHttpContext;
+
+  // Dext.Web.Indy.Server
+  TIndyWebServer = Dext.Web.Indy.Server.TIndyWebServer;
+
+  // Dext.Web.Indy.SSL.Interfaces
+  IIndySSLHandler = Dext.Web.Indy.SSL.Interfaces.IIndySSLHandler;
+
+  // Dext.Web.Indy.SSL.OpenSSL
+  TIndyOpenSSLHandler = Dext.Web.Indy.SSL.OpenSSL.TIndyOpenSSLHandler;
+
+  // Dext.Web.Indy.SSL.Taurus
+  TIndyTaurusSSLHandler = Dext.Web.Indy.SSL.Taurus.TIndyTaurusSSLHandler;
+
+  // Dext.Web.Indy.Types
+  TIndyFormFile = Dext.Web.Indy.Types.TIndyFormFile;
+
+  // Dext.Web.Injection
+  THandlerInjector = Dext.Web.Injection.THandlerInjector;
+
+  // Dext.Web.Interfaces
+  IHttpContext = Dext.Web.Interfaces.IHttpContext;
+  IHttpRequest = Dext.Web.Interfaces.IHttpRequest;
+  IHttpResponse = Dext.Web.Interfaces.IHttpResponse;
+  IApplicationBuilder = Dext.Web.Interfaces.IApplicationBuilder;
+  IWebHost = Dext.Web.Interfaces.IWebHost;
+  IWebHostBuilder = Dext.Web.Interfaces.IWebHostBuilder;
+  TRequestDelegate = Dext.Web.Interfaces.TRequestDelegate;
+  TStaticHandler = Dext.Web.Interfaces.TStaticHandler;
+  TMiddlewareDelegate = Dext.Web.Interfaces.TMiddlewareDelegate;
+  TOpenAPIResponseMetadata = Dext.Web.Interfaces.TOpenAPIResponseMetadata;
+  TEndpointMetadata = Dext.Web.Interfaces.TEndpointMetadata;
+  TCookieOptions = Dext.Web.Interfaces.TCookieOptions;
+  IFormFile = Dext.Web.Interfaces.IFormFile;
+  IFormFileCollection = Dext.Web.Interfaces.IFormFileCollection;
+  IResult = Dext.Web.Interfaces.IResult;
+  IMiddleware = Dext.Web.Interfaces.IMiddleware;
+  TDextAppBuilder = Dext.Web.Interfaces.TDextAppBuilder;
+  IWebApplication = Dext.Web.Interfaces.IWebApplication;
+  IStartup = Dext.Web.Interfaces.IStartup;
+  TDextWebHost = Dext.Web.Interfaces.TDextWebHost;
+  TFormFileCollection = Dext.Web.Interfaces.TFormFileCollection;
+
+  // Dext.Web.Middleware
+  EHttpException = Dext.Web.Middleware.EHttpException;
+  ENotFoundException = Dext.Web.Middleware.ENotFoundException;
+  EUnauthorizedException = Dext.Web.Middleware.EUnauthorizedException;
+  EForbiddenException = Dext.Web.Middleware.EForbiddenException;
+  EValidationException = Dext.Web.Middleware.EValidationException;
+  TExceptionHandlerOptions = Dext.Web.Middleware.TExceptionHandlerOptions;
+  TProblemDetails = Dext.Web.Middleware.TProblemDetails;
+  TExceptionHandlerMiddleware = Dext.Web.Middleware.TExceptionHandlerMiddleware;
+  THttpLoggingOptions = Dext.Web.Middleware.THttpLoggingOptions;
+  THttpLoggingMiddleware = Dext.Web.Middleware.THttpLoggingMiddleware;
+
+  // Dext.Web.Middleware.Compression
+  TCompressionMiddleware = Dext.Web.Middleware.Compression.TCompressionMiddleware;
+
+  // Dext.Web.Middleware.Extensions
+  TApplicationBuilderMiddlewareExtensions = Dext.Web.Middleware.Extensions.TApplicationBuilderMiddlewareExtensions;
+
+  // Dext.Web.Middleware.Logging
+  TRequestLoggingMiddleware = Dext.Web.Middleware.Logging.TRequestLoggingMiddleware;
+
+  // Dext.Web.Middleware.StartupLock
+  TStartupLockMiddleware = Dext.Web.Middleware.StartupLock.TStartupLockMiddleware;
+
+  // Dext.Web.ModelBinding
+  EBindingException = Dext.Web.ModelBinding.EBindingException;
+  TBindingSource = Dext.Web.ModelBinding.TBindingSource;
+  BindingAttribute = Dext.Web.ModelBinding.BindingAttribute;
+  FromBodyAttribute = Dext.Web.ModelBinding.FromBodyAttribute;
+  FromQueryAttribute = Dext.Web.ModelBinding.FromQueryAttribute;
+  FromRouteAttribute = Dext.Web.ModelBinding.FromRouteAttribute;
+  FromHeaderAttribute = Dext.Web.ModelBinding.FromHeaderAttribute;
+  FromServicesAttribute = Dext.Web.ModelBinding.FromServicesAttribute;
+  IModelBinder = Dext.Web.ModelBinding.IModelBinder;
+  TModelBinder = Dext.Web.ModelBinding.TModelBinder;
+  TModelBinderHelper = Dext.Web.ModelBinding.TModelBinderHelper;
+  IBindingSourceProvider = Dext.Web.ModelBinding.IBindingSourceProvider;
+  TBindingSourceProvider = Dext.Web.ModelBinding.TBindingSourceProvider;
+
+  // Dext.Web.ModelBinding.Extensions
+  IApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.IApplicationBuilderWithModelBinding;
+  TApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.TApplicationBuilderWithModelBinding;
+  TApplicationBuilderModelBindingExtensions = Dext.Web.ModelBinding.Extensions.TApplicationBuilderModelBindingExtensions;
+
+  // Dext.Web.MultiTenancy
+  ITenantResolutionStrategy = Dext.Web.MultiTenancy.ITenantResolutionStrategy;
+  ITenantStore = Dext.Web.MultiTenancy.ITenantStore;
+  TMultiTenancyMiddleware = Dext.Web.MultiTenancy.TMultiTenancyMiddleware;
+
+  // Dext.Web.Pipeline
+  IDextPipeline = Dext.Web.Pipeline.IDextPipeline;
+  TDextPipeline = Dext.Web.Pipeline.TDextPipeline;
+
+  // Dext.Web.Results
+  TResult = Dext.Web.Results.TResult;
+  TOutputFormatterContext = Dext.Web.Results.TOutputFormatterContext;
+  TJsonResult = Dext.Web.Results.TJsonResult;
+  TStatusCodeResult = Dext.Web.Results.TStatusCodeResult;
+  TContentResult = Dext.Web.Results.TContentResult;
+  TStreamResult = Dext.Web.Results.TStreamResult;
+  Results = Dext.Web.Results.Results;
+  // TObjectResult<T> = Dext.Web.Results.TObjectResult<T>;
+
+  // Dext.Web.Routing
+  TRoutePattern = Dext.Web.Routing.TRoutePattern;
+  TRouteDefinition = Dext.Web.Routing.TRouteDefinition;
+  IRouteMatcher = Dext.Web.Routing.IRouteMatcher;
+  TRouteMatcher = Dext.Web.Routing.TRouteMatcher;
+  ERouteException = Dext.Web.Routing.ERouteException;
+
+  // Dext.Web.Routing.Attributes
+  DextRouteAttribute = Dext.Web.Routing.Attributes.DextRouteAttribute;
+  DextGetAttribute = Dext.Web.Routing.Attributes.DextGetAttribute;
+  DextPostAttribute = Dext.Web.Routing.Attributes.DextPostAttribute;
+  DextPutAttribute = Dext.Web.Routing.Attributes.DextPutAttribute;
+  DextDeleteAttribute = Dext.Web.Routing.Attributes.DextDeleteAttribute;
+  DextPatchAttribute = Dext.Web.Routing.Attributes.DextPatchAttribute;
+  DextHeadAttribute = Dext.Web.Routing.Attributes.DextHeadAttribute;
+  DextOptionsAttribute = Dext.Web.Routing.Attributes.DextOptionsAttribute;
+  DextControllerAttribute = Dext.Web.Routing.Attributes.DextControllerAttribute;
+  EDextHttpException = Dext.Web.Routing.Attributes.EDextHttpException;
+
+  // Dext.Web.RoutingMiddleware
+  TRoutingMiddleware = Dext.Web.RoutingMiddleware.TRoutingMiddleware;
+
+  // Dext.Web.StaticFiles
+  TContentTypeProvider = Dext.Web.StaticFiles.TContentTypeProvider;
+  TStaticFileOptions = Dext.Web.StaticFiles.TStaticFileOptions;
+  TStaticFileMiddleware = Dext.Web.StaticFiles.TStaticFileMiddleware;
+  TApplicationBuilderStaticFilesExtensions = Dext.Web.StaticFiles.TApplicationBuilderStaticFilesExtensions;
+
+  // Dext.Web.StatusCodes
+  HttpStatus = Dext.Web.StatusCodes.HttpStatus;
+
+  // Dext.Web.Versioning
+  IApiVersionReader = Dext.Web.Versioning.IApiVersionReader;
+  TQueryStringApiVersionReader = Dext.Web.Versioning.TQueryStringApiVersionReader;
+  THeaderApiVersionReader = Dext.Web.Versioning.THeaderApiVersionReader;
+  TCompositeApiVersionReader = Dext.Web.Versioning.TCompositeApiVersionReader;
+
+  // Dext.Web.WebApplication
+  TDextApplication = Dext.Web.WebApplication.TDextApplication;
+
+  // Dext.WebHost
+  TWebHostBuilder = Dext.WebHost.TWebHostBuilder;
+
+const
+  // Dext.HealthChecks
+  Healthy = Dext.HealthChecks.Healthy;
+  Degraded = Dext.HealthChecks.Degraded;
+  Unhealthy = Dext.HealthChecks.Unhealthy;
+  // Dext.OpenAPI.Attributes
+  Path = Dext.OpenAPI.Attributes.Path;
+  Query = Dext.OpenAPI.Attributes.Query;
+  Header = Dext.OpenAPI.Attributes.Header;
+  Cookie = Dext.OpenAPI.Attributes.Cookie;
+  // Dext.OpenAPI.Types
+  odtString = Dext.OpenAPI.Types.odtString;
+  odtNumber = Dext.OpenAPI.Types.odtNumber;
+  odtInteger = Dext.OpenAPI.Types.odtInteger;
+  odtBoolean = Dext.OpenAPI.Types.odtBoolean;
+  odtArray = Dext.OpenAPI.Types.odtArray;
+  odtObject = Dext.OpenAPI.Types.odtObject;
+  oplQuery = Dext.OpenAPI.Types.oplQuery;
+  oplPath = Dext.OpenAPI.Types.oplPath;
+  oplHeader = Dext.OpenAPI.Types.oplHeader;
+  oplCookie = Dext.OpenAPI.Types.oplCookie;
+  sstApiKey = Dext.OpenAPI.Types.sstApiKey;
+  sstHttp = Dext.OpenAPI.Types.sstHttp;
+  sstOAuth2 = Dext.OpenAPI.Types.sstOAuth2;
+  sstOpenIdConnect = Dext.OpenAPI.Types.sstOpenIdConnect;
+  aklQuery = Dext.OpenAPI.Types.aklQuery;
+  aklHeader = Dext.OpenAPI.Types.aklHeader;
+  aklCookie = Dext.OpenAPI.Types.aklCookie;
+  // Dext.RateLimiting.Core
+  rltFixedWindow = Dext.RateLimiting.Core.rltFixedWindow;
+  rltSlidingWindow = Dext.RateLimiting.Core.rltSlidingWindow;
+  rltTokenBucket = Dext.RateLimiting.Core.rltTokenBucket;
+  rltConcurrency = Dext.RateLimiting.Core.rltConcurrency;
+  psIpAddress = Dext.RateLimiting.Core.psIpAddress;
+  psHeader = Dext.RateLimiting.Core.psHeader;
+  psRoute = Dext.RateLimiting.Core.psRoute;
+  psCustom = Dext.RateLimiting.Core.psCustom;
+  // Dext.Web.DataApi
+  amGet = Dext.Web.DataApi.amGet;
+  amGetList = Dext.Web.DataApi.amGetList;
+  amPost = Dext.Web.DataApi.amPost;
+  amPut = Dext.Web.DataApi.amPut;
+  amDelete = Dext.Web.DataApi.amDelete;
+  // Dext.Web.ModelBinding
+  bsBody = Dext.Web.ModelBinding.bsBody;
+  bsQuery = Dext.Web.ModelBinding.bsQuery;
+  bsRoute = Dext.Web.ModelBinding.bsRoute;
+  bsHeader = Dext.Web.ModelBinding.bsHeader;
+  bsServices = Dext.Web.ModelBinding.bsServices;
+  bsForm = Dext.Web.ModelBinding.bsForm;
+  // {END_DEXT_ALIASES}
 
 type
   /// <summary>
@@ -78,7 +562,7 @@ type
   /// </summary>
   TDextHttpAppBuilderHelper = record helper for TDextAppBuilder
   public
-    // 🏭 Factory Methods
+    // ?? Factory Methods
     
     /// <summary>
     ///   Creates a new instance of TCorsOptions with default settings.
@@ -95,7 +579,7 @@ type
     /// </summary>
     function CreateStaticFileOptions: TStaticFileOptions;
     
-    // 🔌 Extensions
+    // ?? Extensions
     
     /// <summary>
     ///   Adds CORS middleware to the pipeline using the provided options.
@@ -152,7 +636,7 @@ type
     /// </summary>
     function UseStaticFiles(const ARootPath: string): TDextAppBuilder; overload;
     
-    // 🧩 Core Forwarding
+    // ?? Core Forwarding
     
     /// <summary>
     ///   Adds a middleware class to the pipeline. The middleware must have a constructor accepting RequestDelegate (and optionally other services).
@@ -188,7 +672,7 @@ type
     function Build: TRequestDelegate;
 
     // -------------------------------------------------------------------------
-    // 🧱 Middleware
+    // ?? Middleware
     // -------------------------------------------------------------------------
     function UseStaticFiles: TDextAppBuilder; overload;
     function UseStartupLock: TDextAppBuilder;
@@ -198,12 +682,12 @@ type
     function UseHttpLogging(const AOptions: THttpLoggingOptions): TDextAppBuilder; overload;
 
     // -------------------------------------------------------------------------
-    // 🚦 Rate Limiting
+    // ?? Rate Limiting
     // -------------------------------------------------------------------------
     function UseRateLimiting(const APolicy: TRateLimitPolicy): TDextAppBuilder; overload;
 
     // -------------------------------------------------------------------------
-    // 🛣️ Routing - POST
+    // ??? Routing - POST
     // -------------------------------------------------------------------------
     
     /// <summary>
@@ -230,7 +714,7 @@ type
     function MapPost<T1, T2, T3, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, T3, TResult>): TDextAppBuilder; overload;
 
     // -------------------------------------------------------------------------
-    // 🛣️ Routing - GET
+    // ??? Routing - GET
     // -------------------------------------------------------------------------
     
     /// <summary>
@@ -269,7 +753,7 @@ type
     function MapGet<T1, T2, T3, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, T3, TResult>): TDextAppBuilder; overload;
 
     // -------------------------------------------------------------------------
-    // 🛣️ Routing - PUT
+    // ??? Routing - PUT
     // -------------------------------------------------------------------------
     function MapPut<T>(const Path: string; Handler: THandlerProc<T>): TDextAppBuilder; overload;
     function MapPut<T1, T2>(const Path: string; Handler: THandlerProc<T1, T2>): TDextAppBuilder; overload;
@@ -280,7 +764,7 @@ type
     function MapPut<T1, T2, T3, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, T3, TResult>): TDextAppBuilder; overload;
 
     // -------------------------------------------------------------------------
-    // 🛣️ Routing - DELETE
+    // ??? Routing - DELETE
     // -------------------------------------------------------------------------
     function MapDelete<T>(const Path: string; Handler: THandlerProc<T>): TDextAppBuilder; overload;
     function MapDelete<T1, T2>(const Path: string; Handler: THandlerProc<T1, T2>): TDextAppBuilder; overload;
@@ -292,7 +776,7 @@ type
   end;
 
 // ===========================================================================
-// 🛠️ Global Response Helpers
+// ??? Global Response Helpers
 // ===========================================================================
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;

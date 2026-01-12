@@ -156,6 +156,9 @@
         <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas"/>
         <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Types.pas"/>
         <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas"/>
+        <DCCReference Include="Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Facade.pas"/>
+        <DCCReference Include="Hosting\CLI\Tools\Dext.Hosting.CLI.Tools.FacadeGenerator.pas"/>
+        <DCCReference Include="Hosting\Dext.Hosting.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

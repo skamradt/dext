@@ -1,17 +1,19 @@
-unit FacadeGenerator;
+unit Dext.Hosting.CLI.Tools.FacadeGenerator;
 
 interface
 
 uses
-  System.SysUtils,
-  System.StrUtils,
   System.Classes,
-  System.IOUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
+  System.IOUtils,
+  System.Math,
+  System.StrUtils,
+  System.SysUtils,
   DelphiAST.Classes,
   DelphiAST.Consts,
-  DelphiAST;
+  DelphiAST,
+  Dext.Utils;
 
 type
   TOrdinalIgnoreCaseComparer = class(TEqualityComparer<string>)
@@ -24,19 +26,37 @@ type
   public
     UnitName: string;
     Types: TList<string>;
-    GenericTypes: TList<string>; // New: Store generic types for comments
+    GenericTypes: TList<string>; 
     Consts: TList<string>;
     constructor Create(const AName: string);
     destructor Destroy; override;
   end;
 
   TFacadeGenerator = class
+  private
+    FTargetUnitName: string;
+    FSkippedUnits: TList<string>;
+    FProcessedUnits: Integer;
+    function IsFieldName(const AName: string): Boolean;
+    function IsUnitProcessed(const UnitName: string): Boolean;
   protected
     FSourcePath: string;
     FSearchPattern: string;
     FExcludedUnits: THashSet<string>;
     FParsedUnits: TObjectList<TExtractedUnit>;
-    FGlobalTypeNames: THashSet<string>; // New: Global deduplication
+    FGlobalTypeNames: THashSet<string>; 
+    
+    // Configuration
+    FStartAliasTag: string;
+    FEndAliasTag: string;
+    FStartUsesTag: string;
+    FEndUsesTag: string;
+    FValidateTags: Boolean;
+    FVerbose: Boolean;
+    
+    // Stats
+    FTotalTypes: Integer;
+    FTotalConsts: Integer;
     
     procedure ScanFolder(const Folder: string);
     procedure ProcessFile(const FileName: string); virtual;
@@ -48,12 +68,16 @@ type
     constructor Create(const SourcePath, Wildcard: string; const Excluded: TArray<string>);
     destructor Destroy; override;
     procedure Execute; virtual;
-    procedure InjectIntoFile(const TargetFile: string);
-  private
-    FSkippedUnits: TList<string>;
-    FProcessedUnits: Integer;
-    function IsFieldName(const AName: string): Boolean;
-    function IsUnitProcessed(const UnitName: string): Boolean;
+    procedure InjectIntoFile(const TargetFile: string; DryRun: Boolean = False);
+    procedure BackupTargetFile(const FileName: string);
+    
+    property StartAliasTag: string read FStartAliasTag write FStartAliasTag;
+    property EndAliasTag: string read FEndAliasTag write FEndAliasTag;
+    property StartUsesTag: string read FStartUsesTag write FStartUsesTag;
+    property EndUsesTag: string read FEndUsesTag write FEndUsesTag;
+    property ValidateTags: Boolean read FValidateTags write FValidateTags;
+    property Verbose: Boolean read FVerbose write FVerbose;
+    property TargetUnitName: string read FTargetUnitName write FTargetUnitName;
   end;
 
 implementation
@@ -97,13 +121,24 @@ begin
   FSourcePath := SourcePath;
   FSearchPattern := Wildcard;
   FExcludedUnits := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create);
-  FGlobalTypeNames := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create); // Case-insensitive
+  FGlobalTypeNames := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create); 
   for S in Excluded do
     FExcludedUnits.Add(S);
     
   FParsedUnits := TObjectList<TExtractedUnit>.Create(True);
   FSkippedUnits := TList<string>.Create;
+  FSkippedUnits := TList<string>.Create;
   FProcessedUnits := 0;
+  
+  // Defaults
+  FStartAliasTag := '// {BEGIN_DEXT_ALIASES}';
+  FEndAliasTag := '// {END_DEXT_ALIASES}';
+  FStartUsesTag := '// {BEGIN_DEXT_USES}';
+  FEndUsesTag := '// {END_DEXT_USES}';
+  FValidateTags := True;
+  FVerbose := False;
+  FTotalTypes := 0;
+  FTotalConsts := 0;
 end;
 
 destructor TFacadeGenerator.Destroy;
@@ -124,7 +159,6 @@ end;
 
 function TFacadeGenerator.IsGeneric(Node: TSyntaxNode): Boolean;
 begin
-  // Check if declaration has type parameters
   Result := Node.FindNode(ntTypeParams) <> nil;
 end;
 
@@ -155,7 +189,21 @@ end;
 
 procedure TFacadeGenerator.Execute;
 begin
+  if (FTargetUnitName <> '') and (not FExcludedUnits.Contains(FTargetUnitName)) then
+  begin
+     FExcludedUnits.Add(FTargetUnitName);
+     if FVerbose then SafeWriteLn('Auto-excluded target unit: ' + FTargetUnitName);
+  end;
+
   ScanFolder(FSourcePath);
+  
+  if FVerbose then
+  begin
+    SafeWriteLn('Statistics:');
+    SafeWriteLn(Format('  Units Processed: %d', [FProcessedUnits]));
+    SafeWriteLn(Format('  Types Found    : %d', [FTotalTypes]));
+    SafeWriteLn(Format('  Consts Found   : %d', [FTotalConsts]));
+  end;
 end;
 
 procedure TFacadeGenerator.ScanFolder(const Folder: string);
@@ -185,9 +233,35 @@ var
   function IsValidType(Name: string): Boolean;
   begin
      Result := True;
-     // Filter obvious keywords if mistakenly parsed as name
      if MatchStr(Name, ['type', 'const', 'var', 'class', 'interface', 'record', 'end']) then Exit(False);
      if IsFieldName(Name) then Exit(False);
+  end;
+
+  // Robust search for Enum Elements anywhere in sub-tree of TypeDecl
+  procedure ScanForElements(UnitDecl: TExtractedUnit; N: TSyntaxNode; const TypeName: string; var FoundElements: Boolean);
+  begin
+     if N = nil then Exit;
+     
+     // User says ntElement (32), Debugger says ntIdentifier (56) inside ntType (114)
+     // We accept both to be safe. 
+     if (N.Typ = ntElement) or (Ord(N.Typ) = 56) then // 56 = ntIdentifier
+     begin
+         // Check if it's the TypeName itself (DeclNode name) to avoid self-reference? 
+         var EnumItemName := N.GetAttribute(anName);
+         if (not EnumItemName.IsEmpty) and (not FGlobalTypeNames.Contains(EnumItemName)) and (EnumItemName <> TypeName) then
+         begin
+            if not UnitDecl.Consts.Contains(EnumItemName) then
+            begin
+               UnitDecl.Consts.Add(EnumItemName);
+               FGlobalTypeNames.Add(EnumItemName);
+               Inc(FTotalConsts);
+            end;
+            FoundElements := True;
+         end;
+     end;
+     
+     for var C in N.ChildNodes do
+       ScanForElements(UnitDecl, C, TypeName, FoundElements);
   end;
   
 begin
@@ -195,90 +269,140 @@ begin
   if TPath.GetFileName(FileName).Contains('.Aliases.inc') then Exit;
   if TPath.GetFileName(FileName).Contains('.Uses.inc') then Exit;
   
-  Writeln('Processing: ' + TPath.GetFileName(FileName));
+  if TPath.GetFileName(FileName).Contains('.Uses.inc') then Exit;
+  
+  if FVerbose then
+    SafeWriteLn('Processing: ' + FileName); // Log FULL PATH to check case/format
   Inc(FProcessedUnits);
 
   Root := nil;
   try
     try
-      // Use TPasSyntaxTreeBuilder from DelphiAST.pas
       Root := TPasSyntaxTreeBuilder.Run(FileName);
     except
       on E: Exception do
       begin
-        Writeln('Error parsing ' + FileName + ': ' + E.Message);
+        SafeWriteLn('Error parsing ' + FileName + ': ' + E.Message);
         Exit;
       end;
     end;
 
-    if Root = nil then Exit;
+    if Root = nil then 
+    begin
+       safeWriteLn('DEBUG: Root is nil for ' + FileName);
+       Exit;
+    end;
+
+    if FileName.ToLower.Contains('dext.specifications.types.pas') then
+    begin
+       SafeWriteLn('DEBUG: HIT ' + FileName); 
+       SafeWriteLn('DEBUG: Root.Typ = ' + IntToStr(Ord(Root.Typ)));
+    end;
 
     UnitName := GetUnitName(Root, FileName);
     
+    // DEBUG: Targeted logging
+    var IsTargetDebug := FileName.Contains('Dext.Specifications.Types');
+    if IsTargetDebug then SafeWriteLn(Format('DEBUG: UnitName=%s', [UnitName]));
+    
     if IsExcluded(UnitName) then 
     begin
-      Writeln('  Excluded: ' + UnitName);
+      SafeWriteLn('  Excluded: ' + UnitName);
       Exit;
     end;
 
-    // Deduplicate units
     if IsUnitProcessed(UnitName) then
     begin
-       Writeln('  Duplicate unit skipped: ' + UnitName);
+       SafeWriteLn('  Duplicate unit skipped: ' + UnitName);
        Exit;
     end;
 
     UnitDecl := TExtractedUnit.Create(UnitName);
     
-    // Find Interface section
     IntfNode := Root.FindNode(ntInterface);
     if IntfNode <> nil then
     begin
-      // Iterate interface sections (Type, Const, etc.)
+      if IsTargetDebug then SafeWriteLn(Format('DEBUG: Interface Node Found. Children: %d', [Length(IntfNode.ChildNodes)]));
       for SectionNode in IntfNode.ChildNodes do
       begin
         if SectionNode.Typ = ntTypeSection then
         begin
+          if IsTargetDebug then SafeWriteLn(Format('DEBUG: TypeSection Found. Children: %d', [Length(SectionNode.ChildNodes)]));
           for DeclNode in SectionNode.ChildNodes do
           begin
             if DeclNode.Typ = ntTypeDecl then
             begin
               TypeName := DeclNode.GetAttribute(anName);
+              if IsTargetDebug then SafeWriteLn(Format('DEBUG: Found Type: %s', [TypeName]));
               
+              if TypeName.IsEmpty then Continue;
               if not IsValidType(TypeName) then Continue;
 
-              // Check for Generics
               if IsGeneric(DeclNode) then 
               begin
-                 // Add to generics list (no global check needed for comments, but optional)
-                 // Format: MyType<T>
-                 // Note: Extracting exact params from AST is harder without traversing ntTypeParams.
-                 // For now, we will just assume <T> as a placeholder or try to simple append <> if we don't parse deeply.
-                 // Actually, checking children of ntTypeParams would be better.
-                 // Let's just append IsGeneric marker for now to keep it simple as requested "commented reference".
-                 // Or we can try to reconstruct it.
-                 // Simplest is just storing the name, adding it to comments.
-                 GenericParams := '<T>'; // Default placeholder
+                 GenericParams := '<T>'; 
                  UnitDecl.GenericTypes.Add(TypeName + GenericParams); 
                  Continue;
               end;
               
-              // Global Deduplication check
               if FGlobalTypeNames.Contains(TypeName) then
               begin
-                 //writeln('  Skipping duplicate type: ' + TypeName);
                  Continue;
               end;
               
               if not UnitDecl.Types.Contains(TypeName) then
               begin
                 UnitDecl.Types.Add(TypeName);
-                FGlobalTypeNames.Add(TypeName); // Mark as used
+                FGlobalTypeNames.Add(TypeName);
+                Inc(FTotalTypes);
+              end;
+
+              // Robust search for Enum Elements anywhere in sub-tree of TypeDecl
+              var FoundElements: Boolean := False;
+              
+              // Only scan if we suspect it is an enum? 
+              // Hard to know without ntEnum node.
+              // But extracting constants from other types (like Aliases) is not desired.
+              // TMyInt = Integer; -> Integer is ntIdentifier. We don't want "const Integer = ...".
+              
+              // Heuristic: If we find ntEnum, scan only children.
+              // If we find ntType (114) and it has MULTIPLE identifiers, it's likely an Enum.
+              // If it has ONE identifier, it's likely an Alias.
+              
+              // Let's look for known structure ntEnum first.
+              var StandardEnumNode := DeclNode.FindNode(ntEnum);
+              if StandardEnumNode = nil then
+              begin
+                  var TypeWrapper := DeclNode.FindNode(ntType);
+                  if TypeWrapper <> nil then
+                     StandardEnumNode := TypeWrapper.FindNode(ntEnum);
+              end;
+              
+              if StandardEnumNode <> nil then
+              begin
+                 ScanForElements(UnitDecl, StandardEnumNode, TypeName, FoundElements);
+              end
+              else 
+              begin
+                 // If no ntEnum found, fallback to ntType container with heuristics?
+                 // TCascadeAction = (caNoAction, ...) -> 4 items.
+                 // If we see > 1 identifier inside ntType, treat as Enum.
+                 var TypeWrapper := DeclNode.FindNode(ntType);
+                 if (TypeWrapper <> nil) then
+                 begin
+                     // Count identifiers
+                     var IdCount := 0;
+                     for var C in TypeWrapper.ChildNodes do
+                        if Ord(C.Typ) = 56 then Inc(IdCount);
+                        
+                     if IdCount > 1 then
+                        ScanForElements(UnitDecl, TypeWrapper, TypeName, FoundElements);
+                 end;
               end;
             end;
           end;
         end
-        else if SectionNode.Typ = ntConstants then // Changed from ntConstSection
+        else if SectionNode.Typ = ntConstants then
         begin
            for DeclNode in SectionNode.ChildNodes do
            begin
@@ -286,7 +410,8 @@ begin
              begin
                var ConstName := DeclNode.GetAttribute(anName);
                
-               // Global Deduplication for constants too
+               if ConstName.IsEmpty then Continue;
+               
                if FGlobalTypeNames.Contains(ConstName) then Continue;
                
                if not UnitDecl.Consts.Contains(ConstName) then
@@ -310,25 +435,27 @@ begin
   end;
 end;
 
-procedure TFacadeGenerator.InjectIntoFile(const TargetFile: string);
+
+
+procedure TFacadeGenerator.InjectIntoFile(const TargetFile: string; DryRun: Boolean);
 var
   Lines: TStringList;
   NewLines: TStringList;
   I: Integer;
   InAliasesBlock, InUsesBlock: Boolean;
   
-  // Local logic
+  TargetUnitName: string;
+  
   procedure AddAliases;
   var
     LUnitInfo: TExtractedUnit;
     LTypeName: string;
     LConstName: string;
     LGenericName: string;
-    HasConsts, HasGenerics: Boolean;
+    HasConsts: Boolean;
   begin
     NewLines.Add('  // Generated Aliases');
     
-    // Sort units
     FParsedUnits.Sort(TComparer<TExtractedUnit>.Construct(
       function(const L, R: TExtractedUnit): Integer
       begin
@@ -338,19 +465,22 @@ var
 
     for LUnitInfo in FParsedUnits do
     begin
-      // Normal Types
+      if SameText(LUnitInfo.UnitName, TargetUnitName) then Continue;
+
       if LUnitInfo.Types.Count > 0 then
       begin
         NewLines.Add('');
         NewLines.Add('  // ' + LUnitInfo.UnitName);
         for LTypeName in LUnitInfo.Types do
+        begin
+          if LTypeName.IsEmpty then Continue;
           NewLines.Add(Format('  %s = %s.%s;', [LTypeName, LUnitInfo.UnitName, LTypeName]));
+        end;
       end;
       
-      // Generic Types (Commented)
       if LUnitInfo.GenericTypes.Count > 0 then
       begin
-         if LUnitInfo.Types.Count = 0 then // Add header if not already added
+         if LUnitInfo.Types.Count = 0 then 
          begin
             NewLines.Add('');
             NewLines.Add('  // ' + LUnitInfo.UnitName);
@@ -360,9 +490,12 @@ var
       end;
     end;
     
-    // Constants
     HasConsts := False;
-    for LUnitInfo in FParsedUnits do if LUnitInfo.Consts.Count > 0 then HasConsts := True;
+    for LUnitInfo in FParsedUnits do 
+    begin
+       if SameText(LUnitInfo.UnitName, TargetUnitName) then Continue;
+       if LUnitInfo.Consts.Count > 0 then HasConsts := True;
+    end;
     
     if HasConsts then
     begin
@@ -370,11 +503,16 @@ var
         NewLines.Add('const');
         for LUnitInfo in FParsedUnits do
         begin
+          if SameText(LUnitInfo.UnitName, TargetUnitName) then Continue;
+
           if LUnitInfo.Consts.Count > 0 then
           begin
              NewLines.Add('  // ' + LUnitInfo.UnitName);
              for LConstName in LUnitInfo.Consts do
+             begin
+                if LConstName.IsEmpty then Continue;
                 NewLines.Add(Format('  %s = %s.%s;', [LConstName, LUnitInfo.UnitName, LConstName]));
+             end;
           end;
         end;
     end;
@@ -391,7 +529,8 @@ var
       try
         for LUnitInfo in FParsedUnits do
         begin
-            // Include unit if traversed, even if only for generics (as reference) or constants
+           if SameText(LUnitInfo.UnitName, TargetUnitName) then Continue;
+
            if (LUnitInfo.Types.Count > 0) or (LUnitInfo.Consts.Count > 0) or (LUnitInfo.GenericTypes.Count > 0) then
               LUnits.Add(LUnitInfo.UnitName);
         end;
@@ -411,14 +550,31 @@ var
 begin
   if not TFile.Exists(TargetFile) then
   begin
-    Writeln('Target file not found: ' + TargetFile);
+    SafeWriteLn('Target file not found: ' + TargetFile);
     Exit;
   end;
+  
+  if DryRun then
+    SafeWriteLn('[DRY RUN] Would inject code into: ' + TargetFile);
+    
+  TargetUnitName := TPath.GetFileNameWithoutExtension(TargetFile);
   
   Lines := TStringList.Create;
   NewLines := TStringList.Create;
   try
     Lines.LoadFromFile(TargetFile);
+    
+    // Validation
+    if FValidateTags then
+    begin
+       if (not Lines.Text.Contains(FStartAliasTag)) or (not Lines.Text.Contains(FEndAliasTag)) then
+         raise Exception.CreateFmt('Alias delimiters not found in %s.' + sLineBreak + 
+           'Expected "%s" and "%s".', [TargetFile, FStartAliasTag, FEndAliasTag]);
+           
+       if (not Lines.Text.Contains(FStartUsesTag)) or (not Lines.Text.Contains(FEndUsesTag)) then
+         raise Exception.CreateFmt('Uses delimiters not found in %s.' + sLineBreak + 
+           'Expected "%s" and "%s".', [TargetFile, FStartUsesTag, FEndUsesTag]);
+    end;
     
     InAliasesBlock := False;
     InUsesBlock := False;
@@ -427,7 +583,7 @@ begin
     begin
       var Trimmed := Trim(Lines[I]);
       
-      if Trimmed.StartsWith('// {BEGIN_DEXT_ALIASES}') then
+      if Trimmed.StartsWith(FStartAliasTag) then
       begin
          NewLines.Add(Lines[I]);
          AddAliases;
@@ -435,14 +591,14 @@ begin
          Continue;
       end;
       
-      if Trimmed.StartsWith('// {END_DEXT_ALIASES}') then
+      if Trimmed.StartsWith(FEndAliasTag) then
       begin
          NewLines.Add(Lines[I]);
          InAliasesBlock := False;
          Continue;
       end;
       
-      if Trimmed.StartsWith('// {BEGIN_DEXT_USES}') then
+      if Trimmed.StartsWith(FStartUsesTag) then
       begin
          NewLines.Add(Lines[I]);
          AddUses;
@@ -450,7 +606,7 @@ begin
          Continue;
       end;
       
-      if Trimmed.StartsWith('// {END_DEXT_USES}') then
+      if Trimmed.StartsWith(FEndUsesTag) then
       begin
          NewLines.Add(Lines[I]);
          InUsesBlock := False;
@@ -461,13 +617,36 @@ begin
          NewLines.Add(Lines[I]);
     end;
     
-    NewLines.SaveToFile(TargetFile);
-    Writeln('Injected code into ' + TargetFile);
+    if not DryRun then
+    begin
+      NewLines.SaveToFile(TargetFile);
+      SafeWriteLn('Injected code into ' + TargetFile);
+    end
+    else
+    begin
+       SafeWriteLn('[DRY RUN] Content preview (first 10 lines):');
+       for I := 0 to Min(9, NewLines.Count - 1) do
+         SafeWriteLn('  ' + NewLines[I]);
+       SafeWriteLn('  ...');
+    end;
     
   finally
     Lines.Free;
     NewLines.Free;
   end;
+end;
+
+
+
+procedure TFacadeGenerator.BackupTargetFile(const FileName: string);
+var
+  BackupFile: string;
+begin
+  BackupFile := FileName + '.bak';
+  if TFile.Exists(BackupFile) then
+    TFile.Delete(BackupFile);
+  TFile.Copy(FileName, BackupFile);
+  SafeWriteLn('Backup created: ' + BackupFile);
 end;
 
 end.

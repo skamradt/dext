@@ -156,6 +156,35 @@ Generates a file like `20260104223000_AddCustomerTable.json`.
 
 ---
 
+## 🏗️ Utility Commands
+
+### `facade`
+Generates a "Facade Unit" (`Dext.pas`) that acts as a central access point for types and constants declared across multiple core units. This simplifies the `uses` clause for end-users.
+
+**Syntax:**
+```bash
+dext facade [--path <source-dir>] [--target <file>] [options]
+```
+
+**Options:**
+- `--path <dir>` (alias `-p`): Source directory to scan for Pascal units. Defaults to current directory.
+- `--target <file>` (alias `-t`): The target file where aliases will be injected. Defaults to `Dext.pas` in the source directory.
+- `--exclude <units>` (alias `-x`): Comma-separated list of unit names to exclude from generation.
+- `--dry-run`: Preview changes without modifying the target file.
+- `--backup`: Create a backup (`.bak`) of the target file before modification.
+- `--no-validate`: Skip validation of delimiter tags (use with caution).
+- `--start-alias <tag>`: Custom start delimiter for alias block.
+- `--end-alias <tag>`: Custom end delimiter for alias block.
+- `--start-uses <tag>`: Custom start delimiter for uses block.
+- `--end-uses <tag>`: Custom end delimiter for uses block.
+
+**Example:**
+```bash
+dext facade -p Sources\Core -t Sources\Core\Dext.pas --dry-run
+```
+
+---
+
 ## ⚙️ Global Options
 
 - `--help` / `-h` / `help`: Displays the help screen with a list of available commands.

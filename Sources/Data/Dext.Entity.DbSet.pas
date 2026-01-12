@@ -33,7 +33,6 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Variants,
-  Dext,
   Dext.Collections,
   Dext.Core.Activator,
   Dext.Core.ValueConverters,

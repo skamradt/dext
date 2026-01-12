@@ -45,6 +45,7 @@ contains
   Dext.Web.Hubs.Protocol.Json in 'Hubs\Dext.Web.Hubs.Protocol.Json.pas',
   Dext.Web.Hubs.Middleware in 'Hubs\Dext.Web.Hubs.Middleware.pas',
   Dext.Web.Hubs.Extensions in 'Hubs\Dext.Web.Hubs.Extensions.pas',
-  Dext.Web.Hubs.Transport.SSE in 'Hubs\Transports\Dext.Web.Hubs.Transport.SSE.pas';
+  Dext.Web.Hubs.Transport.SSE in 'Hubs\Transports\Dext.Web.Hubs.Transport.SSE.pas',
+  Dext.Hubs in 'Hubs\Dext.Hubs.pas';
 
 end.

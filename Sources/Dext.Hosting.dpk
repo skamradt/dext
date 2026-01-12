@@ -75,6 +75,9 @@ contains
   SimpleParser.Lexer.Types in '..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.Types.pas',
   SimpleParser in '..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas',
   SimpleParser.Types in '..\External\DelphiAST\Source\SimpleParser\SimpleParser.Types.pas',
-  DelphiAST.SimpleParserEx in '..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas';
+  DelphiAST.SimpleParserEx in '..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas',
+  Dext.Hosting.CLI.Commands.Facade in 'Hosting\CLI\Commands\Dext.Hosting.CLI.Commands.Facade.pas',
+  Dext.Hosting.CLI.Tools.FacadeGenerator in 'Hosting\CLI\Tools\Dext.Hosting.CLI.Tools.FacadeGenerator.pas',
+  Dext.Hosting in 'Hosting\Dext.Hosting.pas';
 
 end.
