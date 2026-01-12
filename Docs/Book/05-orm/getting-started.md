@@ -126,7 +126,6 @@ end;
 ## 4. Create Tables
 
 ```pascal
-Ctx.Entities<TUser>; // Register entity metadata
 Ctx.EnsureCreated;   // Creates tables if they don't exist
 ```
 
