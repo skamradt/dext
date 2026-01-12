@@ -122,13 +122,13 @@ O foco agora é criar **um exemplo para cada funcionalidade** e unificar a docum
 - [x] **API Reference**: Geração automática de documentação utilizando **DextDoc** (Custom Node.js Generator + Mermaid.js).
 
 ### Novos Exemplos Necessários
-1.  **Dext.Examples.Streaming**: Demonstrar download e upload de arquivos grandes (Stream Writing + Multipart).
-2.  **Dext.Examples.MultiTenancy**: Demonstrar implementação completa de SaaS (Schema por Tenant).
-3.  **Dext.Examples.ComplexQuerying**: Demonstrar queries avançadas do ORM com JSON, Arrays e relatórios.
+- [x] **Dext.Examples.Streaming**: Demonstrar download e upload de arquivos grandes (Stream Writing + Multipart). ✅ Pronto (Testes Pendentes)
+- [x] **Dext.Examples.MultiTenancy**: Demonstrar implementação completa de SaaS (Schema por Tenant). ✅ Pronto (Testes Pendentes)
+- [x] **Dext.Examples.ComplexQuerying**: Demonstrar queries avançadas do ORM com JSON, Arrays e relatórios. ✅ Pronto (Testes Pendentes)
 
 ### Atualização de Exemplos Existentes
-- [ ] Atualizar `Web.TaskFlowAPI` para usar os novos recursos de Cookies e Compression.
-- [ ] Revisar `Web.Dext.Starter.Admin` para garantir uso das melhores práticas atuais.
+- [x] Atualizar `Web.TaskFlowAPI` para usar os novos recursos de Cookies e Compression. ✅ Pronto (Testes Pendentes)
+- [x] Revisar `Web.Dext.Starter.Admin` para garantir uso das melhores práticas atuais. ✅ Pronto (Testes Pendentes)
 
 ---
 

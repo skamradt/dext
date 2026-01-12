@@ -1,6 +1,6 @@
 # 📋 Dext V1 Beta - Tarefas Pendentes
 
-*Última atualização: 2026-01-07*
+*Última atualização: 2026-01-11*
 
 Este documento centraliza as tarefas pendentes para o lançamento do V1 Beta. Marque com `[x]` conforme forem concluídas.
 
@@ -33,7 +33,11 @@ Este documento centraliza as tarefas pendentes para o lançamento do V1 Beta. Ma
 ## 📖 Documentação
 
 - [x] **The Dext Book** - Completo (55 arquivos EN + 55 arquivos PT)
+- [x] **Installation Guides** - Guias de instalação atualizados com Environment Variables
+- [x] **CLI Documentation** - Comando `facade` documentado
 - [x] **API Reference** - Gerada automaticamente com DextDoc (Custom Node.js Generator)
+- [ ] **Book Review & Verification** - Revisar conteúdo técnico e executar códigos/exemplos de todos os capítulos
+- [ ] **Video Series (Screencasts)** - Gravar vídeos curtos cobrindo os capítulos principais do livro
 
 ---
 
@@ -87,6 +91,7 @@ Este documento centraliza as tarefas pendentes para o lançamento do V1 Beta. Ma
 - [x] Basic Authentication Middleware
 - [x] CLI Dashboard (Material 3 embedded)
 - [x] Scaffolding Command (`dext scaffold`)
+- [x] Facade Command (`dext facade`) - Fix `TCascadeAction` enum constants
 - [x] The Dext Book (EN + PT)
 
 ---
