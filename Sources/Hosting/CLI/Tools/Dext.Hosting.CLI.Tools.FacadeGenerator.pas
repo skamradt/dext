@@ -10,6 +10,7 @@ uses
   System.Math,
   System.StrUtils,
   System.SysUtils,
+  Dext.Collections,
   DelphiAST.Classes,
   DelphiAST.Consts,
   DelphiAST,
@@ -290,21 +291,13 @@ begin
     if Root = nil then 
     begin
        safeWriteLn('DEBUG: Root is nil for ' + FileName);
-       Exit;
+     Exit;
     end;
 
-    if FileName.ToLower.Contains('dext.specifications.types.pas') then
-    begin
-       SafeWriteLn('DEBUG: HIT ' + FileName); 
-       SafeWriteLn('DEBUG: Root.Typ = ' + IntToStr(Ord(Root.Typ)));
-    end;
 
     UnitName := GetUnitName(Root, FileName);
     
-    // DEBUG: Targeted logging
-    var IsTargetDebug := FileName.Contains('Dext.Specifications.Types');
-    if IsTargetDebug then SafeWriteLn(Format('DEBUG: UnitName=%s', [UnitName]));
-    
+
     if IsExcluded(UnitName) then 
     begin
       SafeWriteLn('  Excluded: ' + UnitName);
@@ -322,19 +315,18 @@ begin
     IntfNode := Root.FindNode(ntInterface);
     if IntfNode <> nil then
     begin
-      if IsTargetDebug then SafeWriteLn(Format('DEBUG: Interface Node Found. Children: %d', [Length(IntfNode.ChildNodes)]));
+
       for SectionNode in IntfNode.ChildNodes do
       begin
         if SectionNode.Typ = ntTypeSection then
         begin
-          if IsTargetDebug then SafeWriteLn(Format('DEBUG: TypeSection Found. Children: %d', [Length(SectionNode.ChildNodes)]));
+
           for DeclNode in SectionNode.ChildNodes do
           begin
             if DeclNode.Typ = ntTypeDecl then
             begin
               TypeName := DeclNode.GetAttribute(anName);
-              if IsTargetDebug then SafeWriteLn(Format('DEBUG: Found Type: %s', [TypeName]));
-              
+
               if TypeName.IsEmpty then Continue;
               if not IsValidType(TypeName) then Continue;
 

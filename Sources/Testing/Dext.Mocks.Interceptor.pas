@@ -456,7 +456,7 @@ begin
   inherited Create;
   FMock := AMock;
   FProxy := AProxy;
-  if GetTypeKind(T) = tkInterface then FProxyRef := PInterface(@AProxy)^ else FProxyRef := nil;
+  if GetTypeKind(T) = tkInterface then FProxyRef := IInterface(PPointer(@AProxy)^) else FProxyRef := nil;
 end;
 
 function TWhen<T>.When: T; begin Result := FProxy; end;

@@ -321,8 +321,6 @@ var
   Converter: ITypeConverter;
   ConvertedValue: TValue;
 begin
-
-
   if AValue.IsEmpty then
   begin
     Param.Clear;
@@ -332,11 +330,32 @@ begin
       var TypeName := string(AValue.TypeInfo.Name);
       if (TypeName = 'TBytes') or (TypeName = 'TArray<System.Byte>') or (TypeName = 'TArray<Byte>') then
         Param.DataType := ftBlob
+      // Do not force ftString for unknown types, let FireDAC or the query handle it, 
+      // or at least leave it as ftUnknown so it doesn't conflict if the parameter is actually an integer/date in the query
       else if Param.DataType = ftUnknown then
-        Param.DataType := ftString;
+      begin
+         // If we really don't know, ftString is often a safe default for NULLs in some DBs,
+         // but for others (like strict SQL) it might be an issue. 
+         // However, the error "Parameter [P2] data type is unknown" suggests we MUST set it.
+         // If TypeInfo is present but value is empty, we can try to infer from TypeInfo kind.
+         case AValue.TypeInfo.Kind of
+           tkInteger, tkInt64: Param.DataType := ftInteger;
+           tkFloat: 
+             if AValue.TypeInfo = TypeInfo(TDateTime) then Param.DataType := ftDateTime
+             else if AValue.TypeInfo = TypeInfo(TDate) then Param.DataType := ftDate
+             else if AValue.TypeInfo = TypeInfo(TTime) then Param.DataType := ftTime
+             else Param.DataType := ftFloat;
+           tkString, tkUString, tkWString, tkChar, tkWChar: Param.DataType := ftString;
+           tkEnumeration:
+             if AValue.TypeInfo = TypeInfo(Boolean) then Param.DataType := ftBoolean
+             else Param.DataType := ftInteger;
+           else
+             Param.DataType := ftString; // Fallback
+         end;
+      end;
     end
     else if Param.DataType = ftUnknown then
-      Param.DataType := ftString;
+      Param.DataType := ftString; // Ultimate fallback if no TypeInfo
     Exit;
   end;
   
@@ -576,6 +595,10 @@ begin
       end;  // end case AValue.Kind
     else
       Param.Value := AValue.AsVariant;
+      // If the value is Null and we haven't set a type, default to ftString
+      // This prevents "Data type is unknown" errors in FireDAC
+      if (VarIsNull(Param.Value) or VarIsEmpty(Param.Value)) and (Param.DataType = ftUnknown) then
+        Param.DataType := ftString;
     end;
   end;  // end else (no converter)
 end;

@@ -164,7 +164,7 @@ begin
          ProxyObj := TInterfaceProxy.Create(ParamInfo, [Interceptor], TValue.Empty);
          if ProxyObj.QueryInterface(ParamInfo.TypeData.Guid, ProxyIntf) <> S_OK then
            raise Exception.Create('Failed to query interface for mock: ' + ParamType.Name);
-         Args[I] := TValue.From(ParamInfo, ProxyIntf);
+         TValue.Make(@ProxyIntf, ParamInfo, Args[I]);
        end;
     end
     else

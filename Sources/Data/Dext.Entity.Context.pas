@@ -48,7 +48,8 @@ uses
   Dext,
   Dext.Entity.TypeSystem,
   Dext.Specifications.Fluent,
-  Dext.Specifications.Types;
+  Dext.Specifications.Types,
+  Dext.Core.Reflection;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
@@ -463,7 +464,7 @@ begin
        // ignore any properties that are [NotMapped].  Only necessary if the
        // property returns an interface type and calling the getter would
        // be undesireable.
-       if Prop.HasAttribute(NotMappedAttribute) then
+       if Prop.HasAttribute<NotMappedAttribute> then
          continue;
        // assume that properties that hold an interface are likely models so
        // invoke the getter which will auto register any Entities<T>
@@ -769,8 +770,7 @@ begin
               except
                  on E: Exception do
                  begin
-                   SafeWriteLn('Warning creating table for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
-                   // Always log failed SQL if we have a logger or just print it
+                   // Always log failed SQL if we have a logger
                    if Assigned(FOnLog) then
                      FOnLog('FAILED SQL: ' + SQL);
                  end;
@@ -788,7 +788,7 @@ begin
       begin
         // Cycle detected or missing dependency.
         // For now, force create the remaining ones (might fail on FKs, but better than hanging)
-        SafeWriteLn('⚠️ Warning: Cyclic dependency or missing dependency detected in EnsureCreated. Force creating remaining tables...');
+
         for i := Nodes.Count - 1 downto 0 do
         begin
            Node := Nodes[i];
@@ -800,8 +800,7 @@ begin
                 Cmd := IDbCommand(CmdIntf);
                 Cmd.ExecuteNonQuery;
               except
-                 on E: Exception do
-                   SafeWriteLn('Error creating table (forced) for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+                 on E: Exception do; // Ignore errors in forced creation
               end;
             end;
            Nodes.Delete(i);

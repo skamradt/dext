@@ -79,14 +79,18 @@ begin
 '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' + #13#10 +
 '<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">' + #13#10 +
 '<style>' + #13#10 +
-':root{--bg:#0D0B10;--surface:#171520;--surface-c:#1E1B26;--surface-h:#292634;--on-surface:#E8E3EC;--on-surface-v:#A8A3B2;--outline:#555065;--outline-v:#3A3546;--primary:#C4A9FF;--on-primary:#2A1258;--primary-c:#3D2470;--success:#7CD992;--success-c:#1C3D28;--warn:#FFB74D;--warn-c:#3D2800}' + #13#10 +
-':root.light{--bg:#F5F3F7;--surface:#FFFFFF;--surface-c:#F0EDF4;--surface-h:#E8E4EE;--on-surface:#1C1B1F;--on-surface-v:#49454F;--outline:#79747E;--outline-v:#CAC4D0;--primary:#6750A4;--on-primary:#FFFFFF;--primary-c:#EADDFF;--success:#1B873A;--success-c:#D4EDDA;--warn:#B25E02;--warn-c:#FFF3CD}' + #13#10 +
+':root{--bg:#0D0B10;--surface:#171520;--surface-c:#1E1B26;--surface-h:#292634;--on-surface:#E8E3EC;--on-surface-v:#A8A3B2;--outline:#555065;' + 
+'--outline-v:#3A3546;--primary:#C4A9FF;--on-primary:#2A1258;--primary-c:#3D2470;--success:#7CD992;--success-c:#1C3D28;--warn:#FFB74D;--warn-c:#3D2800}' + #13#10 +
+':root.light{--bg:#F5F3F7;--surface:#FFFFFF;--surface-c:#F0EDF4;--surface-h:#E8E4EE;--on-surface:#1C1B1F;--on-surface-v:#49454F;--outline:#79747E;' + 
+'--outline-v:#CAC4D0;--primary:#6750A4;--on-primary:#FFFFFF;--primary-c:#EADDFF;--success:#1B873A;--success-c:#D4EDDA;--warn:#B25E02;--warn-c:#FFF3CD}' + #13#10 +
 '*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,sans-serif;background:var(--bg);color:var(--on-surface);min-height:100vh;display:flex}' + #13#10 +
 '.ms{font-variation-settings:"FILL"0,"wght"400,"GRAD"0,"opsz"24}' + #13#10 +
 '.nav{width:90px;background:var(--surface);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:8px;border-right:1px solid var(--outline-v)}' + #13#10 +
-'.logo{width:52px;height:52px;background:linear-gradient(135deg,#9D7BF7,#6C4AB6);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;color:#fff;margin-bottom:24px;box-shadow:0 4px 20px rgba(157,123,247,0.4)}' + #13#10 +
+'.logo{width:52px;height:52px;background:linear-gradient(135deg,#9D7BF7,#6C4AB6);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;' + 
+'font-size:24px;color:#fff;margin-bottom:24px;box-shadow:0 4px 20px rgba(157,123,247,0.4)}' + #13#10 +
 '.logo span{font-size:14px;margin-left:2px}' + #13#10 +
-'.ni{width:64px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:18px;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--on-surface-v)}' + #13#10 +
+'.ni{width:64px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:18px;cursor:pointer;transition:all .2s;' + 
+'text-decoration:none;color:var(--on-surface-v)}' + #13#10 +
 '.ni:hover{background:var(--surface-h)}.ni.on{background:linear-gradient(135deg,rgba(157,123,247,0.3),rgba(157,123,247,0.1));color:var(--primary)}' + #13#10 +
 '.ni .ms{font-size:26px}.ni .lb{font-size:10px;font-weight:500}' + #13#10 +
 '.main{flex:1;padding:24px 32px;overflow-y:auto}' + #13#10 +
@@ -151,9 +155,11 @@ begin
 '<div class="cd-val"><span id="env-count">3</span><span class="arr ms material-symbols-outlined">north_east</span></div>' + #13#10 +
 '<div class="cd-pct">+10% from last week</div>' + #13#10 +
 '<div class="cd-sub">Active development & staging environments</div>' + #13#10 +
-'<div class="cd-grph"><svg viewBox="0 0 200 50" preserveAspectRatio="none" style="width:100%;height:40px"><path d="M0,45 C20,42 40,35 60,30 S100,20 140,18 S180,15 200,10" fill="none" stroke="var(--primary)" stroke-width="2"/></svg></div></div>' + #13#10 +
+'<div class="cd-grph"><svg viewBox="0 0 200 50" preserveAspectRatio="none" style="width:100%;height:40px"><path d="M0,45 C20,42 40,35 60,30 S100,20 140,18 ' + 
+'S180,15 200,10" fill="none" stroke="var(--primary)" stroke-width="2"/></svg></div></div>' + #13#10 +
 '<div class="cd"><div class="cd-hd"><span class="cd-tt">Coverage</span><div class="cd-ic"><span class="ms material-symbols-outlined">verified</span></div></div>' + #13#10 +
-'<div class="cd-circ"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="var(--outline-v)" stroke-width="8"/><circle id="cov-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 50 50)"/></svg><span class="cv" id="coverage-value">-</span></div>' + #13#10 +
+'<div class="cd-circ"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="var(--outline-v)" stroke-width="8"/><circle id="cov-ring" ' + 
+'cx="50" cy="50" r="42" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 50 50)"/></svg><span class="cv" id="coverage-value">-</span></div>' + #13#10 +
 '<div class="cd-circ cs">Code test coverage across all projects</div></div>' + #13#10 +
 '<div class="cd"><div class="cd-hd"><span class="cd-tt">Projects</span><div class="cd-ic"><span class="ms material-symbols-outlined">folder_copy</span></div></div>' + #13#10 +
 '<div class="cd-val" id="project-count">0</div>' + #13#10 +
@@ -172,7 +178,8 @@ begin
 '<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>' + #13#10 +
 '<script>' + #13#10 +
 'var cfg=null;' + #13#10 +
-'async function load(){try{var r=await Promise.all([fetch("/api/config").then(function(x){return x.json()}),fetch("/api/projects").then(function(x){return x.json()}),fetch("/api/test/summary").then(function(x){return x.json()})]);' + #13#10 +
+'async function load(){try{var r=await Promise.all([fetch("/api/config").then(function(x){return x.json()}),fetch("/api/projects").then(function(x){return x.json()}),' + 
+'fetch("/api/test/summary").then(function(x){return x.json()})]);' + #13#10 +
 'cfg=r[0];document.getElementById("env-count").textContent=cfg.environments?cfg.environments.length:0;' + #13#10 +
 'document.getElementById("project-count").textContent=r[1].length||0;' + #13#10 +
 'var cov=r[2].available?r[2].coverage:0;document.getElementById("coverage-value").textContent=cov?cov+"%":"N/A";' + #13#10 +
@@ -188,7 +195,8 @@ begin
 'var x=l.toLowerCase().indexOf("error")>=0?"log-e":l.toLowerCase().indexOf("warn")>=0?"log-w":"log-i";' + #13#10 +
 'p.innerHTML+="<div class=\"log\"><span class=\"log-t\">["+t+"]</span><span class=\""+x+"\">"+m+"</span></div>";p.scrollTop=p.scrollHeight;});' + #13#10 +
 'c.start().catch(function(e){console.error(e);});}' + #13#10 +
-'document.querySelectorAll(".ni").forEach(function(x){x.addEventListener("click",function(e){e.preventDefault();document.querySelectorAll(".ni").forEach(function(y){y.classList.remove("on");});x.classList.add("on");});});' + #13#10 +
+'document.querySelectorAll(".ni").forEach(function(x){x.addEventListener("click",function(e){e.preventDefault();document.querySelectorAll(".ni").forEach(function(y){' + 
+'y.classList.remove("on");});x.classList.add("on");});});' + #13#10 +
 'function toggleTheme(){var r=document.documentElement;var isLight=r.classList.toggle("light");localStorage.setItem("dext-theme",isLight?"light":"dark");document.getElementById("theme-icon").textContent=isLight?"light_mode":"dark_mode";}' + #13#10 +
 '(function(){var t=localStorage.getItem("dext-theme");if(t=="light"){document.documentElement.classList.add("light");document.getElementById("theme-icon").textContent="light_mode";}})();' + #13#10 +
 'load();hub();' + #13#10 +
@@ -214,18 +222,28 @@ begin
   Host := TWebHostBuilder.CreateDefault(nil)
     .UseUrls(Format('http://localhost:%d', [Port]))
     .ConfigureServices(procedure(Services: IServiceCollection)
+      var
+        RegistryType: TServiceType;
+        RegistryInstance: TObject;
+        LoggerType: TServiceType;
+        FactoryFunc: TFunc<IServiceProvider, TObject>;
       begin
-        Services.AddSingleton(TProjectRegistry, TProjectRegistry.Create);
+        RegistryType := TServiceType.FromClass(TProjectRegistry);
+        RegistryInstance := TProjectRegistry.Create;
+        Services.AddSingleton(RegistryType, RegistryInstance);
         
-        Services.AddSingleton(TypeInfo(ILoggerFactory), nil,
-           function(Provider: IServiceProvider): TObject
+        LoggerType := TServiceType.FromInterface(TypeInfo(ILoggerFactory));
+        
+        FactoryFunc := function(Provider: IServiceProvider): TObject
            var
              Factory: TLoggerFactory;
            begin
               Factory := TLoggerFactory.Create;
               Factory.AddProvider(TConsoleHubLoggerProvider.Create);
               Result := Factory;
-           end);
+           end;
+           
+        Services.AddSingleton(LoggerType, TClass(nil), FactoryFunc);
       end)
     .Configure(procedure(App: IApplicationBuilder)
       var
@@ -396,7 +414,7 @@ begin
                  CovPath := TCodeCoverageTool.FindPath(Config, 'Win32');
 
               Json.AddPair('coveragePath', CovPath);
-              Json.AddPair('configPath', TPath.Combine(TPath.GetHomePath, '.dext', 'config.yaml'));
+              Json.AddPair('configPath', TPath.Combine(TPath.Combine(TPath.GetHomePath, '.dext'), 'config.yaml'));
               
               Arr := TJSONArray.Create;
               for Env in Config.Environments do

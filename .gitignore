@@ -23,3 +23,7 @@ Docs/API/xml/
 node_modules/
 *.rsm
 *.otares
+*.identcache
+*.dsk
+*.tvsconfig
+*.~*

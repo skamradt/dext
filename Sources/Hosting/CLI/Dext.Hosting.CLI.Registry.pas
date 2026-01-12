@@ -70,7 +70,7 @@ var
   HomeDir: string;
 begin
   HomeDir := TPath.GetHomePath;
-  Result := TPath.Combine(HomeDir, '.dext', 'projects.yaml');
+  Result := TPath.Combine(TPath.Combine(HomeDir, '.dext'), 'projects.yaml');
 end;
 
 procedure TProjectRegistry.EnsureRegistryExists;

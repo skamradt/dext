@@ -224,8 +224,13 @@ begin
        ArrayValue := TLiteralExpression(C.Right).Value;
        for I := 0 to ArrayValue.GetArrayLength - 1 do
        begin
-         FParams.Add(GetNextParamName, ArrayValue.GetArrayElement(I));
+         var PName := GetNextParamName;
+         var PVal := ArrayValue.GetArrayElement(I);
+         FParams.Add(PName, PVal);
        end;
+       
+       // Important: Must resolve Left side as it might contain parameters too!
+       Resolve(C.Left);
        Exit;
     end;
   end;
@@ -1426,7 +1431,7 @@ begin
       end;
       Result := CachedSQL;
       Exit;
-    end;
+  end;
   end;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);

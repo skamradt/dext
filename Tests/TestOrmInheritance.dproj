@@ -39,7 +39,7 @@
         <SanitizedProjectName>TestOrmInheritance</SanitizedProjectName>
         <DCC_ExeOutput>.\Output</DCC_ExeOutput>
         <VerInfo_Locale>1046</VerInfo_Locale>
-        <DCC_UnitSearchPath>..\Output\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>.\Output\$(Platform)\$(Config)</DCC_DcuOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">

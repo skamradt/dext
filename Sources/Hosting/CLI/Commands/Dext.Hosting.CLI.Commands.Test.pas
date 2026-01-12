@@ -315,8 +315,8 @@ begin
       var Dir := ExtractFilePath(FileName);
       if Paths.IndexOf(Dir) = -1 then Paths.Add(Dir);
     end;
-    UnitFile := TPath.Combine(BaseDir, BUILD_DIR, 'units.lst');
-    SourcePathFile := TPath.Combine(BaseDir, BUILD_DIR, 'sources.lst');
+    UnitFile := TPath.Combine(TPath.Combine(BaseDir, BUILD_DIR), 'units.lst');
+    SourcePathFile := TPath.Combine(TPath.Combine(BaseDir, BUILD_DIR), 'sources.lst');
     ForceDirectories(ExtractFilePath(UnitFile));
     Units.SaveToFile(UnitFile);
     Paths.SaveToFile(SourcePathFile);

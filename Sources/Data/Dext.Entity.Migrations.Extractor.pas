@@ -37,7 +37,8 @@ uses
   Dext.Entity.Core,
   Dext.Entity.Mapping,
   Dext.Entity.Attributes,
-  Dext.Entity.Migrations.Model;
+  Dext.Entity.Migrations.Model,
+  Dext.Core.Reflection;
 
 type
   TDbContextModelExtractor = class

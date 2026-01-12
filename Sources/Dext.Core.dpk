@@ -88,6 +88,7 @@ contains
   Dext.Mapper in 'Core\Dext.Mapper.pas',
   Dext.DI.Attributes in 'Core\Dext.DI.Attributes.pas',
   Dext.Core.SmartTypes in 'Core\Dext.Core.SmartTypes.pas',
+  Dext.Core.Reflection in 'Core\Dext.Core.Reflection.pas',
   Dext.Configuration.Yaml in 'Core\Dext.Configuration.Yaml.pas',
   Dext.Yaml in 'Core\Dext.Yaml.pas';
 
