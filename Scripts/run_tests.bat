@@ -19,8 +19,16 @@ echo ==========================================
 echo Step 1: Building All Tests
 echo ==========================================
 echo.
+set /A buildnbr=0
+set /A buildcnt=0
 
 for /r "%~dp0..\Tests" %%f in (*.dproj) do (
+   set /A buildcnt+=1
+)
+
+for /r "%~dp0..\Tests" %%f in (*.dproj) do (
+    SET /A buildnbr+=1
+    title Building Test !buildnbr! of %buildcnt%
     set "PROJECT_NAME=%%~nf"
     set "PROJECT_FILE=%%f"
     
@@ -35,8 +43,16 @@ echo ==========================================
 echo Step 2: Running All Tests
 echo ==========================================
 echo.
+set /A testnbr=0
+set /A testcnt=0
 
 for /r "%~dp0..\Tests" %%f in (*.dproj) do (
+   set /A testcnt+=1
+)
+
+for /r "%~dp0..\Tests" %%f in (*.dproj) do (
+    SET /A testnbr+=1
+    title Executing Test !testnbr! of %testcnt%
     set "PROJECT_NAME=%%~nf"
     set "PROJECT_DIR=%%~dpf"
     
@@ -50,6 +66,7 @@ echo.
 echo ==========================================
 echo Test Summary
 echo ==========================================
+title   
 echo Build Failures: %BUILD_FAIL_COUNT%
 echo Passed:  %SUCCESS_COUNT%
 echo Failed:  %FAIL_COUNT%
