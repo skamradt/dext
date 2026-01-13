@@ -79,7 +79,7 @@ Este documento centraliza as tarefas pendentes para o lançamento do V1 Beta. Ma
 ## 🔧 Features Parciais / Validação
 
 - [ ] **HTTPS/SSL** - Validar OpenSSL 1.0.2, 1.1, 3.0 e Taurus TLS
-- [ ] **Advanced Querying** - `Join` e `GroupBy` gerando SQL (atualmente In-Memory)
+- [x] **Advanced Querying** - `Join` e `GroupBy` gerando SQL
 
 ---
 

@@ -30,9 +30,7 @@ $DextExe = "dext" # Default to PATH
 
 # Check common locations
 $PossibleLocations = @(
-    "$RepoRoot\dext.exe",
-    "$RepoRoot\Output\dext.exe",
-    "$RepoRoot\Bin\dext.exe"
+    "$RepoRoot\Apps\dext.exe",
 )
 
 foreach ($loc in $PossibleLocations) {
@@ -68,11 +66,13 @@ try {
     & $DextExe doc --title "$Title" --input "$SourceDir" --output "$OutputDir"
     if ($LASTEXITCODE -eq 0) {
         Write-Host "`nDocumentation generated successfully!" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "`nFailed to generate documentation. Exit Code: $LASTEXITCODE" -ForegroundColor Red
         exit $LASTEXITCODE
     }
-} catch {
+}
+catch {
     Write-Error "An unexpected error occurred: $_"
     exit 1
 }

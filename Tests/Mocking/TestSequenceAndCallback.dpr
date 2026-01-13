@@ -37,33 +37,33 @@ end;
 
 procedure TestSequence;
 var
-  MyMock: Mock<ICalculator>;
-  Calc: ICalculator;
+  CalculatorMock: Mock<ICalculator>;
+  Calculator: ICalculator;
 begin
   WriteLn('=== TestSequence ===');
-  MyMock := Mock<ICalculator>.Create;
-  Calc := MyMock.Instance;
-
+  CalculatorMock := Mock<ICalculator>.Create;
   // Setup sequence: 10, 20, 30
-  MyMock.Setup.ReturnsInSequence([10, 20, 30]).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  CalculatorMock.Setup
+    .ReturnsInSequence([10, 20, 30]).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
 
+  Calculator := CalculatorMock.Instance;
   try
-    Should(Calc.Add(1, 1)).Be(10);
-    Should(Calc.Add(1, 1)).Be(20);
-    Should(Calc.Add(1, 1)).Be(30);
-    Should(Calc.Add(1, 1)).Be(30); // Repeats last value
+    Should(Calculator.Add(1, 1)).Be(10);
+    Should(Calculator.Add(1, 1)).Be(20);
+    Should(Calculator.Add(1, 1)).Be(30);
+    Should(Calculator.Add(1, 1)).Be(30); // Repeats last value
     Pass('ReturnsInSequence Integer');
   except
     on E: Exception do Fail('ReturnsInSequence Integer', E.Message);
   end;
   
   // Setup sequence: "Result 1", "Result 2"
-  MyMock.Setup.ReturnsInSequence(['Result 1', 'Result 2']).When.GetName;
+  CalculatorMock.Setup.ReturnsInSequence(['Result 1', 'Result 2']).When.GetName;
   
   try
-    Should(Calc.GetName).Be('Result 1');
-    Should(Calc.GetName).Be('Result 2');
-    Should(Calc.GetName).Be('Result 2');
+    Should(Calculator.GetName).Be('Result 1');
+    Should(Calculator.GetName).Be('Result 2');
+    Should(Calculator.GetName).Be('Result 2');
     Pass('ReturnsInSequence String');
   except
     on E: Exception do Fail('ReturnsInSequence String', E.Message);
@@ -72,32 +72,32 @@ end;
 
 procedure TestCallback;
 var
-  MyMock: Mock<ICalculator>;
-  Calc: ICalculator;
+  CalculatorMock: Mock<ICalculator>;
+  Calculator: ICalculator;
   LastA, LastB: Integer;
 begin
   WriteLn('=== TestCallback ===');
-  MyMock := Mock<ICalculator>.Create;
-  Calc := MyMock.Instance;
-  
+  CalculatorMock := Mock<ICalculator>.Create;
+
   LastA := 0;
   LastB := 0;
-
   // Setup Callback to capture arguments
-  MyMock.Setup.Callback(procedure(Args: TArray<TValue>)
+  CalculatorMock.Setup.Callback(
+    procedure(Args: TArray<TValue>)
     begin
       LastA := Args[0].AsInteger;
       LastB := Args[1].AsInteger;
     end).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
 
+  Calculator := CalculatorMock.Instance;
   try
-    Calc.Add(5, 10);
+    Calculator.Add(5, 10);
     
     Should(LastA).Be(5);
     Should(LastB).Be(10);
     Pass('Callback captured arguments');
     
-    Should(Calc.Add(99, 1)).Be(0); // Default return
+    Should(Calculator.Add(99, 1)).Be(0); // Default return
     Should(LastA).Be(99);
     Pass('Callback executed successfully');
   except

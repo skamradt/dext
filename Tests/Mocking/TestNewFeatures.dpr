@@ -5,6 +5,7 @@ program TestNewFeatures;
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   System.IOUtils,
   Dext.Assertions,
@@ -92,7 +93,7 @@ begin
   try
     Sut := Mocker.CreateInstance<TSystemUnderTest>;
     try
-      Should(TObject(Sut)).NotBeNil;
+      Should(Sut).NotBeNil;
       Should(Sut.Dep).NotBeNil;
       
       // Setup Mock
@@ -175,4 +176,5 @@ begin
     on E: Exception do
       WriteLn('Unhandled Exception: ', E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

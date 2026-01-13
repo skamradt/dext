@@ -62,17 +62,17 @@ end;
 
 procedure TestBasicMocking;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('=== Test 1: Basic Mocking ===');
-  
-  Calculator := Mock<ICalculator>.Create;
-  
+
+  CalculatorMock := Mock<ICalculator>.Create;
+
   // Setup: Add should return 42 for any arguments (fluent syntax)
-  Calculator.Setup.Returns(42).When.Add(0, 0);
-  
+  CalculatorMock.Setup.Returns(42).When.Add(0, 0);
+
   // Act
-  var Result := Calculator.Instance.Add(10, 20);
+  var Result := CalculatorMock.Instance.Add(10, 20);
   
   // Assert
   if Result = 42 then
@@ -83,19 +83,19 @@ end;
 
 procedure TestArgumentMatchers;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 2: Argument Matchers ===');
   
-  Calculator := Mock<ICalculator>.Create;
+  CalculatorMock := Mock<ICalculator>.Create;
   
 // Setup with Arg.Any
-  Calculator.Setup.Returns(100).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  CalculatorMock.Setup.Returns(100).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
   
   // Act - different arguments
-  var R1 := Calculator.Instance.Add(1, 2);
-  var R2 := Calculator.Instance.Add(50, 100);
+  var R1 := CalculatorMock.Instance.Add(1, 2);
+  var R2 := CalculatorMock.Instance.Add(50, 100);
   
   // Assert
   if (R1 = 100) and (R2 = 100) then
@@ -128,22 +128,22 @@ end;
 
 procedure TestVerification;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 4: Verification ===');
   
-  Calculator := Mock<ICalculator>.Create;
-  Calculator.Setup.Returns(0).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  CalculatorMock := Mock<ICalculator>.Create;
+  CalculatorMock.Setup.Returns(0).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
   
   // Call Add 3 times
-  Calculator.Instance.Add(1, 2);
-  Calculator.Instance.Add(3, 4);
-  Calculator.Instance.Add(5, 6);
+  CalculatorMock.Instance.Add(1, 2);
+  CalculatorMock.Instance.Add(3, 4);
+  CalculatorMock.Instance.Add(5, 6);
   
   // Verify: should have been called at least once
   try
-    Calculator.Received(Times.AtLeast(1)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Received(Times.AtLeast(1)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     WriteLn('  PASS: Verification passed for AtLeast(1)');
   except
     on E: EMockException do
@@ -152,7 +152,7 @@ begin
 
   // Verify exact count
   try
-    Calculator.Received(Times.Exactly(3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Received(Times.Exactly(3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     WriteLn('  PASS: Verification passed for Exactly(3)');
   except
     on E: EMockException do
@@ -160,7 +160,7 @@ begin
   end;
   // Verify with Alias (.Verify)
   try
-    Calculator.Verify(Times.Exactly(3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Verify(Times.Exactly(3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     WriteLn('  PASS: Verification alias Verify(Exactly(3)) passed');
   except
     on E: EMockException do
@@ -170,16 +170,16 @@ end;
 
 procedure TestStrictBehavior;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 5: Strict Behavior ===');
   
-  Calculator := Mock<ICalculator>.Create(TMockBehavior.Strict);
+  CalculatorMock := Mock<ICalculator>.Create(TMockBehavior.Strict);
   
   // Don't setup anything - strict should throw
   try
-    Calculator.Instance.Add(1, 2);
+    CalculatorMock.Instance.Add(1, 2);
     WriteLn('  FAIL: Strict mode should have thrown exception');
   except
     on E: EMockException do
@@ -189,18 +189,18 @@ end;
 
 procedure TestThrowsSetup;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 6: Throws Setup ===');
   
-  Calculator := Mock<ICalculator>.Create;
+  CalculatorMock := Mock<ICalculator>.Create;
   
   // Setup to throw exception
-  Calculator.Setup.Throws(EInvalidOp, 'Cannot divide by zero').When.Add(0, 0);
+  CalculatorMock.Setup.Throws(EInvalidOp, 'Cannot divide by zero').When.Add(0, 0);
   
   try
-    Calculator.Instance.Add(0, 0);
+    CalculatorMock.Instance.Add(0, 0);
     WriteLn('  FAIL: Should have thrown EInvalidOp');
   except
     on E: EInvalidOp do
@@ -212,20 +212,20 @@ end;
 
 procedure TestMultipleReturns;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 7: Multiple Returns (Sequence) ===');
   
-  Calculator := Mock<ICalculator>.Create;
+  CalculatorMock := Mock<ICalculator>.Create;
   
   // Setup to return values in sequence
-  Calculator.Setup.ReturnsInSequence([1, 2, 3]).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  CalculatorMock.Setup.ReturnsInSequence([1, 2, 3]).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
   
-  var R1 := Calculator.Instance.Add(0, 0);
-  var R2 := Calculator.Instance.Add(0, 0);
-  var R3 := Calculator.Instance.Add(0, 0);
-  var R4 := Calculator.Instance.Add(0, 0); // Should return last value again
+  var R1 := CalculatorMock.Instance.Add(0, 0);
+  var R2 := CalculatorMock.Instance.Add(0, 0);
+  var R3 := CalculatorMock.Instance.Add(0, 0);
+  var R4 := CalculatorMock.Instance.Add(0, 0); // Should return last value again
   
   if (R1 = 1) and (R2 = 2) and (R3 = 3) and (R4 = 3) then
     WriteLn('  PASS: Sequence returns worked correctly')
@@ -235,25 +235,25 @@ end;
 
 procedure TestVerifyNoOtherCalls;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 8: VerifyNoOtherCalls ===');
   
-  Calculator := Mock<ICalculator>.Create;
+  CalculatorMock := Mock<ICalculator>.Create;
   
   // Setup
-  Calculator.Setup.Returns(0).When.Add(1, 2);
+  CalculatorMock.Setup.Returns(0).When.Add(1, 2);
   
   // Act
-  Calculator.Instance.Add(1, 2);
+  CalculatorMock.Instance.Add(1, 2);
   
   // Verify specific call
-  Calculator.Received.Add(1, 2);
+  CalculatorMock.Received.Add(1, 2);
   
   // Verify no other calls - should PASS
   try
-    Calculator.VerifyNoOtherCalls;
+    CalculatorMock.VerifyNoOtherCalls;
     WriteLn('  PASS: VerifyNoOtherCalls passed when only expected calls made');
   except
     on E: Exception do
@@ -261,11 +261,11 @@ begin
   end;
   
   // Act again (unexpected call)
-  Calculator.Instance.Subtract(5, 5);
+  CalculatorMock.Instance.Subtract(5, 5);
   
   // Verify no other calls - should FAIL
   try
-    Calculator.VerifyNoOtherCalls;
+    CalculatorMock.VerifyNoOtherCalls;
     WriteLn('  FAIL: VerifyNoOtherCalls passed but unexpected Subtract was called');
   except
     on E: EMockException do
@@ -275,32 +275,32 @@ end;
 
 procedure TestVerificationVariants;
 var
-  Calculator: Mock<ICalculator>;
+  CalculatorMock: Mock<ICalculator>;
 begin
   WriteLn('');
   WriteLn('=== Test 9: Verification Variants ===');
   
-  Calculator := Mock<ICalculator>.Create;
-  Calculator.Setup.Returns(0).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
+  CalculatorMock := Mock<ICalculator>.Create;
+  CalculatorMock.Setup.Returns(0).When.Add(Arg.Any<Integer>, Arg.Any<Integer>);
   
   // Call 2 times
-  Calculator.Instance.Add(1, 1);
-  Calculator.Instance.Add(2, 2);
+  CalculatorMock.Instance.Add(1, 1);
+  CalculatorMock.Instance.Add(2, 2);
   
   try
     // AtLeastOnce (2 >= 1) - PASS
-    Calculator.Verify(Times.AtLeastOnce).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Verify(Times.AtLeastOnce).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     
     // AtMost(5) (2 <= 5) - PASS
-    Calculator.Verify(Times.AtMost(5)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Verify(Times.AtMost(5)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     
     // Between(1, 3) (1 <= 2 <= 3) - PASS
-    Calculator.Verify(Times.Between(1, 3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+    CalculatorMock.Verify(Times.Between(1, 3)).Add(Arg.Any<Integer>, Arg.Any<Integer>);
     
     // Once - FAIL
     // We expect this to fail, so we wrap in sub-try
     try
-        Calculator.Verify(Times.Once).Add(Arg.Any<Integer>, Arg.Any<Integer>);
+        CalculatorMock.Verify(Times.Once).Add(Arg.Any<Integer>, Arg.Any<Integer>);
         WriteLn('  FAIL: Times.Once passed but called 2 times');
     except
         on E: EMockException do
