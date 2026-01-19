@@ -7,6 +7,7 @@ uses
   System.Classes,
   System.IOUtils,
   System.Generics.Collections,
+  System.Generics.Defaults,
   DelphiAST,
   DelphiAST.Classes,
   DelphiAST.Consts,
@@ -54,8 +55,10 @@ type
   end;
 
   TUnitInfo = class
-    Name: string;
-    FileName: string;
+    Name: string;        // Simple unit name (e.g. MyUnit)
+    DisplayName: string; // Name shown in UI (may include path for duplicates)
+    FullPath: string;    // Full file path (unique key)
+    FileName: string;    // Just the filename
     Classes: TObjectList<TClassInfo>;
     GlobalMethods: TObjectList<TMethodInfo>; 
     GlobalConstants: TObjectList<TTypeInfo>; // New: Consts
@@ -66,12 +69,15 @@ type
   
   TDocRegistry = class
   private
-    FUnits: TObjectDictionary<string, TUnitInfo>;
+    FUnits: TObjectDictionary<string, TUnitInfo>; // Keyed by FullPath
+    FUnitsByName: TDictionary<string, TList<TUnitInfo>>; // For duplicate detection
   public
     constructor Create;
     destructor Destroy; override;
-    procedure AddUnit(Info: TUnitInfo); // Renamed: Logic moved out
+    function AddUnit(Info: TUnitInfo; const BaseDir: string): Boolean; // Returns false if duplicate path
+    procedure ResolveDisplayNames; // Call after all units added
     function FindClass(const ClassName: string): TClassInfo;
+    function GetAllUnits: TArray<TUnitInfo>;
     property Units: TObjectDictionary<string, TUnitInfo> read FUnits;
   end;
 
@@ -161,17 +167,99 @@ end;
 constructor TDocRegistry.Create;
 begin
   FUnits := TObjectDictionary<string, TUnitInfo>.Create([doOwnsValues]);
+  FUnitsByName := TDictionary<string, TList<TUnitInfo>>.Create;
 end;
 
 destructor TDocRegistry.Destroy;
+var
+  List: TList<TUnitInfo>;
 begin
+  for List in FUnitsByName.Values do
+    List.Free;
+  FUnitsByName.Free;
   FUnits.Free;
   inherited;
 end;
 
-procedure TDocRegistry.AddUnit(Info: TUnitInfo);
+function TDocRegistry.AddUnit(Info: TUnitInfo; const BaseDir: string): Boolean;
+var
+  NameList: TList<TUnitInfo>;
+  LowerPath: string;
 begin
-  FUnits.Add(Info.Name, Info);
+  LowerPath := Info.FullPath.ToLower;
+  
+  // Check for exact path duplicate (skip silently)
+  if FUnits.ContainsKey(LowerPath) then
+  begin
+    SafeWriteLn('  [SKIP] Duplicate path: ' + Info.FullPath);
+    Info.Free;
+    Exit(False);
+  end;
+  
+  // Add to main dictionary (keyed by full path)
+  FUnits.Add(LowerPath, Info);
+  
+  // Track by simple name for duplicate detection
+  if not FUnitsByName.TryGetValue(Info.Name.ToLower, NameList) then
+  begin
+    NameList := TList<TUnitInfo>.Create;
+    FUnitsByName.Add(Info.Name.ToLower, NameList);
+  end;
+  NameList.Add(Info);
+  
+  Result := True;
+end;
+
+procedure TDocRegistry.ResolveDisplayNames;
+var
+  NameList: TList<TUnitInfo>;
+  Info: TUnitInfo;
+  RelPath: string;
+begin
+  for NameList in FUnitsByName.Values do
+  begin
+    if NameList.Count = 1 then
+    begin
+      // Unique name - use simple name
+      NameList[0].DisplayName := NameList[0].Name;
+    end
+    else
+    begin
+      // Duplicates found - append relative path to distinguish
+      SafeWriteLn(Format('  [WARN] %d units named "%s" - adding paths to distinguish', 
+        [NameList.Count, NameList[0].Name]));
+      for Info in NameList do
+      begin
+        // Extract meaningful path suffix (last 2 folders + filename)
+        RelPath := ExtractRelativePath(ExtractFilePath(Info.FullPath), Info.FullPath);
+        if RelPath = '' then RelPath := Info.FullPath;
+        
+        // Use parent folder + unit name
+        var Folders := Info.FullPath.Split(['\', '/']);
+        if Length(Folders) >= 2 then
+          Info.DisplayName := Format('%s (%s)', [Info.Name, Folders[High(Folders)-1]])
+        else
+          Info.DisplayName := Info.Name;
+          
+        SafeWriteLn(Format('    -> %s', [Info.DisplayName]));
+      end;
+    end;
+  end;
+end;
+
+function TDocRegistry.GetAllUnits: TArray<TUnitInfo>;
+var
+  List: TList<TUnitInfo>;
+  Info: TUnitInfo;
+begin
+  List := TList<TUnitInfo>.Create;
+  try
+    for Info in FUnits.Values do
+      List.Add(Info);
+    Result := List.ToArray;
+  finally
+    List.Free;
+  end;
 end;
 
 function TDocRegistry.FindClass(const ClassName: string): TClassInfo;
@@ -417,7 +505,9 @@ var
 begin
   UInfo := TUnitInfo.Create;
   UInfo.Name := UnitName;
-  UInfo.FileName := FileName;
+  UInfo.FullPath := FileName;
+  UInfo.FileName := TPath.GetFileName(FileName);
+  UInfo.DisplayName := UnitName; // Will be resolved later for duplicates
   
   InterfaceNode := Node.FindNode(ntInterface);
   if InterfaceNode = nil then InterfaceNode := Node;
@@ -647,10 +737,12 @@ var
   Files: TArray<string>;
   FileName: string;
   UnitName: string;
-  UnitNodes: TDictionary<string, TSyntaxNode>;
+  UnitNodes: TDictionary<string, TSyntaxNode>; // Keyed by FullPath
   SidebarHtml: string;
   UnitHtml: string;
   FinalHtml: string;
+  AllUnits: TArray<TUnitInfo>;
+  Info: TUnitInfo;
 begin
   Files := TDirectory.GetFiles(InputDir, '*.pas', TSearchOption.SoAllDirectories);
   UnitNodes := TDictionary<string, TSyntaxNode>.Create;
@@ -661,47 +753,74 @@ begin
     begin
        if FileName.ToLower.Contains('\tests\') then Continue; 
 
-       var Node := ParseFile(FileName);
-       if Node <> nil then
-       begin
-         UnitName := TPath.GetFileNameWithoutExtension(FileName);
-         
-         // NEW: Build Model using Generator Logic (with access to XmlDoc)
-         var Info := BuildUnitModel(UnitName, FileName, Node);
-         FRegistry.AddUnit(Info);
-         
-         UnitNodes.Add(UnitName, Node); 
-         SafeWriteLn('Indexed: ' + UnitName);
+       try
+         var Node := ParseFile(FileName);
+         if Node <> nil then
+         begin
+           UnitName := TPath.GetFileNameWithoutExtension(FileName);
+           
+           // Build Model using Generator Logic (with access to XmlDoc)
+           var UnitInfo := BuildUnitModel(UnitName, FileName, Node);
+           
+           // Try to add - may fail for duplicates (gracefully handled)
+           if FRegistry.AddUnit(UnitInfo, InputDir) then
+           begin
+             UnitNodes.Add(FileName.ToLower, Node);
+             SafeWriteLn('Indexed: ' + UnitName);
+           end
+           else
+             Node.Free; // Free the node if unit was skipped
+         end;
+       except
+         on E: Exception do
+         begin
+           SafeWriteLn(Format('  [ERROR] Failed to parse %s: %s', [FileName, E.Message]));
+           // Continue processing other files
+         end;
        end;
     end;
+    
+    // 1.5 Resolve display names for duplicates
+    FRegistry.ResolveDisplayNames;
     
     // 2. Generate Sidebar
     SidebarHtml := GenerateSidebar;
     
     // 3. Generate HTML for each unit (Pass 2)
     SafeWriteLn('Phase 2: Generating HTML...');
-    var SortedUnits := TList<string>.Create;
-    try
-      for var Key in FRegistry.Units.Keys do SortedUnits.Add(Key);
-      SortedUnits.Sort;
-      
-      for UnitName in SortedUnits do
+    AllUnits := FRegistry.GetAllUnits;
+    
+    // Sort by DisplayName
+    TArray.Sort<TUnitInfo>(AllUnits, TComparer<TUnitInfo>.Construct(
+      function(const Left, Right: TUnitInfo): Integer
       begin
-        if not UnitNodes.ContainsKey(UnitName) then Continue;
-        
-        var Info := FRegistry.Units[UnitName];
-        UnitHtml := GenerateUnitHtml(Info, UnitNodes[Info.Name]);
+        Result := CompareText(Left.DisplayName, Right.DisplayName);
+      end));
+    
+    for Info in AllUnits do
+    begin
+      if not UnitNodes.ContainsKey(Info.FullPath.ToLower) then Continue;
+      
+      try
+        UnitHtml := GenerateUnitHtml(Info, UnitNodes[Info.FullPath.ToLower]);
        
-       FinalHtml := FTemplate
-          .Replace('{{TITLE}}', Info.Name)
-          .Replace('{{PROJECT_TITLE}}', FTitle)
-          .Replace('{{SIDEBAR_CONTENT}}', SidebarHtml)
-          .Replace('{{MAIN_CONTENT}}', UnitHtml);
-          
-       TFile.WriteAllText(TPath.Combine(FOutputDir, Info.Name + '.html'), FinalHtml);
+        // Use safe filename (replace problematic chars for duplicates with paths)
+        var SafeFileName := Info.DisplayName
+          .Replace(' ', '_')
+          .Replace('(', '_')
+          .Replace(')', '_');
+       
+        FinalHtml := FTemplate
+           .Replace('{{TITLE}}', Info.DisplayName)
+           .Replace('{{PROJECT_TITLE}}', FTitle)
+           .Replace('{{SIDEBAR_CONTENT}}', SidebarHtml)
+           .Replace('{{MAIN_CONTENT}}', UnitHtml);
+           
+        TFile.WriteAllText(TPath.Combine(FOutputDir, SafeFileName + '.html'), FinalHtml);
+      except
+        on E: Exception do
+          SafeWriteLn(Format('  [ERROR] Failed to generate HTML for %s: %s', [Info.Name, E.Message]));
       end;
-    finally
-      SortedUnits.Free;
     end;
     
     // 4. Generate Index
@@ -724,23 +843,33 @@ end;
 function TDextDocGenerator.GenerateSidebar: string;
 var
   SB: TStringBuilder;
-  Names: TList<string>;
-  U: string;
+  AllUnits: TArray<TUnitInfo>;
+  Info: TUnitInfo;
+  SafeFileName: string;
 begin
   SB := TStringBuilder.Create;
-  Names := TList<string>.Create;
   try
-    for U in FRegistry.Units.Keys do Names.Add(U);
-    Names.Sort;
+    AllUnits := FRegistry.GetAllUnits;
     
-    for U in Names do
+    // Sort by DisplayName
+    TArray.Sort<TUnitInfo>(AllUnits, TComparer<TUnitInfo>.Construct(
+      function(const Left, Right: TUnitInfo): Integer
+      begin
+        Result := CompareText(Left.DisplayName, Right.DisplayName);
+      end));
+    
+    for Info in AllUnits do
     begin
-       SB.AppendFormat('<a href="%s.html" class="nav-item">%s</a>', [U, U]);
-       SB.AppendLine;
+      // Use same safe filename logic as Generate
+      SafeFileName := Info.DisplayName
+        .Replace(' ', '_')
+        .Replace('(', '_')
+        .Replace(')', '_');
+      SB.AppendFormat('<a href="%s.html" class="nav-item">%s</a>', [SafeFileName, Info.DisplayName]);
+      SB.AppendLine;
     end;
     Result := SB.ToString;
   finally
-    Names.Free;
     SB.Free;
   end;
 end;
