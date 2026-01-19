@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter.MVU.Tests - Dext MVU App</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext MVU App</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Counter.Main.html" class="nav-item">Counter.Main</a>
+<a href="Counter.MVU.html" class="nav-item">Counter.MVU</a>
+<a href="Counter.MVU.Tests.html" class="nav-item">Counter.MVU.Tests</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit Counter.MVU.Tests</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class TCounterUpdateTests {    +Setup()
+    +TestInit_ShouldReturnZeroCount()
+    +TestInit_ShouldReturnStepOne()
+    +TestIncrement_ShouldAddOne()
+    +TestDecrement_ShouldSubtractOne()
+    +TestIncrementByStep_WithStep5_ShouldAdd5()
+    +TestDecrementByStep_WithStep10_ShouldSubtract10()
+    +TestReset_ShouldReturnToZero()
+    +TestSetStep_ShouldChangeStep()
+    +TestMultipleOperations_ShouldAccumulate()
+    +TestImmutability_OriginalShouldNotChange()
+    +TestHistory_ShouldRecordActions()
+}
+TObject <|-- TCounterUpdateTests
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>class TCounterUpdateTests</h3><a name="TCounterUpdateTests"></a><div class="ancestor">Inherits from: TObject</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">procedure Setup</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestInit_ShouldReturnZeroCount</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestInit_ShouldReturnStepOne</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestIncrement_ShouldAddOne</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestDecrement_ShouldSubtractOne</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestIncrementByStep_WithStep5_ShouldAdd5</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestDecrementByStep_WithStep10_ShouldSubtract10</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestReset_ShouldReturnToZero</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestSetStep_ShouldChangeStep</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestMultipleOperations_ShouldAccumulate</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestImmutability_OriginalShouldNotChange</div></div>
+<div class="api-item">
+<div class="api-signature">procedure TestHistory_ShouldRecordActions</div></div>
+</div>
+<hr>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

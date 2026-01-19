@@ -1,0 +1,46 @@
+/* Dext Documentation Theme - Default (Dark) */
+:root {
+    /* Color Palette */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-link: #38bdf8;
+    
+    --border-color: rgba(255, 255, 255, 0.1);
+    --accent-color: #38bdf8;
+    
+    /* Code Blocks */
+    --code-bg: #1e1e1e;
+    --code-text: #d4d4d4;
+    
+    /* Sidebar */
+    --sidebar-bg: rgba(15, 23, 42, 0.95);
+    --sidebar-width: 300px;
+    
+    /* Typography */
+    --font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    --font-code: 'Fira Code', 'Consolas', monospace;
+}
+
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #e2e8f0;
+    
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-link: #0284c7;
+    
+    --border-color: #e2e8f0;
+    --accent-color: #0284c7;
+    
+    --code-bg: #f1f5f9;
+    --code-text: #334155;
+    
+    --sidebar-bg: rgba(255, 255, 255, 0.95);
+}

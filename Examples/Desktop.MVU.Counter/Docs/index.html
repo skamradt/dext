@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index - Dext MVU App</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext MVU App</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Counter.Main.html" class="nav-item">Counter.Main</a>
+<a href="Counter.MVU.html" class="nav-item">Counter.MVU</a>
+<a href="Counter.MVU.Tests.html" class="nav-item">Counter.MVU.Tests</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Dext Framework API</h1><p>Select a unit from the sidebar to view full documentation.</p><h2>Units</h2><div class="list-group"><a href="Counter.Main.html" class="nav-item">Counter.Main</a>
+<a href="Counter.MVU.html" class="nav-item">Counter.MVU</a>
+<a href="Counter.MVU.Tests.html" class="nav-item">Counter.MVU.Tests</a>
+</div>
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter.MVU - Dext MVU App</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext MVU App</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Counter.Main.html" class="nav-item">Counter.Main</a>
+<a href="Counter.MVU.html" class="nav-item">Counter.MVU</a>
+<a href="Counter.MVU.Tests.html" class="nav-item">Counter.MVU.Tests</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit Counter.MVU</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class TCounterModel {    +Init()
+    +WithCount()
+    +WithStep()
+    +WithHistory()
+}
+class TCounterUpdate {    +Update()
+}
+TObject <|-- TCounterUpdate
+class TCounterView {    +CreateControls()
+    +WireEvents()
+    +OnIncrementClick()
+    +OnDecrementClick()
+    +OnIncrementStepClick()
+    +OnDecrementStepClick()
+    +OnResetClick()
+    +OnStep1Click()
+    +OnStep5Click()
+    +OnStep10Click()
+    +Create()
+    +Render()
+}
+TObject <|-- TCounterView
+class TMVURuntime~TModel~ {    +Create()
+    +UpdateModel()
+    +Model
+}
+TObject <|-- TMVURuntime~TModel~
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>record TCounterModel</h3><a name="TCounterModel"></a><div class="description">The Model represents the entire state of your feature. It should be immutable - we never modify it, we create a new one. Using a record ensures value semantics (copy on assignment).</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function Init: TCounterModel</div><div class="description">Creates a new model with default values</div></div>
+<div class="api-item">
+<div class="api-signature">function WithCount(const const: Integer): TCounterModel</div><div class="description">Creates a copy with Count updated</div></div>
+<div class="api-item">
+<div class="api-signature">function WithStep(const const: Integer): TCounterModel</div><div class="description">Creates a copy with Step updated</div></div>
+<div class="api-item">
+<div class="api-signature">function WithHistory(const const: string): TCounterModel</div><div class="description">Creates a copy with History appended</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TCounterUpdate</h3><a name="TCounterUpdate"></a><div class="ancestor">Inherits from: TObject</div><div class="description">The Update function is PURE - it only depends on its inputs and has no side effects. This makes it trivially testable. Given a Model and a Message, it returns a new Model.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function Update(const const: TCounterModel; const const: TCounterMessage): TCounterModel</div><div class="description">Core update function - the heart of MVU. Takes current state and a message, returns new state.</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TCounterView</h3><a name="TCounterView"></a><div class="ancestor">Inherits from: TObject</div><div class="description">The View is responsible for rendering UI based on the Model. It should be a pure function of Model -> UI. All user interactions dispatch Messages through the Dispatch callback.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(Container: TWinControl; Dispatch: TDispatchProc)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Render(const const: TCounterModel)</div><div class="description">Renders the UI based on the current Model. This is called every time the Model changes.</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">procedure CreateControls</div></div>
+<div class="api-item">
+<div class="api-signature">procedure WireEvents</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnIncrementClick(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnDecrementClick(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnIncrementStepClick(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnDecrementStepClick(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnResetClick(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnStep1Click(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnStep5Click(Sender: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure OnStep10Click(Sender: TObject)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TMVURuntime&lt;TModel&gt;</h3><a name="TMVURuntime_lt_TModel_gt_"></a><div class="ancestor">Inherits from: TObject</div><div class="description">The MVU Runtime orchestrates the Model-View-Update loop. It holds the current state and coordinates updates.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(const const: TModel; OnChanged: TProc)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure UpdateModel(const const: TModel)</div></div>
+<div class="api-item">
+<div class="api-signature">property Model: </div></div>
+</div>
+<hr>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type TCounterMessage = enumeration</div><div class="enum-values">Values: IncrementMsg, DecrementMsg, IncrementByStepMsg, DecrementByStepMsg, ResetMsg, SetStep1Msg, SetStep5Msg, SetStep10Msg</div><div class="description">Messages represent everything that can happen in your application. They are the ONLY way to change state. Using an enum is the simplest approach for small examples.</div></div>
+<div class="api-item">
+<div class="api-signature">type TDispatchProc = Type</div><div class="description">Event type for dispatching messages from the View</div></div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>
