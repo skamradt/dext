@@ -27,10 +27,11 @@ unit Dext.Utils;
 
 interface
 
-{$IFDEF MSWINDOWS}
 uses
-  WinApi.Windows;
+{$IFDEF MSWINDOWS}
+  WinApi.Windows,
 {$ENDIF}
+  Dext.Core.Writers;
 
 function ConsolePause: Boolean;
 procedure DebugLog(const AMessage: string);
@@ -50,6 +51,13 @@ procedure SafeWriteLn(const AMessage: string); overload;
 procedure SafeWriteLn; overload;
 procedure SafeWrite(const AMessage: string);
 
+/// <summary>
+///  Initialize the standard framework output to route to the specified writer
+///  instance. This defaults to the console if available then the debug messages
+///  if debugging followed by just ignoring the framework output messages.
+/// </summary>
+procedure InitializeDextWriter(ADextWriter:IDextWriter);
+
 implementation
 
 uses
@@ -58,6 +66,7 @@ uses
 var
   ConsoleAvailable: Boolean = False;
   ConsoleChecked: Boolean = False;
+  CurrentDextWriter : IDextWriter;
 
 function IsConsoleAvailable: Boolean;
 begin
@@ -80,32 +89,20 @@ end;
 
 procedure SafeWriteLn(const AMessage: string);
 begin
-  if IsConsoleAvailable then
-  try
-    System.Writeln(AMessage);
-  except
-    // Silently ignore I/O errors
-  end;
+  if assigned(CurrentDextWriter) then
+    CurrentDextWriter.SafeWriteln(aMessage);
 end;
 
 procedure SafeWriteLn;
 begin
-  if IsConsoleAvailable then
-  try
-    System.Writeln;
-  except
-    // Silently ignore I/O errors
-  end;
+  if assigned(CurrentDextWriter) then
+    CurrentDextWriter.SafeWriteln('');
 end;
 
 procedure SafeWrite(const AMessage: string);
 begin
-  if IsConsoleAvailable then
-  try
-    System.Write(AMessage);
-  except
-    // Silently ignore I/O errors
-  end;
+  if assigned(CurrentDextWriter) then
+    CurrentDextWriter.SafeWrite(aMessage);
 end;
 
 function ConsolePause: Boolean;
@@ -136,6 +133,27 @@ begin
 {$ENDIF}
 end;
 
+procedure InitializeDextWriter(ADextWriter:IDextWriter);
+begin
+  if assigned(ADextWriter) then
+    CurrentDextWriter := aDextWriter
+  else
+    if IsConsoleAvailable then
+      CurrentDextWriter := TConsoleWriter.create
+    {$IFDEF MSWINDOWS}
+    else
+      {$WARN SYMBOL_PLATFORM OFF}
+      if (DebugHook <> 0) then
+        CurrentDextWriter := TWindowsDebugWriter.create
+      {$WARN SYMBOL_PLATFORM ON}
+    {$ENDIF}
+    else
+      CurrentDextWriter := TNullWriter.create;
+end;
+
+
+initialization
+  InitializeDextWriter(Nil);
 
 end.
 
