@@ -106,6 +106,9 @@ type
   TConfigurationRoot = Dext.Configuration.Core.TConfigurationRoot;
   TConfigurationBuilder = Dext.Configuration.Core.TConfigurationBuilder;
   TConfigurationPath = Dext.Configuration.Core.TConfigurationPath;
+  TDextConfiguration = Dext.Configuration.Core.TDextConfiguration;
+  TMemoryConfigurationSource = Dext.Configuration.Core.TMemoryConfigurationSource;
+  TMemoryConfigurationProvider = Dext.Configuration.Core.TMemoryConfigurationProvider;
 
   // Dext.Configuration.EnvironmentVariables
   TEnvironmentVariablesConfigurationProvider = Dext.Configuration.EnvironmentVariables.TEnvironmentVariablesConfigurationProvider;
@@ -121,10 +124,12 @@ type
   IConfigurationSource = Dext.Configuration.Interfaces.IConfigurationSource;
 
   // Dext.Configuration.Json
+  TJsonConfigurationBuilder = Dext.Configuration.Json.TJsonConfigurationBuilder;
   TJsonConfigurationProvider = Dext.Configuration.Json.TJsonConfigurationProvider;
   TJsonConfigurationSource = Dext.Configuration.Json.TJsonConfigurationSource;
 
   // Dext.Configuration.Yaml
+  TYamlConfigurationBuilder = Dext.Configuration.Yaml.TYamlConfigurationBuilder;
   TYamlConfigurationProvider = Dext.Configuration.Yaml.TYamlConfigurationProvider;
   TYamlConfigurationSource = Dext.Configuration.Yaml.TYamlConfigurationSource;
 

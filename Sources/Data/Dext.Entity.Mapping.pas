@@ -232,6 +232,7 @@ type
     class var FInstance: TModelBuilder;
   private var
     FMaps: TObjectDictionary<PTypeInfo, TEntityMap>;
+    FDiscoveryNames: TDictionary<PTypeInfo, string>;
     class constructor Create;
     class destructor Destroy;
   public
@@ -244,6 +245,9 @@ type
     function GetMap(AType: PTypeInfo): TEntityMap;
     function HasMap(AType: PTypeInfo): Boolean;
     function GetMaps: TEnumerable<TEntityMap>;
+    
+    procedure RegisterDiscoveryName(AType: PTypeInfo; const AName: string);
+    function GetDiscoveryName(AType: PTypeInfo): string;
     
     function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
     
@@ -693,10 +697,12 @@ constructor TModelBuilder.Create;
 begin
   inherited;
   FMaps := TObjectDictionary<PTypeInfo, TEntityMap>.Create([doOwnsValues]);
+  FDiscoveryNames := TDictionary<PTypeInfo, string>.Create;
 end;
 
 destructor TModelBuilder.Destroy;
 begin
+  FDiscoveryNames.Free;
   if Assigned(FMaps) then
   begin
     FMaps.Clear;  // Explicitly clear items first
@@ -713,6 +719,17 @@ end;
 class destructor TModelBuilder.Destroy;
 begin
   FreeAndNil(FInstance);
+end;
+
+procedure TModelBuilder.RegisterDiscoveryName(AType: PTypeInfo; const AName: string);
+begin
+  FDiscoveryNames.AddOrSetValue(AType, AName);
+end;
+
+function TModelBuilder.GetDiscoveryName(AType: PTypeInfo): string;
+begin
+  if not FDiscoveryNames.TryGetValue(AType, Result) then
+    Result := '';
 end;
 
 procedure TModelBuilder.ApplyConfiguration<T>(AConfig: IEntityTypeConfiguration<T>);

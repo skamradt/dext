@@ -120,7 +120,7 @@ type
     function Validate(const AValue: T): TValidationResult;
   end;
 
-  TValidator<T: record> = class(TInterfacedObject, IValidator<T>)
+  TValidator<T> = class(TInterfacedObject, IValidator<T>)
   public
     function Validate(const AValue: T): TValidationResult;
   end;
@@ -129,11 +129,39 @@ type
   ///   Non-generic validator helper.
   /// </summary>
   TValidator = class
+  private
+     class function GetFieldValue(const AValue: TValue): TValue;
   public
     class function Validate(const AValue: TValue): TValidationResult;
   end;
 
 implementation
+
+{ TValidator }
+
+class function TValidator.GetFieldValue(const AValue: TValue): TValue;
+var
+  Ctx: TRttiContext;
+  RType: TRttiType;
+  Field: TRttiField;
+begin
+  Result := AValue;
+  if AValue.Kind = tkRecord then
+  begin
+    Ctx := TRttiContext.Create;
+    try
+      RType := Ctx.GetType(AValue.TypeInfo);
+      if (RType <> nil) and (RType is TRttiRecordType) then
+      begin
+        Field := TRttiRecordType(RType).GetField('FValue');
+        if Field <> nil then
+          Result := Field.GetValue(AValue.GetReferenceToRawData);
+      end;
+    finally
+      Ctx.Free;
+    end;
+  end;
+end;
 
 { TValidationResult }
 
@@ -171,13 +199,16 @@ end;
 { RequiredAttribute }
 
 function RequiredAttribute.IsValid(const AValue: TValue): Boolean;
+var
+  Val: TValue;
 begin
-  if AValue.IsEmpty then
+  Val := TValidator.GetFieldValue(AValue);
+  if Val.IsEmpty then
     Exit(False);
 
-  case AValue.Kind of
+  case Val.Kind of
     tkString, tkLString, tkWString, tkUString:
-      Result := AValue.AsString.Trim <> '';
+      Result := Val.AsString.Trim <> '';
     tkInteger, tkInt64:
       Result := True; // Integers are always "present"
     tkFloat:
@@ -204,11 +235,13 @@ end;
 function StringLengthAttribute.IsValid(const AValue: TValue): Boolean;
 var
   Len: Integer;
+  Val: TValue;
 begin
-  if not (AValue.Kind in [tkString, tkLString, tkWString, tkUString]) then
+  Val := TValidator.GetFieldValue(AValue);
+  if not (Val.Kind in [tkString, tkLString, tkWString, tkUString]) then
     Exit(True); // Not a string, skip validation
 
-  Len := AValue.AsString.Length;
+  Len := Val.AsString.Length;
   Result := (Len >= FMinLength) and (Len <= FMaxLength);
 end;
 
@@ -224,11 +257,13 @@ function EmailAddressAttribute.IsValid(const AValue: TValue): Boolean;
 var
   Email: string;
   Regex: TRegEx;
+  Val: TValue;
 begin
-  if not (AValue.Kind in [tkString, tkLString, tkWString, tkUString]) then
+  Val := TValidator.GetFieldValue(AValue);
+  if not (Val.Kind in [tkString, tkLString, tkWString, tkUString]) then
     Exit(True);
 
-  Email := AValue.AsString.Trim;
+  Email := Val.AsString.Trim;
   if Email = '' then
     Exit(True); // Empty is valid (use Required for mandatory)
 
@@ -259,14 +294,16 @@ end;
 function RangeAttribute.IsValid(const AValue: TValue): Boolean;
 var
   NumValue: Double;
+  Val: TValue;
 begin
-  case AValue.Kind of
+  Val := TValidator.GetFieldValue(AValue);
+  case Val.Kind of
     tkInteger:
-      NumValue := AValue.AsInteger;
+      NumValue := Val.AsInteger;
     tkInt64:
-      NumValue := AValue.AsInt64;
+      NumValue := Val.AsInt64;
     tkFloat:
-      NumValue := AValue.AsExtended;
+      NumValue := Val.AsExtended;
     else
       Exit(True); // Not a number, skip
   end;
@@ -283,22 +320,42 @@ end;
 { TValidator<T> }
 
 function TValidator<T>.Validate(const AValue: T): TValidationResult;
+begin
+  Result := TValidator.Validate(TValue.From<T>(AValue));
+end;
+
+{ TValidator (Non-generic) }
+
+class function TValidator.Validate(const AValue: TValue): TValidationResult;
 var
   Context: TRttiContext;
   RttiType: TRttiType;
   Field: TRttiField;
+  Prop: TRttiProperty;
   Attr: TCustomAttribute;
   FieldValue: TValue;
+  Instance: Pointer;
   ValidationAttr: ValidationAttribute;
 begin
   Result := TValidationResult.Create;
+  
+  if AValue.IsEmpty then
+    Exit;
+
   Context := TRttiContext.Create;
   try
-    RttiType := Context.GetType(TypeInfo(T));
-    
+    RttiType := Context.GetType(AValue.TypeInfo);
+    if RttiType = nil then Exit;
+
+    if RttiType.IsInstance then
+      Instance := AValue.AsObject
+    else
+      Instance := AValue.GetReferenceToRawData;
+
+    // Validate Fields
     for Field in RttiType.GetFields do
     begin
-      FieldValue := Field.GetValue(@AValue);
+      FieldValue := Field.GetValue(Instance);
       
       for Attr in Field.GetAttributes do
       begin
@@ -312,43 +369,20 @@ begin
         end;
       end;
     end;
-  finally
-    Context.Free;
-  end;
-end;
 
-{ TValidator (Non-generic) }
-
-class function TValidator.Validate(const AValue: TValue): TValidationResult;
-var
-  Context: TRttiContext;
-  RttiType: TRttiType;
-  Field: TRttiField;
-  Attr: TCustomAttribute;
-  FieldValue: TValue;
-  ValidationAttr: ValidationAttribute;
-begin
-  Result := TValidationResult.Create;
-  
-  if AValue.Kind <> tkRecord then
-    Exit; // Only validate records for now
-
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(AValue.TypeInfo);
-    
-    for Field in RttiType.GetFields do
+    // Validate Properties
+    for Prop in RttiType.GetProperties do
     begin
-      FieldValue := Field.GetValue(AValue.GetReferenceToRawData);
+      FieldValue := Prop.GetValue(Instance);
       
-      for Attr in Field.GetAttributes do
+      for Attr in Prop.GetAttributes do
       begin
         if Attr is ValidationAttribute then
         begin
           ValidationAttr := ValidationAttribute(Attr);
           if not ValidationAttr.IsValid(FieldValue) then
           begin
-            Result.AddError(Field.Name, ValidationAttr.GetErrorMessage(Field.Name));
+            Result.AddError(Prop.Name, ValidationAttr.GetErrorMessage(Prop.Name));
           end;
         end;
       end;

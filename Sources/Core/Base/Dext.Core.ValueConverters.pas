@@ -140,6 +140,9 @@ type
 
 implementation
 
+uses
+  Dext.Core.Reflection;
+
 { TValueConverterRegistry }
 
 class constructor TValueConverterRegistry.Create;
@@ -237,14 +240,9 @@ end;
 class function TValueConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 var
   Converter: IValueConverter;
-  Ctx: TRttiContext;
-  TargetRType: TRttiType;
-  TypeName: string;
-  Fields: TArray<TRttiField>;
-  HasValueField, ValueField: TRttiField;
-  NullableInstance: Pointer;
+  Meta: TTypeMetadata;
+  PropInstance: Pointer;
   InnerValue: TValue;
-  InnerType: PTypeInfo;
 begin
   if AValue.IsEmpty or ((AValue.Kind = tkVariant) and VarIsNull(AValue.AsVariant)) then
   begin
@@ -257,86 +255,55 @@ begin
     Exit(TValue.Empty);
   end;
 
-  // If types are same, return value
+  // Fast path: If types are same, return value directly
   if AValue.TypeInfo = ATargetType then
     Exit(AValue);
 
-  // Check if target is Nullable<T> or Prop<T>
+  // Use cached metadata for Smart Types and Nullables detection
   if ATargetType.Kind = tkRecord then
   begin
-    Ctx := TRttiContext.Create;
-    TargetRType := Ctx.GetType(ATargetType);
-    if TargetRType <> nil then
+    Meta := TReflection.GetMetadata(ATargetType);
+    
+    // Handle Nullable<T>
+    if Meta.IsNullable and (Meta.ValueField <> nil) then
     begin
-      TypeName := TargetRType.Name;
+      // Convert the source value to the inner type
+      InnerValue := Convert(AValue, Meta.InnerType);
       
-      // Check if it's a Nullable<T> by name
-      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      // Create a new Nullable<T> instance
+      TValue.Make(nil, ATargetType, Result);
+      PropInstance := Result.GetReferenceToRawData;
+      
+      // Set the inner value
+      Meta.ValueField.SetValue(PropInstance, InnerValue);
+      
+      // Set HasValue to true (can be string or boolean)
+      if Meta.HasValueField <> nil then
       begin
-        // Find the fields
-        Fields := TargetRType.GetFields;
-        HasValueField := nil;
-        ValueField := nil;
-        
-        for var Field in Fields do
-        begin
-          if Field.Name.ToLower.Contains('hasvalue') then
-            HasValueField := Field
-          else if Field.Name.ToLower = 'fvalue' then
-            ValueField := Field;
-        end;
-        
-        if (HasValueField <> nil) and (ValueField <> nil) then
-        begin
-          // Get the inner type from fValue field
-          InnerType := ValueField.FieldType.Handle;
-          
-          // Convert the source value to the inner type
-          InnerValue := Convert(AValue, InnerType);
-          
-          // Create a new Nullable<T> instance
-          TValue.Make(nil, ATargetType, Result);
-          NullableInstance := Result.GetReferenceToRawData;
-          
-          // Set the inner value
-          ValueField.SetValue(NullableInstance, InnerValue);
-          
-          // Set HasValue to true (can be string or boolean)
-          if HasValueField.FieldType.TypeKind = tkUString then
-            HasValueField.SetValue(NullableInstance, 'HasValue')
-          else if HasValueField.FieldType.TypeKind = tkEnumeration then
-            HasValueField.SetValue(NullableInstance, True); // Standard boolean
-          
-          Exit;
-        end;
-      end
-      // Check if it's a Prop<T> (Smart Type)
-      // Check Contains 'Prop<' for name, OR check for presence of FValue field as fallback
-      else if TypeName.Contains('Prop<') or (TargetRType.GetField('FValue') <> nil) then
-      begin
-        ValueField := TargetRType.GetField('FValue');
-        
-        if ValueField <> nil then
-        begin
-          InnerType := ValueField.FieldType.Handle;
-          try
-            InnerValue := Convert(AValue, InnerType); // Convert raw DB value to T
-            
-            // Create new Prop<T> instance
-            TValue.Make(nil, ATargetType, Result);
-            var PropInstance := Result.GetReferenceToRawData;
-            
-            // Set FValue
-            ValueField.SetValue(PropInstance, InnerValue);
-            Exit;
-          except
-             // If inner conversion fails, let it fall through to registry/cast
-          end;
-        end;
+        if Meta.HasValueField.FieldType.TypeKind = tkUString then
+          Meta.HasValueField.SetValue(PropInstance, 'HasValue')
+        else
+          Meta.HasValueField.SetValue(PropInstance, True);
       end;
+      Exit;
+    end
+    // Handle Prop<T> (Smart Type)
+    else if Meta.IsSmartProp and (Meta.ValueField <> nil) then
+    begin
+      // Convert raw DB value to inner type T
+      InnerValue := Convert(AValue, Meta.InnerType);
+      
+      // Create new Prop<T> instance
+      TValue.Make(nil, ATargetType, Result);
+      PropInstance := Result.GetReferenceToRawData;
+      
+      // Set FValue
+      Meta.ValueField.SetValue(PropInstance, InnerValue);
+      Exit;
     end;
   end;
 
+  // Standard conversion via registry
   Converter := TValueConverterRegistry.GetConverter(AValue.TypeInfo, ATargetType);
   if Converter <> nil then
     Result := Converter.Convert(AValue, ATargetType)
@@ -346,7 +313,6 @@ begin
     try
       Result := AValue.Cast(ATargetType);
     except
-      // If Cast fails, we might want to throw a better error or return default
       raise EConvertError.CreateFmt('Cannot convert %s to %s', [AValue.TypeInfo.Name, ATargetType.Name]);
     end;
   end;

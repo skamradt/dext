@@ -30,6 +30,7 @@ type
     FDialect: ISQLDialect;
     FCustomConnection: IDbConnection;
     FNamingStrategy: INamingStrategy;
+    FNaming: string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -45,6 +46,7 @@ type
     property Dialect: ISQLDialect read FDialect write FDialect;
     property CustomConnection: IDbConnection read FCustomConnection write FCustomConnection;
     property NamingStrategy: INamingStrategy read FNamingStrategy write FNamingStrategy;
+    property Naming: string read FNaming write FNaming;
 
     function BuildConnection: IDbConnection;
     function BuildDialect: ISQLDialect;
@@ -190,8 +192,14 @@ end;
 
 function TDbContextOptions.BuildNamingStrategy: INamingStrategy;
 begin
-  if FNamingStrategy = nil then
+  if FNamingStrategy <> nil then
+    Exit(FNamingStrategy);
+
+  if SameText(FNaming, 'snake_case') then
+    FNamingStrategy := TSnakeCaseNamingStrategy.Create
+  else
     FNamingStrategy := TDefaultNamingStrategy.Create;
+    
   Result := FNamingStrategy;
 end;
 

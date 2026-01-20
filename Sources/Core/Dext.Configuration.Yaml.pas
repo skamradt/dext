@@ -44,6 +44,7 @@ type
   private
     FPath: string;
     FOptional: Boolean;
+    function ResolveFilePath: string;
     procedure FlattenNode(Node: TYamlNode; const Prefix: string);
   public
     constructor Create(const Path: string; Optional: Boolean);
@@ -60,6 +61,22 @@ type
   public
     constructor Create(const Path: string; Optional: Boolean = False);
     function Build(Builder: IConfigurationBuilder): IConfigurationProvider;
+  end;
+
+  /// <summary>
+  ///   Fluent builder for YAML configuration.
+  /// </summary>
+  TYamlConfigurationBuilder = record
+  public
+    class function Create: TDextConfiguration; static;
+  end;
+
+  /// <summary>
+  ///   Extensions for TDextConfiguration to support YAML.
+  /// </summary>
+  TDextConfigurationYamlExtensions = record helper for TDextConfiguration
+  public
+    function AddYamlFile(const Path: string; Optional: Boolean = False): TDextConfiguration;
   end;
 
 implementation
@@ -92,8 +109,11 @@ var
   Parser: TYamlParser;
   Doc: TYamlDocument;
   Content: string;
+  ResolvedPath: string;
 begin
-  if not FileExists(FPath) then
+  ResolvedPath := ResolveFilePath;
+
+  if ResolvedPath = '' then
   begin
     if FOptional then
       Exit
@@ -102,7 +122,7 @@ begin
   end;
 
   try
-    Content := TFile.ReadAllText(FPath, TEncoding.UTF8);
+    Content := TFile.ReadAllText(ResolvedPath, TEncoding.UTF8);
   except
     on E: Exception do
       raise EConfigurationException.CreateFmt('Failed to read configuration file %s: %s', [FPath, E.Message]);
@@ -123,6 +143,18 @@ begin
   finally
     Parser.Free;
   end;
+end;
+
+function TYamlConfigurationProvider.ResolveFilePath: string;
+begin
+  if FileExists(FPath) then
+    Exit(FPath);
+
+  Result := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), FPath);
+  if FileExists(Result) then
+    Exit;
+
+  Result := '';
 end;
 
 procedure TYamlConfigurationProvider.FlattenNode(Node: TYamlNode; const Prefix: string);
@@ -168,6 +200,20 @@ begin
         end;
       end;
   end;
+end;
+
+{ TYamlConfigurationBuilder }
+
+class function TYamlConfigurationBuilder.Create: TDextConfiguration;
+begin
+  Result := TDextConfiguration.New;
+end;
+
+{ TDextConfigurationYamlExtensions }
+
+function TDextConfigurationYamlExtensions.AddYamlFile(const Path: string; Optional: Boolean): TDextConfiguration;
+begin
+  Result := Add(TYamlConfigurationSource.Create(Path, Optional));
 end;
 
 end.

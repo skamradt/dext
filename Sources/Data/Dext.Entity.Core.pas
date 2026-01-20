@@ -72,6 +72,7 @@ type
     function FindObject(const AId: Variant): TObject;
     function Add(const AEntity: TObject): IDbSet;
     function GetTableName: string;
+    function GetEntityType: PTypeInfo;
     function GenerateCreateTableScript: string;
     procedure Clear;
     procedure DetachAll;
@@ -91,6 +92,8 @@ type
     procedure PersistRemove(const AEntity: TObject);
     
     function GetEntityId(const AEntity: TObject): string;
+    
+    property EntityType: PTypeInfo read GetEntityType;
   end;
 
   /// <summary>

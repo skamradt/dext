@@ -30,6 +30,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Character,
   System.Generics.Collections,
   System.Rtti,
   System.TypInfo,
@@ -721,20 +722,28 @@ begin
     Result := FMap.TableName
   else
   begin
-    // Fallback should not happen if map is always created, 
-    // but keep logic just in case or simpler:
-    Result := FMap.TableName;
+    Result := '';
+    Ctx := TRttiContext.Create;
+    Typ := Ctx.GetType(T);
+    
+    // Check TableAttribute
+    for Attr in Typ.GetAttributes do
+      if Attr is TableAttribute then
+        if TableAttribute(Attr).Name <> '' then
+          Result := TableAttribute(Attr).Name;
+    
+    // Fallback to NamingStrategy or class name
     if Result = '' then
     begin
-       Ctx := TRttiContext.Create;
-       Typ := Ctx.GetType(T);
-       Result := Typ.Name;
-       for Attr in Typ.GetAttributes do
-          if Attr is TableAttribute then
-            Result := TableAttribute(Attr).Name;
-       
-       if (Result = Typ.Name) and (FNamingStrategy <> nil) then
-         Result := FNamingStrategy.GetTableName(TypeInfo(T));
+      if FNamingStrategy <> nil then
+        Result := FNamingStrategy.GetTableName(T)
+      else
+      begin
+        // Ultimate fallback: remove T prefix from class name
+        Result := Typ.Name;
+        if (Length(Result) > 1) and (Result[1] = 'T') and CharInSet(Result[2], ['A'..'Z']) then
+          Result := Copy(Result, 2, MaxInt);
+      end;
     end;
   end;
 

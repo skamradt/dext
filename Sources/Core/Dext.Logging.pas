@@ -56,13 +56,45 @@ type
     
     function IsEnabled(ALevel: TLogLevel): Boolean;
     
-    // Convenience methods
-    procedure LogTrace(const AMessage: string; const AArgs: array of const);
-    procedure LogDebug(const AMessage: string; const AArgs: array of const);
-    procedure LogInformation(const AMessage: string; const AArgs: array of const);
-    procedure LogWarning(const AMessage: string; const AArgs: array of const);
+    // Short method names (preferred)
+    procedure Trace(const AMessage: string); overload;
+    procedure Trace(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Debug(const AMessage: string); overload;
+    procedure Debug(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Info(const AMessage: string); overload;
+    procedure Info(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Warn(const AMessage: string); overload;
+    procedure Warn(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Error(const AMessage: string); overload;
+    procedure Error(const AMessage: string; const AArgs: array of const); overload;
+    procedure Error(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Critical(const AMessage: string); overload;
+    procedure Critical(const AMessage: string; const AArgs: array of const); overload;
+    procedure Critical(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    // Legacy method names (for backwards compatibility)
+    procedure LogTrace(const AMessage: string); overload;
+    procedure LogTrace(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogDebug(const AMessage: string); overload;
+    procedure LogDebug(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogInformation(const AMessage: string); overload;
+    procedure LogInformation(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogWarning(const AMessage: string); overload;
+    procedure LogWarning(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogError(const AMessage: string); overload;
     procedure LogError(const AMessage: string; const AArgs: array of const); overload;
     procedure LogError(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogCritical(const AMessage: string); overload;
     procedure LogCritical(const AMessage: string; const AArgs: array of const); overload;
     procedure LogCritical(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
   end;
@@ -95,12 +127,45 @@ type
     procedure Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const); overload; virtual; abstract;
     function IsEnabled(ALevel: TLogLevel): Boolean; virtual; abstract;
   public
-    procedure LogTrace(const AMessage: string; const AArgs: array of const);
-    procedure LogDebug(const AMessage: string; const AArgs: array of const);
-    procedure LogInformation(const AMessage: string; const AArgs: array of const);
-    procedure LogWarning(const AMessage: string; const AArgs: array of const);
+    // Short method names (preferred)
+    procedure Trace(const AMessage: string); overload;
+    procedure Trace(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Debug(const AMessage: string); overload;
+    procedure Debug(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Info(const AMessage: string); overload;
+    procedure Info(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Warn(const AMessage: string); overload;
+    procedure Warn(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Error(const AMessage: string); overload;
+    procedure Error(const AMessage: string; const AArgs: array of const); overload;
+    procedure Error(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure Critical(const AMessage: string); overload;
+    procedure Critical(const AMessage: string; const AArgs: array of const); overload;
+    procedure Critical(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    // Legacy method names (for backwards compatibility)
+    procedure LogTrace(const AMessage: string); overload;
+    procedure LogTrace(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogDebug(const AMessage: string); overload;
+    procedure LogDebug(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogInformation(const AMessage: string); overload;
+    procedure LogInformation(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogWarning(const AMessage: string); overload;
+    procedure LogWarning(const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogError(const AMessage: string); overload;
     procedure LogError(const AMessage: string; const AArgs: array of const); overload;
     procedure LogError(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
+    
+    procedure LogCritical(const AMessage: string); overload;
     procedure LogCritical(const AMessage: string; const AArgs: array of const); overload;
     procedure LogCritical(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
   end;
@@ -225,44 +290,148 @@ end;
 
 { TAbstractLogger }
 
-procedure TAbstractLogger.LogTrace(const AMessage: string; const AArgs: array of const);
+// Short method implementations (preferred)
+
+procedure TAbstractLogger.Trace(const AMessage: string);
+begin
+  Trace(AMessage, []);
+end;
+
+procedure TAbstractLogger.Trace(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Trace, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogDebug(const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Debug(const AMessage: string);
+begin
+  Debug(AMessage, []);
+end;
+
+procedure TAbstractLogger.Debug(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Debug, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogInformation(const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Info(const AMessage: string);
+begin
+  Info(AMessage, []);
+end;
+
+procedure TAbstractLogger.Info(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Information, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogWarning(const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Warn(const AMessage: string);
+begin
+  Warn(AMessage, []);
+end;
+
+procedure TAbstractLogger.Warn(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Warning, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogError(const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Error(const AMessage: string);
+begin
+  Error(AMessage, []);
+end;
+
+procedure TAbstractLogger.Error(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Error, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogError(const AException: Exception; const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Error(const AException: Exception; const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Error, AException, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogCritical(const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Critical(const AMessage: string);
+begin
+  Critical(AMessage, []);
+end;
+
+procedure TAbstractLogger.Critical(const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Critical, AMessage, AArgs);
 end;
 
-procedure TAbstractLogger.LogCritical(const AException: Exception; const AMessage: string; const AArgs: array of const);
+procedure TAbstractLogger.Critical(const AException: Exception; const AMessage: string; const AArgs: array of const);
 begin
   Log(TLogLevel.Critical, AException, AMessage, AArgs);
+end;
+
+// Legacy method implementations (for backwards compatibility)
+
+procedure TAbstractLogger.LogTrace(const AMessage: string);
+begin
+  Trace(AMessage);
+end;
+
+procedure TAbstractLogger.LogTrace(const AMessage: string; const AArgs: array of const);
+begin
+  Trace(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogDebug(const AMessage: string);
+begin
+  Debug(AMessage);
+end;
+
+procedure TAbstractLogger.LogDebug(const AMessage: string; const AArgs: array of const);
+begin
+  Debug(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogInformation(const AMessage: string);
+begin
+  Info(AMessage);
+end;
+
+procedure TAbstractLogger.LogInformation(const AMessage: string; const AArgs: array of const);
+begin
+  Info(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogWarning(const AMessage: string);
+begin
+  Warn(AMessage);
+end;
+
+procedure TAbstractLogger.LogWarning(const AMessage: string; const AArgs: array of const);
+begin
+  Warn(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogError(const AMessage: string);
+begin
+  Error(AMessage);
+end;
+
+procedure TAbstractLogger.LogError(const AMessage: string; const AArgs: array of const);
+begin
+  Error(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogError(const AException: Exception; const AMessage: string; const AArgs: array of const);
+begin
+  Error(AException, AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogCritical(const AMessage: string);
+begin
+  Critical(AMessage);
+end;
+
+procedure TAbstractLogger.LogCritical(const AMessage: string; const AArgs: array of const);
+begin
+  Critical(AMessage, AArgs);
+end;
+
+procedure TAbstractLogger.LogCritical(const AException: Exception; const AMessage: string; const AArgs: array of const);
+begin
+  Critical(AException, AMessage, AArgs);
 end;
 
 { TAggregateLogger }

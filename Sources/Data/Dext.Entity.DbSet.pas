@@ -86,6 +86,7 @@ type
     procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
     function CreateGenerator: TSqlGenerator<T>;
     procedure ResetQueryFlags;
+    procedure HandleTimestamps(const AEntity: TObject; AIsInsert: Boolean);
   protected
     function GetEntityId(const AEntity: T): string; overload;
     function GetEntityId(const AEntity: TObject): string; overload;
@@ -100,6 +101,7 @@ type
     destructor Destroy; override;
 
     function GetTableName: string;
+    function GetEntityType: PTypeInfo;
     function FindObject(const AId: Variant): TObject;
     function Add(const AEntity: TObject): IDbSet; overload;
     procedure Update(const AEntity: TObject); overload;
@@ -260,12 +262,17 @@ begin
   begin
     for Attr in Typ.GetAttributes do
       if Attr is TableAttribute then
-        FTableName := TableAttribute(Attr).Name;
+        if TableAttribute(Attr).Name <> '' then
+          FTableName := TableAttribute(Attr).Name;
   end;
+  
+  // Property-based Naming Discovery fallback
   if FTableName = '' then
-    FTableName := FContext.Dialect.QuoteIdentifier(FContext.NamingStrategy.GetTableName(T)); 
+    FTableName := TModelBuilder.Instance.GetDiscoveryName(TypeInfo(T));
+
+  // Final fallback: Use naming strategy to derive from class name
   if FTableName = '' then
-     FTableName := FContext.NamingStrategy.GetTableName(T);
+    FTableName := FContext.NamingStrategy.GetTableName(T);
   for Prop in Typ.GetProperties do
   begin
     IsMapped := True;
@@ -313,12 +320,24 @@ begin
     FProps.Add(ColName.ToLower, Prop);
     FColumns.Add(Prop.Name, ColName);
     
-    // Check for backing field mapping
+    // Check for backing field mapping - either explicit from fluent mapping or auto-detect for Smart Types
     if (PropMap <> nil) and (PropMap.FieldName <> '') then
     begin
       Field := Typ.GetField(PropMap.FieldName);
       if Field <> nil then
         FFields.Add(ColName.ToLower, Field);
+    end
+    else
+    begin
+      // Auto-detect backing field for Smart Types (Prop<T>)
+      // Convention: Property "Name" has backing field "FName"
+      if (Prop.PropertyType.TypeKind = tkRecord) then
+      begin
+        var FieldName := 'F' + Prop.Name;
+        Field := Typ.GetField(FieldName);
+        if Field <> nil then
+          FFields.Add(ColName.ToLower, Field);
+      end;
     end;
   end;
   if FPKColumns.Count = 0 then
@@ -361,6 +380,11 @@ begin
     if (Schema <> '') and FContext.Dialect.UseSchemaPrefix then
        Result := FContext.Dialect.QuoteIdentifier(Schema) + '.' + Result;
   end;
+end;
+
+function TDbSet<T>.GetEntityType: PTypeInfo;
+begin
+  Result := TypeInfo(T);
 end;
 
 function TDbSet<T>.GetPKColumns: TArray<string>;
@@ -552,11 +576,11 @@ begin
           Val := Converter.FromDatabase(Val, Prop.PropertyType.Handle);
         end;
         
-        // Use field mapping if available to avoid triggering setters
+        // Use centralized reflection helper that handles Smart Types, Nullables and conversion
         if FFields.TryGetValue(ColName.ToLower, Field) then
-          TValueConverter.ConvertAndSetField(Result, Field, Val)
-        else
-          TValueConverter.ConvertAndSet(Result, Prop, Val);
+          TReflection.SetValue(Pointer(Result), Field, Val)
+        else if FProps.TryGetValue(ColName.ToLower, Prop) then
+          TReflection.SetValue(Pointer(Result), Prop, Val);
       except
         on E: Exception do
           SafeWriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
@@ -679,6 +703,37 @@ begin
     Remove(Entity);
 end;
 
+procedure TDbSet<T>.HandleTimestamps(const AEntity: TObject; AIsInsert: Boolean);
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  Prop: TRttiProperty;
+  Attr: TCustomAttribute;
+  NowVal: TDateTime;
+begin
+  NowVal := Now;
+  Ctx := TRttiContext.Create;
+  try
+    Typ := Ctx.GetType(T);
+    for Prop in Typ.GetProperties do
+    begin
+      for Attr in Prop.GetAttributes do
+      begin
+        if (Attr is CreatedAtAttribute) and AIsInsert then
+        begin
+          TReflection.SetValue(Pointer(AEntity), Prop, NowVal);
+        end
+        else if (Attr is UpdatedAtAttribute) then
+        begin
+          TReflection.SetValue(Pointer(AEntity), Prop, NowVal);
+        end;
+      end;
+    end;
+  finally
+    Ctx.Free;
+  end;
+end;
+
 procedure TDbSet<T>.PersistAdd(const AEntity: TObject);
 var
   Generator: TSqlGenerator<T>;
@@ -694,6 +749,7 @@ var
   Attr: TCustomAttribute;
   PropMap: TPropertyMap;
 begin
+  HandleTimestamps(AEntity, True);
   Generator := CreateGenerator;
   try
     try
@@ -793,37 +849,9 @@ begin
        if VarIsNull(PKVal) or VarIsEmpty(PKVal) then
          raise Exception.Create('Failed to retrieve AutoInc ID for ' + GetTableName + '.');
        
-       // Use registered converter if available for proper type conversion
-       var Converter := TTypeConverterRegistry.Instance.GetConverter(AutoIncProp.PropertyType.Handle);
-       if Converter <> nil then
-       begin
-         // Use converter's FromDatabase for proper endianness handling
-         var ConvertedVal := Converter.FromDatabase(TValue.FromVariant(PKVal), AutoIncProp.PropertyType.Handle);
-         AutoIncProp.SetValue(TObject(AEntity), ConvertedVal);
-       end
-       else if AutoIncProp.PropertyType.Handle = TypeInfo(TUUID) then
-       begin
-         // Fallback for TUUID without registered converter
-         var UuidVal: TUUID;
-         var StrVal := VarToStr(PKVal);
-         if StrVal.StartsWith('{') then
-           StrVal := Copy(StrVal, 2, Length(StrVal) - 2);
-         UuidVal := TUUID.FromString(StrVal);
-         AutoIncProp.SetValue(TObject(AEntity), TValue.From<TUUID>(UuidVal));
-       end
-       else if AutoIncProp.PropertyType.Handle = TypeInfo(TGUID) then
-       begin
-         // Fallback for TGUID without registered converter - use StringToGUID
-         var GuidVal: TGUID;
-         var StrVal := VarToStr(PKVal);
-         if not StrVal.StartsWith('{') then
-           StrVal := '{' + StrVal + '}';
-         GuidVal := StringToGUID(StrVal);
-         AutoIncProp.SetValue(TObject(AEntity), TValue.From<TGUID>(GuidVal));
-       end
-       else
-         TValueConverter.ConvertAndSet(AEntity, AutoIncProp, TValue.FromVariant(PKVal));
-     end;
+        // Use centralized reflection helper that handles conversion and Smart Types accurately
+        TReflection.SetValue(Pointer(AEntity), AutoIncProp, TValue.FromVariant(PKVal));
+      end;
      
      // Add to identity map using full entity ID
      var NewId := GetEntityId(T(AEntity)); 
@@ -850,7 +878,10 @@ begin
   if Length(AEntities) = 0 then Exit;
   SetLength(EntitiesT, Length(AEntities));
   for i := 0 to High(AEntities) do
+  begin
     EntitiesT[i] := T(AEntities[i]);
+    HandleTimestamps(AEntities[i], True);
+  end;
   Generator := CreateGenerator;
   try
     Sql := Generator.GenerateInsertTemplate(Props);
@@ -901,6 +932,7 @@ var
   Val: TValue;
   NewVer: Integer;
 begin
+  HandleTimestamps(AEntity, False);
   Generator := CreateGenerator;
   try
     Sql := Generator.GenerateUpdate(T(AEntity));
@@ -921,7 +953,7 @@ begin
           begin
             Val := Prop.GetValue(Pointer(AEntity));
             if Val.IsEmpty then NewVer := 1 else NewVer := Val.AsInteger + 1;
-            Prop.SetValue(Pointer(AEntity), NewVer);
+            TReflection.SetValue(Pointer(AEntity), Prop, NewVer);
             Break;
           end;
         end;
@@ -1029,7 +1061,7 @@ begin
           else 
             ValToSet := TValue.FromVariant(DeletedVal);
             
-          Prop.SetValue(AEntity, ValToSet);
+          TReflection.SetValue(Pointer(AEntity), Prop, ValToSet);
           
           // Use PersistUpdate to save the change
           PersistUpdate(AEntity);
@@ -1298,7 +1330,7 @@ begin
       var FkVal := Pair.Value.ToString;
       if LoadedMap.ContainsKey(FkVal) then
       begin
-        NavProp.SetValue(Pointer(Parent), LoadedMap[FkVal]);
+        TReflection.SetValue(Pointer(Parent), NavProp, LoadedMap[FkVal]);
       end;
     end;
   finally
@@ -1681,7 +1713,7 @@ begin
           else 
             ValToSet := TValue.FromVariant(NotDeletedVal);
  
-          Prop.SetValue(TObject(AEntity), ValToSet);
+          TReflection.SetValue(Pointer(AEntity), Prop, ValToSet);
           PersistUpdate(AEntity);
         end;
       end;

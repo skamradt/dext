@@ -108,6 +108,38 @@ type
     function Build: IConfigurationRoot;
   end;
 
+  TMemoryConfigurationProvider = class(TConfigurationProvider)
+  public
+    constructor Create(Data: TDictionary<string, string>);
+    procedure Load; override;
+  end;
+
+  TMemoryConfigurationSource = class(TInterfacedObject, IConfigurationSource)
+  private
+    FData: TDictionary<string, string>;
+  public
+    constructor Create(Data: TEnumerable<TPair<string, string>>); overload;
+    constructor Create(const Data: array of TPair<string, string>); overload;
+    destructor Destroy; override;
+    function Build(Builder: IConfigurationBuilder): IConfigurationProvider;
+  end;
+
+  /// <summary>
+  ///   Fluent wrapper for IConfigurationBuilder.
+  /// </summary>
+  TDextConfiguration = record
+  private
+    FBuilder: IConfigurationBuilder;
+  public
+    constructor Create(const ABuilder: IConfigurationBuilder);
+    class function New: TDextConfiguration; static;
+
+    function Add(const ASource: IConfigurationSource): TDextConfiguration;
+    function AddValues(const AValues: array of TPair<string, string>): TDextConfiguration;
+    function Build: IConfigurationRoot;
+    function Unwrap: IConfigurationBuilder;
+  end;
+
   /// <summary>
   ///   Static helper for configuration paths
   /// </summary>
@@ -399,6 +431,88 @@ begin
   finally
     Providers.Free;
   end;
+end;
+
+{ TDextConfiguration }
+
+constructor TDextConfiguration.Create(const ABuilder: IConfigurationBuilder);
+begin
+  FBuilder := ABuilder;
+end;
+
+class function TDextConfiguration.New: TDextConfiguration;
+begin
+  Result := TDextConfiguration.Create(TConfigurationBuilder.Create);
+end;
+
+function TDextConfiguration.Add(const ASource: IConfigurationSource): TDextConfiguration;
+begin
+  FBuilder.Add(ASource);
+  Result := Self;
+end;
+
+function TDextConfiguration.AddValues(const AValues: array of TPair<string, string>): TDextConfiguration;
+begin
+  Result := Add(TMemoryConfigurationSource.Create(AValues));
+end;
+
+function TDextConfiguration.Build: IConfigurationRoot;
+begin
+  Result := FBuilder.Build;
+end;
+
+function TDextConfiguration.Unwrap: IConfigurationBuilder;
+begin
+  Result := FBuilder;
+end;
+
+{ TMemoryConfigurationProvider }
+
+constructor TMemoryConfigurationProvider.Create(Data: TDictionary<string, string>);
+begin
+  inherited Create;
+  if Data <> nil then
+  begin
+    for var Pair in Data do
+      FData.Add(Pair.Key, Pair.Value);
+  end;
+end;
+
+procedure TMemoryConfigurationProvider.Load;
+begin
+  // Already loaded in constructor
+end;
+
+{ TMemoryConfigurationSource }
+
+constructor TMemoryConfigurationSource.Create(Data: TEnumerable<TPair<string, string>>);
+begin
+  inherited Create;
+  FData := TDictionary<string, string>.Create;
+  if Data <> nil then
+  begin
+    for var Pair in Data do
+      FData.Add(Pair.Key, Pair.Value);
+  end;
+end;
+
+constructor TMemoryConfigurationSource.Create(const Data: array of TPair<string, string>);
+begin
+  inherited Create;
+  FData := TDictionary<string, string>.Create;
+  for var Pair in Data do
+    FData.Add(Pair.Key, Pair.Value);
+end;
+
+destructor TMemoryConfigurationSource.Destroy;
+begin
+  FData.Free;
+  inherited;
+end;
+
+function TMemoryConfigurationSource.Build(Builder: IConfigurationBuilder): IConfigurationProvider;
+begin
+  Result := TMemoryConfigurationProvider.Create(FData);
 end;
 
 { TConfigurationPath }

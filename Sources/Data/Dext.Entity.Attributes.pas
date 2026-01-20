@@ -39,7 +39,8 @@ type
   private
     FName: string;
   public
-    constructor Create(const AName: string);
+    constructor Create; overload;
+    constructor Create(const AName: string); overload;
     property Name: string read FName;
   end;
 
@@ -122,6 +123,20 @@ type
   ///   The property must be of an integer type.
   /// </summary>
   VersionAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a property as an automatic Creation Timestamp.
+  ///   The ORM will set this field to the current date/time on Insert.
+  /// </summary>
+  CreatedAtAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a property as an automatic Update Timestamp.
+  ///   The ORM will set this field to the current date/time on Insert and Update.
+  /// </summary>
+  UpdatedAtAttribute = class(TCustomAttribute)
   end;
 
   /// <summary>
@@ -239,6 +254,11 @@ type
 implementation
 
 { TableAttribute }
+
+constructor TableAttribute.Create;
+begin
+  FName := '';
+end;
 
 constructor TableAttribute.Create(const AName: string);
 begin

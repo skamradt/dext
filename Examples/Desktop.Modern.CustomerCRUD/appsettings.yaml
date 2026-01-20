@@ -1,0 +1,10 @@
+Logging:
+  LogLevel: Information
+
+Database:
+  DriverName: SQLite
+  Params:
+    Database: customers.db
+  Naming: snake_case
+  Pooling: true
+  PoolMax: 20

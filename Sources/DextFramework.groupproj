@@ -27,6 +27,21 @@
         <Projects Include="..\Apps\CLI\DextTool.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\Desktop.Modern.CustomerCRUD\DesktopModernCustomerCRUD.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\Web.DatabaseAsApi\Web.DatabaseAsApi.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Examples\Desktop.MVU.CounterFrame\DesktopMVUCounterFrame.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -107,14 +122,59 @@
     <Target Name="DextTool:Make">
         <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Orm_EntityDemo">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj"/>
+    </Target>
+    <Target Name="Orm_EntityDemo:Clean">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Orm_EntityDemo:Make">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DesktopModernCustomerCRUD">
+        <MSBuild Projects="..\Examples\Desktop.Modern.CustomerCRUD\DesktopModernCustomerCRUD.dproj"/>
+    </Target>
+    <Target Name="DesktopModernCustomerCRUD:Clean">
+        <MSBuild Projects="..\Examples\Desktop.Modern.CustomerCRUD\DesktopModernCustomerCRUD.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DesktopModernCustomerCRUD:Make">
+        <MSBuild Projects="..\Examples\Desktop.Modern.CustomerCRUD\DesktopModernCustomerCRUD.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin">
+        <MSBuild Projects="..\Examples\Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin:Clean">
+        <MSBuild Projects="..\Examples\Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin:Make">
+        <MSBuild Projects="..\Examples\Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_DatabaseAsApi">
+        <MSBuild Projects="..\Examples\Web.DatabaseAsApi\Web.DatabaseAsApi.dproj"/>
+    </Target>
+    <Target Name="Web_DatabaseAsApi:Clean">
+        <MSBuild Projects="..\Examples\Web.DatabaseAsApi\Web.DatabaseAsApi.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_DatabaseAsApi:Make">
+        <MSBuild Projects="..\Examples\Web.DatabaseAsApi\Web.DatabaseAsApi.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DesktopMVUCounterFrame">
+        <MSBuild Projects="..\Examples\Desktop.MVU.CounterFrame\DesktopMVUCounterFrame.dproj"/>
+    </Target>
+    <Target Name="DesktopMVUCounterFrame:Clean">
+        <MSBuild Projects="..\Examples\Desktop.MVU.CounterFrame\DesktopMVUCounterFrame.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DesktopMVUCounterFrame:Make">
+        <MSBuild Projects="..\Examples\Desktop.MVU.CounterFrame\DesktopMVUCounterFrame.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;DextTool"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;DextTool;Orm_EntityDemo;DesktopModernCustomerCRUD;Web_Dext_Starter_Admin;Web_DatabaseAsApi;DesktopMVUCounterFrame"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;DextTool:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;DextTool:Clean;Orm_EntityDemo:Clean;DesktopModernCustomerCRUD:Clean;Web_Dext_Starter_Admin:Clean;Web_DatabaseAsApi:Clean;DesktopMVUCounterFrame:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;DextTool:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;DextTool:Make;Orm_EntityDemo:Make;DesktopModernCustomerCRUD:Make;Web_Dext_Starter_Admin:Make;Web_DatabaseAsApi:Make;DesktopMVUCounterFrame:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -14,6 +14,7 @@ uses
   Dext.Types.Lazy,
   Dext.DI.Interfaces,
   Dext.DI.Core,
+  Dext.Configuration.Interfaces,
   // {BEGIN_DEXT_USES}
   // Generated Uses
   Dext.Entity.Attributes,
@@ -48,7 +49,8 @@ uses
   Dext.Entity.Tenancy,
   Dext.Entity.TypeConverters,
   Dext.Entity.TypeSystem,
-  Dext.Specifications.SQL.Generator
+  Dext.Specifications.SQL.Generator,
+  Dext.Validation
   // {END_DEXT_USES}
   ;
 
@@ -80,6 +82,9 @@ type
   DiscriminatorValueAttribute = Dext.Entity.Attributes.DiscriminatorValueAttribute;
   DbTypeAttribute = Dext.Entity.Attributes.DbTypeAttribute;
   TypeConverterAttribute = Dext.Entity.Attributes.TypeConverterAttribute;
+  CreatedAtAttribute = Dext.Entity.Attributes.CreatedAtAttribute;
+  UpdatedAtAttribute = Dext.Entity.Attributes.UpdatedAtAttribute;
+  EmailAddressAttribute = Dext.Validation.EmailAddressAttribute;
 
   // Dext.Entity.Cache
   TSQLCache = Dext.Entity.Cache.TSQLCache;
@@ -102,10 +107,6 @@ type
   IReferenceEntry = Dext.Entity.Core.IReferenceEntry;
   IEntityEntry = Dext.Entity.Core.IEntityEntry;
   IDbContext = Dext.Entity.Core.IDbContext;
-  // IDbSet<T> = Dext.Entity.Core.IDbSet<T>;
-
-  // Dext.Entity.DbSet
-  // TDbSet<T> = Dext.Entity.DbSet.TDbSet<T>;
 
   // Dext.Entity.Dialects
   TDatabaseDialect = Dext.Entity.Dialects.TDatabaseDialect;
@@ -234,10 +235,7 @@ type
   Build = Dext.Entity.Prototype.Build;
 
   // Dext.Entity.Query
-  // IPagedResult<T> = Dext.Entity.Query.IPagedResult<T>;
-  // TPagedResult<T> = Dext.Entity.Query.TPagedResult<T>;
   // TQueryIterator<T> = Dext.Entity.Query.TQueryIterator<T>;
-  // TFluentQuery<T> = Dext.Entity.Query.TFluentQuery<T>;
   // TSpecificationQueryIterator<T> = Dext.Entity.Query.TSpecificationQueryIterator<T>;
   // TProjectingIterator<T> = Dext.Entity.Query.TProjectingIterator<T>;
   // TFilteringIterator<T> = Dext.Entity.Query.TFilteringIterator<T>;
@@ -380,7 +378,12 @@ type
     /// <summary>
     ///   Registers a DbContext with the dependency injection container.
     /// </summary>
-    function AddDbContext<T: TDbContext>(Config: TProc<TDbContextOptions>): TDextServices;
+    function AddDbContext<T: TDbContext>(Config: TProc<TDbContextOptions>): TDextServices; overload;
+    
+    /// <summary>
+    ///   Registers a DbContext with configuration binding.
+    /// </summary>
+    function AddDbContext<T: TDbContext>(const AConfig: IConfigurationSection): TDextServices; overload;
   end;
 
   TPersistence = class
@@ -395,6 +398,7 @@ implementation
 
 uses
   System.Rtti,
+  Dext.Configuration.Binder,
   Dext.Specifications.OrderBy; // Added for IServiceProvider, TServiceType
 
 { TDextPersistenceServicesHelper }
@@ -403,6 +407,16 @@ function TDextPersistenceServicesHelper.AddDbContext<T>(Config: TProc<TDbContext
 begin
   TPersistence.AddDbContext<T>(Self.Unwrap, Config);
   Result := Self;
+end;
+
+function TDextPersistenceServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
+begin
+  Result := AddDbContext<T>(
+    procedure(Options: TDbContextOptions)
+    begin
+      TConfigurationBinder.Bind(AConfig, Options);
+    end
+  );
 end;
 
 { TPersistence }

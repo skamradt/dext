@@ -42,6 +42,7 @@ type
   private
     FPath: string;
     FOptional: Boolean;
+    function ResolveFilePath: string;
     
     procedure ProcessNode(const Prefix: string; Node: IDextJsonNode);
     procedure ProcessObject(const Prefix: string; Obj: IDextJsonObject);
@@ -58,6 +59,22 @@ type
   public
     constructor Create(const Path: string; Optional: Boolean = False);
     function Build(Builder: IConfigurationBuilder): IConfigurationProvider;
+  end;
+
+  /// <summary>
+  ///   Fluent builder for JSON configuration.
+  /// </summary>
+  TJsonConfigurationBuilder = record
+  public
+    class function Create: TDextConfiguration; static;
+  end;
+
+  /// <summary>
+  ///   Extensions for TDextConfiguration to support JSON.
+  /// </summary>
+  TDextConfigurationJsonExtensions = record helper for TDextConfiguration
+  public
+    function AddJsonFile(const Path: string; Optional: Boolean = False): TDextConfiguration;
   end;
 
 implementation
@@ -89,8 +106,11 @@ procedure TJsonConfigurationProvider.Load;
 var
   JsonContent: string;
   RootNode: IDextJsonNode;
+  ResolvedPath: string;
 begin
-  if not FileExists(FPath) then
+  ResolvedPath := ResolveFilePath;
+
+  if ResolvedPath = '' then
   begin
     if FOptional then
       Exit;
@@ -98,7 +118,7 @@ begin
   end;
 
   try
-    JsonContent := TFile.ReadAllText(FPath, TEncoding.UTF8);
+    JsonContent := TFile.ReadAllText(ResolvedPath, TEncoding.UTF8);
     if JsonContent.Trim = '' then
       Exit;
 
@@ -110,6 +130,18 @@ begin
     on E: Exception do
       raise EConfigurationException.CreateFmt('Error loading JSON configuration from %s: %s', [FPath, E.Message]);
   end;
+end;
+
+function TJsonConfigurationProvider.ResolveFilePath: string;
+begin
+  if FileExists(FPath) then
+    Exit(FPath);
+
+  Result := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), FPath);
+  if FileExists(Result) then
+    Exit;
+
+  Result := '';
 end;
 
 procedure TJsonConfigurationProvider.ProcessNode(const Prefix: string; Node: IDextJsonNode);
@@ -174,6 +206,20 @@ begin
       
     ProcessNode(ChildPrefix, ChildNode);
   end;
+end;
+
+{ TJsonConfigurationBuilder }
+
+class function TJsonConfigurationBuilder.Create: TDextConfiguration;
+begin
+  Result := TDextConfiguration.New;
+end;
+
+{ TDextConfigurationJsonExtensions }
+
+function TDextConfigurationJsonExtensions.AddJsonFile(const Path: string; Optional: Boolean): TDextConfiguration;
+begin
+  Result := Add(TJsonConfigurationSource.Create(Path, Optional));
 end;
 
 end.

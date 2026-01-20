@@ -155,6 +155,7 @@ type
 implementation
 
 uses
+  FireDAC.ConsoleUI.Wait,
   Dext.Utils;
 
 { TFireDACTransaction }

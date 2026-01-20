@@ -422,6 +422,7 @@ implementation
 uses
   System.DateUtils,
   System.Variants,
+  Dext.Core.Reflection,
   Dext.Core.DateUtils,
   Dext.Json.Driver.DextJsonDataObjects; // Default driver
 
@@ -780,7 +781,6 @@ var
   Prop: TRttiProperty;
   PropName: string;
   ActualPropName: string;
-  PropValue: TValue;
   Found: Boolean;
   Instance: TObject;
   CreateMethod: TRttiMethod;
@@ -847,186 +847,46 @@ begin
       if not Found then Continue;
 
       // Deserialization Logic (Similar to DeserializeRecord but for Properties)
-      case Prop.PropertyType.TypeKind of
-        tkInteger:
-          PropValue := TValue.From<Integer>(AJson.GetInteger(ActualPropName));
-          
-        tkInt64:
-          PropValue := TValue.From<Int64>(AJson.GetInt64(ActualPropName));
-          
-        tkFloat:
-          begin
-            var Node := AJson.GetNode(ActualPropName);
-            if (Node <> nil) and (Node.GetNodeType = jntString) then
+      var Node := AJson.GetNode(ActualPropName);
+      if Node <> nil then
+      begin
+        var Val: TValue;
+        case Node.GetNodeType of
+          jntString: Val := TValue.From<string>(Node.AsString);
+          jntNumber: 
             begin
-              var DtStr := Node.AsString;
-              var DtVal: TDateTime;
-              if TryParseCommonDate(DtStr, DtVal) then
-                PropValue := TValue.From<TDateTime>(DtVal)
+              if (Prop.PropertyType.Handle = TypeInfo(Integer)) then
+                Val := TValue.From<Integer>(Node.AsInteger)
+              else if (Prop.PropertyType.Handle = TypeInfo(Int64)) then
+                Val := TValue.From<Int64>(Node.AsInt64)
               else
-              begin
-                try
-                  PropValue := TValue.From<Double>(Node.AsDouble);
-                except
-                  PropValue := TValue.From<Double>(0);
-                end;
-              end;
-            end
-            else if (Prop.PropertyType.Handle = TypeInfo(TDateTime)) or 
-                    (Prop.PropertyType.Handle = TypeInfo(TDate)) or 
-                    (Prop.PropertyType.Handle = TypeInfo(TTime)) then
-            begin
-              var DtStr := AJson.GetString(ActualPropName);
-              if DtStr = '' then
-                PropValue := TValue.From<Double>(0)
-              else
-              begin
-                var DtVal: TDateTime;
-                if TryParseCommonDate(DtStr, DtVal) then
-                  PropValue := TValue.From<TDateTime>(DtVal)
-                else
-                begin
-                   try
-                     PropValue := TValue.From<Double>(AJson.GetDouble(ActualPropName));
-                   except
-                     PropValue := TValue.From<Double>(0);
-                   end;
-                end;
-              end;
-            end
-            else
-            begin
-              try
-                PropValue := TValue.From<Double>(AJson.GetDouble(ActualPropName));
-              except
-                PropValue := TValue.From<Double>(0);
-              end;
+                Val := TValue.From<Double>(Node.AsDouble);
             end;
-          end;
-          
-        tkString, tkLString, tkWString, tkUString:
-          PropValue := TValue.From<string>(AJson.GetString(ActualPropName));
-          
-        tkEnumeration:
-           if Prop.PropertyType.Handle = TypeInfo(Boolean) then
-             PropValue := TValue.From<Boolean>(AJson.GetBoolean(ActualPropName))
-           else
-           begin
-              // Enum handling
-              var EnumStr := AJson.GetString(ActualPropName);
-               if EnumStr <> '' then
-                 PropValue := TValue.FromOrdinal(Prop.PropertyType.Handle, GetEnumValue(Prop.PropertyType.Handle, EnumStr))
-               else
-                 PropValue := TValue.FromOrdinal(Prop.PropertyType.Handle, AJson.GetInteger(ActualPropName));
-           end;
-
-        tkClass:
-           begin
-              // Use field type handle
-              if IsListType(Prop.PropertyType.Handle) then
-              begin
-                 var NestedArr := AJson.GetArray(ActualPropName);
-                 if NestedArr <> nil then
-                   PropValue := DeserializeList(NestedArr, Prop.PropertyType.Handle)
-                 else
-                   PropValue := TValue.Empty;
-              end
+          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+          jntObject: 
+            begin
+              if (Prop.PropertyType.TypeKind = tkClass) then
+                Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
+              else if (Prop.PropertyType.TypeKind = tkRecord) then
+                Val := DeserializeRecord(Node as IDextJsonObject, Prop.PropertyType.Handle)
               else
-              begin
-                 var NestedObj := AJson.GetObject(ActualPropName);
-                 if NestedObj <> nil then
-                   PropValue := DeserializeObject(NestedObj, Prop.PropertyType.Handle)
-                 else
-                   PropValue := TValue.Empty;
-              end;
-           end;
-
-        tkRecord:
-           begin
-              if Prop.PropertyType.Handle = TypeInfo(TGUID) then
-              begin
-                PropValue := TValue.From<TGUID>(StringToGUID(AJson.GetString(ActualPropName)));
-              end
-              else if Prop.PropertyType.Handle = TypeInfo(TUUID) then
-              begin
-                PropValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(ActualPropName)));
-              end
+                Val := TValue.Empty;
+            end;
+          jntArray: 
+            begin
+              if IsArrayType(Prop.PropertyType.Handle) then
+                Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
+              else if IsListType(Prop.PropertyType.Handle) then
+                Val := DeserializeList(Node as IDextJsonArray, Prop.PropertyType.Handle)
               else
-              begin
-                // Handle Prop<T> transparent deserialization
-                // If it's a Prop<T>, the JSON will have the scalar value (e.g. 1999.99), not a nested object {"FValue": 1999.99}.
-                // Handle Prop<T> transparent deserialization
-                var TypeName := Prop.PropertyType.Name;
-                var FieldFValue := Prop.PropertyType.GetField('FValue');
-                var PropValueProp := Prop.PropertyType.GetProperty('Value');
-                
-                if (TypeName.Contains('Prop<') or 
-                    SameText(TypeName, 'StringType') or
-                    SameText(TypeName, 'CurrencyType') or
-                    SameText(TypeName, 'BoolType') or
-                    SameText(TypeName, 'IntType') or
-                    SameText(TypeName, 'Int64Type') or
-                    SameText(TypeName, 'FloatType') or
-                    SameText(TypeName, 'DateType') or
-                    SameText(TypeName, 'TimeType') or
-                    SameText(TypeName, 'DateTimeType')
-                   ) and ((FieldFValue <> nil) or (PropValueProp <> nil)) then
-                begin
-                   // It's a Smart Property!
-                   // Determine Inner Type
-                   var InnerType: TRttiType;
-                   if FieldFValue <> nil then
-                     InnerType := FieldFValue.FieldType
-                   else
-                     InnerType := PropValueProp.PropertyType;
-                     
-                   var InnerTypeKind := InnerType.TypeKind;
-                   var InnerValue: TValue;
-                   
-                   case InnerTypeKind of
-                     tkInteger: InnerValue := TValue.From<Integer>(AJson.GetInteger(ActualPropName));
-                     tkInt64:   InnerValue := TValue.From<Int64>(AJson.GetInt64(ActualPropName));
-                     tkFloat:   InnerValue := TValue.From<Double>(AJson.GetDouble(ActualPropName));
-                     tkString, tkUString, tkLString, tkWString: 
-                                InnerValue := TValue.From<string>(AJson.GetString(ActualPropName));
-                     tkEnumeration:
-                        if InnerType.Handle = TypeInfo(Boolean) then
-                          InnerValue := TValue.From<Boolean>(AJson.GetBoolean(ActualPropName))
-                        else
-                          InnerValue := TValue.FromOrdinal(InnerType.Handle, AJson.GetInteger(ActualPropName));
-                     else
-                        InnerValue := TValue.Empty;
-                   end;
-                   
-                   if not InnerValue.IsEmpty then
-                   begin
-                      // Initialize the record
-                      TValue.Make(nil, Prop.PropertyType.Handle, PropValue);
-                      
-                      if FieldFValue <> nil then
-                        FieldFValue.SetValue(PropValue.GetReferenceToRawData, InnerValue)
-                      else
-                        PropValueProp.SetValue(PropValue.GetReferenceToRawData, InnerValue);
-                   end
-                   else
-                      // If value is missing in JSON (e.g. null), use Empty (default record)
-                      // TValue.Make(nil... creates default initialized record.
-                      TValue.Make(nil, Prop.PropertyType.Handle, PropValue);
-                end
-                else
-                begin
-                    var NestedObj := AJson.GetObject(ActualPropName);
-                    if NestedObj <> nil then
-                      PropValue := DeserializeRecord(NestedObj, Prop.PropertyType.Handle)
-                    else
-                      PropValue := TValue.Empty;
-                end;
-              end;
-           end;
+                Val := TValue.Empty;
+            end;
+          else Val := TValue.Empty;
+        end;
+        
+        if not Val.IsEmpty then
+          TReflection.SetValue(Instance, Prop, Val);
       end;
-
-      if not PropValue.IsEmpty then
-        Prop.SetValue(Instance, PropValue);
     end;
 
   finally
@@ -1126,182 +986,46 @@ begin
         Continue;
       end;
 
-      case Field.FieldType.TypeKind of
-        tkInteger:
-          FieldValue := TValue.From<Integer>(AJson.GetInteger(ActualFieldName));
-
-        tkInt64:
-          FieldValue := TValue.From<Int64>(AJson.GetInt64(ActualFieldName));
-
-        tkFloat:
-          begin
-            var Node := AJson.GetNode(ActualFieldName);
-            if (Node <> nil) and (Node.GetNodeType = jntString) then
+      var Node := AJson.GetNode(ActualFieldName);
+      if Node <> nil then
+      begin
+        var Val: TValue;
+        case Node.GetNodeType of
+          jntString: Val := TValue.From<string>(Node.AsString);
+          jntNumber:
             begin
-              var DateStr := Node.AsString;
-              var DateValue: TDateTime;
-              if TryParseCommonDate(DateStr, DateValue) then
-                FieldValue := TValue.From<TDateTime>(DateValue)
+              if (Field.FieldType.Handle = TypeInfo(Integer)) then
+                Val := TValue.From<Integer>(Node.AsInteger)
+              else if (Field.FieldType.Handle = TypeInfo(Int64)) then
+                Val := TValue.From<Int64>(Node.AsInt64)
               else
-              begin
-                // Fallback: try as double, but catch exception
-                try
-                  FieldValue := TValue.From<Double>(Node.AsDouble);
-                except
-                  FieldValue := TValue.From<Double>(0);
-                end;
-              end;
-            end
-            else if (Field.FieldType.Handle = TypeInfo(TDateTime)) or 
-                    (Field.FieldType.Handle = TypeInfo(TDate)) or 
-                    (Field.FieldType.Handle = TypeInfo(TTime)) then
-            begin
-              var DateStr := AJson.GetString(ActualFieldName);
-              if DateStr = '' then
-                FieldValue := TValue.From<Double>(0)
-              else
-              begin
-                var DateValue: TDateTime;
-                if TryParseCommonDate(DateStr, DateValue) then
-                  FieldValue := TValue.From<TDateTime>(DateValue)
-                else
-                begin
-                   try
-                     FieldValue := TValue.From<Double>(AJson.GetDouble(ActualFieldName));
-                   except
-                     FieldValue := TValue.From<Double>(0);
-                   end;
-                end;
-              end;
-            end
-            else
-            begin
-              try
-                FieldValue := TValue.From<Double>(AJson.GetDouble(ActualFieldName));
-              except
-                FieldValue := TValue.From<Double>(0);
-              end;
+                Val := TValue.From<Double>(Node.AsDouble);
             end;
-          end;
-
-        tkString, tkLString, tkWString, tkUString:
-          begin
-            var ForceNumber := False;
-            for var Attr in Field.GetAttributes do
-              if Attr is JsonNumberAttribute then
-                ForceNumber := True;
-
-            if ForceNumber then
-            begin
-              // We need to get the raw string representation or convert
-              // Since we are abstracted, we can just get string and convert manually if needed,
-              // or trust GetString returns the value.
-              // But wait, if it's a number in JSON, GetString should return string representation.
-              // Our adapters should handle this.
-              FieldValue := TValue.From<string>(AJson.GetString(ActualFieldName));
-            end
-            else
-            begin
-              FieldValue := TValue.From<string>(AJson.GetString(ActualFieldName));
-            end;
-          end;
-
-        tkEnumeration:
-          begin
-            if Field.FieldType.Handle = TypeInfo(Boolean) then
-              FieldValue := TValue.From<Boolean>(AJson.GetBoolean(ActualFieldName))
-            else
-            begin
-              case FSettings.EnumStyle of
-                TDextEnumStyle.AsString:
-                  begin
-                    var EnumName := AJson.GetString(ActualFieldName);
-                    if EnumName <> '' then
-                      FieldValue := TValue.FromOrdinal(Field.FieldType.Handle,
-                        GetEnumValue(Field.FieldType.Handle, EnumName))
-                    else
-                      FieldValue := TValue.FromOrdinal(Field.FieldType.Handle, AJson.GetInteger(ActualFieldName));
-                  end;
-                TDextEnumStyle.AsNumber:
-                  FieldValue := TValue.FromOrdinal(Field.FieldType.Handle, AJson.GetInteger(ActualFieldName));
-              end;
-            end;
-          end;
-
-        tkRecord:
-          begin
-            // Handle Prop<T> transparent deserialization
-            // If it's a Prop<T>, the JSON will have the scalar value (e.g. 1999.99), not a nested object {"FValue": 1999.99}.
-            var TypeName := Field.FieldType.Name;
-            var FieldFValue := Field.FieldType.GetField('FValue');
-            
-            if (FieldFValue <> nil) and (TypeName.Contains('Prop<') or (Field.FieldType.GetProperty('Value') <> nil)) then
-            begin
-               // It's a Smart Property!
-               // Read the value as the INNER type (tkFloat, tkInteger, etc)
-               var InnerTypeKind := FieldFValue.FieldType.TypeKind;
-               var InnerValue: TValue;
-               
-               case InnerTypeKind of
-                 tkInteger: InnerValue := TValue.From<Integer>(AJson.GetInteger(ActualFieldName));
-                 tkInt64:   InnerValue := TValue.From<Int64>(AJson.GetInt64(ActualFieldName));
-                 tkFloat:   InnerValue := TValue.From<Double>(AJson.GetDouble(ActualFieldName));
-                 tkString, tkUString, tkLString, tkWString: 
-                            InnerValue := TValue.From<string>(AJson.GetString(ActualFieldName));
-                 tkEnumeration:
-                    if FieldFValue.FieldType.Handle = TypeInfo(Boolean) then
-                      InnerValue := TValue.From<Boolean>(AJson.GetBoolean(ActualFieldName))
-                    else
-                      InnerValue := TValue.FromOrdinal(FieldFValue.FieldType.Handle, AJson.GetInteger(ActualFieldName)); // Simple enum support
-                 else
-                    // Fallback to empty if unknown inner type
-                    InnerValue := TValue.Empty;
-               end;
-               
-               if not InnerValue.IsEmpty then
-               begin
-                  // Initialize the record
-                  TValue.Make(nil, Field.FieldType.Handle, FieldValue);
-                  // Set FValue on the new record instance
-                  FieldFValue.SetValue(FieldValue.GetReferenceToRawData, InnerValue);
-               end
-               else
-                  FieldValue := TValue.Empty;
-            end
-            else
-            begin
-                // Standard Record Deserialization (Expects Object)
-                var NestedJson := AJson.GetObject(ActualFieldName);
-                if NestedJson <> nil then
-                  FieldValue := DeserializeRecord(NestedJson, Field.FieldType.Handle)
-                else
-                  FieldValue := TValue.Empty;
-            end;
-          end;
-        tkClass:
-          begin
-             // Check if it is a list
-             if IsListType(Field.FieldType.Handle) then
+          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+          jntObject: 
              begin
-               var NestedArr := AJson.GetArray(ActualFieldName);
-               if NestedArr <> nil then
-                 FieldValue := DeserializeList(NestedArr, Field.FieldType.Handle)
+               if (Field.FieldType.TypeKind = tkClass) then
+                 Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
+               else if (Field.FieldType.TypeKind = tkRecord) then
+                 Val := DeserializeRecord(Node as IDextJsonObject, Field.FieldType.Handle)
                else
-                 FieldValue := TValue.Empty;
-             end
-             else
-             begin
-               var NestedObj := AJson.GetObject(ActualFieldName);
-               if NestedObj <> nil then
-                 FieldValue := DeserializeObject(NestedObj, Field.FieldType.Handle)
-               else
-                 FieldValue := TValue.Empty;
+                 Val := TValue.Empty;
              end;
-          end;
-      end;
+          jntArray: 
+             begin
+               if IsArrayType(Field.FieldType.Handle) then
+                 Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
+               else if IsListType(Field.FieldType.Handle) then
+                 Val := DeserializeList(Node as IDextJsonArray, Field.FieldType.Handle)
+               else
+                 Val := TValue.Empty;
+             end;
+          else Val := TValue.Empty;
+        end;
 
-      if not FieldValue.IsEmpty then
-        Field.SetValue(Result.GetReferenceToRawData, FieldValue);
+        if not Val.IsEmpty then
+          TReflection.SetValue(Result.GetReferenceToRawData, Field, Val);
+      end;
     end;
   finally
     Context.Free;

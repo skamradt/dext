@@ -459,15 +459,42 @@ begin
      Props := Typ.GetProperties;
      for Prop in Props do
      begin
-       // ignore any properties that are [NotMapped].  Only necessary if the
-       // property returns an interface type and calling the getter would
-       // be undesireable.
+       // ignore any properties that are [NotMapped].
        if Prop.HasAttribute<NotMappedAttribute> then
          continue;
-       // assume that properties that hold an interface are likely models so
-       // invoke the getter which will auto register any Entities<T>
+
+       // assume that properties that hold an interface are likely models (IDbSet<T>)
        if Prop.IsReadable and (Prop.PropertyType.TypeKind = tkInterface) then
-         Prop.GetValue(Self);
+       begin
+         // Capture the property name for naming discovery (e.g. "Customers" -> "customers")
+         // We need to find the generic type T from IDbSet<T>
+         var IntfType := Prop.PropertyType;
+         if IntfType.Name.StartsWith('IDbSet<') then
+         begin
+            // This is a simple heuristic. Better: check GUID or use RTTI to find the entity type.
+            // But usually, the property name is exactly what we want as a table name placeholder.
+            
+            // Try to extract T from IDbSet<T> RTTI if possible, 
+            // but even simpler: when the getter is called by Prop.GetValue(Self), 
+            // Entities<T> is called, which registers the type. 
+            // We just need to associate this specific property name with the type T.
+            
+            // Invoke the getter to ensure Entities<T> is called and the DbSet is created/cached
+            var Val := Prop.GetValue(Self);
+            
+            // After invocation, the DbSet for T is in FCache. 
+            // We can try to peek into the IDbSet to see its Entity Type, 
+            // or we use a more robust way to register the association.
+            
+            var DbSet: IDbSet;
+            if (not Val.IsEmpty) and Supports(Val.AsInterface, IDbSet, DbSet) then
+            begin
+               // Register this property name as the "Discovery Name" for this entity type
+               // TModelBuilder will use it if no explicit table name is provided.
+               TModelBuilder.Instance.RegisterDiscoveryName(DbSet.EntityType, Prop.Name);
+            end;
+         end;
+       end;
      end;
    finally
       Ctx.free;

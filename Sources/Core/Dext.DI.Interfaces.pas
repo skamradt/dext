@@ -137,15 +137,27 @@ type
     class operator Implicit(const A: TDextServices): IServiceCollection;
 
     // Generic Overloads for Interface + Implementation pairs
-    function AddSingleton<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
-    function AddTransient<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
-    function AddScoped<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
+    function AddSingleton<TService: IInterface; TImplementation: class>: TDextServices; overload;
+    function AddSingleton<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
+    
+    function AddTransient<TService: IInterface; TImplementation: class>: TDextServices; overload;
+    function AddTransient<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
+    
+    function AddScoped<TService: IInterface; TImplementation: class>: TDextServices; overload;
+    function AddScoped<TService: IInterface; TImplementation: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
+
+    // Generic Overloads for Instance registration
+    function AddSingleton<T: IInterface>(const AInstance: T): TDextServices; overload;
 
     // Generic Overloads for Class-only registration (no interface)
-    // Usage: Services.AddSingleton<TMyService>
-    function AddSingleton<T: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
-    function AddTransient<T: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
-    function AddScoped<T: class>(const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
+    function AddSingleton<T: class>: TDextServices; overload;
+    function AddSingleton<T: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
+    
+    function AddTransient<T: class>: TDextServices; overload;
+    function AddTransient<T: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
+    
+    function AddScoped<T: class>: TDextServices; overload;
+    function AddScoped<T: class>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices; overload;
 
     // Non-generic forwarding
     function AddSingleton(const AServiceType: TServiceType; const AImplementationClass: TClass; const AFactory: TFunc<IServiceProvider, TObject> = nil): TDextServices; overload;
@@ -308,6 +320,11 @@ begin
   Result := A.FServices;
 end;
 
+function TDextServices.AddSingleton<TService, TImplementation>: TDextServices;
+begin
+  Result := AddSingleton<TService, TImplementation>(nil);
+end;
+
 function TDextServices.AddSingleton<TService, TImplementation>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
 var
   Guid: TGUID;
@@ -315,6 +332,20 @@ begin
   Guid := GetTypeData(TypeInfo(TService))^.Guid;
   FServices.AddSingleton(TServiceType.FromInterface(Guid), TImplementation, AFactory);
   Result := Self;
+end;
+
+function TDextServices.AddSingleton<T>(const AInstance: T): TDextServices;
+var
+  Guid: TGUID;
+begin
+  Guid := GetTypeData(TypeInfo(T))^.Guid;
+  FServices.AddSingleton(TServiceType.FromInterface(Guid), AInstance as TObject);
+  Result := Self;
+end;
+
+function TDextServices.AddTransient<TService, TImplementation>: TDextServices;
+begin
+  Result := AddTransient<TService, TImplementation>(nil);
 end;
 
 function TDextServices.AddTransient<TService, TImplementation>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
@@ -326,6 +357,11 @@ begin
   Result := Self;
 end;
 
+function TDextServices.AddScoped<TService, TImplementation>: TDextServices;
+begin
+  Result := AddScoped<TService, TImplementation>(nil);
+end;
+
 function TDextServices.AddScoped<TService, TImplementation>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
 var
   Guid: TGUID;
@@ -335,16 +371,31 @@ begin
   Result := Self;
 end;
 
+function TDextServices.AddSingleton<T>: TDextServices;
+begin
+  Result := AddSingleton<T>(nil);
+end;
+
 function TDextServices.AddSingleton<T>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
 begin
   FServices.AddSingleton(TServiceType.FromClass(T), T, AFactory);
   Result := Self;
 end;
 
+function TDextServices.AddTransient<T>: TDextServices;
+begin
+  Result := AddTransient<T>(nil);
+end;
+
 function TDextServices.AddTransient<T>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
 begin
   FServices.AddTransient(TServiceType.FromClass(T), T, AFactory);
   Result := Self;
+end;
+
+function TDextServices.AddScoped<T>: TDextServices;
+begin
+  Result := AddScoped<T>(nil);
 end;
 
 function TDextServices.AddScoped<T>(const AFactory: TFunc<IServiceProvider, TObject>): TDextServices;
