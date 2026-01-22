@@ -209,8 +209,8 @@ Features moved to v1.1 or v2.0:
 - **Scheduled Jobs (CRON)**: Scheduling recurrent tasks (e.g., daily reports, data cleanup).
 
 - **Developer Experience (DevX)**:
-  - **CLI REST Runner**: Support for executing `.http` / `.rest` files via `dext.exe run-requests file.http`. Compatibility with the VS Code/IntelliJ format.
-  - **Fluent REST Client**: High-performance HTTP Client with a fluent API (`Client.Get('url').WithHeader('x', 'y').RetrieveJson<T>`). It will serve as the engine for the CLI Runner and integration tests.
+  - **CLI REST Runner**: ✅ IMPLEMENTED - Support for parsing and executing `.http` / `.rest` files. Parser (`THttpRequestParser`) and Executor (`THttpExecutor`) are ready.
+  - ~~**Fluent REST Client**~~: ✅ IMPLEMENTED - High-performance HTTP Client with fluent API (`TRestClient`).
   - **IDE Integration**: Future plugin to run requests directly from the Delphi IDE editor.
 
 - **Docker Tooling**: `Dockerfile` templates and `dext docker init` command to simplify deployment. (Priority)

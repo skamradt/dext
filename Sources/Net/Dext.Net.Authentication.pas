@@ -91,10 +91,10 @@ end;
 
 function TBasicAuthProvider.GetHeaderValue: string;
 var
-  LAuth: string;
+  Auth: string;
 begin
-  LAuth := FUsername + ':' + FPassword;
-  Result := 'Basic ' + TNetEncoding.Base64.Encode(LAuth).Replace(#13#10, '');
+  Auth := FUsername + ':' + FPassword;
+  Result := 'Basic ' + TNetEncoding.Base64.Encode(Auth).Replace(#13#10, '');
 end;
 
 { TApiKeyAuthProvider }

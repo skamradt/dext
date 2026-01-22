@@ -95,7 +95,6 @@ contains
   Dext.Auth.Middleware in 'Web\Dext.Auth.Middleware.pas',
   Dext.Web.DataApi in 'Web\Dext.Web.DataApi.pas',
   Dext.OpenAPI.Fluent in 'Web\Dext.OpenAPI.Fluent.pas',
-  Dext.Web.StatusCodes in 'Web\Dext.Web.StatusCodes.pas',
   Dext.Auth.BasicAuth in 'Web\Dext.Auth.BasicAuth.pas',
   Dext.Web.ResponseHelper in 'Web\Dext.Web.ResponseHelper.pas';
 

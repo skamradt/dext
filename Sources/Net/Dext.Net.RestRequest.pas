@@ -39,10 +39,10 @@ uses
 type
   { Internal forward declarations }
   IRestRequestData = interface;
-  
+
   /// <summary>
-  ///   Fluent Request Builder for complex REST operations.
-  ///   Uses a record for fluent API and an internal ref-counted class for state memory safety.
+  /// Fluent Request Builder for complex REST operations.
+  /// Uses a record for fluent API and an internal ref-counted class for state memory safety.
   /// </summary>
   TRestRequest = record
   private
@@ -51,7 +51,7 @@ type
     function GetFullUrl: string;
   public
     constructor Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
-    
+
     // Configuration
     function Header(const AName, AValue: string): TRestRequest;
     function QueryParam(const AName, AValue: string): TRestRequest;
@@ -59,7 +59,7 @@ type
     function Body<T: class>(const ABody: T): TRestRequest; overload;
     function JsonBody(const AJson: string): TRestRequest;
     function Cancellation(AToken: ICancellationToken): TRestRequest;
-    
+
     // Execution
     function Execute: TAsyncBuilder<IRestResponse>; overload;
     function Execute<T: class>: TAsyncBuilder<T>; overload;
@@ -77,7 +77,7 @@ type
     function GetBody: TStream;
     function GetToken: ICancellationToken;
     function GetOwnsBody: Boolean;
-    
+
     procedure SetBody(ABody: TStream; AOwns: Boolean);
     procedure SetToken(AToken: ICancellationToken);
     function DetachBody: TStream;
@@ -102,7 +102,7 @@ type
   public
     constructor Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
     destructor Destroy; override;
-    
+
     function GetClient: TRestClient;
     function GetMethod: TDextHttpMethod;
     function GetEndpoint: string;
@@ -111,15 +111,16 @@ type
     function GetBody: TStream;
     function GetToken: ICancellationToken;
     function GetOwnsBody: Boolean;
-    
+
     procedure SetBody(ABody: TStream; AOwns: Boolean);
     procedure SetToken(AToken: ICancellationToken);
     function DetachBody: TStream;
   end;
 
-{ TRestRequestData }
+  { TRestRequestData }
 
-constructor TRestRequestData.Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
+constructor TRestRequestData.Create(AClient: TRestClient; AMethod: TDextHttpMethod;
+  const AEndpoint: string);
 begin
   inherited Create;
   FClient := AClient;
@@ -138,21 +139,58 @@ begin
   inherited;
 end;
 
-function TRestRequestData.GetBody: TStream; begin Result := FBody; end;
-function TRestRequestData.GetClient: TRestClient; begin Result := FClient; end;
-function TRestRequestData.GetEndpoint: string; begin Result := FEndpoint; end;
-function TRestRequestData.GetHeaders: TDictionary<string, string>; begin Result := FHeaders; end;
-function TRestRequestData.GetMethod: TDextHttpMethod; begin Result := FMethod; end;
-function TRestRequestData.GetOwnsBody: Boolean; begin Result := FOwnsBody; end;
-function TRestRequestData.GetQueryParams: TDictionary<string, string>; begin Result := FQueryParams; end;
-function TRestRequestData.GetToken: ICancellationToken; begin Result := FToken; end;
+function TRestRequestData.GetBody: TStream;
+begin
+  Result := FBody;
+end;
+
+function TRestRequestData.GetClient: TRestClient;
+begin
+  Result := FClient;
+end;
+
+function TRestRequestData.GetEndpoint: string;
+begin
+  Result := FEndpoint;
+end;
+
+function TRestRequestData.GetHeaders: TDictionary<string, string>;
+begin
+  Result := FHeaders;
+end;
+
+function TRestRequestData.GetMethod: TDextHttpMethod;
+begin
+  Result := FMethod;
+end;
+
+function TRestRequestData.GetOwnsBody: Boolean;
+begin
+  Result := FOwnsBody;
+end;
+
+function TRestRequestData.GetQueryParams: TDictionary<string, string>;
+begin
+  Result := FQueryParams;
+end;
+
+function TRestRequestData.GetToken: ICancellationToken;
+begin
+  Result := FToken;
+end;
+
 procedure TRestRequestData.SetBody(ABody: TStream; AOwns: Boolean);
 begin
-  if FOwnsBody and Assigned(FBody) and (FBody <> ABody) then FBody.Free;
+  if FOwnsBody and Assigned(FBody) and (FBody <> ABody) then
+    FBody.Free;
   FBody := ABody;
   FOwnsBody := AOwns;
 end;
-procedure TRestRequestData.SetToken(AToken: ICancellationToken); begin FToken := AToken; end;
+
+procedure TRestRequestData.SetToken(AToken: ICancellationToken);
+begin
+  FToken := AToken;
+end;
 
 function TRestRequestData.DetachBody: TStream;
 begin
@@ -163,40 +201,42 @@ end;
 
 { TRestRequest }
 
-constructor TRestRequest.Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
+constructor TRestRequest.Create(AClient: TRestClient; AMethod: TDextHttpMethod;
+  const AEndpoint: string);
 begin
   FData := TRestRequestData.Create(AClient, AMethod, AEndpoint);
 end;
 
 function TRestRequest.GetData: IRestRequestData;
 begin
-  if not Assigned(FData) then 
+  if not Assigned(FData) then
     raise EDextRestException.Create('RestRequest not initialized');
   Result := FData;
 end;
 
 function TRestRequest.GetFullUrl: string;
 var
-  LUrl: string;
-  LFisrt: Boolean;
-  LData: IRestRequestData;
+  Url: string;
+  First: Boolean;
+  Data: IRestRequestData;
 begin
-  LData := GetData;
-  LUrl := LData.GetEndpoint;
-  if LData.GetQueryParams.Count > 0 then
+  Data := GetData;
+  Url := Data.GetEndpoint;
+  if Data.GetQueryParams.Count > 0 then
   begin
-    LFisrt := not LUrl.Contains('?');
-    for var LPair in LData.GetQueryParams do
+    First := not Url.Contains('?');
+    for var Pair in Data.GetQueryParams do
     begin
-      if LFisrt then
-        LUrl := LUrl + '?'
+      if First then
+        Url := Url + '?'
       else
-        LUrl := LUrl + '&';
-      LUrl := LUrl + TNetEncoding.URL.Encode(LPair.Key) + '=' + TNetEncoding.URL.Encode(LPair.Value);
-      LFisrt := False;
+        Url := Url + '&';
+      Url := Url + TNetEncoding.Url.Encode(Pair.Key) + '=' +
+        TNetEncoding.Url.Encode(Pair.Value);
+      First := False;
     end;
   end;
-  Result := LUrl;
+  Result := Url;
 end;
 
 function TRestRequest.Header(const AName, AValue: string): TRestRequest;
@@ -219,10 +259,10 @@ end;
 
 function TRestRequest.Body<T>(const ABody: T): TRestRequest;
 var
-  LJson: string;
+  Json: string;
 begin
-  LJson := TDextJson.Serialize(ABody);
-  Result := JsonBody(LJson);
+  Json := TDextJson.Serialize(ABody);
+  Result := JsonBody(Json);
 end;
 
 function TRestRequest.JsonBody(const AJson: string): TRestRequest;
@@ -240,26 +280,26 @@ end;
 
 function TRestRequest.Execute: TAsyncBuilder<IRestResponse>;
 begin
-  var LData := GetData;
-  var LClient := LData.GetClient;
-  var LBody: TStream;
-  var LOwnsBody := LData.GetOwnsBody;
-  
-  if LOwnsBody then
-    LBody := LData.DetachBody
-  else
-    LBody := LData.GetBody;
-  
-  Result := LClient.ExecuteAsync(LData.GetMethod, GetFullUrl, LBody, LOwnsBody, LData.GetHeaders);
+  var Data := GetData;
+  var Client := Data.GetClient;
+  var Body: TStream;
+  var OwnsBody := Data.GetOwnsBody;
 
-  if Assigned(LData.GetToken) then
-    Result := Result.WithCancellation(LData.GetToken);
+  if OwnsBody then
+    Body := Data.DetachBody
+  else
+    Body := Data.GetBody;
+
+  Result := Client.ExecuteAsync(Data.GetMethod, GetFullUrl, Body, OwnsBody,
+    Data.GetHeaders);
+
+  if Assigned(Data.GetToken) then
+    Result := Result.WithCancellation(Data.GetToken);
 end;
 
 function TRestRequest.ExecuteAsString: TAsyncBuilder<string>;
 begin
-  Result := Execute.ThenBy<string>(
-    function(LResp: IRestResponse): string
+  Result := Execute.ThenBy<string>(function(LResp: IRestResponse): string
     begin
       Result := LResp.ContentString;
     end);
@@ -267,11 +307,11 @@ end;
 
 function TRestRequest.Execute<T>: TAsyncBuilder<T>;
 begin
-  Result := Execute.ThenBy<T>(
-    function(LResp: IRestResponse): T
+  Result := Execute.ThenBy<T>(function(LResp: IRestResponse): T
     begin
       Result := TDextJson.Deserialize<T>(LResp.ContentString);
     end);
 end;
 
 end.
+

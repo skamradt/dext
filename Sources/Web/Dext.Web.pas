@@ -73,7 +73,7 @@ uses
   Dext.Web.Routing,
   Dext.Web.RoutingMiddleware,
   Dext.Web.StaticFiles,
-  Dext.Web.StatusCodes,
+  Dext.Http.StatusCodes,
   Dext.Web.Versioning,
   Dext.WebHost,
   Dext.Caching,
@@ -456,8 +456,8 @@ type
   TStaticFileMiddleware = Dext.Web.StaticFiles.TStaticFileMiddleware;
   TApplicationBuilderStaticFilesExtensions = Dext.Web.StaticFiles.TApplicationBuilderStaticFilesExtensions;
 
-  // Dext.Web.StatusCodes
-  HttpStatus = Dext.Web.StatusCodes.HttpStatus;
+  // Dext.Http.StatusCodes (moved to Core for shared use by Dext.Web and Dext.Net)
+  HttpStatus = Dext.Http.StatusCodes.HttpStatus;
 
   // Dext.Web.Versioning
   IApiVersionReader = Dext.Web.Versioning.IApiVersionReader;

@@ -21,11 +21,12 @@
 {                                                                           }
 {  Author:  Cesar Romero                                                    }
 {  Created: 2026-01-07                                                      }
+{  Moved:   2026-01-22 (from Dext.Web to Dext.Core)                         }
 {                                                                           }
 {  HTTP Status Codes - Clean naming convention (HttpStatus.OK)              }
 {                                                                           }
 {***************************************************************************}
-unit Dext.Web.StatusCodes;
+unit Dext.Http.StatusCodes;
 
 interface
 

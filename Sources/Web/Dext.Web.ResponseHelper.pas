@@ -70,7 +70,7 @@ procedure RespondNoContent(const AContext: IHttpContext);
 implementation
 
 uses
-  Dext.Web.StatusCodes;
+  Dext.Http.StatusCodes;
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string);
 begin

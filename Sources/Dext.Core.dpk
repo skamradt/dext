@@ -91,7 +91,10 @@ contains
   Dext.Core.Reflection in 'Core\Dext.Core.Reflection.pas',
   Dext.Configuration.Yaml in 'Core\Dext.Configuration.Yaml.pas',
   Dext.Yaml in 'Core\Dext.Yaml.pas',
-  Dext.Core.Writers in 'Core\Base\Dext.Core.Writers.pas';
+  Dext.Core.Writers in 'Core\Base\Dext.Core.Writers.pas',
+  Dext.Http.StatusCodes in 'Core\Dext.Http.StatusCodes.pas',
+  Dext.Http.Request in 'Core\Dext.Http.Request.pas',
+  Dext.Http.Parser in 'Core\Dext.Http.Parser.pas';
 
 end.
 

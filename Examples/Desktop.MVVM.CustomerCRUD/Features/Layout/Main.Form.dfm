@@ -32,6 +32,9 @@ object MainForm: TMainForm
       Color = 3355443
       ParentBackground = False
       TabOrder = 0
+      DesignSize = (
+        180
+        600)
       object LogoLabel: TLabel
         Left = 0
         Top = 0
@@ -69,6 +72,7 @@ object MainForm: TMainForm
         Top = 555
         Width = 160
         Height = 35
+        Anchors = [akLeft, akBottom]
         Caption = 'About'
         TabOrder = 1
         OnClick = BtnAboutClick

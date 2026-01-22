@@ -196,6 +196,11 @@ Funcionalidades movidas para v1.1 ou v2.0:
 - **Background Jobs/Queues**: Sistema de filas para processamento assíncrono robusto (integração Redis/RabbitMQ).
 - **Scheduled Jobs (CRON)**: Agendamento de tarefas recorrentes (ex: relatórios diários, limpeza de dados).
 
+- **Experiência do Desenvolvedor (DevX)**:
+  - **CLI REST Runner**: ✅ IMPLEMENTADO - Suporte para parsing e execução de arquivos `.http` / `.rest`. Parser (`THttpRequestParser`) e Executor (`THttpExecutor`) prontos.
+  - ~~**REST Client Fluente**~~: ✅ IMPLEMENTADO - Cliente HTTP de alta performance com API fluente (`TRestClient`).
+  - **Integração IDE**: Plugin futuro para executar requests diretamente do editor da IDE Delphi.
+
 - **Docker Tooling**: Templates de `Dockerfile` e comando `dext docker init` para facilitar o deployment. (Prioritário)
 - **Telemetry & Observability**: Suporte a OpenTelemetry (Tracing/Metrics) e dashboards nativos.
 - **Advanced Resilience**: Patterns de Retry, Circuit Breaker e Timeout na Async API.

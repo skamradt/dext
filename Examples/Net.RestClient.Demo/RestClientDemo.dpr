@@ -41,6 +41,7 @@ begin
     .OnCompleteAsync(
       procedure(Response: IRestResponse)
       begin
+        Writeln('--- Demo: Fluent GET (Typed) Response ---');
         Writeln('Status: ', Response.StatusCode);
         Writeln('Content: ', Response.ContentString.Substring(0, 100) + '...');
         Countdown.Signal;
@@ -48,6 +49,7 @@ begin
     .OnExceptionAsync(
       procedure(E: Exception)
       begin
+        Writeln('--- Demo: Fluent GET (Typed) Error ---');
         Writeln('Error: ', E.Message);
         Countdown.Signal;
       end)
@@ -69,6 +71,7 @@ begin
     .OnCompleteAsync(
       procedure(Response: IRestResponse)
       begin
+        Writeln('--- Demo: TRestRequest Response ---');
         Writeln('POST Status: ', Response.StatusCode);
         Writeln('POST Response: ', Response.ContentString);
         Countdown.Signal;
@@ -76,6 +79,7 @@ begin
     .OnExceptionAsync(
       procedure(E: Exception)
       begin
+        Writeln('--- Demo: TRestRequest Error ---');
         Writeln('Error: ', E.Message);
         Countdown.Signal;
       end)
@@ -95,14 +99,16 @@ begin
       .OnCompleteAsync(
         procedure(Response: IRestResponse)
         begin
+          Writeln('--- Demo: Cancellation Response ---');
           Writeln('Success (should not happen if canceled)');
           Countdown.Signal;
         end)
       .OnExceptionAsync(
         procedure(E: Exception)
         begin
-            Writeln('Expected Error: ', E.Message);
-            Countdown.Signal;
+          Writeln('--- Demo: Cancellation Error ---');
+          Writeln('Expected Error: ', E.Message);
+          Countdown.Signal;
         end)
       .Start;
       
@@ -123,6 +129,7 @@ begin
       .Await; // Blocks and runs on current thread
       
     try
+      Writeln('--- Demo: Synchronous Response ---');
       Writeln('Synchronous success!');
       Writeln('ID: ', Response.id);
       Writeln('Title: ', Response.title);

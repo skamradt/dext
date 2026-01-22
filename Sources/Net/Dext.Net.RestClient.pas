@@ -49,9 +49,7 @@ type
   /// <summary>
   ///   Content-Type for requests.
   /// </summary>
-  TDextContentType = (
-    ctJson, ctXml, ctFormUrlEncoded, ctMultipartFormData, ctBinary, ctText
-  );
+  TDextContentType = (ctJson, ctXml, ctFormUrlEncoded, ctMultipartFormData, ctBinary, ctText);
 
   /// <summary>
   ///   Interface for a REST Response.
@@ -81,7 +79,7 @@ type
 
   { Internal Implementation Classes - Must be in interface for Generic Visibility }
 
-  TRestResponseImpl = class(TInterfacedObject, IRestResponse)
+  TRestResponse = class(TInterfacedObject, IRestResponse)
   private
     FStatusCode: Integer;
     FStatusText: string;
@@ -97,7 +95,7 @@ type
     destructor Destroy; override;
   end;
 
-  TRestResponseImpl<T> = class(TRestResponseImpl, IRestResponse<T>)
+  TRestResponse<T> = class(TRestResponse, IRestResponse<T>)
   private
     FData: T;
   protected
@@ -158,7 +156,7 @@ type
   /// </summary>
   TRestClient = record
   private
-    FImpl: IRestClient;
+    FInstance: IRestClient;
     class var FSharedPool: TConnectionPool;
     class destructor Destroy;
   public
@@ -196,8 +194,8 @@ type
       const ABody: TStream = nil; AOwnsBody: Boolean = False;
       AHeaders: TDictionary<string, string> = nil): TAsyncBuilder<IRestResponse>;
 
-      
-    property Impl: IRestClient read FImpl;
+
+    property Instance: IRestClient read FInstance;
   end;
 
   /// <summary>
@@ -218,9 +216,9 @@ begin
   Result := TRestClient.Create(ABaseUrl);
 end;
 
-{ TRestResponseImpl }
+{ TRestResponse }
 
-constructor TRestResponseImpl.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream);
+constructor TRestResponse.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream);
 begin
   inherited Create;
   FStatusCode := AStatusCode;
@@ -234,18 +232,18 @@ begin
   end;
 end;
 
-destructor TRestResponseImpl.Destroy;
+destructor TRestResponse.Destroy;
 begin
   FContentStream.Free;
   inherited;
 end;
 
-function TRestResponseImpl.GetContentStream: TStream;
+function TRestResponse.GetContentStream: TStream;
 begin
   Result := FContentStream;
 end;
 
-function TRestResponseImpl.GetContentString: string;
+function TRestResponse.GetContentString: string;
 begin
   if FContentStream.Size = 0 then Exit('');
   
@@ -256,37 +254,37 @@ begin
   Result := TEncoding.UTF8.GetString(LBytes);
 end;
 
-function TRestResponseImpl.GetHeader(const AName: string): string;
+function TRestResponse.GetHeader(const AName: string): string;
 begin
   Result := '';
 end;
 
-function TRestResponseImpl.GetStatusCode: Integer;
+function TRestResponse.GetStatusCode: Integer;
 begin
   Result := FStatusCode;
 end;
 
-function TRestResponseImpl.GetStatusText: string;
+function TRestResponse.GetStatusText: string;
 begin
   Result := FStatusText;
 end;
 
-{ TRestResponseImpl<T> }
+{ TRestResponse<T> }
 
-constructor TRestResponseImpl<T>.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream; AData: T);
+constructor TRestResponse<T>.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream; AData: T);
 begin
   inherited Create(AStatusCode, AStatusText, AStream);
   FData := AData;
 end;
 
-destructor TRestResponseImpl<T>.Destroy;
+destructor TRestResponse<T>.Destroy;
 begin
   if TValue.From<T>(FData).IsObject then
     TValue.From<T>(FData).AsObject.Free;
   inherited;
 end;
 
-function TRestResponseImpl<T>.GetData: T;
+function TRestResponse<T>.GetData: T;
 begin
   Result := FData;
 end;
@@ -370,16 +368,16 @@ end;
 function TRestClientImpl.ExecuteAsync(AMethod: TDextHttpMethod; const AEndpoint: string; 
   const ABody: TStream; AOwnsBody: Boolean; AHeaders: TDictionary<string, string>): TAsyncBuilder<IRestResponse>;
 var
-  LUrl: string;
-  LRetries: Integer;
-  LHeaders: TNetHeaders;
-  LTimeout: Integer;
-  LAuth: IAuthenticationProvider;
+  Url: string;
+  Retries: Integer;
+  Headers: TNetHeaders;
+  Timeout: Integer;
+  Auth: IAuthenticationProvider;
 begin
-  LUrl := GetFullUrl(AEndpoint);
-  LRetries := FMaxRetries;
-  LTimeout := FTimeout;
-  LAuth := FAuthProvider;
+  Url := GetFullUrl(AEndpoint);
+  Retries := FMaxRetries;
+  Timeout := FTimeout;
+  Auth := FAuthProvider;
   
   // Snapshot headers (Thread Safety)
   var LHeadList := TList<TNetHeader>.Create;
@@ -392,12 +390,12 @@ begin
       FLock.Leave;
     end;
       
-    if Assigned(LAuth) then
+    if Assigned(Auth) then
     begin
-       if LAuth is TApiKeyAuthProvider then
-         LHeadList.Add(TNetHeader.Create(TApiKeyAuthProvider(LAuth).Key, LAuth.GetHeaderValue))
+       if Auth is TApiKeyAuthProvider then
+         LHeadList.Add(TNetHeader.Create(TApiKeyAuthProvider(Auth).Key, Auth.GetHeaderValue))
        else
-         LHeadList.Add(TNetHeader.Create('Authorization', LAuth.GetHeaderValue));
+         LHeadList.Add(TNetHeader.Create('Authorization', Auth.GetHeaderValue));
     end;
 
     if Assigned(AHeaders) then
@@ -406,64 +404,62 @@ begin
         LHeadList.Add(TNetHeader.Create(LPair.Key, LPair.Value));
     end;
     
-    LHeaders := LHeadList.ToArray;
+    Headers := LHeadList.ToArray;
   finally
     LHeadList.Free;
   end;
-
   
   Result := TAsyncTask.Run<IRestResponse>(
     function: IRestResponse
     var
-      LHttpClient: THttpClient;
-      LResponse: IHTTPResponse;
-      LAttempt: Integer;
-      LLastError: Exception;
-      LMethodStr: string;
+      HttpClient: THttpClient;
+      Response: IHTTPResponse;
+      Attempt: Integer;
+      LastError: Exception;
+      MethodStr: string;
     begin
       try
-        LAttempt := 0;
-        LLastError := nil;
+        Attempt := 0;
+        LastError := nil;
         
-        while LAttempt <= LRetries do
+        while Attempt <= Retries do
         begin
-          LHttpClient := TConnectionPool(TRestClient.FSharedPool).Acquire;
+          HttpClient := TConnectionPool(TRestClient.FSharedPool).Acquire;
           try
-            LHttpClient.ConnectionTimeout := LTimeout;
-            LHttpClient.SendTimeout := LTimeout;
-            LHttpClient.ResponseTimeout := LTimeout;
+            HttpClient.ConnectionTimeout := Timeout;
+            HttpClient.SendTimeout := Timeout;
+            HttpClient.ResponseTimeout := Timeout;
             
             case AMethod of
-              hmGET:    LMethodStr := 'GET';
-              hmPOST:   LMethodStr := 'POST';
-              hmPUT:    LMethodStr := 'PUT';
-              hmDELETE: LMethodStr := 'DELETE';
-              hmPATCH:  LMethodStr := 'PATCH';
-              hmHEAD:   LMethodStr := 'HEAD';
-              hmOPTIONS:LMethodStr := 'OPTIONS';
-              else LMethodStr := '';
+              hmGET:    MethodStr := 'GET';
+              hmPOST:   MethodStr := 'POST';
+              hmPUT:    MethodStr := 'PUT';
+              hmDELETE: MethodStr := 'DELETE';
+              hmPATCH:  MethodStr := 'PATCH';
+              hmHEAD:   MethodStr := 'HEAD';
+              hmOPTIONS:MethodStr := 'OPTIONS';
+              else MethodStr := '';
             end;
 
             try
-              LResponse := LHttpClient.Execute(LMethodStr, LUrl, ABody, nil, LHeaders) as IHTTPResponse;
-
-              Result := TRestResponseImpl.Create(LResponse.StatusCode, LResponse.StatusText, LResponse.ContentStream);
+              Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
+              Result := TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream);
               Exit;
             except
               on E: Exception do
               begin
-                LLastError := E;
-                Inc(LAttempt);
-                if LAttempt > LRetries then Break;
-                Sleep(Trunc(Power(2, LAttempt) * 100));
+                LastError := E;
+                Inc(Attempt);
+                if Attempt > Retries then Break;
+                Sleep(Trunc(Power(2, Attempt) * 100));
               end;
             end;
           finally
-            TConnectionPool(TRestClient.FSharedPool).Release(LHttpClient);
+            TConnectionPool(TRestClient.FSharedPool).Release(HttpClient);
           end;
         end;
         
-        if Assigned(LLastError) then raise LLastError;
+        if Assigned(LastError) then raise LastError;
       finally
         if AOwnsBody and Assigned(ABody) then
           ABody.Free;
@@ -471,8 +467,6 @@ begin
     end
   );
 end;
-
-
 
 { TRestClient }
 
@@ -490,61 +484,61 @@ begin
     if TInterlocked.CompareExchange(Pointer(FSharedPool), Pointer(LNewPool), nil) <> nil then
       LNewPool.Free;
   end;
-  Result.FImpl := TRestClientImpl.Create(ABaseUrl);
+  Result.FInstance := TRestClientImpl.Create(ABaseUrl);
 end;
 
 function TRestClient.BaseUrl(const AValue: string): TRestClient;
 begin
-  FImpl.BaseUrl(AValue);
+  FInstance.BaseUrl(AValue);
   Result := Self;
 end;
 
 function TRestClient.BearerToken(const AToken: string): TRestClient;
 begin
-  FImpl.Auth(TBearerAuthProvider.Create(AToken));
+  FInstance.Auth(TBearerAuthProvider.Create(AToken));
   Result := Self;
 end;
 
 function TRestClient.BasicAuth(const AUsername, APassword: string): TRestClient;
 begin
-  FImpl.Auth(TBasicAuthProvider.Create(AUsername, APassword));
+  FInstance.Auth(TBasicAuthProvider.Create(AUsername, APassword));
   Result := Self;
 end;
 
 function TRestClient.ApiKey(const AName, AValue: string; AInHeader: Boolean): TRestClient;
 begin
   if AInHeader then
-    FImpl.Auth(TApiKeyAuthProvider.Create(AName, AValue));
+    FInstance.Auth(TApiKeyAuthProvider.Create(AName, AValue));
   Result := Self;
 end;
 
 function TRestClient.Auth(AProvider: IAuthenticationProvider): TRestClient;
 begin
-  FImpl.Auth(AProvider);
+  FInstance.Auth(AProvider);
   Result := Self;
 end;
 
 function TRestClient.ContentType(AValue: TDextContentType): TRestClient;
 begin
-  FImpl.ContentType(AValue);
+  FInstance.ContentType(AValue);
   Result := Self;
 end;
 
 function TRestClient.Header(const AName, AValue: string): TRestClient;
 begin
-  FImpl.Header(AName, AValue);
+  FInstance.Header(AName, AValue);
   Result := Self;
 end;
 
 function TRestClient.Retry(AValue: Integer): TRestClient;
 begin
-  FImpl.Retry(AValue);
+  FInstance.Retry(AValue);
   Result := Self;
 end;
 
 function TRestClient.Timeout(AValue: Integer): TRestClient;
 begin
-  FImpl.Timeout(AValue);
+  FInstance.Timeout(AValue);
   Result := Self;
 end;
 
@@ -555,10 +549,10 @@ end;
 
 function TRestClient.Get<T>(const AEndpoint: string): TAsyncBuilder<T>;
 var
-  LBuilder: TAsyncBuilder<IRestResponse>;
+  Builder: TAsyncBuilder<IRestResponse>;
 begin
-  LBuilder := Get(AEndpoint);
-  Result := LBuilder.ThenBy<T>(
+  Builder := Get(AEndpoint);
+  Result := Builder.ThenBy<T>(
     function(LRes: IRestResponse): T
     begin
       Result := TDextJson.Deserialize<T>(LRes.ContentString);
@@ -577,16 +571,16 @@ end;
 
 function TRestClient.Post<TRes>(const AEndpoint: string; const ABody: TRes): TAsyncBuilder<IRestResponse<TRes>>;
 var
-  LStream: TStringStream;
-  LBuilder: TAsyncBuilder<IRestResponse>;
+  Stream: TStringStream;
+  Builder: TAsyncBuilder<IRestResponse>;
 begin
-  LStream := TStringStream.Create(TDextJson.Serialize(ABody), TEncoding.UTF8);
-  LBuilder := ExecuteAsync(hmPOST, AEndpoint, LStream, True);
-  Result := LBuilder.ThenBy<IRestResponse<TRes>>(
+  Stream := TStringStream.Create(TDextJson.Serialize(ABody), TEncoding.UTF8);
+  Builder := ExecuteAsync(hmPOST, AEndpoint, Stream, True);
+  Result := Builder.ThenBy<IRestResponse<TRes>>(
       TFunc<IRestResponse, IRestResponse<TRes>>(
         function(Base: IRestResponse): IRestResponse<TRes>
         begin
-          Result := TRestResponseImpl<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream, 
+          Result := TRestResponse<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream,
             TDextJson.Deserialize<TRes>(Base.ContentString));
         end
       )
@@ -605,16 +599,16 @@ end;
 
 function TRestClient.Put<TRes>(const AEndpoint: string; const ABody: TRes): TAsyncBuilder<IRestResponse<TRes>>;
 var
-  LStream: TStringStream;
-  LBuilder: TAsyncBuilder<IRestResponse>;
+  Stream: TStringStream;
+  Builder: TAsyncBuilder<IRestResponse>;
 begin
-  LStream := TStringStream.Create(TDextJson.Serialize(ABody), TEncoding.UTF8);
-  LBuilder := ExecuteAsync(hmPUT, AEndpoint, LStream, True);
-  Result := LBuilder.ThenBy<IRestResponse<TRes>>(
+  Stream := TStringStream.Create(TDextJson.Serialize(ABody), TEncoding.UTF8);
+  Builder := ExecuteAsync(hmPUT, AEndpoint, Stream, True);
+  Result := Builder.ThenBy<IRestResponse<TRes>>(
       TFunc<IRestResponse, IRestResponse<TRes>>(
         function(Base: IRestResponse): IRestResponse<TRes>
         begin
-          Result := TRestResponseImpl<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream, 
+          Result := TRestResponse<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream,
             TDextJson.Deserialize<TRes>(Base.ContentString));
         end
       )
@@ -623,10 +617,10 @@ end;
 
 function TRestClient.Put<T>(const AEndpoint: string): TAsyncBuilder<T>;
 var
-  LBuilder: TAsyncBuilder<IRestResponse>;
+  Builder: TAsyncBuilder<IRestResponse>;
 begin
-  LBuilder := Put(AEndpoint);
-  Result := LBuilder.ThenBy<T>(
+  Builder := Put(AEndpoint);
+  Result := Builder.ThenBy<T>(
     function(LRes: IRestResponse): T
     begin
       Result := TDextJson.Deserialize<T>(LRes.ContentString);
@@ -640,10 +634,10 @@ end;
 
 function TRestClient.Delete<T>(const AEndpoint: string): TAsyncBuilder<T>;
 var
-  LBuilder: TAsyncBuilder<IRestResponse>;
+  Builder: TAsyncBuilder<IRestResponse>;
 begin
-  LBuilder := Delete(AEndpoint);
-  Result := LBuilder.ThenBy<T>(
+  Builder := Delete(AEndpoint);
+  Result := Builder.ThenBy<T>(
     function(LRes: IRestResponse): T
     begin
       Result := TDextJson.Deserialize<T>(LRes.ContentString);
@@ -653,7 +647,7 @@ end;
 function TRestClient.ExecuteAsync(AMethod: TDextHttpMethod; const AEndpoint: string; 
   const ABody: TStream; AOwnsBody: Boolean; AHeaders: TDictionary<string, string>): TAsyncBuilder<IRestResponse>;
 begin
-  Result := FImpl.ExecuteAsync(AMethod, AEndpoint, ABody, AOwnsBody, AHeaders);
+  Result := FInstance.ExecuteAsync(AMethod, AEndpoint, ABody, AOwnsBody, AHeaders);
 end;
 
 

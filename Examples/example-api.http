@@ -1,0 +1,48 @@
+### Variables
+@baseUrl = https://jsonplaceholder.typicode.com
+@contentType = application/json
+
+### Get all posts
+GET {{baseUrl}}/posts
+Accept: {{contentType}}
+
+### Get post by ID
+GET {{baseUrl}}/posts/1
+Accept: {{contentType}}
+
+### Create a new post
+POST {{baseUrl}}/posts
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+
+{
+  "title": "Dext Framework",
+  "body": "Testing HTTP client from Dext Dashboard",
+  "userId": 1
+}
+
+### Update a post
+PUT {{baseUrl}}/posts/1
+Content-Type: {{contentType}}
+
+{
+  "id": 1,
+  "title": "Updated Title",
+  "body": "Updated body content",
+  "userId": 1
+}
+
+### Delete a post
+DELETE {{baseUrl}}/posts/1
+
+### Get comments for a post
+GET {{baseUrl}}/posts/1/comments
+Accept: {{contentType}}
+
+### Get users
+GET {{baseUrl}}/users
+Accept: {{contentType}}
+
+### Get user by ID
+GET {{baseUrl}}/users/1
+Accept: {{contentType}}

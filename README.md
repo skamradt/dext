@@ -85,6 +85,7 @@ A high-performance, fluent HTTP client for modern connectivity.
 - **Resilience**: Built-in support for Retries, Timeouts, and Circuit Breaker patterns.
 - **Authentication**: Pluggable providers (Bearer, Basic, ApiKey).
 - **Serialization**: Automatic JSON serialization/deserialization integration with `Dext.Json`.
+- **HTTP File Parser** ⭐ NEW: Parse and execute `.http` files (VS Code/IntelliJ REST Client format) with variable interpolation and environment variable support.
 
 ### ⚙️ Dext.Core (Infrastructure)
 The foundation of the framework, usable in any type of application.
