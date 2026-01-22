@@ -87,6 +87,9 @@
 - [Magic Binding](11-desktop-ui/magic-binding.md) - Binding declarativo de UI
 - [Padrões MVVM](11-desktop-ui/mvvm-patterns.md) - Guia de arquitetura
 
+#### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NOVO
+- [Cliente REST](12-networking/rest-client.md) - Cliente HTTP Fluente
+
 ---
 
 ### Apêndice

@@ -141,6 +141,12 @@ type
     /// </summary>
     /// <returns>An interface to the running task.</returns>
     function Start: IAsyncTask;
+
+    /// <summary>
+    ///   Executes the pipeline synchronously on the current thread and returns the result.
+    ///   This blocks the calling thread until the operation completes.
+    /// </summary>
+    function Await: T;
   end;
 
   /// <summary>
@@ -356,6 +362,20 @@ function TAsyncBuilder<T>.WithCancellation(const AToken: ICancellationToken): TA
 begin
   FToken := AToken;
   Result := Self;
+end;
+
+function TAsyncBuilder<T>.Await: T;
+begin
+  if (FToken <> nil) and (FToken.IsCancellationRequested) then
+    FToken.ThrowIfCancellationRequested;
+    
+  if Assigned(FWork) then
+    Result := FWork()
+  else
+    Result := Default(T);
+    
+  if (FToken <> nil) and (FToken.IsCancellationRequested) then
+    FToken.ThrowIfCancellationRequested;
 end;
 
 function TAsyncBuilder<T>.Start: IAsyncTask;

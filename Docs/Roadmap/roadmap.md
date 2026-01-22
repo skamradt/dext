@@ -295,6 +295,14 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
 - [ ] **Distributed Rate Limiting**: Suporte a Redis para Rate Limiting distribuído.
 - [ ] **Feature Toggle**: Sistema de gerenciamento de features (flags) para habilitar/desabilitar funcionalidades dinamicamente.
 
+### 8. Networking (Dext.Net) (✅ Beta 0.96)
+- [x] **High Performance Client**: Wrapper otimizado sobre `THttpClient` com Connection Pooling nativo.
+- [x] **Fluent Request Builder**: API fluente para construção de requisições (`Get`, `Post`, `Header`, `Body`).
+- [x] **Authentication**: Providers nativos (Bearer, Basic, ApiKey).
+- [x] **Resilience**: Integração com `Dext.Threading.Async` (Retry, Fallback, Circuit Breaker patterns via pipeline).
+- [x] **Serialization**: Integração nativa com `Dext.Json` para typed responses (`ExecuteAsJson<T>`).
+- [ ] **WebSockets**: Suporte a cliente WebSocket full-duplex.
+
 ### 7. Documentação & Qualidade (🚧 Em Andamento)
 - [x] **Integration Tests**: Testes de integração completos (MinimalAPITest, ControllerExample).
 - [x] **Configuration Docs**: Documentação do sistema de configuração.

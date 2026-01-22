@@ -78,6 +78,14 @@ A modern ORM focused on productivity and performance.
   - Direct access to FireDAC's physical layer (IFDPhysConnection) for ultra-fast queries
 - **Performance**: High-Speed Metadata Cache (singleton-based) to minimize reflection overhead.
 
+### 🌐 Dext.Net (Networking) ⭐ NEW
+A high-performance, fluent HTTP client for modern connectivity.
+- **Fluent API**: Builder pattern for intuitive request construction (`Client.Get('/api').Header(...).Start`).
+- **Connection Pooling**: Native thread-safe pool reuses `THttpClient` instances for maximum throughput.
+- **Resilience**: Built-in support for Retries, Timeouts, and Circuit Breaker patterns.
+- **Authentication**: Pluggable providers (Bearer, Basic, ApiKey).
+- **Serialization**: Automatic JSON serialization/deserialization integration with `Dext.Json`.
+
 ### ⚙️ Dext.Core (Infrastructure)
 The foundation of the framework, usable in any type of application.
 - **Dependency Injection**: Full and fast IOC container.
