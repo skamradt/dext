@@ -28,9 +28,10 @@ unit Dext.Hosting.CLI;
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.IOUtils,
+  System.SysUtils,
   Dext.Entity,
   Dext.Entity.Core,
   Dext.Entity.Migrations,
@@ -44,11 +45,12 @@ type
   private
     FCommands: TDictionary<string, IConsoleCommand>;
     FContextFactory: TFunc<IDbContext>;
-    procedure RegisterCommands;
     procedure ShowHelp;
   public
     constructor Create(AContextFactory: TFunc<IDbContext>);
     destructor Destroy; override;
+    
+    procedure AddCommand(const Command: IConsoleCommand);
     // Returns True if a command was executed, False if normal startup should proceed
     function Run: Boolean; 
   end;
@@ -58,19 +60,9 @@ type
 
 implementation
 
+
 uses
-  System.IOUtils,
   Dext.Hosting.CLI.Registry,
-  Dext.Hosting.CLI.Commands.MigrateUp,
-  Dext.Hosting.CLI.Commands.MigrateList,
-  Dext.Hosting.CLI.Commands.MigrateDown,
-  Dext.Hosting.CLI.Commands.MigrateGenerate,
-  Dext.Hosting.CLI.Commands.Test,
-  Dext.Hosting.CLI.Commands.Configuration,
-  Dext.Hosting.CLI.Commands.UI,
-  Dext.Hosting.CLI.Commands.Scaffold,
-  Dext.Hosting.CLI.Commands.Doc,
-  Dext.Hosting.CLI.Commands.Facade,
   Dext.Utils;
 
 { TDextCLI }
@@ -79,7 +71,6 @@ constructor TDextCLI.Create(AContextFactory: TFunc<IDbContext>);
 begin
   FContextFactory := AContextFactory;
   FCommands := TDictionary<string, IConsoleCommand>.Create;
-  RegisterCommands;
 end;
 
 destructor TDextCLI.Destroy;
@@ -88,40 +79,10 @@ begin
   inherited;
 end;
 
-procedure TDextCLI.RegisterCommands;
+procedure TDextCLI.AddCommand(const Command: IConsoleCommand);
 begin
-  var CmdUp := TMigrateUpCommand.Create(FContextFactory);
-  FCommands.Add(CmdUp.GetName, CmdUp);
-  
-  var CmdList := TMigrateListCommand.Create(FContextFactory);
-  FCommands.Add(CmdList.GetName, CmdList);
-
-  var CmdDown := TMigrateDownCommand.Create(FContextFactory);
-  FCommands.Add(CmdDown.GetName, CmdDown);
-
-  var CmdGen := TMigrateGenerateCommand.Create;
-  FCommands.Add(CmdGen.GetName, CmdGen);
-
-  var CmdTest := TTestCommand.Create;
-  FCommands.Add(CmdTest.GetName, CmdTest);
-  
-  var CmdConfig := TConfigInitCommand.Create;
-  FCommands.Add(CmdConfig.GetName, CmdConfig);
-  
-  var CmdEnv := TEnvScanCommand.Create;
-  FCommands.Add(CmdEnv.GetName, CmdEnv);
-
-  var CmdUI := TUICommand.Create;
-  FCommands.Add(CmdUI.GetName, CmdUI);
-  
-  var CmdScaffold := TScaffoldCommand.Create;
-  FCommands.Add(CmdScaffold.GetName, CmdScaffold);
-
-  var CmdDoc := TDocCommand.Create;
-  FCommands.Add(CmdDoc.GetName, CmdDoc);
-
-  var CmdFacade := TFacadeCommand.Create;
-  FCommands.Add(CmdFacade.GetName, CmdFacade);
+  if Command <> nil then
+    FCommands.AddOrSetValue(Command.GetName, Command);
 end;
 
 procedure TDextCLI.ShowHelp;

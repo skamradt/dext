@@ -12,7 +12,17 @@ uses
   Dext.Entity.Setup,
   Dext.Configuration.Core,
   Dext.Configuration.Interfaces,
-  Dext.Configuration.Json;
+  Dext.Configuration.Json,
+  Dext.Hosting.CLI.Commands.MigrateUp,
+  Dext.Hosting.CLI.Commands.MigrateDown,
+  Dext.Hosting.CLI.Commands.MigrateList,
+  Dext.Hosting.CLI.Commands.MigrateGenerate,
+  Dext.Hosting.CLI.Commands.Test,
+  Dext.Hosting.CLI.Commands.Configuration,
+  Dext.Hosting.CLI.Commands.UI,
+  Dext.Hosting.CLI.Commands.Scaffold,
+  Dext.Hosting.CLI.Commands.Doc,
+  Dext.Hosting.CLI.Commands.Facade;
 
 function CreateDbContext: IDbContext;
 var
@@ -80,6 +90,21 @@ begin
   try
     CLI := TDextCLI.Create(CreateDbContext);
     try
+      // Migration Commands
+      CLI.AddCommand(TMigrateUpCommand.Create(CreateDbContext));
+      CLI.AddCommand(TMigrateDownCommand.Create(CreateDbContext));
+      CLI.AddCommand(TMigrateListCommand.Create(CreateDbContext));
+      CLI.AddCommand(TMigrateGenerateCommand.Create);
+      
+      // Tool Commands
+      CLI.AddCommand(TTestCommand.Create);
+      CLI.AddCommand(TConfigInitCommand.Create);
+      CLI.AddCommand(TEnvScanCommand.Create);
+      CLI.AddCommand(TUICommand.Create);
+      CLI.AddCommand(TScaffoldCommand.Create);
+      CLI.AddCommand(TDocCommand.Create);
+      CLI.AddCommand(TFacadeCommand.Create);
+
       CLI.Run;
     finally
       CLI.Free;

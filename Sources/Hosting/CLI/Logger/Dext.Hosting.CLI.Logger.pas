@@ -8,8 +8,7 @@ uses
   Dext.Logging,
   Dext.Web.Hubs.Interfaces,
   Dext.Web.Hubs.Extensions, // Static access to HubContext
-  Dext.Utils,
-  Dext.Hosting.CLI.Hubs.Dashboard;
+  Dext.Utils;
 
 type
   TConsoleHubLogger = class(TAbstractLogger)

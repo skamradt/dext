@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dext Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">Dext Dashboard</div>
+        <div class="doughnut-container">
+            <div class="doughnut" id="chart">
+                <div class="doughnut-label">
+                    <div class="value" id="pass-percent">0%</div>
+                    <div class="label">PASS RATE</div>
+                </div>
+            </div>
+        </div>
+        <div class="nav-item active" onclick="switchView(&quot;dashboard&quot;)">
+            <span>Current Run</span>
+        </div>
+        <div class="nav-item" onclick="switchView(&quot;timeline&quot;)">
+            <span>History</span>
+        </div>
+    </div>
+    
+    <div class="main">
+        <!-- Dashboard View -->
+        <div id="view-dashboard" class="view active">
+            <div class="toolbar">
+                <div id="status-text">Waiting for test run...</div>
+                <div class="status-badge status-running" id="connection-status">Connecting...</div>
+            </div>
+            <div class="content" id="test-list"></div>
+        </div>
+        
+        <!-- Timeline View -->
+        <div id="view-timeline" class="view">
+             <div class="toolbar"><div>Test Quality Trend</div></div>
+             <div class="chart-container" id="timeline-container" style="height: 300px; flex-shrink: 0;">Loading...</div>
+             <div class="toolbar" style="background:var(--sidebar); border-top:1px solid #333;"><div>Executions</div></div>
+             <div id="run-list" class="run-list"></div>
+             <div id="tooltip" class="tooltip"></div>
+        </div>
+    </div>
+    
+    <script src="scripts/dashboard.js"></script>
+</body>
+</html>

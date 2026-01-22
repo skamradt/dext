@@ -1,0 +1,6 @@
+DASHBOARD_HTML RCDATA "assets\\index.html"
+DASHBOARD_CSS RCDATA "assets\\styles\\dashboard.css"
+DASHBOARD_JS RCDATA "assets\\scripts\\dashboard.js"
+MAIN_HTML RCDATA "main-assets\\index.html"
+MAIN_CSS RCDATA "main-assets\\main.css"
+MAIN_JS RCDATA "main-assets\\main.js"
