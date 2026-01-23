@@ -165,6 +165,13 @@ begin
   inherited Create;
   FTransaction := TFDTransaction.Create(nil);
   FTransaction.Connection := AConnection;
+
+  // Bind this transaction to the connection so Queries pick it up automatically. 
+  // Without this, FireDAC creates implicit auto-commit transactions for each SQL
+  // command, ignoring our explicit transaction.
+  AConnection.Transaction := FTransaction;
+  AConnection.UpdateTransaction := FTransaction;
+
   FTransaction.StartTransaction;
   FOwnsTransaction := True;
 end;
@@ -173,6 +180,13 @@ destructor TFireDACTransaction.Destroy;
 begin
   if FOwnsTransaction and (FTransaction <> nil) then
   begin
+    // Unbind from connection if it is still bound
+    if (FTransaction.Connection <> nil) and (FTransaction.Connection.Transaction = FTransaction) then
+    begin
+      FTransaction.Connection.Transaction := nil;
+      FTransaction.Connection.UpdateTransaction := nil;
+    end;
+
     if FTransaction.Active then
       FTransaction.Rollback;
     FTransaction.Free;
@@ -183,11 +197,23 @@ end;
 procedure TFireDACTransaction.Commit;
 begin
   FTransaction.Commit;
+  // Unbind after commit to avoid accidental reuse
+  if (FTransaction.Connection <> nil) and (FTransaction.Connection.Transaction = FTransaction) then
+  begin
+    FTransaction.Connection.Transaction := nil;
+    FTransaction.Connection.UpdateTransaction := nil;
+  end;
 end;
 
 procedure TFireDACTransaction.Rollback;
 begin
   FTransaction.Rollback;
+  // Unbind after rollback
+  if (FTransaction.Connection <> nil) and (FTransaction.Connection.Transaction = FTransaction) then
+  begin
+    FTransaction.Connection.Transaction := nil;
+    FTransaction.Connection.UpdateTransaction := nil;
+  end;
 end;
 
 { TFireDACReader }
