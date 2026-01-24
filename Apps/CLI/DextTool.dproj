@@ -5,7 +5,7 @@
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">DextTool</ProjectName>
-        <TargetedPlatforms>32897</TargetedPlatforms>
+        <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>
         <ProjectVersion>20.3</ProjectVersion>
@@ -199,7 +199,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\Output\DextTool.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\Output\DextTool.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>DextTool.exe</RemoteName>
                         <Overwrite>true</Overwrite>
@@ -1068,8 +1068,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Android64'">
@@ -1077,8 +1076,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Linux64'">
@@ -1086,8 +1084,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win32'">
@@ -1095,8 +1092,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win64'">
@@ -1104,8 +1100,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Android'">
@@ -1113,8 +1108,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Android64'">
@@ -1122,8 +1116,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Linux64'">
@@ -1131,8 +1124,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win32'">
@@ -1140,8 +1132,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win64'">
@@ -1149,8 +1140,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;
-</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
 </Project>

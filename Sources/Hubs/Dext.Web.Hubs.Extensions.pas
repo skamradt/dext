@@ -80,6 +80,12 @@ type
     /// Gets the middleware instance (for advanced scenarios).
     /// </summary>
     class function Middleware: THubMiddleware;
+    
+    /// <summary>
+    /// Gracefully shuts down all Hub connections.
+    /// Call this before stopping the web server.
+    /// </summary>
+    class procedure ShutdownHubs;
   end;
 
 /// <summary>
@@ -141,6 +147,15 @@ end;
 class function THubExtensions.Middleware: THubMiddleware;
 begin
   Result := FMiddleware;
+end;
+
+class procedure THubExtensions.ShutdownHubs;
+begin
+  if FMiddleware <> nil then
+  begin
+    FMiddleware.Shutdown;
+    Sleep(200);
+  end;
 end;
 
 initialization

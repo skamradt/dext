@@ -44,6 +44,9 @@ type
     FConfiguration: IConfiguration;
     FDefaultPort: Integer;
     FActiveHost: IWebHost; // ✅ Track active host
+    
+    procedure Setup(Port: Integer);
+    procedure Teardown;
   public
     constructor Create;
     destructor Destroy; override;
@@ -59,6 +62,8 @@ type
     function MapControllers: IWebApplication;
     procedure Run; overload;
     procedure Run(Port: Integer); overload;
+    procedure Start; overload;
+    procedure Start(Port: Integer); overload;
     procedure Stop;
     procedure SetDefaultPort(Port: Integer);
 
@@ -167,6 +172,7 @@ end;
 
 destructor TDextApplication.Destroy;
 begin
+  Stop; // Ensure cleanup
   FAppBuilder := nil;
   FServiceProvider := nil;
   inherited Destroy;
@@ -224,14 +230,8 @@ begin
   Result := Self;
 end;
 
-procedure TDextApplication.Run;
-begin
-  Run(FDefaultPort);
-end;
-
-procedure TDextApplication.Run(Port: Integer);
+procedure TDextApplication.Setup(Port: Integer);
 var
-  WebHost: IWebHost;
   RequestHandler: TRequestDelegate;
   HostedManager: IHostedServiceManager;
   SSLHandler: IIndySSLHandler;
@@ -271,9 +271,6 @@ begin
     SafeWriteLn('⚙️ AutoMigrate enabled. Checking database schema...');
     
     // Resolve DbContext
-    // Note: We assume the user has registered their DbContext in ConfigureServices
-    // If not, this might fail or return nil depending on DI implementation.
-    // For now, we try to get IDbContext.
     var DbContextIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IDbContext));
     if DbContextIntf <> nil then
     begin
@@ -283,9 +280,7 @@ begin
       finally
         Migrator.Free;
       end;
-    end
-    else
-      ;
+    end;
   end;
   
   // Update State: Migrating -> Seeding
@@ -343,45 +338,100 @@ begin
       SafeWriteLn('[WARN] HTTPS configured but certificate files not found. Using HTTP.');
   end;
 
-  WebHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
-  
-  // ✅ Store active host so Stop() can access it
-  FActiveHost := WebHost;
+  // Store active host
+  FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
+end;
 
-  try
-    WebHost.Run;
-  finally
-    // ✅ Release active host reference
-    FActiveHost := nil;
+procedure TDextApplication.Teardown;
+var
+  Lifetime: THostApplicationLifetime;
+  StateControl: IAppStateControl;
+  StateObserver: IAppStateObserver;
+  HostedManager: IHostedServiceManager;
+begin
+  if FServiceProvider = nil then Exit;
 
-    // Update State: Running -> Stopping
-    if StateControl <> nil then
-      StateControl.SetState(asStopping);
+  // Resolve services
+  var StateControlIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IAppStateControl));
+  if StateControlIntf <> nil then
+    StateControl := StateControlIntf as IAppStateControl
+  else
+    StateControl := nil;
 
-    // Notify Stopping
-    if Lifetime <> nil then
-      Lifetime.NotifyStopping;
-
-    // Stop Hosted Services
-    if HostedManager <> nil then
-    begin
-      HostedManager.StopAsync;
-      // Do NOT Free HostedManager here if it is a Singleton managed by FServiceProvider
-      // It will be freed when FServiceProvider is destroyed.
-      // If it's transient, we might need to free it, but it's registered as singleton usually.
-    end;
+  var StateObserverIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IAppStateObserver));
+  if StateObserverIntf <> nil then
+    StateObserver := StateObserverIntf as IAppStateObserver
+  else
+    StateObserver := nil;
     
-    // Update State: Stopping -> Stopped
-    if StateControl <> nil then
-      StateControl.SetState(asStopped);
+  // Idempotency check: If already stopped, exit
+  if (StateObserver <> nil) and (StateObserver.State = asStopped) then Exit;
 
-    // Notify Stopped
-    if Lifetime <> nil then
-      Lifetime.NotifyStopped;
-      
-    // Explicitly release provider reference to ensure cleanup
-    FServiceProvider := nil;
+  var LifetimeIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));
+  if LifetimeIntf <> nil then
+    Lifetime := LifetimeIntf as THostApplicationLifetime
+  else
+    Lifetime := nil;
+    
+  var ManagerIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostedServiceManager));
+  if ManagerIntf <> nil then
+    HostedManager := ManagerIntf as THostedServiceManager
+  else
+    HostedManager := nil;
+    
+  // Release active host reference
+  FActiveHost := nil;
+
+  // Update State: Running -> Stopping
+  if StateControl <> nil then
+    StateControl.SetState(asStopping);
+
+  // Notify Stopping
+  if Lifetime <> nil then
+    Lifetime.NotifyStopping;
+
+  // Stop Hosted Services
+  if HostedManager <> nil then
+  begin
+    HostedManager.StopAsync;
   end;
+  
+  // Update State: Stopping -> Stopped
+  if StateControl <> nil then
+    StateControl.SetState(asStopped);
+
+  // Notify Stopped
+  if Lifetime <> nil then
+    Lifetime.NotifyStopped;
+    
+  // Explicitly release provider reference to ensure cleanup
+  FServiceProvider := nil;
+end;
+
+procedure TDextApplication.Run;
+begin
+  Run(FDefaultPort);
+end;
+
+procedure TDextApplication.Run(Port: Integer);
+begin
+  Setup(Port);
+  try
+    FActiveHost.Run;
+  finally
+    Teardown;
+  end;
+end;
+
+procedure TDextApplication.Start;
+begin
+  Start(FDefaultPort);
+end;
+
+procedure TDextApplication.Start(Port: Integer);
+begin
+  Setup(Port);
+  FActiveHost.Start;
 end;
 
 function TDextApplication.UseMiddleware(Middleware: TClass): IWebApplication;
@@ -402,12 +452,23 @@ begin
 end;
 
 procedure TDextApplication.Stop;
+var
+  LifetimeIntf: IInterface;
 begin
+  if FServiceProvider <> nil then
+  begin
+    LifetimeIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));
+    if LifetimeIntf <> nil then
+      (LifetimeIntf as IHostApplicationLifetime).StopApplication;
+  end;
+
   if FActiveHost <> nil then
   begin
     SafeWriteLn('Stopping active host...');
     FActiveHost.Stop;
   end;
+  
+  Teardown;
 end;
 
 procedure TDextApplication.SetDefaultPort(Port: Integer);

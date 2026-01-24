@@ -4,16 +4,30 @@ interface
 
 uses
   System.Classes,
-  Vcl.ExtCtrls,
+  System.SysUtils,
+  Vcl.Controls,
   Vcl.Forms,
   Vcl.Menus,
+  Vcl.Graphics,
   Winapi.Messages,
   Winapi.Windows,
+  Winapi.ShellAPI,
   Dext.Vcl.FormDecorator;
 
+const
+  WM_TOOLTRAYICON = WM_USER + 1;
+  WM_RESETTOOLTIP = WM_USER + 2;
+
 type
-  TTrayIconEx = class(Vcl.ExtCtrls.TTrayIcon)
+  TTrayIconEx = class(TComponent)
   private
+    IconData: TNOTIFYICONDATA;
+    FWindowHandle: HWND;
+    FIcon: TIcon;
+    FToolTip: string;
+    FActive: Boolean;
+    
+    // Original TTrayIconEx properties
     FCloseToTray: Boolean;
     FPopupMenuDefault: TPopupMenu;
     FForm: TForm;
@@ -24,10 +38,29 @@ type
     FMenuItemClose: TMenuItem;
     FStartMinimized: Boolean;
     FOnCloseClick: TNotifyEvent;
-
+    
+    FBalloonFlags: Integer; // Dummy field for compatibility
+    
+    FOnClick: TNotifyEvent;
+    FOnDblClick: TNotifyEvent;
+    
+    // Internal methods from new implementation
+    procedure FillDataStructure;
+    function AddIcon: Boolean;
+    function ModifyIcon: Boolean;
+    function DeleteIcon: Boolean;
+    procedure SetActive(Value: Boolean);
+    procedure SetIcon(Value: TIcon);
+    procedure SetToolTip(Value: string);
+    procedure WndProc(var Msg: TMessage);
+    procedure DoRightClick; // Modified to not take params
+    
+    // Ex logic
     procedure ActionCloseClick(Sender: TObject);
     procedure ActionDoubleClick(Sender: TObject);
     procedure CreatePopupMenu;
+    procedure ShowApplicationTaskbarIcon;
+    
   protected
     FWindowProcProxy: IWindowProcProxy;
     FShowMainForm: Boolean;
@@ -36,12 +69,22 @@ type
     procedure SetCloseToTray(const Value: Boolean);
     procedure SetMinimizeToTray(const Value: Boolean);
     procedure TrayWindowProc(var Message: TMessage; var Handled: Boolean);
-    procedure ShowApplicationTaskbarIcon;
+    
   public
     constructor Create(Form: TForm; DoubleClickEvent: TNotifyEvent = nil); reintroduce;
+    destructor Destroy; override;
+    
     function AddMenuItem(const Caption: string; const MenuClick: TNotifyEvent; const Hint: string = ''): TMenuItem;
     procedure ToggleMinimizeRestore;
+    procedure ShowBalloonHint; // Shim for VCL compatibility
 
+    property Icon: TIcon read FIcon write SetIcon;
+    property Visible: Boolean read FActive write SetActive;
+    property Hint: string read FToolTip write SetToolTip;
+    property BalloonHint: string read FToolTip write SetToolTip; // Alias for Hint
+    property BalloonFlags: Integer write FBalloonFlags; // Ignored in this simple impl, kept for compat
+    
+    // Ex properties
     property CloseToTray: Boolean read FCloseToTray write SetCloseToTray;
     property DefaultPopupMenu: TPopupMenu read FPopupMenuDefault write FPopupMenuDefault;
     property MenuItemClose: TMenuItem read FMenuItemClose;
@@ -49,6 +92,7 @@ type
     property MinimizeToTray: Boolean read FMinimizeToTray write SetMinimizeToTray;
     property StartMinimized: Boolean read FStartMinimized write FStartMinimized;
     property OnCloseClick: TNotifyEvent read FOnCloseClick write FOnCloseClick;
+    property OnDblClick: TNotifyEvent read FOnDblClick write FOnDblClick;
   end;
 
 const
@@ -62,7 +106,7 @@ resourcestring
 implementation
 
 uses
-  Dext.Vcl.Helpers; // Replaces Foundation.Vcl
+  Dext.Vcl.Helpers; 
 
 { TTrayIconEx }
 
@@ -70,6 +114,9 @@ constructor TTrayIconEx.Create(Form: TForm; DoubleClickEvent: TNotifyEvent = nil
 begin
   inherited Create(Form);
   FForm := Form;
+  
+  FWindowHandle := AllocateHWnd(WndProc);
+  FIcon := TIcon.Create;
 
   if FForm <> nil then
   begin
@@ -78,7 +125,6 @@ begin
     Self.Name         := FForm.Name + TRAY_ICON_NAME_SUFIX;
   end;
 
-  Visible := True;
   FMinimized := True;
   FStartMinimized := True;
 
@@ -87,12 +133,9 @@ begin
   else
     OnDblClick := ActionDoubleClick;
 
-  Icon.Assign(Application.Icon);
-  BalloonHint := Application.Title;
-  Hint := Application.Title;
-  ShowBalloonHint;
-  MinimizeToTray := True;
-  CloseToTray := True;
+  // Defaults
+  FMinimizeToTray := False;
+  FCloseToTray := False;
   CreatePopupMenu;
 
   if FStartMinimized then
@@ -103,6 +146,126 @@ begin
   else
     FShowMainForm := True;
 end;
+
+destructor TTrayIconEx.Destroy;
+begin
+  if FActive then
+    DeleteIcon;
+    
+  FreeAndNil(FIcon);
+  System.Classes.DeallocateHWnd(FWindowHandle);
+  inherited;
+end;
+
+// --- Low Level Implementation ---
+
+procedure TTrayIconEx.FillDataStructure;
+begin
+  IconData.cbSize := SizeOf(TNOTIFYICONDATA);
+  IconData.Wnd := FWindowHandle;
+  IconData.uID := 0; 
+  IconData.uFlags := NIF_MESSAGE + NIF_ICON + NIF_TIP;
+  IconData.hIcon := FIcon.Handle;
+  IconData.uCallbackMessage := WM_TOOLTRAYICON;
+  
+  // Safe copy using StrPLCopy
+  StrPLCopy(IconData.szTip, FToolTip, Length(IconData.szTip) - 1);
+end;
+
+function TTrayIconEx.AddIcon: Boolean;
+begin
+  FillDataStructure;
+  Result := Shell_NotifyIcon(NIM_ADD, @IconData);
+
+  // FIX: If tooltip is empty, icon might be blank. Reset it explicitly.
+  if FToolTip = '' then
+    PostMessage(FWindowHandle, WM_RESETTOOLTIP, 0, 0);
+end;
+
+function TTrayIconEx.ModifyIcon: Boolean;
+begin
+  FillDataStructure;
+  if FActive then
+    Result := Shell_NotifyIcon(NIM_MODIFY, @IconData)
+  else
+    Result := True;
+end;
+
+function TTrayIconEx.DeleteIcon: Boolean;
+begin
+   Result := Shell_NotifyIcon(NIM_DELETE, @IconData);
+end;
+
+procedure TTrayIconEx.SetActive(Value: Boolean);
+begin
+  if Value <> FActive then 
+  begin
+    FActive := Value;
+    if not (csDesigning in ComponentState) then
+    begin
+      if Value then
+        AddIcon
+      else
+        DeleteIcon;
+    end;
+  end;
+end;
+
+procedure TTrayIconEx.SetIcon(Value: TIcon);
+begin
+  if Value <> FIcon then
+  begin
+    FIcon.Assign(Value);
+    ModifyIcon;
+  end;
+end;
+
+procedure TTrayIconEx.SetToolTip(Value: string);
+begin
+  // Hack from original code: truncate to 62 chars
+  if Length(Value) > 62 then
+    Value := Copy(Value, 1, 62);
+  FToolTip := Value;
+  ModifyIcon;
+end;
+
+procedure TTrayIconEx.ShowBalloonHint;
+begin
+  // Not implemented in this simple version, but kept for compatibility.
+  // Standard Shell_NotifyIcon v1/v2 doesn't support balloons easily without 
+  // checking shell version. For Sidecar this is less critical than the icon appearing.
+end;
+
+procedure TTrayIconEx.DoRightClick;
+var
+  MouseCo: TPoint;
+begin
+  GetCursorPos(MouseCo);
+
+  if Assigned(FPopupMenuDefault) then begin
+    SetForegroundWindow(Application.Handle); // Needed for popup menu to close correctly
+    Application.ProcessMessages;
+    FPopupMenuDefault.Popup(MouseCo.X, MouseCo.Y);
+  end;
+end;
+
+procedure TTrayIconEx.WndProc(var Msg: TMessage);
+begin
+  with Msg do
+    if (Msg = WM_RESETTOOLTIP) then
+      SetToolTip(FToolTip)
+    else if (Msg = WM_TOOLTRAYICON) then begin
+      case lParam of
+        WM_LBUTTONDBLCLK: if Assigned(FOnDblClick) then FOnDblClick(Self);
+        WM_LBUTTONUP    : if Assigned(FOnClick) then FOnClick(Self);
+        WM_RBUTTONUP    : DoRightClick;
+      end;
+    end
+    else
+      Result := DefWindowProc(FWindowHandle, Msg, wParam, lParam);
+end;
+
+// --- Ex Logic ---
 
 procedure TTrayIconEx.ActionCloseClick(Sender: TObject);
 begin
@@ -161,7 +324,7 @@ begin
   end;
 
   FMenuItemClose := AddMenuItem(STrayCloseApplicationCaption, ActionCloseClick);
-  PopupMenu := FPopupMenuDefault;
+  // Do not assign PopupMenu property as we handle popup manually in DoRightClick
 end;
 
 procedure TTrayIconEx.ShowApplicationTaskbarIcon;

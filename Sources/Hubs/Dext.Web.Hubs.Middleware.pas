@@ -124,6 +124,9 @@ type
     /// <summary>Middleware handler</summary>
     procedure Handle(Ctx: IHttpContext; Next: TRequestDelegate);
     
+    /// <summary>Gracefully shuts down all SSE connections</summary>
+    procedure Shutdown;
+    
     property ConnectionManager: TConnectionManager read FConnectionManager;
     property GroupManager: TGroupManager read FGroupManager;
   end;
@@ -262,12 +265,19 @@ destructor THubMiddleware.Destroy;
 var
   Dispatcher: THubDispatcher;
 begin
+  Shutdown; // Close all SSE connections first
   for Dispatcher in FHubs.Values do
     Dispatcher.Free;
   FHubs.Free;
   FSSETransport.Free;
   // Note: TConnectionManager and TGroupManager are interfaced, will be freed automatically
   inherited;
+end;
+
+procedure THubMiddleware.Shutdown;
+begin
+  if FSSETransport <> nil then
+    FSSETransport.CloseAllConnections;
 end;
 
 procedure THubMiddleware.MapHub(const Path: string; HubClass: THubClass);
@@ -394,10 +404,11 @@ begin
   KeepAliveCounter := 0;
   
   // SSE loop - keep connection open
-  while not Connection.Aborted do
+  // Check BOTH connection closed AND transport shutdown
+  while (not Connection.Closed) and (not FSSETransport.IsShuttingDown) do
   begin
     // Check for pending messages
-    while Connection.HasPendingMessages do
+    while Connection.HasPendingMessages and (not FSSETransport.IsShuttingDown) do
     begin
       Msg := Connection.DequeueMessage;
       if Msg <> '' then

@@ -57,7 +57,7 @@ type
     FItems: TDictionary<string, TValue>;
     FMessageQueue: TQueue<string>;
     FQueueLock: TCriticalSection;
-    FAborted: Boolean;
+    FClosed: Int64; // 0 = open, 1 = closed (using Integer for TInterlocked)
   public
     constructor Create(const AConnectionId: string);
     destructor Destroy; override;
@@ -73,6 +73,7 @@ type
     
     procedure SendAsync(const Message: string);
     procedure Close(const Reason: string = '');
+    function IsClosed: Boolean;
     
     // SSE-specific
     function HasPendingMessages: Boolean;
@@ -81,7 +82,7 @@ type
     
     property ConnectionId: string read GetConnectionId;
     property State: TConnectionState read GetState;
-    property Aborted: Boolean read FAborted;
+    property Closed: Boolean read IsClosed;
   end;
   
   /// <summary>
@@ -95,6 +96,7 @@ type
     FOnMessageReceived: TOnMessageReceived;
     FOnConnected: TOnConnectionEvent;
     FOnDisconnected: TOnConnectionEvent;
+    FShuttingDown: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -112,6 +114,11 @@ type
     function CreateConnection(const ConnectionId: string): TSSEConnection;
     function GetConnection(const ConnectionId: string): TSSEConnection;
     procedure RemoveConnection(const ConnectionId: string);
+    
+    // Shutdown support
+    procedure CloseAllConnections;
+    function IsShuttingDown: Boolean;
+    function GetActiveConnectionCount: Integer;
     
     // Event triggers
     procedure TriggerConnected(const ConnectionId: string);
@@ -149,7 +156,7 @@ begin
   FItems := TDictionary<string, TValue>.Create;
   FMessageQueue := TQueue<string>.Create;
   FQueueLock := TCriticalSection.Create;
-  FAborted := False;
+  FClosed := 0;
 end;
 
 destructor TSSEConnection.Destroy;
@@ -210,11 +217,20 @@ end;
 procedure TSSEConnection.Close(const Reason: string);
 begin
   FState := csDisconnected;
-  FAborted := True;
+  TInterlocked.Exchange(FClosed, 1);
+end;
+
+function TSSEConnection.IsClosed: Boolean;
+begin
+  Result := TInterlocked.Read(FClosed) = 1;
 end;
 
 function TSSEConnection.HasPendingMessages: Boolean;
 begin
+  // Safety check: if closed, don't access the lock
+  if TInterlocked.Read(FClosed) = 1 then
+    Exit(False);
+    
   FQueueLock.Enter;
   try
     Result := FMessageQueue.Count > 0;
@@ -225,6 +241,10 @@ end;
 
 function TSSEConnection.DequeueMessage: string;
 begin
+  // Safety check: if closed, don't access the lock
+  if TInterlocked.Read(FClosed) = 1 then
+    Exit('');
+    
   FQueueLock.Enter;
   try
     if FMessageQueue.Count > 0 then
@@ -248,10 +268,25 @@ begin
   inherited Create;
   FConnections := TDictionary<string, TSSEConnection>.Create;
   FLock := TCriticalSection.Create;
+  FShuttingDown := False;
 end;
 
 destructor TSSETransport.Destroy;
+var
+  WaitCount: Integer;
 begin
+  // Signal all connections to close
+  CloseAllConnections;
+  
+  // Wait for SSE loops to exit and clean up connections (max 5 seconds)
+  WaitCount := 0;
+  while (GetActiveConnectionCount > 0) and (WaitCount < 50) do
+  begin
+    Sleep(100);
+    Inc(WaitCount);
+  end;
+  
+  // Now safe to free resources
   FLock.Enter;
   try
     FConnections.Free;
@@ -260,6 +295,35 @@ begin
   end;
   FLock.Free;
   inherited;
+end;
+
+procedure TSSETransport.CloseAllConnections;
+var
+  Conn: TSSEConnection;
+begin
+  FShuttingDown := True;
+  FLock.Enter;
+  try
+    for Conn in FConnections.Values do
+      Conn.Close('Server shutting down');
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TSSETransport.IsShuttingDown: Boolean;
+begin
+  Result := FShuttingDown;
+end;
+
+function TSSETransport.GetActiveConnectionCount: Integer;
+begin
+  FLock.Enter;
+  try
+    Result := FConnections.Count;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TSSETransport.GetTransportType: TTransportType;

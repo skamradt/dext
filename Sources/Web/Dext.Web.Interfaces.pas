@@ -213,6 +213,7 @@ type
   IWebHost = interface
     ['{B3E7D4F1-9C6E-4B8A-8D2C-7F5A1B3E8D9F}']
     procedure Run;
+    procedure Start;
     procedure Stop;
   end;
 
@@ -256,6 +257,8 @@ type
     function GetConfiguration: IConfiguration;
     function BuildServices: IServiceProvider; // ? Automation
     procedure Run(Port: Integer); overload;
+    procedure Start(Port: Integer); overload;
+    procedure Start; overload;
     procedure SetDefaultPort(Port: Integer);
 
     property Services: TDextServices read GetServices;

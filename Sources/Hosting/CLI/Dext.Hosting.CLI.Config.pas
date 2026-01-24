@@ -44,6 +44,7 @@ type
     FEnvironments: TList<TDextEnvironment>;
     FDextPath: string;
     FCoveragePath: string;
+    FStartMinimized: Boolean;
     procedure LoadEnvironments(Doc: TYamlDocument);
     function FindNode(Parent: TYamlNode; const Key: string): TYamlNode;
     function GetScalarValue(Node: TYamlNode; const Def: string = ''): string;
@@ -64,6 +65,7 @@ type
     
     property DextPath: string read FDextPath write FDextPath; // Added write
     property CoveragePath: string read FCoveragePath write FCoveragePath; // Added write
+    property StartMinimized: Boolean read FStartMinimized write FStartMinimized;
     property Environments: TList<TDextEnvironment> read FEnvironments;
   end;
 
@@ -169,6 +171,7 @@ begin
         try
           FDextPath := GetScalarValue(FindNode(Doc.Root, 'dext_path'));
           FCoveragePath := GetScalarValue(FindNode(Doc.Root, 'coverage_path'));
+          FStartMinimized := StrToBoolDef(GetScalarValue(FindNode(Doc.Root, 'start_minimized'), 'false'), False);
           
           LoadEnvironments(Doc);
         finally
@@ -200,6 +203,7 @@ begin
       SB.AppendLine('dext_path: "' + FDextPath.Replace('\', '\\') + '"');
     if FCoveragePath <> '' then
       SB.AppendLine('coverage_path: "' + FCoveragePath.Replace('\', '\\') + '"');
+    SB.AppendLine('start_minimized: ' + BoolToStr(FStartMinimized, True).ToLower);
       
     SB.AppendLine('environments:');
     for Env in FEnvironments do
@@ -523,3 +527,4 @@ begin
 end;
 
 end.
+

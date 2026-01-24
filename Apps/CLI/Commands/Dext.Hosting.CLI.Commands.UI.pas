@@ -34,7 +34,10 @@ uses
   Dext.Hosting.CLI.Hubs.Dashboard,
   Dext.Logging,
   Dext.Hosting.CLI.Logger,
-  Dext.Utils;
+  Dext.Utils,
+  Dext.Http.Request,
+  Dext.Http.Parser,
+  Dext.Http.Executor;
 
 type
   TUICommand = class(TInterfacedObject, IConsoleCommand)
@@ -459,6 +462,149 @@ begin
                Res.Execute(Ctx);
             finally
                SR.Free;
+            end;
+          end);
+
+        // API: HTTP Client - Parse
+        App.MapPost('/api/http/parse',
+          procedure(Ctx: IHttpContext)
+          var
+            Body: string;
+            Res: IResult;
+            SR: TStreamReader;
+            Json, ResJson: TJSONObject;
+            Collection: THttpRequestCollection;
+            ReqArr, VarArr: TJSONArray;
+            ReqObj, VarObj: TJSONObject;
+            I: Integer;
+          begin
+            SR := TStreamReader.Create(Ctx.Request.Body);
+            try
+              Body := SR.ReadToEnd;
+              Json := TJSONObject.ParseJSONValue(Body) as TJSONObject;
+              if (Json <> nil) then
+              try
+                if Json.TryGetValue('content', Body) then
+                begin
+                  Collection := THttpRequestParser.Parse(Body);
+                  try
+                    ResJson := TJSONObject.Create;
+                    try
+                      ReqArr := TJSONArray.Create;
+                      for I := 0 to Collection.Requests.Count - 1 do
+                      begin
+                        ReqObj := TJSONObject.Create;
+                        ReqObj.AddPair('name', Collection.Requests[I].Name);
+                        ReqObj.AddPair('method', Collection.Requests[I].Method);
+                        ReqObj.AddPair('url', Collection.Requests[I].Url);
+                        ReqObj.AddPair('lineNumber', TJSONNumber.Create(Collection.Requests[I].LineNumber));
+                        ReqObj.AddPair('body', Collection.Requests[I].Body);
+                        ReqArr.Add(ReqObj);
+                      end;
+                      ResJson.AddPair('requests', ReqArr);
+                      
+                      VarArr := TJSONArray.Create;
+                      for I := 0 to Collection.Variables.Count - 1 do
+                      begin
+                        VarObj := TJSONObject.Create;
+                        VarObj.AddPair('name', Collection.Variables[I].Name);
+                        VarObj.AddPair('value', Collection.Variables[I].Value);
+                        VarObj.AddPair('isEnvVar', TJSONBool.Create(Collection.Variables[I].IsEnvVar));
+                        VarObj.AddPair('envVarName', Collection.Variables[I].EnvVarName);
+                        VarArr.Add(VarObj);
+                      end;
+                      ResJson.AddPair('variables', VarArr);
+                      
+                      Res := Results.Text(ResJson.ToString, 200);
+                    finally
+                      ResJson.Free;
+                    end;
+                  finally
+                    Collection.Free;
+                  end;
+                end
+                else
+                  Res := Results.BadRequest('Missing content field');
+              finally
+                Json.Free;
+              end
+              else
+                Res := Results.BadRequest('Invalid JSON');
+              Res.Execute(Ctx);
+            finally
+              SR.Free;
+            end;
+          end);
+
+        // API: HTTP Client - Execute
+        App.MapPost('/api/http/execute',
+          procedure(Ctx: IHttpContext)
+          var
+            Body: string;
+            Res: IResult;
+            SR: TStreamReader;
+            Json, ResJson, HeadersObj: TJSONObject;
+            Collection: THttpRequestCollection;
+            RequestIndex: Integer;
+            ExResult: THttpExecutionResult;
+            Pair: TPair<string, string>;
+          begin
+            SR := TStreamReader.Create(Ctx.Request.Body);
+            try
+              Body := SR.ReadToEnd;
+              Json := TJSONObject.ParseJSONValue(Body) as TJSONObject;
+              if (Json <> nil) then
+              try
+                RequestIndex := 0;
+                Json.TryGetValue('requestIndex', RequestIndex);
+                
+                if Json.TryGetValue('content', Body) then
+                begin
+                  Collection := THttpRequestParser.Parse(Body);
+                  try
+                    if (RequestIndex >= 0) and (RequestIndex < Collection.Requests.Count) then
+                    begin
+                      ExResult := THttpExecutor.ExecuteSync(Collection.Requests[RequestIndex], Collection.Variables);
+                      
+                      ResJson := TJSONObject.Create;
+                      try
+                        ResJson.AddPair('requestName', ExResult.RequestName);
+                        ResJson.AddPair('requestMethod', ExResult.RequestMethod);
+                        ResJson.AddPair('requestUrl', ExResult.RequestUrl);
+                        ResJson.AddPair('statusCode', TJSONNumber.Create(ExResult.StatusCode));
+                        ResJson.AddPair('statusText', ExResult.StatusText);
+                        ResJson.AddPair('responseBody', ExResult.ResponseBody);
+                        ResJson.AddPair('durationMs', TJSONNumber.Create(ExResult.DurationMs));
+                        ResJson.AddPair('success', TJSONBool.Create(ExResult.Success));
+                        ResJson.AddPair('errorMessage', ExResult.ErrorMessage);
+                        
+                        HeadersObj := TJSONObject.Create;
+                        if ExResult.ResponseHeaders <> nil then
+                          for Pair in ExResult.ResponseHeaders do
+                            HeadersObj.AddPair(Pair.Key, Pair.Value);
+                        ResJson.AddPair('responseHeaders', HeadersObj);
+                        
+                        Res := Results.Text(ResJson.ToString, 200);
+                      finally
+                        ResJson.Free;
+                      end;
+                    end
+                    else
+                      Res := Results.BadRequest('Invalid request index');
+                  finally
+                    Collection.Free;
+                  end;
+                end
+                else
+                  Res := Results.BadRequest('Missing content field');
+              finally
+                Json.Free;
+              end
+              else
+                Res := Results.BadRequest('Invalid JSON');
+              Res.Execute(Ctx);
+            finally
+              SR.Free;
             end;
           end);
 

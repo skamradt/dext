@@ -54,6 +54,7 @@ type
     destructor Destroy; override;
 
     procedure Run;
+    procedure Start;
     procedure Stop;
   end;
 
@@ -183,69 +184,127 @@ begin
   end;
 end;
 
-procedure TIndyWebServer.Run;
+procedure TIndyWebServer.Start;
+var
+  Protocol: string;
 begin
   if not FHTTPServer.Active then
   begin
     FHTTPServer.Active := True;
     
-    var Protocol := 'http';
+    Protocol := 'http';
     if FSSLEnabled then 
       Protocol := 'https';
 
     SafeWriteLn(Format('Dext server running on %s://localhost:%d', [Protocol, FPort]));
     if FSSLEnabled then
       SafeWriteLn('HTTPS Enabled.');
+  end;
+end;
 
-    // Check for automated test mode
-    if FindCmdLineSwitch('no-wait', ['-', '/'], True) then
-    begin
-       SafeWriteLn('🤖 Automated test mode: Server started successfully. Exiting run loop.');
-       Exit;
-    end;
+procedure TIndyWebServer.Run;
+begin
+  Start;
 
-    SafeWriteLn('Press Ctrl+C to stop the server...');
+  // Check for automated test mode
+  if FindCmdLineSwitch('no-wait', ['-', '/'], True) then
+  begin
+     SafeWriteLn('🤖 Automated test mode: Server started successfully. Exiting run loop.');
+     Exit;
+  end;
 
-    GServerStopping := False;
+  SafeWriteLn('Press Ctrl+C to stop the server...');
+
+  GServerStopping := False;
 {$IFDEF MSWINDOWS}
-    SetConsoleCtrlHandler(@ConsoleCtrlHandler, True);
+  SetConsoleCtrlHandler(@ConsoleCtrlHandler, True);
 {$ENDIF}
 {$IFDEF POSIX}
-    signal(SIGINT, @SignalHandler);
-    signal(SIGTERM, @SignalHandler);
+  signal(SIGINT, @SignalHandler);
+  signal(SIGTERM, @SignalHandler);
 {$ENDIF}
-    // Get Lifetime Service to observe external stop requests
-    var LifetimeIntf := FServices.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));
-    var Lifetime: IHostApplicationLifetime := nil;
-    if LifetimeIntf <> nil then
-        Lifetime := LifetimeIntf as IHostApplicationLifetime;
+  // Get Lifetime Service to observe external stop requests
+  var LifetimeIntf := FServices.GetServiceAsInterface(TServiceType.FromInterface(IHostApplicationLifetime));
+  var Lifetime: IHostApplicationLifetime := nil;
+  if LifetimeIntf <> nil then
+      Lifetime := LifetimeIntf as IHostApplicationLifetime;
 
-    try
-      while FHTTPServer.Active and (not GServerStopping) do
+  try
+    while FHTTPServer.Active and (not GServerStopping) do
+    begin
+      Sleep(100);
+      
+      // Check for programatic shutdown request
+      if (Lifetime <> nil) and (Lifetime.ApplicationStopping.IsCancellationRequested) then
       begin
-        Sleep(100);
-        
-        // Check for programatic shutdown request
-        if (Lifetime <> nil) and (Lifetime.ApplicationStopping.IsCancellationRequested) then
-        begin
-           GServerStopping := True;
-        end;
+         GServerStopping := True;
       end;
-    finally
-{$IFDEF MSWINDOWS}
-      SetConsoleCtrlHandler(@ConsoleCtrlHandler, False);
-{$ENDIF}
     end;
+  finally
+    // Deactivate server gracefully at the end of the loop
+    if FHTTPServer.Active then
+    begin
+      try
+        FHTTPServer.Active := False;
+      except
+        // Silence Indy cleanup exceptions
+      end;
+    end;
+
+{$IFDEF MSWINDOWS}
+    SetConsoleCtrlHandler(@ConsoleCtrlHandler, False);
+{$ENDIF}
   end;
 end;
 
 procedure TIndyWebServer.Stop;
+var
+  LContexts: TList;
+  i: Integer;
+  Ctx: TIdContext;
 begin
+  // Signal graceful stop
+  GServerStopping := True;
+  
+  // 1. Aggressively close all sockets to unblock any stuck threads (SSE, etc)
   if FHTTPServer.Active then
   begin
-    FHTTPServer.Active := False;
-    SafeWriteLn('Dext server stopped.');
+    try
+      LContexts := FHTTPServer.Contexts.LockList;
+      try
+        for i := LContexts.Count - 1 downto 0 do
+        begin
+          Ctx := TIdContext(LContexts[i]);
+          
+          // Force close the socket handle. 
+          // This causes an immediate EIdSocketError or similar in the worker thread,
+          // breaking it out of blocking I/O calls.
+          if (Ctx.Binding <> nil) and Ctx.Binding.HandleAllocated then
+          begin
+             try
+               Ctx.Binding.CloseSocket;
+             except
+               // Ignore errors closing socket, we just want to ensure it's closed
+             end;
+          end;
+        end;
+      finally
+        FHTTPServer.Contexts.UnlockList;
+      end;
+    except
+      on E: Exception do
+        SafeWriteLn('Error forcing socket close: ' + E.Message);
+    end;
+
+    // 2. Deactivate the server
+    try
+      FHTTPServer.Active := False;
+    except
+      // Silence exceptions during shutdown
+    end;
   end;
+  
+  Sleep(200);
 end;
 
 end.
