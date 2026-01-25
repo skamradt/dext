@@ -241,15 +241,10 @@ begin
       end;
     end;
   finally
-    // Deactivate server gracefully at the end of the loop
+    // Use Stop() to ensure aggressive cleanup (socket force-close)
+    // happens for Console apps too, preventing hangs on exit.
     if FHTTPServer.Active then
-    begin
-      try
-        FHTTPServer.Active := False;
-      except
-        // Silence Indy cleanup exceptions
-      end;
-    end;
+      Stop;
 
 {$IFDEF MSWINDOWS}
     SetConsoleCtrlHandler(@ConsoleCtrlHandler, False);

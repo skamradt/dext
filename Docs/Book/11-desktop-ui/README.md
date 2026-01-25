@@ -17,6 +17,16 @@
 | **MVVM Patterns** | Clean architecture with ViewModel and Controller patterns |
 | **Testability** | Full unit testing support with dependency injection |
 
+### Hosting a Web Server (Sidecar)
+
+If you need to host a Dext Web Server inside your VCL application (Sidecar pattern), always use the **`Start`** method (non-blocking) instead of `Run` (blocking).
+
+```pascal
+// In FormCreate:
+FHost := WebBuilder.Build;
+FHost.Start; // Does not freeze the UI!
+```
+
 ---
 
 ## Chapters

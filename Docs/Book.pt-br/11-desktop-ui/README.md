@@ -17,6 +17,16 @@
 | **Padrões MVVM** | Arquitetura limpa com ViewModel e Controller |
 | **Testabilidade** | Suporte completo a testes unitários com DI |
 
+### Hospedando um Servidor Web (Sidecar)
+
+Se você precisa hospedar um Servidor Web Dext dentro de sua aplicação VCL (padrão Sidecar), use sempre o método **`Start`** (não-bloqueante) ao invés de `Run` (bloqueante).
+
+```pascal
+// No FormCreate:
+FHost := WebBuilder.Build;
+FHost.Start; // Não congela a UI!
+```
+
 ---
 
 ## Capítulos

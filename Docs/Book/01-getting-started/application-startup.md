@@ -78,8 +78,38 @@ begin
   TWebHostBuilder.CreateDefault
     .UseStartup<TStartup>
     .Build
-    .Run;
+    .Run; // Blocks execution (Console App)
 end.
+```
+
+## Execution Models: Run vs Start
+
+Dext provides two ways to run the host, designed for different application types:
+
+| Method | Behavior | Use Case |
+| :--- | :--- | :--- |
+| **`Run`** | Blocks the calling thread until stopped (Ctrl+C). | **Console Apps**, Services, Daemons. |
+| **`Start`** | Non-blocking. Starts the server and returns immediately. | **GUI Apps (VCL/FMX)** like System Tray tools or Desktop Shells. |
+
+### Example: GUI Application (Sidecar)
+
+In a VCL application, you must use `Start` to avoid freezing the main form:
+
+```pascal
+procedure TMainForm.FormCreate(Sender: TObject);
+begin
+  // Create and Start the host without blocking the UI
+  FHost := TWebHostBuilder.CreateDefault
+    .UseStartup<TStartup>
+    .Build;
+    
+  FHost.Start; 
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+begin
+  FHost.Stop; // Graceful shutdown
+end;
 ```
 
 ## Advanced: Database Seeding
