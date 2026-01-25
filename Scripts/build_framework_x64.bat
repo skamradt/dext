@@ -29,6 +29,11 @@ echo Output directory: %OUTPUT_PATH%
 echo Platform: %PLATFORM%
 echo.
 
+cd "%~dp0..\Sources\Dashboard"
+echo Building Dashboard Resources...
+powershell -NoProfile -ExecutionPolicy Bypass -File "build-resources.ps1" -OutputPath "%OUTPUT_PATH%"
+if %ERRORLEVEL% NEQ 0 goto Error
+
 cd "%~dp0..\Sources"
 
 echo Building Dext.Core...

@@ -1,7 +1,11 @@
+param (
+    [string]$OutputPath = ""
+)
+
 $ErrorActionPreference = "Stop"
 
-$rcFile = "Dext.Dashboard.rc"
-$resFile = "Dext.Dashboard.res"
+$rcFile = Join-Path $PSScriptRoot "Dext.Dashboard.rc"
+$resFile = Join-Path $PSScriptRoot "Dext.Dashboard.res"
 
 # Function to find BRCC32
 function Get-Brcc32Path {
@@ -50,6 +54,15 @@ Write-Host "Compiling $rcFile..."
 
 if (Test-Path $resFile) {
     Write-Host "✅ Resource compiled successfully: $resFile"
-} else {
+    
+    if (![string]::IsNullOrEmpty($OutputPath)) {
+        if (-not (Test-Path $OutputPath)) {
+            New-Item -ItemType Directory -Force -Path $OutputPath | Out-Null
+        }
+        Copy-Item -Path $resFile -Destination $OutputPath -Force
+        Write-Host "✅ Copied to: $OutputPath"
+    }
+}
+else {
     Write-Error "❌ Failed to create $resFile"
 }
