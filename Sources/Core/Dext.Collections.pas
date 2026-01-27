@@ -136,7 +136,8 @@ type
     procedure SetItem(Index: Integer; const Value: T);
     function GetEnumerator: IEnumerator<T>;
   public
-    constructor Create(OwnsObjects: Boolean = True);
+    constructor Create; overload;
+    constructor Create(OwnsObjects: Boolean); overload;
     destructor Destroy; override;
 
     procedure Add(const Value: T);
@@ -272,6 +273,11 @@ begin
 end;
 
 { TSmartList<T> }
+
+constructor TSmartList<T>.Create;
+begin
+  Create(True);
+end;
 
 constructor TSmartList<T>.Create(OwnsObjects: Boolean);
 begin

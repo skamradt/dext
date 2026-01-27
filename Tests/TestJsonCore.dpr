@@ -7,7 +7,9 @@ uses
   Dext.Utils,
   System.SysUtils,
   System.Generics.Collections,
-  Dext.Json;
+  Dext.Json,
+  Dext.Types.UUID,
+  Dext.Collections;
 
 type
   TPost = class
@@ -40,6 +42,15 @@ type
   public
     property Id: TGUID read FId write FId;
     property Name: string read FName write FName;
+  end;
+
+  TEntityWithUuid = class
+    private
+      FId: TUUID;
+      FName: string;
+    public
+      property Id: TUUID read FId write FId;
+      property Name: string read FName write FName;
   end;
 
 constructor TThread.Create;
@@ -169,10 +180,49 @@ begin
     Writeln('[FAIL] Raw GUID deserialization failed');
 end;
 
+procedure TestUuidDeserialization;
+var
+  Json: string;
+  ListEntityWithUuid: IList<TEntityWithUuid>;
+begin
+  Writeln('Testing JSON Deserialization UUID...');
+
+  Json := '[ ' +
+          '  { ' +
+          '    "Id": "17DDCACD-EFAB-47B3-B6FD-18A7D4A7A3C4", ' +
+          '    "Name": "Dext" ' +
+          '  } ' +
+          ']';
+
+  try
+    ListEntityWithUuid := TDextJson.Deserialize<TSmartList<TEntityWithUuid>>(Json);
+    try
+      if ListEntityWithUuid.Count > 0 then
+      begin
+        ListEntityWithUuid.ForEach(
+          procedure (AEntityWithUuid: TEntityWithUuid)
+          begin
+            Writeln('  - Id: ' + AEntityWithUuid.Id.ToString + ', Name: ' + AEntityWithUuid.Name);
+          end);
+      end
+      else
+      begin
+        Writeln('  [FAIL] No EntityWithUuid deserialized (List support missing?)');
+      end;
+    finally
+      ListEntityWithUuid.Clear;
+    end;
+  except
+    on E: Exception do
+      Writeln('Exception: ' + E.Message);
+  end;
+end;
+
 begin
   try
     TestDeserialization;
     TestGuidSerialization;
+    TestUuidDeserialization;
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);

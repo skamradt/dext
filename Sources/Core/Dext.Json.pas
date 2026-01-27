@@ -1747,7 +1747,22 @@ var
 begin
   Context := TRttiContext.Create;
   try
-    var CreateMethod := Context.GetType(AType).GetMethod('Create');
+    var RttiType := Context.GetType(AType);
+    var CreateMethod: TRttiMethod := nil;
+
+    for var Method in RttiType.GetMethods do
+      if Method.IsConstructor and (Length(Method.GetParameters) = 0) then
+      begin
+        CreateMethod := Method;
+        Break;
+      end;
+
+    if CreateMethod = nil then
+      CreateMethod := RttiType.GetMethod('Create');
+
+    if CreateMethod = nil then
+      raise EDextJsonException.CreateFmt('Cannot find a suitable constructor for %s', [AType.NameFld.ToString]);
+
     Result := CreateMethod.Invoke(AType^.TypeData^.ClassType, []);
     List := Result.AsObject;
 

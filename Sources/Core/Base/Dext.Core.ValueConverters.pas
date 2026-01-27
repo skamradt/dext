@@ -35,6 +35,7 @@ uses
   System.Variants,
   System.DateUtils,
   System.Classes,
+  Dext.Types.UUID,
   Dext.Core.DateUtils;
 
 type
@@ -132,6 +133,16 @@ type
   TStringToBytesConverter = class(TBaseConverter)
     function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
   end;
+  
+  // String -> TUUID
+  TStringToUUIDConverter = class(TBaseConverter)
+    function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
+  end;
+
+  // Variant -> TUUID
+  TVariantToUUIDConverter = class(TBaseConverter)
+    function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
+  end;
 
   // Class -> Class (handles object pointers and inheritance)
   TClassToClassConverter = class(TBaseConverter)
@@ -197,6 +208,10 @@ begin
   RegisterConverter(tkUString, tkInt64, TVariantToIntegerConverter.Create);
   RegisterConverter(tkString, tkInteger, TVariantToIntegerConverter.Create);
   RegisterConverter(tkString, tkFloat, TVariantToFloatConverter.Create);
+
+  // TUUID support
+  RegisterConverter(TypeInfo(string), TypeInfo(TUUID), TStringToUUIDConverter.Create);
+  RegisterConverter(TypeInfo(Variant), TypeInfo(TUUID), TVariantToUUIDConverter.Create);
 end;
 
 class destructor TValueConverterRegistry.Destroy;
@@ -680,6 +695,20 @@ begin
   
   Bytes := TEncoding.UTF8.GetBytes(Str);
   Result := TValue.From<TBytes>(Bytes);
+end;
+
+{ TStringToUUIDConverter }
+
+function TStringToUUIDConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
+begin
+  Result := TValue.From<TUUID>(TUUID.FromString(AValue.AsString));
+end;
+
+{ TVariantToUUIDConverter }
+
+function TVariantToUUIDConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
+begin
+  Result := TValue.From<TUUID>(TUUID.FromString(VarToStr(AValue.AsVariant)));
 end;
 
 end.
