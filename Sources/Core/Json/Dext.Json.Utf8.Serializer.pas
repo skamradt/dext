@@ -33,6 +33,7 @@ uses
   System.TypInfo,
   Dext.Core.Span,
   Dext.Json.Utf8,
+  Dext.Core.DateUtils,
   Dext.Types.UUID;
 
 type
@@ -133,7 +134,19 @@ begin
       Field.SetValue(Instance, TValue.From<Int64>(AReader.GetInt64));
       
     tkFloat:
-      Field.SetValue(Instance, TValue.From<Double>(AReader.GetDouble));
+      if (Field.FieldType.Handle = TypeInfo(TDateTime)) or 
+         (Field.FieldType.Handle = TypeInfo(TDate)) or 
+         (Field.FieldType.Handle = TypeInfo(TTime)) then
+      begin
+         var DateStr := AReader.GetString;
+         var Dt: TDateTime;
+         if TryParseCommonDate(DateStr, Dt) then
+           Field.SetValue(Instance, TValue.From<TDateTime>(Dt))
+         else
+           Field.SetValue(Instance, TValue.From<TDateTime>(0));
+      end
+      else
+        Field.SetValue(Instance, TValue.From<Double>(AReader.GetDouble));
       
     tkString, tkLString, tkWString, tkUString:
       Field.SetValue(Instance, TValue.From<string>(AReader.GetString));

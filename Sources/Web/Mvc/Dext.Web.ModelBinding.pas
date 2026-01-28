@@ -1222,6 +1222,13 @@ begin
                             var CurrVal := Currency(BodyJsonObj.GetDouble(JsonFieldName));
                             FieldValue := TValue.From<Currency>(CurrVal);
                           end
+                          else if (Field.FieldType.Handle = TypeInfo(TDateTime)) or 
+                                  (Field.FieldType.Handle = TypeInfo(TDate)) or 
+                                  (Field.FieldType.Handle = TypeInfo(TTime)) then
+                          begin                            
+                            var DateStr := BodyJsonObj.GetString(JsonFieldName);
+                            FieldValue := ConvertStringToType(DateStr, Field.FieldType.Handle);
+                          end
                           else
                           begin
                             var FloatVal := BodyJsonObj.GetDouble(JsonFieldName);
