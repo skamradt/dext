@@ -5,13 +5,13 @@ program TestNewFeatures;
 
 uses
   Dext.MM,
-  Dext.Utils,
   System.SysUtils,
   System.IOUtils,
   Dext.Assertions,
   Dext.Mocks,
   Dext.Mocks.Auto,
-  Dext.Testing.Console;
+  Dext.Testing.Console,
+  Dext.Utils;
 
 type
   {$M+}

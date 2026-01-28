@@ -61,6 +61,26 @@ $(DEXT)\Web\MVC
 1.  Open `Sources\DextFramework.groupproj`.
 2.  Right-click **ProjectGroup** > **Build All**.
 
+### 4. Database Drivers Configuration (Optional)
+
+By default, Dext is configured with only the **SQLite** driver enabled. This ensures full compatibility with **Delphi Community Edition**.
+
+If you are using Delphi Enterprise/Architect and want to use other databases (PostgreSQL, SQL Server, Oracle, MySQL, etc.), follow these steps:
+
+1.  Open the file `Sources\Dext.inc`.
+2.  Uncomment the directives for the databases you want to use:
+    ```pascal
+    {$DEFINE DEXT_ENABLE_DB_SQLITE}      // Active by default
+    {.$DEFINE DEXT_ENABLE_DB_POSTGRES}   // Remove the dot (.) to enable
+    {.$DEFINE DEXT_ENABLE_DB_MYSQL}
+    {.$DEFINE DEXT_ENABLE_DB_MSSQL}
+    // ... other drivers
+    ```
+3.  **Rebuild** the framework (`DextFramework.groupproj` > **Build All**) to apply the changes.
+4.  **Important:** Add the unit `Dext.Entity.Drivers.FireDAC.Links` to your project (e.g., in your DPR or Main Form `uses` clause). This ensures that the enabled drivers are correctly linked to your application.
+
+> **Note:** The `Dext.inc` file is automatically copied to the output folder (`Output`) during the Build process, ensuring that your applications use the same directive definitions as the compiled framework.
+
 ---
 
 ## Troubleshooting

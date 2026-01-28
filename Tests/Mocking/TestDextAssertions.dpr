@@ -9,6 +9,7 @@ program TestDextAssertions;
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   System.Generics.Collections,
   System.DateUtils,
@@ -483,7 +484,5 @@ begin
     end;
   end;
   
-  WriteLn('');
-  WriteLn('Press Enter to exit...');
-  ReadLn;
+  ConsolePause;
 end.

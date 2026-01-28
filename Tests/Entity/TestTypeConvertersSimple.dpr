@@ -8,7 +8,7 @@ uses
   System.Rtti,
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
-  FireDAC.Phys.PG,
+  Dext.Entity.Drivers.FireDAC.Links,
   Dext.Utils,
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.TypeConverters,

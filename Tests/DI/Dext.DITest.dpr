@@ -2,6 +2,7 @@
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   Dext.DI.Interfaces,
   Dext.DI.Core,
@@ -105,5 +106,5 @@ begin
       Writeln('Error: ', E.Message);
   end;
 
-  Readln;
+  ConsolePause;
 end.

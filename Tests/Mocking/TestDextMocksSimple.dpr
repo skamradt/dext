@@ -14,7 +14,8 @@ uses
   Dext.Interception.Proxy,
   Dext.Mocks,
   Dext.Mocks.Interceptor,
-  Dext.Mocks.Matching;
+  Dext.Mocks.Matching,
+  Dext.Utils;
 
 type
   {$M+}
@@ -69,7 +70,5 @@ begin
       WriteLn('ERROR at current step: ', E.ClassName, ': ', E.Message);
   end;
 
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
+  ConsolePause;
 end.

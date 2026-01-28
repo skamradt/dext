@@ -75,8 +75,6 @@ begin
     TestEdgeCases;
     TestLocalization;
     TestProviders; // ✅ Adicionado teste de drivers
-    // Readln;
-    // Exit;
     TestBindingAttributes;
     TestRealWorldBindingScenarios;
     TestModelBinderBasic;
@@ -87,25 +85,14 @@ begin
     TestBindServicesComprehensive;
     TestBindQueryDateTypes; // ✅ New test for Date/Time binding
     TestBindBodyZeroAlloc; // ✅ New test for Zero Alloc Body Binding
-    Readln;
-    Exit;
     TestBindRouteComprehensive;
     TestBindRouteEdgeCases;
-    Readln;
-    Exit;
     TestBindQueryComprehensive;
     TestBindQueryEdgeCases;
-    Readln;
-    Exit;
     TestCompleteIntegration;
     TestFinalIntegration;
     TestWebHostIntegration;
     TestConciseIntegration;
-
-    Readln;
-    Exit;
-
-
     Writeln('=== Starting Dext Web Server with CORS ===');
 
     var Host := TDextWebHost.CreateDefaultBuilder

@@ -6,6 +6,7 @@ program TestDextHubs;
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   System.Rtti,
   System.JSON,
@@ -621,9 +622,5 @@ begin
     end;
   end;
   
-  {$IFDEF DEBUG}
-  WriteLn;
-  Write('Press Enter to exit...');
-  ReadLn;
-  {$ENDIF}
+  ConsolePause;
 end.

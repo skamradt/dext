@@ -9,6 +9,7 @@ program TestDextMocks;
 
 uses
   Dext.MM,
+  Dext.Utils,
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
@@ -377,7 +378,5 @@ begin
     end;
   end;
   
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
+  ConsolePause;
 end.

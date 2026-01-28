@@ -2,15 +2,13 @@
 
 interface
 
+{$I Dext.inc}
+
 uses
   System.SysUtils,
   FireDAC.Comp.Client,
   FireDAC.Stan.Def,
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.PG,
-  FireDAC.Phys.FB,
-  FireDAC.Phys.MSSQL, // Add MSSQL Driver
-  FireDAC.Phys.MySQL, // Add MySQL/MariaDB Driver
+  Dext.Entity.Drivers.FireDAC.Links,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.Dialects;
@@ -57,7 +55,9 @@ type
     class var FMySQLPassword: string;
     class var FMySQLVendorLib: string;
     class var FMySQLVendorHome: string;
+    {$IFDEF DEXT_ENABLE_DB_MYSQL}
     class var FMySQLDriverLink: TFDPhysMySQLDriverLink;
+    {$ENDIF}
   public
     /// <summary>
     ///   Initialize default configuration
@@ -419,6 +419,7 @@ begin
   FMySQLVendorHome := AVendorHome;
   
   // Configure Driver Link globally for MySQL
+  {$IFDEF DEXT_ENABLE_DB_MYSQL}
   if FMySQLDriverLink = nil then
     FMySQLDriverLink := TFDPhysMySQLDriverLink.Create(nil);
 
@@ -431,6 +432,10 @@ begin
     if AVendorHome <> '' then
       FMySQLDriverLink.VendorHome := AVendorHome;
   end;
+  {$ELSE}
+  if (AVendorLib <> '') or (AVendorHome <> '') then
+    WriteLn('⚠️  Warning: MySQL VendorLib/Home config ignored because DEXT_ENABLE_DB_MYSQL is not defined.');
+  {$ENDIF}
 
   WriteLn(Format('✅ MySQL/MariaDB configured: %s:%d/%s', [AHost, APort, ADatabase]));
   if AVendorLib <> '' then

@@ -17,7 +17,8 @@ uses
   System.Rtti,
   System.Variants,
   Dext.Assertions,
-  Dext.Types.UUID;
+  Dext.Types.UUID,
+  Dext.Utils;
 
 var
   TestsPassed: Integer = 0;
@@ -449,7 +450,5 @@ begin
     end;
   end;
   
-  WriteLn('');
-  WriteLn('Press ENTER to exit...');
-  ReadLn;
+  ConsolePause;
 end.

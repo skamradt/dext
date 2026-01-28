@@ -15,6 +15,26 @@ Os arquivos compilados serão gerados automaticamente na pasta:
 *   `Output\$(Platform)\$(Config)`
 *   *Exemplo:* `Output\Win32\Debug`
 
+## 1.1 Configuração de Drivers de Banco de Dados (Opcional)
+
+Por padrão, o Dext vem configurado apenas com o driver **SQLite** habilitado. Isso garante compatibilidade total com o **Delphi Community Edition**.
+
+Se você possui o Delphi Enterprise/Architect e deseja utilizar outros bancos de dados (PostgreSQL, SQL Server, Oracle, MySQL, etc.), siga estes passos:
+
+1.  Abra o arquivo `Sources\Dext.inc`.
+2.  Descomente as diretivas correspondentes aos bancos que deseja utilizar:
+    ```pascal
+    {$DEFINE DEXT_ENABLE_DB_SQLITE}      // Já ativo por padrão
+    {.$DEFINE DEXT_ENABLE_DB_POSTGRES}   // Remova o ponto (.) para ativar
+    {.$DEFINE DEXT_ENABLE_DB_MYSQL}
+    {.$DEFINE DEXT_ENABLE_DB_MSSQL}
+    // ... outros drivers
+    ```
+3.  **Recompile** o framework (`DextFramework.groupproj` > **Build All**) para aplicar as alterações.
+4.  **Importante:** Adicione a unit `Dext.Entity.Drivers.FireDAC.Links` ao seu projeto (ex: na cláusula `uses` do DPR ou Formulário Principal). Isso garante que os drivers habilitados sejam corretamente vinculados à sua aplicação.
+
+> **Nota:** O arquivo `Dext.inc` é copiado automaticamente para a pasta de saída (`Output`) durante o processo de Build, garantindo que suas aplicações utilizem as mesmas definições de diretivas que o framework compilado.
+
 ## 2. Configuração de Variável de Ambiente (Recomendado)
 
 Utilizar uma variável de ambiente simplifica seus Library Paths e permite alternar entre diferentes versões/forks do Dext facilmente.

@@ -6,6 +6,8 @@ program TestVirtualInterface;
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,
+  Dext.Utils,
   System.SysUtils,
   System.Rtti;
 
@@ -71,7 +73,5 @@ begin
       WriteLn('ERROR: ', E.ClassName, ': ', E.Message);
   end;
   
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
+  ConsolePause;
 end.

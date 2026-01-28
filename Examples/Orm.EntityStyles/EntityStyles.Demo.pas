@@ -28,7 +28,7 @@ uses
   System.SysUtils,
   Data.DB,
   FireDAC.Comp.Client,
-  FireDAC.Phys.SQLite,
+  Dext.Entity.Drivers.FireDAC.Links,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,
   FireDAC.DApt,

@@ -21,14 +21,8 @@ uses
   FireDAC.Comp.Client,
   FireDAC.DApt,
   FireDAC.Comp.UI,
-  FireDAC.ConsoleUI.Wait
-  {$IFDEF DEXT_ENABLE_DB_POSTGRES}, FireDAC.Phys.PG {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_SQLITE}, FireDAC.Phys.SQLite {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_MYSQL}, FireDAC.Phys.MySQL {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_MSSQL}, FireDAC.Phys.MSSQL {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_ORACLE}, FireDAC.Phys.Oracle {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_FIREBIRD}, FireDAC.Phys.FB {$ENDIF}
-  {$IFDEF DEXT_ENABLE_DB_ODBC}, FireDAC.Phys.ODBC {$ENDIF};
+  FireDAC.ConsoleUI.Wait,
+  Dext.Entity.Drivers.FireDAC.Links; // Centralized driver linking
 
 type
   TComponentHelper = class helper for TComponent

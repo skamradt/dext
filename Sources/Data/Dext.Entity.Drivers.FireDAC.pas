@@ -44,12 +44,7 @@ uses
   FireDAC.DApt.Intf,
   FireDAC.DatS,
   FireDAC.Phys.Intf,
-  {$IFDEF DEXT_ENABLE_DB_SQLITE}
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.SQLiteDef,
-  FireDAC.Phys.SQLiteWrapper,
-  FireDAC.Phys.SQLiteCli,
-  {$ENDIF}
+  Dext.Entity.Drivers.FireDAC.Links,
   FireDAC.Stan.Async,
   FireDAC.Stan.Def,
   FireDAC.Stan.Error,

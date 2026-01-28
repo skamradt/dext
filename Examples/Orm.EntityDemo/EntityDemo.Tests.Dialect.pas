@@ -8,8 +8,7 @@ uses
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.Dialects,
   FireDAC.Comp.Client,
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.SQLiteDef,
+  Dext.Entity.Drivers.FireDAC.Links,
   System.SysUtils,
   EntityDemo.Tests.Base;
 

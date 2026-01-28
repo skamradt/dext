@@ -8,7 +8,7 @@ uses
   System.Generics.Collections,
   Dext.Collections,
   FireDAC.Comp.Client,
-  FireDAC.Phys.SQLite,
+  Dext.Entity.Drivers.FireDAC.Links,
   FireDAC.DApt,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,

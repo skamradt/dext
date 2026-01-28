@@ -2,6 +2,8 @@
 
 interface
 
+{$I Dext.inc}
+
 uses
   System.Generics.Collections,
   System.Classes,
@@ -16,10 +18,7 @@ uses
   FireDAC.Stan.Pool,
   FireDAC.Stan.Async,
   FireDAC.Phys,
-  FireDAC.Phys.PG,
-  FireDAC.Phys.PGDef,
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.FB,
+  Dext.Entity.Drivers.FireDAC.Links,
   FireDAC.Stan.ExprFuncs,
   FireDAC.ConsoleUI.Wait,
   FireDAC.Comp.Client,

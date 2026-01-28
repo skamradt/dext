@@ -36,7 +36,8 @@ requires
   FireDACCommon,
   FireDACCommonDriver,
   Dext.Core,
-  FireDACSqliteDriver;
+  FireDACSqliteDriver,
+  FireDACPgDriver;
 
 contains
   Dext.Entity.Context in 'Data\Dext.Entity.Context.pas',
@@ -72,6 +73,7 @@ contains
   Dext.Entity.Grouping in 'Data\Dext.Entity.Grouping.pas',
   Dext.Entity.Joining in 'Data\Dext.Entity.Joining.pas',
   Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas',
-  Dext.Entity.Cache in 'Data\Dext.Entity.Cache.pas';
+  Dext.Entity.Cache in 'Data\Dext.Entity.Cache.pas',
+  Dext.Entity.Drivers.FireDAC.Links in 'Data\Dext.Entity.Drivers.FireDAC.Links.pas';
 
 end.
