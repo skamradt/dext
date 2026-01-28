@@ -404,7 +404,10 @@ uses
   System.RegularExpressions,
   System.IOUtils,
   Dext.Utils,
-  Dext.Testing.Report;
+  Dext.Testing.Report,
+  Dext.Logging,
+  Dext.Logging.Global,
+  Dext.Types.UUID;
 
 const
   CONSOLE_COLOR_GREEN = 10;
@@ -1098,6 +1101,7 @@ begin
   Stopwatch := TStopwatch.StartNew;
 
   NotifyRunStart(TestCount);
+  // Log.Info('Run Started: %d tests', [TestCount]);
 
   TTestConsole.WriteHeader('Dext Test Runner');
   SafeWriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
@@ -1119,6 +1123,9 @@ begin
 
   PrintSummary;
   
+  // Log.Info('Run Completed: %d Tests, %d Passed, %d Failed, %d Skipped. Duration: %.3fs', 
+  //  [FSummary.TotalTests, FSummary.Passed, FSummary.Failed, FSummary.Skipped, FSummary.TotalDuration.TotalSeconds]);
+    
   NotifyRunComplete(FSummary);
 end;
 
@@ -1139,6 +1146,7 @@ begin
   Stopwatch := TStopwatch.StartNew;
 
   NotifyRunStart(0);
+  Log.Info('Run Started (Filtered)');
   TTestConsole.WriteHeader('Dext Test Runner (Filtered)');
   SafeWriteLn;
 
@@ -1212,65 +1220,80 @@ var
   TestCases: TArray<TArray<TValue>>;
   DisplayNames: TArray<string>;
   I: Integer;
+  Scope: IDisposable;
 begin
-  NotifyFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
-  if Assigned(FOnFixtureStart) then
-    FOnFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
-
-  if FVerbose then
-  begin
-    SafeWriteLn;
-    TTestConsole.WriteInfo('Fixture: ' + Fixture.Name);
-    if Fixture.Description <> '' then
-      Write('  ' + Fixture.Description);
-    SafeWriteLn;
-  end;
-
-  // Create fixture instance
-  Instance := Fixture.FixtureClass.Create;
+  // Start Scope for Fixture
+  Scope := Log.Logger.BeginScope('Fixture {Fixture}', [Fixture.Name]);
   try
-    // BeforeAll (class-level setup)
-    if Assigned(Fixture.BeforeAllMethod) then
+    // Log.Info('Starting Fixture: %s (%d tests)', [Fixture.Name, Fixture.TestMethods.Count]);
+  
+    NotifyFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
+    if Assigned(FOnFixtureStart) then
+      FOnFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
+  
+    if FVerbose then
     begin
-      try
-        Fixture.BeforeAllMethod.Invoke(Instance, []);
-      except
-        on E: Exception do
-        begin
-          TTestConsole.WriteFail('BeforeAll failed: ' + E.Message);
-          Exit;
+      SafeWriteLn;
+      TTestConsole.WriteInfo('Fixture: ' + Fixture.Name);
+      if Fixture.Description <> '' then
+        Write('  ' + Fixture.Description);
+      SafeWriteLn;
+    end;
+  
+    // Create fixture instance
+    Instance := Fixture.FixtureClass.Create;
+    try
+      // BeforeAll (class-level setup)
+      if Assigned(Fixture.BeforeAllMethod) then
+      begin
+        try
+          Fixture.BeforeAllMethod.Invoke(Instance, []);
+        except
+          on E: Exception do
+          begin
+            Log.Error('BeforeAll failed for %s: %s', [Fixture.Name, E.Message]);
+            TTestConsole.WriteFail('BeforeAll failed: ' + E.Message);
+            Exit;
+          end;
         end;
       end;
-    end;
-
-    // Execute each test method
-    for Method in Fixture.TestMethods do
-    begin
-      // Get test cases
-      TestCases := GetTestCases(Method);
-      DisplayNames := GetTestCaseDisplayNames(Method);
-
-      for I := 0 to High(TestCases) do
-        ExecuteTest(Fixture, Method, Instance, TestCases[I], DisplayNames[I]);
-    end;
-
-    // AfterAll (class-level cleanup)
-    if Assigned(Fixture.AfterAllMethod) then
-    begin
-      try
-        Fixture.AfterAllMethod.Invoke(Instance, []);
-      except
-        on E: Exception do
-          TTestConsole.WriteFail('AfterAll failed: ' + E.Message);
+  
+      // Execute each test method
+      for Method in Fixture.TestMethods do
+      begin
+        // Get test cases
+        TestCases := GetTestCases(Method);
+        DisplayNames := GetTestCaseDisplayNames(Method);
+  
+        for I := 0 to High(TestCases) do
+          ExecuteTest(Fixture, Method, Instance, TestCases[I], DisplayNames[I]);
       end;
+  
+      // AfterAll (class-level cleanup)
+      if Assigned(Fixture.AfterAllMethod) then
+      begin
+        try
+          Fixture.AfterAllMethod.Invoke(Instance, []);
+        except
+          on E: Exception do
+          begin
+            Log.Error('AfterAll failed for %s: %s', [Fixture.Name, E.Message]);
+            TTestConsole.WriteFail('AfterAll failed: ' + E.Message);
+          end;
+        end;
+      end;
+    finally
+      Instance.Free;
     end;
+  
+    // Log.Info('Completed Fixture: %s', [Fixture.Name]);
+    NotifyFixtureComplete(Fixture.Name);
+    if Assigned(FOnFixtureComplete) then
+      FOnFixtureComplete(Fixture.Name);
+      
   finally
-    Instance.Free;
+    Scope.Dispose;
   end;
-
-  NotifyFixtureComplete(Fixture.Name);
-  if Assigned(FOnFixtureComplete) then
-    FOnFixtureComplete(Fixture.Name);
 end;
 
 class procedure TTestRunner.ExecuteTest(Fixture: TTestFixtureInfo;
@@ -1289,6 +1312,7 @@ var
   Params: TArray<TRttiParameter>;
   P: Integer;
   NeedsContext: Boolean;
+  Scope: IDisposable;
 begin
   Info.FixtureName := Fixture.Name;
   Info.TestName := Method.Name;
@@ -1297,6 +1321,10 @@ begin
     Info.DisplayName := Info.DisplayName + TestCaseDisplayName;
   Info.Categories := GetCategories(Method);
   Categories := Info.Categories;
+
+  // Logging Instrumentation
+  Scope := Log.Logger.BeginScope('Test {Test}', [Info.DisplayName]);
+  try
 
   // Check filters
   if not FFilter.Matches(Fixture.Name, Method.Name, Categories, IsExplicit(Method)) then
@@ -1307,6 +1335,8 @@ begin
   NotifyTestStart(Fixture.Name, Info.DisplayName);
   if Assigned(FOnTestStart) then
     FOnTestStart(Fixture.Name, Info.DisplayName);
+    
+  // Log.Info('Started Test: %s.%s', [Fixture.Name, Info.DisplayName]);
 
   // Check platform
   if not ShouldRunOnPlatform(Method) then
@@ -1316,6 +1346,7 @@ begin
     Inc(FSummary.Skipped);
     PrintResultChar(trSkipped);
     PrintTestResult(Info);
+    Log.Warn('Skipped Test: %s (Platform not supported)', [Info.DisplayName]);
     NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
@@ -1331,6 +1362,7 @@ begin
     Inc(FSummary.Skipped);
     PrintResultChar(trSkipped);
     PrintTestResult(Info);
+    Log.Warn('Skipped Test: %s (%s)', [Info.DisplayName, IgnoreReason]);
     NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
@@ -1382,6 +1414,7 @@ begin
 
         Info.Result := trPassed;
         Inc(FSummary.Passed);
+        // Log.Info('Passed Test: %s', [Info.DisplayName]);
 
         // Check MaxTime warning
         MaxTime := GetMaxTime(Method);
@@ -1389,6 +1422,7 @@ begin
         begin
           Info.ErrorMessage := Format('Test passed but exceeded MaxTime (%dms > %dms)',
             [Stopwatch.ElapsedMilliseconds, MaxTime]);
+          Log.Warn('Test exceeded MaxTime: %s', [Info.ErrorMessage]);
         end;
       finally
         // TearDown
@@ -1403,6 +1437,7 @@ begin
         // Try to get stack trace if available
         Info.StackTrace := E.StackTrace;
         Inc(FSummary.Failed);
+        // Log.Error('Failed Test: %s. Error: %s', [Info.DisplayName, E.Message]);
       end;
     end;
 
@@ -1420,6 +1455,9 @@ begin
     NotifyTestComplete(Info);
     if Assigned(FOnTestComplete) then
       FOnTestComplete(Info);
+  end;
+  finally
+    Scope.Dispose;
   end;
 end;
 

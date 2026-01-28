@@ -138,6 +138,8 @@ type
 
     class function NoContent: IResult;
     
+    class function InternalServerError(const AMessage: string): IResult;
+
     class function Json(const AJson: string; AStatusCode: Integer = 200): IResult;
     class function Text(const AContent: string; AStatusCode: Integer = 200): IResult;
     class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult; // Added
@@ -374,6 +376,11 @@ end;
 class function Results.NoContent: IResult;
 begin
   Result := TStatusCodeResult.Create(204);
+end;
+
+class function Results.InternalServerError(const AMessage: string): IResult;
+begin
+  Result := TJsonResult.Create(Format('{"error": "%s"}', [AMessage]), 500);
 end;
 
 class function Results.Json(const AJson: string; AStatusCode: Integer): IResult;

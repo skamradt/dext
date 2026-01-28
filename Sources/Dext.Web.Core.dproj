@@ -137,7 +137,6 @@
         <DCCReference Include="Web\Dext.Web.StaticFiles.pas"/>
         <DCCReference Include="Web\Dext.Web.Indy.Types.pas"/>
         <DCCReference Include="Web\Dext.Web.Indy.pas"/>
-        <DCCReference Include="Web\Dext.Web.Middleware.Logging.pas"/>
         <DCCReference Include="Web\Caching\Dext.Caching.pas"/>
         <DCCReference Include="Web\Caching\Dext.Caching.Redis.pas"/>
         <DCCReference Include="Web\Mvc\Dext.Web.Controllers.pas"/>
@@ -175,9 +174,9 @@
         <DCCReference Include="Web\Dext.Auth.Middleware.pas"/>
         <DCCReference Include="Web\Dext.Web.DataApi.pas"/>
         <DCCReference Include="Web\Dext.OpenAPI.Fluent.pas"/>
-        <DCCReference Include="Web\Dext.Web.StatusCodes.pas"/>
         <DCCReference Include="Web\Dext.Auth.BasicAuth.pas"/>
         <DCCReference Include="Web\Dext.Web.ResponseHelper.pas"/>
+        <DCCReference Include="Web\Dext.Web.Middleware.Logging.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

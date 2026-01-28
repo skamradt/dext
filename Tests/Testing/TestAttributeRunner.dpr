@@ -32,7 +32,7 @@ program TestAttributeRunner;
 {$APPTYPE CONSOLE}
 
 uses
-  Dext.MM, // Memory manager first - Disabled for local test build due to missing path
+  Dext.MM,
   System.SysUtils,
   System.Rtti,
   Dext.Assertions,
@@ -41,7 +41,10 @@ uses
   Dext.Testing.Fluent,   // Fluent API
   Dext.Utils,
   Dext.Core.SmartTypes,
-  Dext.Entity.Prototype;
+  Dext.Entity.Prototype,
+  Dext.Testing.Listeners.Telemetry,
+  Dext.Logging,
+  Dext.Logging.Global;
 
 type
   TSmartUser = class
@@ -512,12 +515,14 @@ begin
     WriteLn('🧪 Dext Attribute-Based Testing Demo');
     WriteLn('=====================================');
     WriteLn;
+
+    // Register Telemetry Listener
+    TTestRunner.RegisterListener(TTelemetryTestListener.Create(Log.Logger));
     
     // ✨ NEW FLUENT API - Clean and intuitive!
-    // Everything in one elegant chain:
     if TTest.Configure
       .Verbose
-      .UseDashboard(9000) // 🚀 Enable Live Dashboard at http://localhost:9000
+////      .UseDashboard(9000)
       .RegisterFixtures([TGlobalSetup, TCalculatorTests, TStringTests, TAssertionTests, TExternalDataTests])
       .ExportToJUnit('test-results.xml')
       .ExportToJson('test-results.json')
@@ -525,15 +530,16 @@ begin
       .Run then
       ExitCode := 0
     else
-
       ExitCode := 1;
+      
+    // Give time for async logs (Sidecar Sink) to flush before process kill
+    Sleep(1000);
   except
     on E: Exception do
     begin
       WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
       ExitCode := 1;
-      WriteLn('Press Enter to exit...');
-      ReadLn;
     end;
   end;
+  ConsolePause;
 end.

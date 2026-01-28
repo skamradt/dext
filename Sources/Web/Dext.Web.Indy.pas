@@ -105,8 +105,9 @@ type
     FServices: IServiceProvider;
     FUser: IClaimsPrincipal;
     FItems: TDictionary<string, TValue>;
+    FContext: TIdContext;
   public
-    constructor Create(ARequestInfo: TIdHTTPRequestInfo;
+    constructor Create(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
       AResponseInfo: TIdHTTPResponseInfo; const AServices: IServiceProvider);
     destructor Destroy; override;
     procedure SetRouteParams(const AParams: TDictionary<string, string>);
@@ -123,6 +124,7 @@ type
     property Services: IServiceProvider read GetServices write SetServices;
     property User: IClaimsPrincipal read GetUser write SetUser;
     property Items: TDictionary<string, TValue> read GetItems;
+    property Context: TIdContext read FContext;
   end;
 
 implementation
@@ -621,10 +623,11 @@ end;
 
 { TIndyHttpContext }
 
-constructor TIndyHttpContext.Create(ARequestInfo: TIdHTTPRequestInfo;
+constructor TIndyHttpContext.Create(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
   AResponseInfo: TIdHTTPResponseInfo; const AServices: IServiceProvider);
 begin
   inherited Create;
+  FContext := AContext;
   FRequest := TIndyHttpRequest.Create(ARequestInfo);
   FResponse := TIndyHttpResponse.Create(AResponseInfo);
   

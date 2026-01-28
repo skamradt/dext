@@ -132,9 +132,7 @@
         <DCCReference Include="Core\Dext.DI.Interfaces.pas"/>
         <DCCReference Include="Core\Dext.Json.pas"/>
         <DCCReference Include="Core\Dext.Json.Types.pas"/>
-        <DCCReference Include="Core\Dext.Logging.Console.pas"/>
         <DCCReference Include="Core\Dext.Logging.Extensions.pas"/>
-        <DCCReference Include="Core\Dext.Logging.pas"/>
         <DCCReference Include="Core\Dext.Options.Extensions.pas"/>
         <DCCReference Include="Core\Dext.Options.pas"/>
         <DCCReference Include="Core\Dext.pas"/>
@@ -163,6 +161,17 @@
         <DCCReference Include="Core\Dext.Configuration.Yaml.pas"/>
         <DCCReference Include="Core\Dext.Yaml.pas"/>
         <DCCReference Include="Core\Base\Dext.Core.Writers.pas"/>
+        <DCCReference Include="Core\Dext.Http.StatusCodes.pas"/>
+        <DCCReference Include="Core\Dext.Http.Request.pas"/>
+        <DCCReference Include="Core\Dext.Http.Parser.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Console.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Global.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Sinks.Sidecar.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Async.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Sinks.pas"/>
+        <DCCReference Include="Core\Dext.Logging.RingBuffer.pas"/>
+        <DCCReference Include="Core\Dext.Logging.pas"/>
+        <DCCReference Include="Core\Dext.Telemetry.Context.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

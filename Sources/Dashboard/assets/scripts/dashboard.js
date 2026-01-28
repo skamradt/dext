@@ -63,22 +63,36 @@ source.addEventListener("test_complete", (e) => {
     const msg = JSON.parse(e.data);
     const id = ("t-" + msg.fixture + "-" + msg.test).replace(/[^a-zA-Z0-9-_]/g, "_");
     const el = document.getElementById(id);
+
+    // Normalize status to lowercase to handle "Passed" vs "passed"
+    const statusLower = (msg.status || "").toLowerCase();
+
     if (el) {
         let icon = "FAIL";
-        if (msg.status === "passed") icon = "PASS";
-        else if (msg.status === "skipped") icon = "SKIP";
-        el.className = "test-card " + msg.status;
+        if (statusLower === "passed") icon = "PASS";
+        else if (statusLower === "skipped") icon = "SKIP";
+
+        // Remove old classes and set new status class
+        el.classList.remove("running", "passed", "failed", "skipped");
+        el.classList.add("test-card", statusLower);
+
         el.querySelector(".test-icon").className = "test-icon"; /* remove running */
         el.querySelector(".test-icon").innerText = icon;
         el.querySelector(".test-meta").innerText = msg.duration + "ms";
-        if (stats[msg.status] !== undefined) stats[msg.status]++;
+
+        // Use statusLower for stats counting
+        if (stats[statusLower] !== undefined) stats[statusLower]++;
+
         updateChart();
-        if (msg.status === "failed") {
+
+        if (statusLower === "failed") {
             const detailsId = id + "-details";
             el.querySelector(".test-header").setAttribute("onclick", `document.getElementById("${detailsId}").classList.toggle("open")`);
-            const detailsHtml = `<div class="test-details" id="${detailsId}"><div class="error-msg">${msg.error}</div></div>`;
+            const detailsHtml = `<div class="test-details" id="${detailsId}"><div class="error-msg">${msg.error || "Unknown Error"}</div></div>`;
             el.insertAdjacentHTML("beforeend", detailsHtml);
         }
+    } else {
+        console.warn("Test card not found for update:", id);
     }
 });
 

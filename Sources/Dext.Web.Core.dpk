@@ -57,7 +57,6 @@ contains
   Dext.Web.StaticFiles in 'Web\Dext.Web.StaticFiles.pas',
   Dext.Web.Indy.Types in 'Web\Dext.Web.Indy.Types.pas',
   Dext.Web.Indy in 'Web\Dext.Web.Indy.pas',
-  Dext.Web.Middleware.Logging in 'Web\Dext.Web.Middleware.Logging.pas',
   Dext.Caching in 'Web\Caching\Dext.Caching.pas',
   Dext.Caching.Redis in 'Web\Caching\Dext.Caching.Redis.pas',
   Dext.Web.Controllers in 'Web\Mvc\Dext.Web.Controllers.pas',
@@ -96,6 +95,7 @@ contains
   Dext.Web.DataApi in 'Web\Dext.Web.DataApi.pas',
   Dext.OpenAPI.Fluent in 'Web\Dext.OpenAPI.Fluent.pas',
   Dext.Auth.BasicAuth in 'Web\Dext.Auth.BasicAuth.pas',
-  Dext.Web.ResponseHelper in 'Web\Dext.Web.ResponseHelper.pas';
+  Dext.Web.ResponseHelper in 'Web\Dext.Web.ResponseHelper.pas',
+  Dext.Web.Middleware.Logging in 'Web\Dext.Web.Middleware.Logging.pas';
 
 end.

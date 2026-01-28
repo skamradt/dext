@@ -339,7 +339,7 @@ begin
     FWaitDashboard := False;
   end;
 
-  // Check for Report Overrides via Command Line
+  // Check for Overrides via Command Line
   for var I := 1 to ParamCount do
   begin
     var P := ParamStr(I);
@@ -348,7 +348,21 @@ begin
     else if P.StartsWith('-html:', True) or P.StartsWith('/html:', True) then
       FHTMLFile := P.Substring(6).DeQuotedString('"')
     else if P.StartsWith('-json:', True) or P.StartsWith('/json:', True) then
-      FJsonFile := P.Substring(6).DeQuotedString('"');
+      FJsonFile := P.Substring(6).DeQuotedString('"')
+      
+    // Filter overrides
+    else if P.StartsWith('-filter:', True) or P.StartsWith('/filter:', True) then
+      FTestPattern := P.Substring(8).DeQuotedString('"')
+    else if P.StartsWith('-fixture:', True) or P.StartsWith('/fixture:', True) then
+      FFixturePattern := P.Substring(9).DeQuotedString('"')
+    else if P.StartsWith('-category:', True) or P.StartsWith('/category:', True) then
+      FilterByCategory(P.Substring(10).DeQuotedString('"'))
+      
+    // Behavior overrides
+    else if  (P = '-no-wait') or (P = '/no-wait') then
+      FWaitDashboard := False
+    else if (P = '-no-dashboard') or (P = '/no-dashboard') then
+      FUseDashboard := False;
   end;
 
   // Start Dashboard

@@ -168,7 +168,7 @@ var
 begin
   try
     // Criar contexto Dext a partir do request Indy
-    DextContext := TIndyHttpContext.Create(ARequestInfo, AResponseInfo, FServices);
+    DextContext := TIndyHttpContext.Create(AContext, ARequestInfo, AResponseInfo, FServices);
 
     // Executar pipeline Dext
     FPipeline(DextContext);

@@ -30,7 +30,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  Dext.Types.UUID;
 
 type
   /// <summary>
@@ -45,7 +46,15 @@ type
     Critical = 5,
     None = 6
   );
-{$M+}
+  {$M+}
+  /// <summary>
+  ///   Defines a mechanism for releasing resources.
+  /// </summary>
+  IDisposable = interface
+    ['{00000000-0000-0000-C000-000000000046}']
+    procedure Dispose;
+  end;
+
   /// <summary>
   ///   Represents a type used to perform logging.
   /// </summary>
@@ -56,6 +65,9 @@ type
     
     function IsEnabled(ALevel: TLogLevel): Boolean;
     
+    function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; overload;
+    function BeginScope(const AState: TObject): IDisposable; overload;
+
     // Short method names (preferred)
     procedure Trace(const AMessage: string); overload;
     procedure Trace(const AMessage: string; const AArgs: array of const); overload;
@@ -115,6 +127,7 @@ type
     ['{C3D4E5F6-7890-1234-5678-90ABCDEF1234}']
     function CreateLogger(const ACategoryName: string): ILogger;
     procedure AddProvider(const AProvider: ILoggerProvider);
+    procedure Dispose;
   end;
 {$M-}
 
@@ -126,7 +139,10 @@ type
   protected
     procedure Log(ALevel: TLogLevel; const AMessage: string; const AArgs: array of const); overload; virtual; abstract;
     procedure Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const); overload; virtual; abstract;
+
     function IsEnabled(ALevel: TLogLevel): Boolean; virtual; abstract;
+    function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; overload; virtual; abstract;
+    function BeginScope(const AState: TObject): IDisposable; overload; virtual; abstract;
   public
     // Short method names (preferred)
     procedure Trace(const AMessage: string); overload;
@@ -185,6 +201,28 @@ type
     procedure Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const); override;
     
     function IsEnabled(ALevel: TLogLevel): Boolean; override;
+    
+    function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; override;
+    function BeginScope(const AState: TObject): IDisposable; override;
+  end;
+
+  /// <summary>
+  ///   Helper for aggregating multiple IDisposable instances.
+  /// </summary>
+  TCompositeDisposable = class(TInterfacedObject, IDisposable)
+  private
+    FDisposables: TArray<IDisposable>;
+  public
+    constructor Create(const ADisposables: TArray<IDisposable>);
+    procedure Dispose;
+  end;
+  
+  /// <summary>
+  ///   No-op disposable for when no logger is enabled.
+  /// </summary>
+  TNullDisposable = class(TInterfacedObject, IDisposable)
+  public
+    procedure Dispose;
   end;
 
   /// <summary>
@@ -204,6 +242,7 @@ type
     function CreateLoggerInstance(const ACategoryName: string): TAggregateLogger;
     procedure SetMinimumLevel(ALevel: TLogLevel);
     procedure AddProvider(const AProvider: ILoggerProvider);
+    procedure Dispose;
   end;
 
 implementation
@@ -249,6 +288,12 @@ end;
 procedure TLoggerFactory.SetMinimumLevel(ALevel: TLogLevel);
 begin
   FMinimumLevel := ALevel;
+end;
+
+procedure TLoggerFactory.Dispose;
+begin
+  // Clean up providers?
+  // For now, allow Destroy to handle it, or explicit cleanup if needed.
 end;
 
 function TLoggerFactory.CreateLogger(const ACategoryName: string): ILogger;
@@ -480,6 +525,58 @@ begin
   begin
     LLogger.Log(ALevel, AException, AMessage, AArgs);
   end;
+end;
+
+function TAggregateLogger.BeginScope(const AMessage: string; const AArgs: array of const): IDisposable;
+var
+  LDisposables: TArray<IDisposable>;
+  i: Integer;
+begin
+  SetLength(LDisposables, Length(FLoggers));
+  for i := 0 to High(FLoggers) do
+  begin
+    LDisposables[i] := FLoggers[i].BeginScope(AMessage, AArgs);
+  end;
+  Result := TCompositeDisposable.Create(LDisposables);
+end;
+
+function TAggregateLogger.BeginScope(const AState: TObject): IDisposable;
+var
+  LDisposables: TArray<IDisposable>;
+  i: Integer;
+begin
+  SetLength(LDisposables, Length(FLoggers));
+  for i := 0 to High(FLoggers) do
+  begin
+    LDisposables[i] := FLoggers[i].BeginScope(AState);
+  end;
+  Result := TCompositeDisposable.Create(LDisposables);
+end;
+
+{ TCompositeDisposable }
+
+constructor TCompositeDisposable.Create(const ADisposables: TArray<IDisposable>);
+begin
+  inherited Create;
+  FDisposables := ADisposables;
+end;
+
+procedure TCompositeDisposable.Dispose;
+var
+  LDisposable: IDisposable;
+begin
+  for LDisposable in FDisposables do
+  begin
+    if LDisposable <> nil then
+      LDisposable.Dispose;
+  end;
+end;
+
+{ TNullDisposable }
+
+procedure TNullDisposable.Dispose;
+begin
+  // No-op
 end;
 
 end.

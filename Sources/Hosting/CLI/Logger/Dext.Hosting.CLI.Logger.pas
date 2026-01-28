@@ -18,6 +18,9 @@ type
     procedure Log(ALevel: TLogLevel; const AMessage: string; const AArgs: array of const); overload; override;
     procedure Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const); overload; override;
     function IsEnabled(ALevel: TLogLevel): Boolean; override;
+    
+    function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; overload; override;
+    function BeginScope(const AState: TObject): IDisposable; overload; override;
   public
     constructor Create(const Category: string);
   end;
@@ -41,6 +44,17 @@ end;
 function TConsoleHubLogger.IsEnabled(ALevel: TLogLevel): Boolean;
 begin
   Result := True;
+end;
+
+function TConsoleHubLogger.BeginScope(const AMessage: string; const AArgs: array of const): IDisposable;
+begin
+  // Scopes not supported in CLI/Hub logger yet
+  Result := TNullDisposable.Create;
+end;
+
+function TConsoleHubLogger.BeginScope(const AState: TObject): IDisposable;
+begin
+  Result := TNullDisposable.Create;
 end;
 
 procedure TConsoleHubLogger.Log(ALevel: TLogLevel; const AMessage: string; const AArgs: array of const);

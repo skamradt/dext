@@ -61,9 +61,7 @@ contains
   Dext.DI.Interfaces in 'Core\Dext.DI.Interfaces.pas',
   Dext.Json in 'Core\Dext.Json.pas',
   Dext.Json.Types in 'Core\Dext.Json.Types.pas',
-  Dext.Logging.Console in 'Core\Dext.Logging.Console.pas',
   Dext.Logging.Extensions in 'Core\Dext.Logging.Extensions.pas',
-  Dext.Logging in 'Core\Dext.Logging.pas',
   Dext.Options.Extensions in 'Core\Dext.Options.Extensions.pas',
   Dext.Options in 'Core\Dext.Options.pas',
   Dext in 'Core\Dext.pas',
@@ -94,7 +92,15 @@ contains
   Dext.Core.Writers in 'Core\Base\Dext.Core.Writers.pas',
   Dext.Http.StatusCodes in 'Core\Dext.Http.StatusCodes.pas',
   Dext.Http.Request in 'Core\Dext.Http.Request.pas',
-  Dext.Http.Parser in 'Core\Dext.Http.Parser.pas';
+  Dext.Http.Parser in 'Core\Dext.Http.Parser.pas',
+  Dext.Logging.Console in 'Core\Dext.Logging.Console.pas',
+  Dext.Logging.Global in 'Core\Dext.Logging.Global.pas',
+  Dext.Logging.Sinks.Sidecar in 'Core\Dext.Logging.Sinks.Sidecar.pas',
+  Dext.Logging.Async in 'Core\Dext.Logging.Async.pas',
+  Dext.Logging.Sinks in 'Core\Dext.Logging.Sinks.pas',
+  Dext.Logging.RingBuffer in 'Core\Dext.Logging.RingBuffer.pas',
+  Dext.Logging in 'Core\Dext.Logging.pas',
+  Dext.Telemetry.Context in 'Core\Dext.Telemetry.Context.pas';
 
 end.
 

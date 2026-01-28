@@ -9,26 +9,106 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
         rel="stylesheet">
     <link rel="stylesheet" href="main.css">
+    <style>
+        .test-tree-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--outline-v);
+            display: flex;
+            align-items: center;
+        }
+
+        .test-tree-item:hover {
+            background: var(--surface-v);
+        }
+
+        .test-tree-item.selected {
+            background: var(--surface-v);
+            border-left: 3px solid var(--primary);
+        }
+
+        .test-fixture {
+            font-weight: 600;
+            background: var(--surface);
+            user-select: none;
+        }
+
+        .test-method {
+            padding-left: 28px;
+            font-size: 0.9em;
+        }
+
+        .test-status-icon {
+            font-size: 18px;
+            margin-right: 8px;
+            font-family: 'Material Symbols Outlined';
+            vertical-align: middle;
+        }
+
+        .st-pass {
+            color: #2ecc71;
+        }
+
+        .st-fail {
+            color: #e74c3c;
+        }
+
+        .st-skip {
+            color: #f1c40f;
+        }
+
+        .st-none {
+            color: var(--on-surface-v);
+        }
+    </style>
 </head>
 
 <body>
     <nav class="nav">
         <div class="logo">D<span>ext</span></div>
         <a href="#" class="ni on" data-page="dashboard"><span class="ms material-symbols-outlined">home</span><span
-                class="lb">Dashboard</span></a>
-        <a href="#" class="ni" data-page="http"><span class="ms material-symbols-outlined">http</span><span
-                class="lb">HTTP</span></a>
+                class="lb" data-i18n="dashboard">Dashboard</span></a>
         <a href="#" class="ni" data-page="projects"><span class="ms material-symbols-outlined">folder</span><span
-                class="lb">Projects</span></a>
+                class="lb" data-i18n="projects">Projects</span></a>
+        <a href="#" class="ni" data-page="tests"><span class="ms material-symbols-outlined">science</span><span
+                class="lb" data-i18n="tests">Tests</span></a>
+        <a href="#" class="ni" data-page="http"><span class="ms material-symbols-outlined">http</span><span class="lb"
+                data-i18n="http">HTTP</span></a>
         <a href="#" class="ni" data-page="settings"><span class="ms material-symbols-outlined">settings</span><span
-                class="lb">Settings</span></a>
+                class="lb" data-i18n="settings">Settings</span></a>
         <a href="#" class="ni" data-page="logs"><span class="ms material-symbols-outlined">terminal</span><span
-                class="lb">Logs</span></a>
+                class="lb" data-i18n="logs">Logs</span></a>
     </nav>
     <main class="main">
         <div class="hd">
             <h1 id="page-title">Dext Dashboard</h1>
             <div class="hd-act">
+                <!-- Global Workspace Selector -->
+                <div class="wk-select-btn" onclick="openWorkspaceModal()">
+                    <span class="ms material-symbols-outlined" style="color:var(--primary)">folder_open</span>
+                    <div class="wk-info">
+                        <span class="wk-lbl" data-i18n="active_workspace">Active Workspace</span>
+                        <span class="wk-curr" id="header-wk-path" data-i18n="select_folder">Select Folder...</span>
+                    </div>
+                </div>
+
+                <!-- Active Project Selector -->
+                <select id="header-pj-select" class="hd-select" onchange="selectActiveProject(this.value)">
+                    <option value="" data-i18n="no_project">No Project</option>
+                </select>
+
+                <!-- Language Selector -->
+                <select id="lang-select" class="hd-select lang-select" onchange="changeLang(this.value)"
+                    style="width: auto;">
+                    <option value="en">English (EN)</option>
+                    <option value="pt">Português (PT)</option>
+                    <option value="es">Español (ES)</option>
+                    <option value="fr">Français (FR)</option>
+                    <option value="it">Italiano (IT)</option>
+                    <option value="de">Deutsch (DE)</option>
+                    <option value="ja">日本語 (JA)</option>
+                </select>
+
                 <div class="hd-ic" id="theme-toggle" onclick="toggleTheme()"><span class="ms material-symbols-outlined"
                         id="theme-icon">dark_mode</span></div>
                 <div class="hd-ic"><span class="ms material-symbols-outlined">notifications</span></div>
@@ -41,21 +121,15 @@
         <div id="page-dashboard" class="page active">
             <div class="cg">
                 <div class="cd">
-                    <div class="cd-hd"><span class="cd-tt">Environments</span>
+                    <div class="cd-hd"><span class="cd-tt" data-i18n="environments">Environments</span>
                         <div class="cd-ic"><span class="ms material-symbols-outlined">cloud</span></div>
                     </div>
                     <div class="cd-val"><span id="env-count">3</span><span
                             class="arr ms material-symbols-outlined">north_east</span></div>
-                    <div class="cd-pct">+10% from last week</div>
-                    <div class="cd-sub">Active development & staging environments</div>
-                    <div class="cd-grph"><svg viewBox="0 0 200 50" preserveAspectRatio="none"
-                            style="width:100%;height:40px">
-                            <path d="M0,45 C20,42 40,35 60,30 S100,20 140,18 
-S180,15 200,10" fill="none" stroke="var(--primary)" stroke-width="2" />
-                        </svg></div>
+                    <div class="cd-sub" data-i18n="active_development">Active development & staging environments</div>
                 </div>
                 <div class="cd">
-                    <div class="cd-hd"><span class="cd-tt">Coverage</span>
+                    <div class="cd-hd"><span class="cd-tt" data-i18n="coverage">Coverage</span>
                         <div class="cd-ic"><span class="ms material-symbols-outlined">verified</span></div>
                     </div>
                     <div class="cd-circ"><svg viewBox="0 0 100 100">
@@ -64,50 +138,55 @@ S180,15 200,10" fill="none" stroke="var(--primary)" stroke-width="2" />
                                 stroke-width="8" stroke-linecap="round" stroke-dasharray="0 264"
                                 transform="rotate(-90 50 50)" />
                         </svg><span class="cv" id="coverage-value">-</span></div>
-                    <div class="cd-circ cs">Code test coverage across all projects</div>
+                    <div class="cd-circ cs" data-i18n="coverage_sub">Code test coverage across all projects</div>
                 </div>
                 <div class="cd">
-                    <div class="cd-hd"><span class="cd-tt">Projects</span>
+                    <div class="cd-hd"><span class="cd-tt" data-i18n="projects">Projects</span>
                         <div class="cd-ic"><span class="ms material-symbols-outlined">folder_copy</span></div>
                     </div>
                     <div class="cd-val" id="project-count">0</div>
-                    <div class="cd-sub">Active Delphi projects currently managed</div>
+                    <div class="cd-sub" data-i18n="projects_sub">Active Delphi projects currently managed</div>
                     <div class="pj-list" id="pj-list"></div>
                 </div>
             </div>
             <div class="grid2">
                 <section class="sec">
-                    <h2 class="sec-tt"><span class="ms material-symbols-outlined">dns</span> Environments</h2>
+                    <h2 class="sec-tt"><span class="ms material-symbols-outlined">dns</span> <span
+                            data-i18n="environments">Environments</span></h2>
                     <ul class="env" id="env-list">
-                        <li class="env-i">Loading...</li>
+                        <li class="env-i" data-i18n="loading">Loading...</li>
                     </ul>
                     <button class="btn btn-t" style="margin-top:14px" onclick="scan()"><span
-                            class="ms material-symbols-outlined">search</span>Scan Environments</button>
+                            class="ms material-symbols-outlined">search</span><span data-i18n="scan_env">Scan
+                            Environments</span></button>
                 </section>
                 <section class="sec">
-                    <h2 class="sec-tt"><span class="ms material-symbols-outlined">history</span> Recent Activity</h2>
+                    <h2 class="sec-tt"><span class="ms material-symbols-outlined">history</span> <span
+                            data-i18n="recent_activity">Recent Activity</span></h2>
                     <table class="at">
                         <thead>
                             <tr>
-                                <th>Action</th>
-                                <th>Time</th>
-                                <th>Status</th>
+                                <th data-i18n="action">Action</th>
+                                <th data-i18n="time">Time</th>
+                                <th data-i18n="status">Status</th>
                             </tr>
                         </thead>
                         <tbody id="at-body">
                             <tr>
-                                <td>Dashboard started</td>
-                                <td>Just now</td>
-                                <td><span class="st st-p">Active</span></td>
+                                <td data-i18n="dashboard_started">Dashboard started</td>
+                                <td data-i18n="just_now">Just now</td>
+                                <td><span class="st st-p" data-i18n="active">Active</span></td>
                             </tr>
                         </tbody>
                     </table>
                 </section>
             </div>
             <section class="sec">
-                <h2 class="sec-tt"><span class="ms material-symbols-outlined">terminal</span> Live Logs</h2>
+                <h2 class="sec-tt"><span class="ms material-symbols-outlined">terminal</span> <span
+                        data-i18n="live_logs">Live Logs</span></h2>
                 <div class="logs" id="logs">
-                    <div class="log"><span class="log-t">[--:--:--]</span> Waiting for logs...</div>
+                    <div class="log"><span class="log-t">[--:--:--]</span> <span data-i18n="waiting_logs">Waiting for
+                            logs...</span></div>
                 </div>
             </section>
         </div>
@@ -115,25 +194,31 @@ S180,15 200,10" fill="none" stroke="var(--primary)" stroke-width="2" />
         <!-- PAGE: HTTP Client -->
         <div id="page-http" class="page">
             <div class="http-toolbar">
-                <button class="btn btn-t" onclick="httpNew()"><span
-                        class="ms material-symbols-outlined">add</span>New</button>
+                <button class="btn btn-t" onclick="httpNew()"><span class="ms material-symbols-outlined">add</span><span
+                        data-i18n="new">New</span></button>
                 <label class="btn btn-t">
-                    <span class="ms material-symbols-outlined">upload_file</span>Upload
+                    <span class="ms material-symbols-outlined">upload_file</span><span data-i18n="upload">Upload</span>
                     <input type="file" accept=".http,.rest" id="http-upload" style="display:none"
                         onchange="httpUpload(event)">
                 </label>
                 <button class="btn btn-t" onclick="httpDownload()"><span
-                        class="ms material-symbols-outlined">download</span>Download</button>
+                        class="ms material-symbols-outlined">download</span><span
+                        data-i18n="download">Download</span></button>
                 <div class="http-sep"></div>
                 <button class="btn btn-primary" onclick="httpExecute()"><span
-                        class="ms material-symbols-outlined">play_arrow</span>Execute</button>
+                        class="ms material-symbols-outlined">play_arrow</span><span
+                        data-i18n="execute">Execute</span></button>
                 <button class="btn btn-t" onclick="httpExecuteAll()"><span
-                        class="ms material-symbols-outlined">playlist_play</span>Run All</button>
+                        class="ms material-symbols-outlined">playlist_play</span><span data-i18n="run_all">Run
+                        All</span></button>
+                <button class="btn btn-t" onclick="httpToggleHistory()"><span
+                        class="ms material-symbols-outlined">history</span><span
+                        data-i18n="req_history">History</span></button>
             </div>
             <div class="http-layout">
                 <div class="http-editor-panel">
                     <div class="http-editor-header">
-                        <span class="http-editor-title">Editor</span>
+                        <span class="http-editor-title" data-i18n="editor">Editor</span>
                         <div class="http-requests-chips" id="http-requests"></div>
                     </div>
                     <textarea id="http-editor" class="http-editor" placeholder="### My Request
@@ -149,21 +234,35 @@ Content-Type: application/json
   &quot;email&quot;: &quot;john@example.com&quot;
 }"></textarea>
                     <div class="http-vars">
-                        <span class="http-vars-title">Variables</span>
+                        <span class="http-vars-title" data-i18n="variables">Variables</span>
                         <div id="http-vars-list"></div>
+                    </div>
+
+                    <!-- History Panel (Overlays Editor) -->
+                    <div id="http-history" class="http-history" style="display:none">
+                        <div class="http-history-header">
+                            <span data-i18n="req_history">Request History</span>
+                            <button class="btn btn-t" onclick="httpToggleHistory()"><span
+                                    class="ms material-symbols-outlined">close</span></button>
+                        </div>
+                        <div id="http-history-list" class="http-history-list">
+                            <!-- Items go here -->
+                        </div>
                     </div>
                 </div>
                 <div class="http-response-panel">
                     <div class="http-response-header">
-                        <span class="http-response-title">Response</span>
+                        <span class="http-response-title" data-i18n="response">Response</span>
                         <div class="http-response-meta" id="http-meta">
                             <span class="http-status" id="http-status">--</span>
                             <span class="http-time" id="http-time">--</span>
                         </div>
                     </div>
                     <div class="http-response-tabs">
-                        <button class="http-tab on" data-tab="body" onclick="httpTab('body')">Body</button>
-                        <button class="http-tab" data-tab="headers" onclick="httpTab('headers')">Headers</button>
+                        <button class="http-tab on" data-tab="body" onclick="httpTab('body')"
+                            data-i18n="body">Body</button>
+                        <button class="http-tab" data-tab="headers" onclick="httpTab('headers')"
+                            data-i18n="headers">Headers</button>
                     </div>
                     <div class="http-response-content">
                         <pre id="http-body" class="http-body"></pre>
@@ -173,35 +272,178 @@ Content-Type: application/json
             </div>
         </div>
 
-        <!-- PAGE: Projects (Placeholder) -->
+        <!-- PAGE: Tests -->
+        <div id="page-tests" class="page">
+            <div class="http-toolbar">
+                <button class="btn btn-primary" onclick="testsRunAll()"><span
+                        class="ms material-symbols-outlined">play_arrow</span><span data-i18n="run_all">Run
+                        All</span></button>
+                <div class="http-sep"></div>
+                <button class="btn btn-t" onclick="testsRunFailed()"><span
+                        class="ms material-symbols-outlined">replay</span><span data-i18n="rerun_failed">Rerun
+                        Failed</span></button>
+                <div class="http-sep"></div>
+                <select id="tests-pj-select" class="hd-select" onchange="discoverTestProject(this.value)">
+                    <option value="" data-i18n="select_test_project">Select Test Project...</option>
+                </select>
+                <div class="http-sep"></div>
+                <div
+                    style="flex:1;display:flex;align-items:center;background:var(--surface-v);border-radius:4px;padding:0 8px;border:1px solid var(--outline-v)">
+                    <span class="ms material-symbols-outlined"
+                        style="font-size:18px;color:var(--on-surface-v)">filter_list</span>
+                    <input type="text" id="test-filter" data-i18n="filter_tests"
+                        placeholder="Filter fixtures or tests..."
+                        style="background:transparent;border:none;color:var(--on-surface);padding:8px;width:100%;outline:none;"
+                        oninput="testsFilter()">
+                </div>
+            </div>
+            <div class="http-layout">
+                <!-- Test Tree Panel -->
+                <div class="http-editor-panel">
+                    <div class="http-editor-header">
+                        <span class="http-editor-title" data-i18n="test_suite">Test Suite</span>
+                        <div class="http-requests-chips">
+                            <span class="ch" id="tests-total">0 Tests</span>
+                            <span class="ch" style="background:#2ecc7120;color:#2ecc71" id="tests-passed">0 Pass</span>
+                            <span class="ch" style="background:#e74c3c20;color:#e74c3c" id="tests-failed">0 Fail</span>
+                        </div>
+                    </div>
+                    <div id="test-tree" class="test-tree">
+                        <div style="padding:20px;color:var(--on-surface-v);text-align:center">
+                            <span data-i18n="no_tests">No tests discovered.</span><br><span data-i18n="click_run">Click
+                                "Run All" to start.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Details Panel -->
+                <div class="http-response-panel">
+                    <div class="http-response-header">
+                        <span class="http-response-title" id="test-detail-title" data-i18n="select_test">Select a
+                            test</span>
+                        <div class="http-response-meta">
+                            <span class="http-time" id="test-detail-duration"></span>
+                        </div>
+                    </div>
+                    <div class="http-response-content">
+                        <pre id="test-detail-logs" class="http-body" data-i18n="select_test_detail"
+                            style="white-space:pre-wrap;font-family:monospace;padding:10px;color:var(--on-surface-v)">Select a test to view execution details.</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: Projects -->
         <div id="page-projects" class="page">
             <section class="sec">
-                <h2 class="sec-tt"><span class="ms material-symbols-outlined">folder</span> Projects</h2>
-                <p style="color:var(--on-surface-v)">Project management coming soon...</p>
+                <div class="hd-act" style="justify-content:space-between;margin-bottom:20px">
+                    <h2 class="sec-tt"><span class="ms material-symbols-outlined">folder_open</span> <span
+                            data-i18n="project_workspace">Project Workspace</span>
+                    </h2>
+                    <button class="btn btn-primary" onclick="refreshWorkspace()"><span
+                            class="ms material-symbols-outlined">refresh</span><span
+                            data-i18n="refresh">Refresh</span></button>
+                </div>
+
+                <!-- Active Workspace Card (Simplified) -->
+                <div class="cd" onclick="openWorkspaceModal()"
+                    style="width:100%;margin-bottom:20px;flex-direction:row;align-items:center;justify-content:space-between;padding:15px">
+                    <div style="display:flex;align-items:center;gap:15px">
+                        <div class="cd-ic" style="background:var(--primary);color:var(--on-primary)"><span
+                                class="ms material-symbols-outlined">home_work</span></div>
+                        <div>
+                            <div class="cd-sub" style="margin:0" data-i18n="active_wk_root">Active Workspace Root</div>
+                            <div class="cd-val" style="font-size:1.2em;margin:0" id="wk-path-card"
+                                data-i18n="not_selected">Not Selected</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-t" data-i18n="change_folder">Change Folder</button>
+                </div>
+
+                <!-- Detected Assets -->
+                <div class="grid2">
+                    <div class="cd">
+                        <div class="cd-hd"><span class="cd-tt" data-i18n="dproj_detected">Delphi Projects
+                                (.dproj)</span></div>
+                        <div class="pj-list" id="scan-dproj" data-i18n="loading">Scanning...</div>
+                    </div>
+                    <div class="cd">
+                        <div class="cd-hd"><span class="cd-tt" data-i18n="tests_detected">Tests Detected</span></div>
+                        <div class="pj-list" id="scan-tests" data-i18n="loading">Scanning...</div>
+                    </div>
+                    <div class="cd">
+                        <div class="cd-hd"><span class="cd-tt" data-i18n="http_files">HTTP Files</span></div>
+                        <div class="pj-list" id="scan-http" data-i18n="loading">Scanning...</div>
+                    </div>
+                    <div class="cd">
+                        <div class="cd-hd"><span class="cd-tt" data-i18n="docs_facades">Docs & Facades</span></div>
+                        <div class="pj-list" id="scan-docs" data-i18n="loading">Scanning...</div>
+                    </div>
+                </div>
+
             </section>
         </div>
 
         <!-- PAGE: Settings (Placeholder) -->
         <div id="page-settings" class="page">
             <section class="sec">
-                <h2 class="sec-tt"><span class="ms material-symbols-outlined">settings</span> Settings</h2>
-                <p style="color:var(--on-surface-v)">Settings coming soon...</p>
+                <h2 class="sec-tt"><span class="ms material-symbols-outlined">settings</span> <span
+                        data-i18n="settings">Settings</span></h2>
+                <p style="color:var(--on-surface-v)" data-i18n="settings_soon">Settings coming soon...</p>
             </section>
         </div>
 
         <!-- PAGE: Logs (Placeholder) -->
         <div id="page-logs" class="page">
             <section class="sec">
-                <h2 class="sec-tt"><span class="ms material-symbols-outlined">terminal</span> Logs</h2>
+                <h2 class="sec-tt"><span class="ms material-symbols-outlined">terminal</span> <span
+                        data-i18n="logs">Logs</span></h2>
                 <div class="logs" id="logs-full" style="max-height:500px">
-                    <div class="log"><span class="log-t">[--:--:--]</span> Waiting for logs...</div>
+                    <div class="log"><span class="log-t">[--:--:--]</span> <span data-i18n="waiting_logs">Waiting for
+                            logs...</span></div>
                 </div>
             </section>
         </div>
 
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
-    <script src="main.js"></script>
+    <script src="i18n.js" charset="utf-8"></script>
+    <script src="main.js" charset="utf-8"></script>
+
+    <!-- Global Modal -->
+    <div id="wk-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="fe-drag-overlay" id="fe-drag-overlay">
+                <div class="fe-drag-msg"><span class="ms material-symbols-outlined">folder_open</span><span
+                        data-i18n="drop_folder">Drop folder here to select</span></div>
+            </div>
+            <div class="modal-header">
+                <span class="modal-title" data-i18n="select_wk_title">Select Workspace Folder</span>
+                <button class="btn btn-t" onclick="closeWorkspaceModal()"><span
+                        class="ms material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body" style="padding-bottom:0">
+                <div class="fe-bar">
+                    <button class="btn btn-t" onclick="navUp()"><span
+                            class="ms material-symbols-outlined">arrow_upward</span></button>
+                    <input type="text" id="fe-path" class="fe-path-input" value="C:\" onchange="loadFolder(this.value)">
+                    <button class="btn btn-primary" onclick="loadFolder(document.getElementById('fe-path').value)"
+                        data-i18n="go">Go</button>
+                </div>
+                <div class="fe-list-container" id="fe-list">
+                    <!-- Items -->
+                </div>
+                <div style="margin-top:10px;font-size:11px;color:var(--on-surface-v)" data-i18n="tip_drag">
+                    Tip: You can paste a full path above, or drag & drop a folder here.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-t" onclick="closeWorkspaceModal()" data-i18n="cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="selectCurrentFolder()" data-i18n="select_curr">Select Current
+                    Folder</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

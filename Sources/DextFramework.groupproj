@@ -27,10 +27,10 @@
         <Projects Include="Dext.Net.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Apps\CLI\DextTool.dproj">
+        <Projects Include="..\Apps\Sidecar\DextSidecar.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Apps\Sidecar\DextSidecar.dproj">
+        <Projects Include="..\Apps\CLI\DextTool.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -113,15 +113,6 @@
     <Target Name="Dext_Net:Make">
         <MSBuild Projects="Dext.Net.dproj" Targets="Make"/>
     </Target>
-    <Target Name="DextTool">
-        <MSBuild Projects="..\Apps\CLI\DextTool.dproj"/>
-    </Target>
-    <Target Name="DextTool:Clean">
-        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="DextTool:Make">
-        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
-    </Target>
     <Target Name="DextSidecar">
         <MSBuild Projects="..\Apps\Sidecar\DextSidecar.dproj"/>
     </Target>
@@ -131,14 +122,23 @@
     <Target Name="DextSidecar:Make">
         <MSBuild Projects="..\Apps\Sidecar\DextSidecar.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DextTool">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj"/>
+    </Target>
+    <Target Name="DextTool:Clean">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextTool:Make">
+        <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextTool;DextSidecar"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextSidecar;DextTool"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextTool:Clean;DextSidecar:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextTool:Make;DextSidecar:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -40,6 +40,8 @@ type
     procedure Log(ALevel: TLogLevel; const AMessage: string; const AArgs: array of const); override;
     procedure Log(ALevel: TLogLevel; const AException: Exception; const AMessage: string; const AArgs: array of const); override;
     function IsEnabled(ALevel: TLogLevel): Boolean; override;
+    function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; override;
+    function BeginScope(const AState: TObject): IDisposable; override;
   public
     constructor Create(const ACategoryName: string);
   end;
@@ -102,7 +104,18 @@ begin
     SafeWriteLn(Format('      %s: %s', [AException.ClassName, AException.Message]));
 end;
 
-{ TConsoleLoggerProvider }
+{ TConsoleLogger }
+
+function TConsoleLogger.BeginScope(const AMessage: string; const AArgs: array of const): IDisposable;
+begin
+  // For basic Console Logger, scopes are ignored or could be implemented later.
+  Result := TNullDisposable.Create;
+end;
+
+function TConsoleLogger.BeginScope(const AState: TObject): IDisposable;
+begin
+  Result := TNullDisposable.Create;
+end;
 
 function TConsoleLoggerProvider.CreateLogger(const ACategoryName: string): ILogger;
 begin

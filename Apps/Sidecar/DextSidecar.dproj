@@ -46,9 +46,9 @@
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DcuOutput>..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
-        <PreBuildEvent><![CDATA[powershell -NoProfile -ExecutionPolicy Bypass -File "$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1" -OutputPath "..\..\Output\$(ProductVersion)_$(Platform)_$(Config)"
+        <DCC_UnitSearchPath>..\..\External\DelphiAST\Source;..\..\External\DelphiAST\Source\SimpleParser;..\..\Output\37.0_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DcuOutput>..\..\Output\37.0_$(Platform)_$(Config)</DCC_DcuOutput>
+        <PreBuildEvent><![CDATA[powershell -NoProfile -ExecutionPolicy Bypass -File "$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1" -OutputPath "..\..\Output\37.0_$(Platform)_$(Config)"
 $(PreBuildEvent)]]></PreBuildEvent>
         <PostBuildEvent><![CDATA[copy /Y "$(OUTPUTPATH)" "$(OUTPUTDIR)..\Apps\dext-sidecar.exe"
 $(PostBuildEvent)]]></PostBuildEvent>
@@ -93,12 +93,13 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="Main.Form.pas">
             <Form>MainForm</Form>
         </DCCReference>
-        <DCCReference Include="Lib\Dext.Vcl.TrayIcon.pas"/>
-        <DCCReference Include="Lib\Dext.Vcl.FormDecorator.pas"/>
-        <DCCReference Include="Lib\Dext.Vcl.Helpers.pas"/>
         <DCCReference Include="Lib\Dext.Classes.pas"/>
+        <DCCReference Include="..\..\Sources\Dashboard\Dext.Dashboard.Routes.pas"/>
         <DCCReference Include="Dext.Services.FileWatcher.pas"/>
         <DCCReference Include="Dext.Sidecar.Server.pas"/>
+        <DCCReference Include="Lib\Dext.Vcl.FormDecorator.pas"/>
+        <DCCReference Include="Lib\Dext.Vcl.Helpers.pas"/>
+        <DCCReference Include="Lib\Dext.Vcl.TrayIcon.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -1090,19 +1091,19 @@ $(PostBuildEvent)]]></PostBuildEvent>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win32'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\37.0_$(Platform)_$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext-sidecar.exe&quot;</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext-sidecar.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win64'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\37.0_$(Platform)_$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext-sidecar.exe&quot;</PostBuildEvent>
+        <PostBuildEvent>copy /Y &quot;$(OUTPUTPATH)&quot; &quot;$(OUTPUTDIR)..\Apps\dext-sidecar.exe&quot;</PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
 </Project>
