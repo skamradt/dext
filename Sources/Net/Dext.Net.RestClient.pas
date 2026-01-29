@@ -38,9 +38,10 @@ uses
   Dext.Threading.Async,
   Dext.Threading.CancellationToken,
   Dext.Net.ConnectionPool,
-  Dext.Net.Authentication;
+  Dext.Net.Authentication,
+  Dext.Http.Request;
 
-type
+ type
   /// <summary>
   ///   Supported HTTP Methods.
   /// </summary>
@@ -194,6 +195,10 @@ type
       const ABody: TStream = nil; AOwnsBody: Boolean = False;
       AHeaders: TDictionary<string, string> = nil): TAsyncBuilder<IRestResponse>;
 
+    /// <summary>
+    ///   Executes a request defined by a THttpRequestInfo object (from .http parser).
+    /// </summary>
+    function Execute(RequestInfo: THttpRequestInfo): TAsyncBuilder<IRestResponse>;
 
     property Instance: IRestClient read FInstance;
   end;
@@ -642,6 +647,34 @@ begin
     begin
       Result := TDextJson.Deserialize<T>(LRes.ContentString);
     end);
+end;
+
+function TRestClient.Execute(RequestInfo: THttpRequestInfo): TAsyncBuilder<IRestResponse>;
+var
+  Method: TDextHttpMethod;
+  BodyStream: TStringStream;
+  Headers: TDictionary<string, string>;
+begin
+  if RequestInfo = nil then
+    raise Exception.Create('RequestInfo cannot be nil');
+
+  // Map Method String to Enum
+  if SameText(RequestInfo.Method, 'GET') then Method := hmGET
+  else if SameText(RequestInfo.Method, 'POST') then Method := hmPOST
+  else if SameText(RequestInfo.Method, 'PUT') then Method := hmPUT
+  else if SameText(RequestInfo.Method, 'DELETE') then Method := hmDELETE
+  else if SameText(RequestInfo.Method, 'PATCH') then Method := hmPATCH
+  else if SameText(RequestInfo.Method, 'HEAD') then Method := hmHEAD
+  else if SameText(RequestInfo.Method, 'OPTIONS') then Method := hmOPTIONS
+  else raise Exception.Create('Unsupported HTTP Method: ' + RequestInfo.Method);
+
+  // Prepare Body
+  BodyStream := nil;
+  if RequestInfo.Body <> '' then
+    BodyStream := TStringStream.Create(RequestInfo.Body, TEncoding.UTF8);
+
+  // Execute
+  Result := ExecuteAsync(Method, RequestInfo.Url, BodyStream, True, RequestInfo.Headers);
 end;
 
 function TRestClient.ExecuteAsync(AMethod: TDextHttpMethod; const AEndpoint: string; 

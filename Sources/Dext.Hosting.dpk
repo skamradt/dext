@@ -43,11 +43,7 @@ requires
   Dext.Core,
   Dext.EF.Core,
   Dext.Web.Core,
-  Dext.Web.Hubs,
-  FireDACPgDriver,
-  FireDACCommonODBC,
-  FireDACIBDriver,
-  FireDACMSSQLDriver;
+  Dext.Web.Hubs;
 
 contains
   Dext.Hosting.CLI.Logger in 'Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas',

@@ -12,6 +12,8 @@ uses
   Dext.Vcl.FormDecorator in 'Lib\Dext.Vcl.FormDecorator.pas',
   Dext.Vcl.Helpers in 'Lib\Dext.Vcl.Helpers.pas',
   Dext.Vcl.TrayIcon in 'Lib\Dext.Vcl.TrayIcon.pas',
+  Dext.Dashboard.TestScanner in '..\..\Sources\Dashboard\Dext.Dashboard.TestScanner.pas',
+  Dext.Dashboard.TestRunner in '..\..\Sources\Dashboard\Dext.Dashboard.TestRunner.pas',
   Vcl.Themes,
   Vcl.Styles;
 

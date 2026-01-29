@@ -100,6 +100,8 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="Lib\Dext.Vcl.FormDecorator.pas"/>
         <DCCReference Include="Lib\Dext.Vcl.Helpers.pas"/>
         <DCCReference Include="Lib\Dext.Vcl.TrayIcon.pas"/>
+        <DCCReference Include="..\..\Sources\Dashboard\Dext.Dashboard.TestScanner.pas"/>
+        <DCCReference Include="..\..\Sources\Dashboard\Dext.Dashboard.TestRunner.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -126,6 +128,12 @@ $(PostBuildEvent)]]></PostBuildEvent>
                 <Platform value="Win64">False</Platform>
             </Platforms>
             <Deployment Version="5">
+                <DeployFile LocalName="..\..\Output\DextSidecar.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>DextSidecar.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="C:\Users\Public\Documents\DevExpress\VCL\Demos\ExpressWizard Control\Delphi\WizardControlDemo\DemoApp.ico" Configuration="Debug" Class="UWP_DelphiLogo44">
                     <Platform Name="Win32">
                         <RemoteDir>Assets\</RemoteDir>

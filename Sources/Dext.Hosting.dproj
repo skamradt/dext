@@ -126,10 +126,6 @@
         <DCCReference Include="Dext.EF.Core.dcp"/>
         <DCCReference Include="Dext.Web.Core.dcp"/>
         <DCCReference Include="Dext.Web.Hubs.dcp"/>
-        <DCCReference Include="FireDACPgDriver.dcp"/>
-        <DCCReference Include="FireDACCommonODBC.dcp"/>
-        <DCCReference Include="FireDACIBDriver.dcp"/>
-        <DCCReference Include="FireDACMSSQLDriver.dcp"/>
         <DCCReference Include="Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Args.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Config.pas"/>
