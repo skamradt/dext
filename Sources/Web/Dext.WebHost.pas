@@ -78,8 +78,11 @@ begin
   // Release closures to break reference cycles
   FAppConfig := nil;
   FServicesConfig := nil;
+  // Free class instance (TDextServices is now a class, not record)
+  FServices.Free;
   inherited;
 end;
+
 
 class function TWebHostBuilder.CreateDefault(Args: TArray<string>): IWebHostBuilder;
 begin

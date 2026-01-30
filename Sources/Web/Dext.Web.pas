@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -30,6 +30,7 @@ interface
 uses
   System.SysUtils,
   Dext,
+  Dext.Entity,
   Dext.Web.ResponseHelper,
   // {BEGIN_DEXT_USES}
   // Generated Uses
@@ -525,9 +526,16 @@ const
 
 type
   /// <summary>
-  ///   Helper for TDextServices to add web framework features.
+  ///   Class helper for TDextServices to add web framework features.
+  ///   Inherits from TDextEntityServicesHelper to enable access to both
+  ///   Entity (AddDbContext) and Web (AddControllers) methods.
   /// </summary>
-  TDextHttpServicesHelper = record helper for TDextServices
+  /// <remarks>
+  ///   This is the final helper in the inheritance chain:
+  ///   Core (TDextServicesHelper) → Entity (TDextEntityServicesHelper) → Web (TDextWebServicesHelper)
+  ///   When using Dext.Web, ALL methods from the chain are available on TDextServices.
+  /// </remarks>
+  TDextWebServicesHelper = class helper(TDextEntityServicesHelper) for TDextServices
   public
     /// <summary>
     ///   Scans the application for controllers (classes with [DextController]) and registers them in the DI container.
@@ -556,6 +564,10 @@ type
     /// </summary>
     function Configure<T: class, constructor>(Section: IConfigurationSection): TDextServices; overload;
   end;
+  
+  // Alias for backward compatibility
+  TDextHttpServicesHelper = TDextWebServicesHelper;
+
 
   /// <summary>
   ///   Helper for TDextAppBuilder to provide factory methods and extensions for middleware configuration.
@@ -818,9 +830,9 @@ begin
   Dext.Web.ResponseHelper.RespondNoContent(AContext);
 end;
 
-{ TDextHttpServicesHelper }
+{ TDextWebServicesHelper }
 
-function TDextHttpServicesHelper.AddControllers: TDextServices;
+function TDextWebServicesHelper.AddControllers: TDextServices;
 var
   Scanner: IControllerScanner;
 begin
@@ -829,27 +841,28 @@ begin
   Result := Self;
 end;
 
-function TDextHttpServicesHelper.AddHealthChecks: THealthCheckBuilder;
+function TDextWebServicesHelper.AddHealthChecks: THealthCheckBuilder;
 begin
   Result := THealthCheckBuilder.Create(Self.Unwrap);
 end;
 
-function TDextHttpServicesHelper.AddBackgroundServices: TBackgroundServiceBuilder;
+function TDextWebServicesHelper.AddBackgroundServices: TBackgroundServiceBuilder;
 begin
   Result := TBackgroundServiceBuilder.Create(Self.Unwrap);
 end;
 
-function TDextHttpServicesHelper.Configure<T>(Configuration: IConfiguration): TDextServices;
+function TDextWebServicesHelper.Configure<T>(Configuration: IConfiguration): TDextServices;
 begin
   TOptionsServiceCollectionExtensions.Configure<T>(Self.Unwrap, Configuration);
   Result := Self;
 end;
 
-function TDextHttpServicesHelper.Configure<T>(Section: IConfigurationSection): TDextServices;
+function TDextWebServicesHelper.Configure<T>(Section: IConfigurationSection): TDextServices;
 begin
   TOptionsServiceCollectionExtensions.Configure<T>(Self.Unwrap, Section);
   Result := Self;
 end;
+
 
 { TDextHttpAppBuilderHelper }
 

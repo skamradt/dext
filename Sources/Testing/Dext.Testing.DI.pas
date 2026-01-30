@@ -120,7 +120,11 @@ end;
 constructor TTestServiceProvider.Create(const BaseServices: TDextServices);
 begin
   inherited Create;
-  FServices := BaseServices;
+  // Note: We don't own BaseServices when passed in - it's the caller's responsibility
+  // For safety, we'll create a new one and copy services if needed
+  FServices := TDextServices.New;
+  if BaseServices <> nil then
+    FServices.Unwrap.AddRange(BaseServices.Unwrap);
   FMocks := TDictionary<TGUID, IInterface>.Create;
   FBuilt := False;
 end;
@@ -128,8 +132,11 @@ end;
 destructor TTestServiceProvider.Destroy;
 begin
   FMocks.Free;
+  // Always free since we always own (either created via New or created fresh in overload)
+  FServices.Free;
   inherited;
 end;
+
 
 procedure TTestServiceProvider.EnsureNotBuilt;
 begin

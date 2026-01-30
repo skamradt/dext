@@ -125,8 +125,12 @@ type
   ///       Use with caution! Consider using interface-based registration for Transient
   ///       services to leverage ARC, or ensure manual disposal in endpoint code.
   ///   </para>
+  ///   <para>
+  ///     <b>Class Helper Inheritance:</b> This is a class (not record) to enable
+  ///     class helper inheritance across packages (Core → Entity → Web).
+  ///   </para>
   /// </remarks>
-  TDextServices = record
+  TDextServices = class
   private
     FServices: IServiceCollection;
   public
@@ -134,7 +138,6 @@ type
     class function New: TDextServices; static;
     function Unwrap: IServiceCollection;
     procedure AddRange(const AOther: TDextServices);
-    class operator Implicit(const A: TDextServices): IServiceCollection;
 
     // Generic Overloads for Interface + Implementation pairs
     function AddSingleton<TService: IInterface; TImplementation: class>: TDextServices; overload;
@@ -166,6 +169,21 @@ type
 
     function BuildServiceProvider: IServiceProvider;
   end;
+
+  /// <summary>
+  ///   Base class helper for TDextServices. Extended by Entity and Web packages.
+  /// </summary>
+  /// <remarks>
+  ///   This helper is intentionally minimal. Specialized packages (Dext.Entity, Dext.Web)
+  ///   add their own methods by inheriting from this helper:
+  ///   - Dext.Entity: TDextEntityServicesHelper = class helper(TDextServicesHelper) for TDextServices
+  ///   - Dext.Web: TDextWebServicesHelper = class helper(TDextEntityServicesHelper) for TDextServices
+  /// </remarks>
+  TDextServicesHelper = class helper for TDextServices
+  public
+    // Base helper - currently empty. Subpackages extend via inheritance.
+  end;
+
 
   TDextDIFactory = class
   public
@@ -296,17 +314,18 @@ end;
 
 constructor TDextServices.Create(AServices: IServiceCollection);
 begin
+  inherited Create;
   FServices := AServices;
 end;
 
 class function TDextServices.New: TDextServices;
 begin
-  Result.FServices := TDextDIFactory.CreateServiceCollection;
+  Result := TDextServices.Create(TDextDIFactory.CreateServiceCollection);
 end;
 
 procedure TDextServices.AddRange(const AOther: TDextServices);
 begin
-  if (FServices <> nil) and (AOther.FServices <> nil) then
+  if (FServices <> nil) and (AOther <> nil) and (AOther.FServices <> nil) then
     FServices.AddRange(AOther.FServices);
 end;
 
@@ -315,10 +334,6 @@ begin
   Result := FServices;
 end;
 
-class operator TDextServices.Implicit(const A: TDextServices): IServiceCollection;
-begin
-  Result := A.FServices;
-end;
 
 function TDextServices.AddSingleton<TService, TImplementation>: TDextServices;
 begin

@@ -371,9 +371,14 @@ type
   TDbContextClass = class of TDbContext;
   
   /// <summary>
-  ///   Helper for TDextServices to add Persistence features.
+  ///   Class helper for TDextServices to add Persistence features.
+  ///   Inherits from TDextServicesHelper (Core) to enable helper inheritance chain.
   /// </summary>
-  TDextPersistenceServicesHelper = record helper for TDextServices
+  /// <remarks>
+  ///   This helper adds Entity Framework-style persistence methods to TDextServices.
+  ///   Web package extends this helper with TDextWebServicesHelper.
+  /// </remarks>
+  TDextEntityServicesHelper = class helper(TDextServicesHelper) for TDextServices
   public
     /// <summary>
     ///   Registers a DbContext with the dependency injection container.
@@ -385,6 +390,10 @@ type
     /// </summary>
     function AddDbContext<T: TDbContext>(const AConfig: IConfigurationSection): TDextServices; overload;
   end;
+  
+  // Alias for backward compatibility
+  TDextPersistenceServicesHelper = TDextEntityServicesHelper;
+
 
   TPersistence = class
   public
@@ -401,15 +410,15 @@ uses
   Dext.Configuration.Binder,
   Dext.Specifications.OrderBy; // Added for IServiceProvider, TServiceType
 
-{ TDextPersistenceServicesHelper }
+{ TDextEntityServicesHelper }
 
-function TDextPersistenceServicesHelper.AddDbContext<T>(Config: TProc<TDbContextOptions>): TDextServices;
+function TDextEntityServicesHelper.AddDbContext<T>(Config: TProc<TDbContextOptions>): TDextServices;
 begin
   TPersistence.AddDbContext<T>(Self.Unwrap, Config);
   Result := Self;
 end;
 
-function TDextPersistenceServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
+function TDextEntityServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
 begin
   Result := AddDbContext<T>(
     procedure(Options: TDbContextOptions)
@@ -418,6 +427,7 @@ begin
     end
   );
 end;
+
 
 { TPersistence }
 

@@ -653,7 +653,6 @@ function TRestClient.Execute(RequestInfo: THttpRequestInfo): TAsyncBuilder<IRest
 var
   Method: TDextHttpMethod;
   BodyStream: TStringStream;
-  Headers: TDictionary<string, string>;
 begin
   if RequestInfo = nil then
     raise Exception.Create('RequestInfo cannot be nil');
