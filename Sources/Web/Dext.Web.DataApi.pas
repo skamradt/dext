@@ -43,7 +43,7 @@ type
     FRequireAuthentication: Boolean;
     FRolesForRead: string;   // Comma-separated roles for GET operations
     FRolesForWrite: string;  // Comma-separated roles for POST/PUT/DELETE
-    FNamingStrategy: TDextCaseStyle;
+    FNamingStrategy: TCaseStyle;
     // Swagger options (disabled by default)
     FEnableSwagger: Boolean;
     FSwaggerTag: string;
@@ -161,7 +161,7 @@ begin
   FAllowedMethods := AllApiMethods;
   FAllowedMethods := AllApiMethods;
   FTenantIdRequired := False;
-  FNamingStrategy := TDextCaseStyle.CamelCase;
+  FNamingStrategy := TCaseStyle.CamelCase;
 end;
 
 function TDataApiOptions<T>.Allow(AMethods: TApiMethods): TDataApiOptions<T>;
@@ -206,13 +206,13 @@ end;
 
 function TDataApiOptions<T>.UseSnakeCase: TDataApiOptions<T>;
 begin
-  FNamingStrategy := TDextCaseStyle.SnakeCase;
+  FNamingStrategy := TCaseStyle.SnakeCase;
   Result := Self;
 end;
 
 function TDataApiOptions<T>.UseCamelCase: TDataApiOptions<T>;
 begin
-  FNamingStrategy := TDextCaseStyle.CamelCase;
+  FNamingStrategy := TCaseStyle.CamelCase;
   Result := Self;
 end;
 

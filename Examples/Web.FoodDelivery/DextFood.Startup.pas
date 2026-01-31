@@ -3,13 +3,26 @@
 interface
 
 uses
+  System.TypInfo,
+  System.Rtti,
   System.SysUtils,
   Dext,
   Dext.Entity,           // Facade para ORM (TDbContext, TSnakeCaseNamingStrategy)
-  Dext.Entity.Prototype, // For Prototype.Entity<T>
-  Dext.Web;
+  Dext.Entity.Core,      // Explicitly needed for IDbSet<T>
+  Dext.Web,
+  DextFood.Domain;
 
 type
+  /// <summary>
+  /// Contexto de banco de dados específico para o DextFood.
+  /// </summary>
+  TAppDbContext = class(TDbContext)
+  private
+    function GetOrders: IDbSet<TOrder>;
+  public
+    property Orders: IDbSet<TOrder> read GetOrders;
+  end;
+
   /// <summary>
   /// Classe de inicialização (Bootstrap) do backend DextFood.
   /// </summary>
@@ -24,17 +37,24 @@ type
 implementation
 
 uses
-  DextFood.Domain,
+  Dext.Json,
   DextFood.Services,
   DextFood.Hubs,
   DextFood.DbSeeder;
+
+{ TAppDbContext }
+
+function TAppDbContext.GetOrders: IDbSet<TOrder>;
+begin
+  Result := Entities<TOrder>;
+end;
 
 { TStartup }
 
 procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  // 1. Motor de Persistência (SQLite In-Memory + Naming Strategy)
-  Services.AddDbContext<TDbContext>(ConfigureDatabase);
+  // 1. Motor de Persistência via Contexto Tipado
+  Services.AddDbContext<TAppDbContext>(ConfigureDatabase);
   
   // 2. Registro de Serviços de Negócio
   Services.AddSingleton<IOrderService, TOrderService>;
@@ -44,42 +64,36 @@ begin
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
-var
-  SwaggerOpts: TOpenAPIOptions;
-  CorsOpts: TCorsOptions;
 begin
+  var Builder := App.Builder;
   // ✨ Configurações globais de JSON (CamelCase para APIs modernas)
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
+  DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
 
   // Pipeline de middlewares configurado via Facade Dext.Web
-  App.Builder
+  Builder
     .UseExceptionHandler
     .UseHttpLogging;
 
   // 🛡️ Configuração granular de CORS
-  CorsOpts := TCorsOptions.Create;
-  CorsOpts.AllowedOrigins := ['*'];
-  CorsOpts.AllowedMethods := ['*'];
-  CorsOpts.AllowedHeaders := ['*'];
-  App.Builder.UseCors(CorsOpts);
-
-  // 1. Inicializa e popula o Banco de Dados
-  TDbSeeder.Seed(App);
+  Builder.UseCors(Cors
+    .AllowAnyOrigin
+    .AllowAnyMethod
+    .AllowAnyHeader);
 
   // 🚀 Mapeia todas as rotas (Minimal APIs e Controllers) ANTES do Swagger
   
   // Health Check
-  App.Builder.MapGet('/health',
+  Builder.MapGet('/health',
     procedure(Ctx: IHttpContext)
     begin
       Ctx.Response.Json('{"status": "healthy"}');
     end);
 
   // Real-time Hub
-  // App.Builder.MapHub<TOrderHub>('/hubs/orders');
+  //Builder.MapHub<TOrderHub>('/hubs/orders');
 
   // Minimal API Tipada
-  App.Builder.MapPost<IOrderService, IHttpContext, IResult>('/api/orders',
+  Builder.MapPost<IOrderService, IHttpContext, IResult>('/api/orders',
     function(Service: IOrderService; Ctx: IHttpContext): IResult
     var
       Total: Currency;
@@ -89,34 +103,30 @@ begin
       Result := Results.Ok('{"message": "Pedido criado"}');
     end);
 
-  // Exemplo de consulta com Smart Properties
-  App.Builder.MapGet('/api/orders/high-value',
-    procedure(Ctx: IHttpContext)
-    var
-      Db: TDbContext;
-      o: TOrder;
+  // Exemplo de consulta com Smart Properties e Dependency Injection
+  Builder.MapGet<TAppDbContext, IResult>('/api/orders/high-value',
+    function(Db: TAppDbContext): IResult
     begin
-      //Db := Ctx.Services.GetService(TDbContext);
-      o := Prototype.Entity<TOrder>;
-      var List := Db.Entities<TOrder>.Where(o.Total > 50).ToList;
-      //Ctx.Response.Json(List);
+      var Order := Prototype.Entity<TOrder>;
+      var List := Db.Orders.Where(Order.Total > 50).ToList;
+      Result := Results.Ok(List);
     end);
 
   // Controllers
   App.MapControllers;
 
   // ✨ Swagger UI em /swagger (Inspeção automática de rotas)
-  SwaggerOpts := TOpenAPIOptions.Default;
-  SwaggerOpts.Title := 'DextFood API';
-  SwaggerOpts.Version := 'v1';
-  App.Builder.UseSwagger(SwaggerOpts);
+  Builder.UseSwagger(Swagger
+    .Title('DextFood API')
+    .Version('v1'));
 end;
 
 procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
 begin
   Options
-    .UseSQLite(':memory:')
+    .UseSQLite('DextFood.db')
     .UseNamingStrategy(TSnakeCaseNamingStrategy.Create);
 end;
 
 end.
+

@@ -21,7 +21,7 @@ type
   // ==========================================================================
   // Categories Controller
   // ==========================================================================
-  [DextController('/api/categories')]
+  [Controller('/api/categories')]
   [Authorize]
   [SwaggerTag('Categories')]
   TCategoriesController = class
@@ -30,24 +30,24 @@ type
   public
     constructor Create(Service: ICategoryService);
     
-    [DextGet('')]
+    [Get('')]
     [SwaggerOperation('List all categories', 'Returns all product categories')]
     [SwaggerResponse(HttpStatus.OK, 'Categories list')]
     procedure GetAll(Ctx: IHttpContext); virtual;
     
-    [DextGet('/{id}')]
+    [Get('/{id}')]
     [SwaggerOperation('Get category by ID')]
     [SwaggerParam('id', 'Category unique identifier')]
     [SwaggerResponse(HttpStatus.OK, TCategory, 'Category found')]
     [SwaggerResponse(HttpStatus.NotFound, 'Category not found')]
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextPost('')]
+    [Post('')]
     [SwaggerOperation('Create new category')]
     [SwaggerResponse(HttpStatus.Created, TCategory, 'Category created')]
     procedure Add(Ctx: IHttpContext; const Request: TCreateCategoryRequest); virtual;
     
-    [DextDelete('/{id}')]
+    [Delete('/{id}')]
     [SwaggerOperation('Delete category')]
     [SwaggerParam('id', 'Category ID to delete')]
     [SwaggerResponse(HttpStatus.NoContent, 'Category deleted')]
@@ -57,7 +57,7 @@ type
   // ==========================================================================
   // Products Controller
   // ==========================================================================
-  [DextController('/api/products')]
+  [Controller('/api/products')]
   [Authorize]
   [SwaggerTag('Products')]
   TProductsController = class
@@ -66,29 +66,29 @@ type
   public
     constructor Create(Service: IProductService);
     
-    [DextGet('')]
+    [Get('')]
     [SwaggerOperation('List all products', 'Returns all menu products')]
     [SwaggerResponse(HttpStatus.OK, 'Products list')]
     procedure GetAll(Ctx: IHttpContext); virtual;
     
-    [DextGet('/{id}')]
+    [Get('/{id}')]
     [SwaggerOperation('Get product by ID')]
     [SwaggerParam('id', 'Product unique identifier')]
     [SwaggerResponse(HttpStatus.OK, TProduct, 'Product found')]
     [SwaggerResponse(HttpStatus.NotFound, 'Product not found')]
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextGet('/category/{categoryId}')]
+    [Get('/category/{categoryId}')]
     [SwaggerOperation('Get products by category')]
     [SwaggerParam('categoryId', 'Category ID')]
     procedure GetByCategory(Ctx: IHttpContext; [FromRoute] CategoryId: Int64); virtual;
     
-    [DextPost('')]
+    [Post('')]
     [SwaggerOperation('Create new product')]
     [SwaggerResponse(HttpStatus.Created, TProduct, 'Product created')]
     procedure Add(Ctx: IHttpContext; const Request: TCreateProductRequest); virtual;
     
-    [DextPatch('/{id}/availability')]
+    [Patch('/{id}/availability')]
     [SwaggerOperation('Update product availability')]
     [SwaggerParam('id', 'Product ID')]
     procedure UpdateAvailability(Ctx: IHttpContext; [FromRoute] Id: Int64; 
@@ -98,7 +98,7 @@ type
   // ==========================================================================
   // Tables Controller
   // ==========================================================================
-  [DextController('/api/tables')]
+  [Controller('/api/tables')]
   [Authorize]
   [SwaggerTag('Tables')]
   TTablesController = class
@@ -107,24 +107,24 @@ type
   public
     constructor Create(Service: ITableService);
     
-    [DextGet('')]
+    [Get('')]
     [SwaggerOperation('List all tables')]
     [SwaggerResponse(HttpStatus.OK, 'Tables list')]
     procedure GetAll(Ctx: IHttpContext); virtual;
     
-    [DextGet('/available')]
+    [Get('/available')]
     [SwaggerOperation('Get available tables')]
     [SwaggerResponse(HttpStatus.OK, 'List of available tables')]
     procedure GetAvailable(Ctx: IHttpContext); virtual;
     
-    [DextGet('/{id}')]
+    [Get('/{id}')]
     [SwaggerOperation('Get table by ID')]
     [SwaggerParam('id', 'Table unique identifier')]
     [SwaggerResponse(HttpStatus.OK, 'Table found')]
     [SwaggerResponse(HttpStatus.NotFound, 'Table not found')]
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextPatch('/{id}/status')]
+    [Patch('/{id}/status')]
     [SwaggerOperation('Update table status')]
     [SwaggerParam('id', 'Table ID')]
     procedure UpdateStatus(Ctx: IHttpContext; [FromRoute] Id: Int64; 
@@ -134,7 +134,7 @@ type
   // ==========================================================================
   // Orders Controller
   // ==========================================================================
-  [DextController('/api/orders')]
+  [Controller('/api/orders')]
   [Authorize]
   [SwaggerTag('Orders')]
   TOrdersController = class
@@ -143,53 +143,53 @@ type
   public
     constructor Create(OrderService: IOrderService);
     
-    [DextGet('')]
+    [Get('')]
     [SwaggerOperation('List all orders')]
     [SwaggerResponse(HttpStatus.OK, 'Orders list')]
     procedure GetAll(Ctx: IHttpContext); virtual;
     
-    [DextGet('/open')]
+    [Get('/open')]
     [SwaggerOperation('Get open orders')]
     [SwaggerResponse(HttpStatus.OK, 'List of open orders')]
     procedure GetOpen(Ctx: IHttpContext); virtual;
     
-    [DextGet('/{id}')]
+    [Get('/{id}')]
     [SwaggerOperation('Get order by ID')]
     [SwaggerParam('id', 'Order unique identifier')]
     [SwaggerResponse(HttpStatus.OK, 'Order found')]
     [SwaggerResponse(HttpStatus.NotFound, 'Order not found')]
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextGet('/table/{tableId}')]
+    [Get('/table/{tableId}')]
     [SwaggerOperation('Get open order by table', 'Returns the current open order for a table')]
     [SwaggerParam('tableId', 'Table ID')]
     procedure GetByTable(Ctx: IHttpContext; [FromRoute] TableId: Int64); virtual;
     
-    [DextPost('')]
+    [Post('')]
     [SwaggerOperation('Create new order', 'Opens a new order/tab for a table')]
     [SwaggerResponse(HttpStatus.Created, 'Order created')]
     procedure Add(Ctx: IHttpContext; const Request: TCreateOrderRequest); virtual;
     
-    [DextPost('/{id}/items')]
+    [Post('/{id}/items')]
     [SwaggerOperation('Add item to order')]
     [SwaggerParam('id', 'Order ID')]
     [SwaggerResponse(HttpStatus.Created, 'Item added')]
     procedure AddItem(Ctx: IHttpContext; [FromRoute] Id: Int64; 
       const Request: TAddOrderItemRequest); virtual;
     
-    [DextGet('/{id}/items')]
+    [Get('/{id}/items')]
     [SwaggerOperation('Get order items')]
     [SwaggerParam('id', 'Order ID')]
     [SwaggerResponse(HttpStatus.OK, 'Order items')]
     procedure GetItems(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextPost('/{id}/close')]
+    [Post('/{id}/close')]
     [SwaggerOperation('Close order', 'Marks order as paid and closes it')]
     [SwaggerParam('id', 'Order ID')]
     [SwaggerResponse(HttpStatus.OK, 'Order closed')]
     procedure CloseOrder(Ctx: IHttpContext; [FromRoute] Id: Int64); virtual;
     
-    [DextPost('/{id}/cancel')]
+    [Post('/{id}/cancel')]
     [SwaggerOperation('Cancel order')]
     [SwaggerParam('id', 'Order ID')]
     [SwaggerResponse(HttpStatus.OK, 'Order cancelled')]
@@ -199,7 +199,7 @@ type
   // ==========================================================================
   // Reports Controller
   // ==========================================================================
-  [DextController('/api/reports')]
+  [Controller('/api/reports')]
   [Authorize]
   [SwaggerTag('Reports')]
   TReportsController = class
@@ -209,11 +209,11 @@ type
     constructor Create(Service: TReportService);
     destructor Destroy; override;
     
-    [DextGet('/stats')]
+    [Get('/stats')]
     [SwaggerOperation('Get general statistics')]
     procedure GetStats(Ctx: IHttpContext); virtual;
     
-    [DextGet('/daily-summary')]
+    [Get('/daily-summary')]
     [SwaggerOperation('Get daily summary')]
     procedure GetDailySummary(Ctx: IHttpContext); virtual;
   end;

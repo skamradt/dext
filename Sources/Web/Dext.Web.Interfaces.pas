@@ -228,14 +228,17 @@ type
   /// <summary>
   ///   Wrapper for IApplicationBuilder to provide factory methods and extensions.
   /// </summary>
-  TDextAppBuilder = record
+  TAppBuilder = record
   private
     FBuilder: IApplicationBuilder;
   public
     constructor Create(ABuilder: IApplicationBuilder);
     function Unwrap: IApplicationBuilder;
-    class operator Implicit(const A: TDextAppBuilder): IApplicationBuilder;
+    class operator Implicit(const A: TAppBuilder): IApplicationBuilder;
   end;
+
+  /// <deprecated>Use TAppBuilder instead</deprecated>
+  TDextAppBuilder = TAppBuilder;
 
   // Forward declaration
   IWebApplication = interface;
@@ -249,7 +252,7 @@ type
   IWebApplication = interface(IWebHost)
     ['{B6C96B49-0292-42A6-A767-C7EAF52F71FC}']
     function GetServices: TDextServices;
-    function GetBuilder: TDextAppBuilder;
+    function GetBuilder: TAppBuilder;
     function UseMiddleware(Middleware: TClass): IWebApplication;
     function UseStartup(Startup: IStartup): IWebApplication; // ? Non-generic
     function MapControllers: IWebApplication;
@@ -262,13 +265,16 @@ type
     procedure SetDefaultPort(Port: Integer);
 
     property Services: TDextServices read GetServices;
-    property Builder: TDextAppBuilder read GetBuilder;
+    property Builder: TAppBuilder read GetBuilder;
     property Configuration: IConfiguration read GetConfiguration;
   end;
 
-  TDextWebHost = class
+  TWebHost = class
     class function CreateDefaultBuilder: IWebHostBuilder;
   end;
+
+  /// <deprecated>Use TWebHost instead</deprecated>
+  TDextWebHost = TWebHost;
 
   TFormFileCollection = class(TInterfacedObject, IFormFileCollection)
   private
@@ -330,24 +336,24 @@ end;
 
 { TDextWebHost }
 
-class function TDextWebHost.CreateDefaultBuilder: IWebHostBuilder;
+class function TWebHost.CreateDefaultBuilder: IWebHostBuilder;
 begin
   Result := TWebHostBuilder.Create;
 end;
 
 { TDextAppBuilder }
 
-constructor TDextAppBuilder.Create(ABuilder: IApplicationBuilder);
+constructor TAppBuilder.Create(ABuilder: IApplicationBuilder);
 begin
   FBuilder := ABuilder;
 end;
 
-function TDextAppBuilder.Unwrap: IApplicationBuilder;
+function TAppBuilder.Unwrap: IApplicationBuilder;
 begin
   Result := FBuilder;
 end;
 
-class operator TDextAppBuilder.Implicit(const A: TDextAppBuilder): IApplicationBuilder;
+class operator TAppBuilder.Implicit(const A: TAppBuilder): IApplicationBuilder;
 begin
   Result := A.FBuilder;
 end;

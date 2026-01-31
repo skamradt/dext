@@ -147,7 +147,7 @@ begin
   // We need to bridge TWebHostBuilder -> TDextApplication.
   
   // Create the app instance
-  Host := TDextApplication.Create;
+  Host := TWebApplication.Create;
   
   // Apply service configuration if any
   if Assigned(FServicesConfig) then

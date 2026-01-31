@@ -17,16 +17,21 @@ begin
     Writeln('🚀 Iniciando DextFood Backend...');
     
     // Instancia a aplicação Dext
-    var App := TDextApplication.Create;
+    var App: IWebApplication := TDextApplication.Create;
     
     // Configura a aplicação via classe Startup
     App.UseStartup(TStartup.Create);
     
+    // OBRIGATÓRIO para SQLite :memory: ou Seeding manual:
+    // Construir os serviços antes de rodar o seeder, para que ele use o Provider final.
+    var Provider := App.BuildServices;
+    TDbSeeder.Seed(Provider);
+
     Writeln('🌐 Servidor ouvindo em: http://localhost:9000');
     Writeln('Endpoints disponíveis:');
     Writeln('  GET  /health');
     Writeln('  POST /api/orders');
-    Writeln('  SSE  /hubs/orders');
+    Writeln('  GET  /api/orders/high-value');
     Writeln;
     Writeln('Pressione Enter para encerrar.');
     
@@ -38,3 +43,4 @@ begin
       Writeln('❌ Erro crítico: ', E.ClassName, ': ', E.Message);
   end;
 end.
+

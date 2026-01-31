@@ -103,17 +103,27 @@ type
 
   /// <summary>
   ///   Fluent builder for creating CORS options.
+  ///   This is a managed record - no manual memory management required.
   /// </summary>
-  TCorsBuilder = class
+  TCorsBuilder = record
   private
     FOptions: TCorsOptions;
+    FInitialized: Boolean;
+    procedure EnsureInitialized;
   public
-    constructor Create;
+    /// <summary>
+    ///   Creates a new CORS builder with default options.
+    /// </summary>
+    class function Create: TCorsBuilder; static;
+    
+    // =====================================================================
+    // New API (without 'With' prefix)
+    // =====================================================================
     
     /// <summary>
     ///   Specifies the allowed origins.
     /// </summary>
-    function WithOrigins(const AOrigins: array of string): TCorsBuilder;
+    function Origins(const AOrigins: TArray<string>): TCorsBuilder;
     
     /// <summary>
     ///   Allows any origin (*). Cannot be used with AllowCredentials.
@@ -123,7 +133,7 @@ type
     /// <summary>
     ///   Specifies the allowed HTTP methods.
     /// </summary>
-    function WithMethods(const AMethods: array of string): TCorsBuilder;
+    function Methods(const AMethods: TArray<string>): TCorsBuilder;
     
     /// <summary>
     ///   Allows any HTTP method.
@@ -133,7 +143,7 @@ type
     /// <summary>
     ///   Specifies the allowed request headers.
     /// </summary>
-    function WithHeaders(const AHeaders: array of string): TCorsBuilder;
+    function Headers(const AHeaders: TArray<string>): TCorsBuilder;
     
     /// <summary>
     ///   Allows any request header.
@@ -143,7 +153,7 @@ type
     /// <summary>
     ///   Specifies headers that can be exposed to the browser.
     /// </summary>
-    function WithExposedHeaders(const AHeaders: array of string): TCorsBuilder;
+    function ExposedHeaders(const AHeaders: TArray<string>): TCorsBuilder;
     
     /// <summary>
     ///   Allows credentials (cookies, authorization headers).
@@ -154,12 +164,27 @@ type
     /// <summary>
     ///   Sets how long (in seconds) the preflight response can be cached.
     /// </summary>
-    function WithMaxAge(ASeconds: Integer): TCorsBuilder;
+    function MaxAge(ASeconds: Integer): TCorsBuilder;
+
+    // =====================================================================
+    // Deprecated API (with 'With' prefix) - for backward compatibility
+    // =====================================================================
+    
+    function WithOrigins(const AOrigins: TArray<string>): TCorsBuilder; deprecated 'Use Origins instead';
+    function WithMethods(const AMethods: TArray<string>): TCorsBuilder; deprecated 'Use Methods instead';
+    function WithHeaders(const AHeaders: TArray<string>): TCorsBuilder; deprecated 'Use Headers instead';
+    function WithExposedHeaders(const AHeaders: TArray<string>): TCorsBuilder; deprecated 'Use ExposedHeaders instead';
+    function WithMaxAge(ASeconds: Integer): TCorsBuilder; deprecated 'Use MaxAge instead';
 
     /// <summary>
-    ///   Builds and returns the CORS options.
+    ///   Returns the built CORS options.
     /// </summary>
     function Build: TCorsOptions;
+    
+    /// <summary>
+    ///   Implicit conversion to TCorsOptions for direct use in UseCors.
+    /// </summary>
+    class operator Implicit(const ABuilder: TCorsBuilder): TCorsOptions;
   end;
 
   /// <summary>
@@ -178,9 +203,15 @@ type
     class function UseCors(const ABuilder: IApplicationBuilder; const AOptions: TCorsOptions): IApplicationBuilder; overload; static;
     
     /// <summary>
-    ///   Adds CORS middleware configured with a builder.
+    ///   Adds CORS middleware configured with a builder callback.
     /// </summary>
     class function UseCors(const ABuilder: IApplicationBuilder; AConfigurator: TProc<TCorsBuilder>): IApplicationBuilder; overload; static;
+    
+    /// <summary>
+    ///   Adds CORS middleware with a fluent builder.
+    ///   Usage: UseCors(TCorsBuilder.Create.AllowAnyOrigin.AllowAnyMethod)
+    /// </summary>
+    class function UseCors(const ABuilder: IApplicationBuilder; const ACorsBuilder: TCorsBuilder): IApplicationBuilder; overload; static;
   end;
 
   /// <summary>
@@ -191,11 +222,19 @@ type
     class operator Implicit(const AValue: TCorsOptions): TValue;
   end;
 
+function Cors: TCorsBuilder;
+
 implementation
 
 uses
   Dext.Utils;
+
 { TStringArrayHelper }
+
+function Cors: TCorsBuilder;
+begin
+  Result := TCorsBuilder.Create;
+end;
 
 function TStringArrayHelper.Contains(const AValue: string): Boolean;
 var
@@ -349,85 +388,126 @@ end;
 
 { TCorsBuilder }
 
-constructor TCorsBuilder.Create;
+procedure TCorsBuilder.EnsureInitialized;
 begin
-  inherited Create;
-  FOptions := TCorsOptions.Create;
+  if not FInitialized then
+  begin
+    FOptions := TCorsOptions.Create;
+    FInitialized := True;
+  end;
+end;
+
+class function TCorsBuilder.Create: TCorsBuilder;
+begin
+  Result.FOptions := TCorsOptions.Create;
+  Result.FInitialized := True;
 end;
 
 function TCorsBuilder.AllowAnyHeader: TCorsBuilder;
 begin
+  EnsureInitialized;
   FOptions.AllowedHeaders := ['*'];
   Result := Self;
 end;
 
 function TCorsBuilder.AllowAnyMethod: TCorsBuilder;
 begin
+  EnsureInitialized;
   FOptions.AllowedMethods := ['*'];
   Result := Self;
 end;
 
 function TCorsBuilder.AllowAnyOrigin: TCorsBuilder;
 begin
+  EnsureInitialized;
   FOptions.AllowedOrigins := ['*'];
   Result := Self;
 end;
 
 function TCorsBuilder.AllowCredentials: TCorsBuilder;
 begin
+  EnsureInitialized;
   FOptions.AllowCredentials := True;
   Result := Self;
 end;
 
 function TCorsBuilder.Build: TCorsOptions;
 begin
+  EnsureInitialized;
   Result := FOptions;
 end;
 
-function TCorsBuilder.WithExposedHeaders(const AHeaders: array of string): TCorsBuilder;
-var
-  I: Integer;
+class operator TCorsBuilder.Implicit(const ABuilder: TCorsBuilder): TCorsOptions;
 begin
-  SetLength(FOptions.ExposedHeaders, Length(AHeaders));
-  for I := 0 to High(AHeaders) do
-    FOptions.ExposedHeaders[I] := AHeaders[I];
+  Result := ABuilder.FOptions;
+end;
+
+// =====================================================================
+// New API implementations (without 'With' prefix)
+// =====================================================================
+
+function TCorsBuilder.Origins(const AOrigins: TArray<string>): TCorsBuilder;
+begin
+  EnsureInitialized;
+  FOptions.AllowedOrigins := AOrigins;
   Result := Self;
 end;
 
-function TCorsBuilder.WithHeaders(const AHeaders: array of string): TCorsBuilder;
-var
-  I: Integer;
+function TCorsBuilder.Methods(const AMethods: TArray<string>): TCorsBuilder;
 begin
-  SetLength(FOptions.AllowedHeaders, Length(AHeaders));
-  for I := 0 to High(AHeaders) do
-    FOptions.AllowedHeaders[I] := AHeaders[I];
+  EnsureInitialized;
+  FOptions.AllowedMethods := AMethods;
   Result := Self;
 end;
 
-function TCorsBuilder.WithMaxAge(ASeconds: Integer): TCorsBuilder;
+function TCorsBuilder.Headers(const AHeaders: TArray<string>): TCorsBuilder;
 begin
+  EnsureInitialized;
+  FOptions.AllowedHeaders := AHeaders;
+  Result := Self;
+end;
+
+function TCorsBuilder.ExposedHeaders(const AHeaders: TArray<string>): TCorsBuilder;
+begin
+  EnsureInitialized;
+  FOptions.ExposedHeaders := AHeaders;
+  Result := Self;
+end;
+
+function TCorsBuilder.MaxAge(ASeconds: Integer): TCorsBuilder;
+begin
+  EnsureInitialized;
   FOptions.MaxAge := ASeconds;
   Result := Self;
 end;
 
-function TCorsBuilder.WithMethods(const AMethods: array of string): TCorsBuilder;
-var
-  I: Integer;
+// =====================================================================
+// Deprecated API implementations (delegate to new methods)
+// =====================================================================
+
+function TCorsBuilder.WithOrigins(const AOrigins: TArray<string>): TCorsBuilder;
 begin
-  SetLength(FOptions.AllowedMethods, Length(AMethods));
-  for I := 0 to High(AMethods) do
-    FOptions.AllowedMethods[I] := AMethods[I];
-  Result := Self;
+  Result := Origins(AOrigins);
 end;
 
-function TCorsBuilder.WithOrigins(const AOrigins: array of string): TCorsBuilder;
-var
-  I: Integer;
+function TCorsBuilder.WithMethods(const AMethods: TArray<string>): TCorsBuilder;
 begin
-  SetLength(FOptions.AllowedOrigins, Length(AOrigins));
-  for I := 0 to High(AOrigins) do
-    FOptions.AllowedOrigins[I] := AOrigins[I];
-  Result := Self;
+  Result := Methods(AMethods);
+end;
+
+function TCorsBuilder.WithHeaders(const AHeaders: TArray<string>): TCorsBuilder;
+begin
+  Result := Headers(AHeaders);
+end;
+
+function TCorsBuilder.WithExposedHeaders(const AHeaders: TArray<string>): TCorsBuilder;
+begin
+  Result := ExposedHeaders(AHeaders);
+end;
+
+function TCorsBuilder.WithMaxAge(ASeconds: Integer): TCorsBuilder;
+begin
+  Result := MaxAge(ASeconds);
 end;
 
 { TApplicationBuilderCorsExtensions }
@@ -448,18 +528,18 @@ class function TApplicationBuilderCorsExtensions.UseCors(
   const ABuilder: IApplicationBuilder; AConfigurator: TProc<TCorsBuilder>): IApplicationBuilder;
 var
   Builder: TCorsBuilder;
-  Options: TCorsOptions;
 begin
   Builder := TCorsBuilder.Create;
-  try
-    if Assigned(AConfigurator) then
-      AConfigurator(Builder);
-    Options := Builder.Build;
-  finally
-    Builder.Free;
-  end;
+  if Assigned(AConfigurator) then
+    AConfigurator(Builder);
 
-  Result := ABuilder.UseMiddleware(TCorsMiddleware, Options);
+  Result := ABuilder.UseMiddleware(TCorsMiddleware, Builder.Build);
+end;
+
+class function TApplicationBuilderCorsExtensions.UseCors(
+  const ABuilder: IApplicationBuilder; const ACorsBuilder: TCorsBuilder): IApplicationBuilder;
+begin
+  Result := ABuilder.UseMiddleware(TCorsMiddleware, ACorsBuilder.Build);
 end;
 
 { TCorsOptionsHelper }

@@ -126,7 +126,7 @@ begin
           Result := Results.Ok(Product);
         except
           on E: Exception do
-            Result := Results.StatusCode(500, '{"error": "' + E.Message + '"}');
+            Result := Results.InternalError(E);
         end;
       end);
 

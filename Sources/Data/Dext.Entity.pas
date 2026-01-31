@@ -1,5 +1,9 @@
 unit Dext.Entity;
 
+{$I ..\Dext.inc}
+
+{$IFDEF DEXT_ENABLE_ENTITY}
+
 {$IFDEF FPC}
   {$MODE DELPHI}
 {$ENDIF}
@@ -587,5 +591,6 @@ begin
   Result.Create(ValueFactory);
 end;
 
+{$ENDIF}
 
 end.

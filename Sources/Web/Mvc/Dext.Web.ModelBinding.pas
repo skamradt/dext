@@ -303,7 +303,7 @@ function TModelBinder.BindBody(AType: PTypeInfo; Context: IHttpContext): TValue;
 var
   Stream: TStream;
   JsonString: string;
-  Settings: TDextSettings;
+  Settings: TJsonSettings;
   Bytes: TBytes;
   Span: TByteSpan;
 begin
@@ -361,7 +361,7 @@ begin
     
     // Fallback to legacy string based for now in the non-generic untyped method
     JsonString := TEncoding.UTF8.GetString(Bytes);
-    Settings := TDextSettings.Default.WithCaseInsensitive;
+    Settings := TJsonSettings.Default.CaseInsensitive;
     Result := TDextJson.Deserialize(AType, JsonString, Settings);
     
   except

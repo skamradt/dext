@@ -7,6 +7,8 @@
 >
 > 📌 **Confira o [Roadmap & Plano V1.0 Beta](Docs/Releases/v1-beta-roadmap.pt-br.md)** para a lista detalhada de funcionalidades, tarefas pendentes e planos futuros.
 
+> 📢 **[Novidades / Changelog](CHANGELOG.md)** — Últimas atualizações, breaking changes e novas features
+
 **Dext** é um ecossistema completo para desenvolvimento moderno em Delphi. Ele traz a produtividade e os padrões arquiteturais de frameworks como **ASP.NET Core** e **Spring Boot** para a performance nativa do Object Pascal.
 
 O objetivo não é apenas criar APIs, mas fornecer uma fundação sólida (DI, Configuration, Logging, ORM) para que você construa aplicações enterprise robustas e testáveis.

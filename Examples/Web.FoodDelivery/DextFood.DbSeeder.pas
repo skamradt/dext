@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils,
   Dext,
-  Dext.Web,
+  Dext.DI.Interfaces,
   Dext.Entity,
   DextFood.Domain;
 
@@ -15,27 +15,27 @@ type
   /// </summary>
   TDbSeeder = class
   public
-    class procedure Seed(const App: IWebApplication);
+    class procedure Seed(const Provider: IServiceProvider);
   end;
 
 implementation
 
+uses
+  DextFood.Startup; // For TAppDbContext
+
 { TDbSeeder }
 
-class procedure TDbSeeder.Seed(const App: IWebApplication);
+class procedure TDbSeeder.Seed(const Provider: IServiceProvider);
 var
   Scope: IServiceScope;
-  Db: TDbContext;
-  Provider: IServiceProvider;
+  Db: TAppDbContext;
   Order: TOrder;
 begin
   Writeln('[*] Initializing Database Seeding...');
   
-  // No Dext, construímos o ServiceProvider a partir da coleção registrada no App
-  Provider := App.Services.BuildServiceProvider;
   Scope := Provider.CreateScope;
   try
-    Db := Scope.ServiceProvider.GetService(TDbContext) as TDbContext;
+    Db := Scope.ServiceProvider.GetService(TAppDbContext) as TAppDbContext;
     if Assigned(Db) then
     begin
       // OBRIGATÓRIO: Registrar entidades no cache antes de EnsureCreated
@@ -45,7 +45,7 @@ begin
       Db.EnsureCreated;
       
       // Verifica se já existem dados
-      if Db.Entities<TOrder>.ToList.Count = 0 then
+      if Db.Orders.ToList.Count = 0 then
       begin
         Writeln('[*] Database is empty. Seeding sample data...');
         
@@ -54,21 +54,21 @@ begin
         Order.Status := TOrderStatus.Pending;
         Order.Total := 85.50;
         Order.CreatedAt := Now;
-        Db.Entities<TOrder>.Add(Order);
+        Db.Orders.Add(Order);
         
         // Exemplo 2: Pedido em Preparo
         Order := TOrder.Create;
         Order.Status := TOrderStatus.Preparing;
         Order.Total := 120.00;
         Order.CreatedAt := Now - (1/24); // 1 hora atrás
-        Db.Entities<TOrder>.Add(Order);
+        Db.Orders.Add(Order);
         
         // Exemplo 3: Pedido Concluído
         Order := TOrder.Create;
         Order.Status := TOrderStatus.Completed;
         Order.Total := 45.90;
         Order.CreatedAt := Now - 1; // Ontem
-        Db.Entities<TOrder>.Add(Order);
+        Db.Orders.Add(Order);
         
         Db.SaveChanges;
         Writeln('[OK] Seeding completed successfully.');
@@ -77,10 +77,11 @@ begin
         Writeln('[INFO] Database already has data. Skipping seeding.');
     end
     else
-      Writeln('[ERROR] Could not resolve TDbContext.');
+      Writeln('[ERROR] Could not resolve TAppDbContext.');
   finally
-    // Scope is an interface, will be freed by ARC, but clear pointers if needed
+    Scope := nil;
   end;
 end;
 
 end.
+

@@ -138,14 +138,21 @@ type
 
     class function NoContent: IResult;
     
-    class function InternalServerError(const AMessage: string): IResult;
+    class function InternalServerError(const AMessage: string): IResult; overload;
+    class function InternalServerError(const E: Exception): IResult; overload;
+    
+    /// <summary>
+    ///   Alias for InternalServerError - accepts an Exception directly.
+    ///   Usage: Result := Results.InternalError(E);
+    /// </summary>
+    class function InternalError(const E: Exception): IResult; overload;
+    class function InternalError(const AMessage: string): IResult; overload;
 
     class function Json(const AJson: string; AStatusCode: Integer = 200): IResult;
     class function Text(const AContent: string; AStatusCode: Integer = 200): IResult;
     class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult; // Added
     class function Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
     class function Stream(const AStream: TStream; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
-    
     
     /// <summary>
     ///   Returns an HTML result by reading the content from a view file.
@@ -381,6 +388,22 @@ end;
 class function Results.InternalServerError(const AMessage: string): IResult;
 begin
   Result := TJsonResult.Create(Format('{"error": "%s"}', [AMessage]), 500);
+end;
+
+class function Results.InternalServerError(const E: Exception): IResult;
+begin
+  Result := TJsonResult.Create(
+    Format('{"error": "%s", "type": "%s"}', [E.Message, E.ClassName]), 500);
+end;
+
+class function Results.InternalError(const E: Exception): IResult;
+begin
+  Result := InternalServerError(E);
+end;
+
+class function Results.InternalError(const AMessage: string): IResult;
+begin
+  Result := InternalServerError(AMessage);
 end;
 
 class function Results.Json(const AJson: string; AStatusCode: Integer): IResult;

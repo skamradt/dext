@@ -71,6 +71,87 @@ type
   end;
 
   /// <summary>
+  ///   Fluent builder for creating OpenAPI/Swagger options.
+  ///   This is a managed record - no manual memory management required.
+  /// </summary>
+  TOpenAPIBuilder = record
+  private
+    FOptions: TOpenAPIOptions;
+    FInitialized: Boolean;
+    procedure EnsureInitialized;
+  public
+    /// <summary>
+    ///   Creates a new OpenAPI builder with default options.
+    /// </summary>
+    class function Create: TOpenAPIBuilder; static;
+    
+    /// <summary>
+    ///   Sets the API title.
+    /// </summary>
+    function Title(const ATitle: string): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets the API description.
+    /// </summary>
+    function Description(const ADescription: string): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets the API version.
+    /// </summary>
+    function Version(const AVersion: string): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Adds a server to the configuration.
+    /// </summary>
+    function Server(const AUrl: string; const ADescription: string = ''): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets contact information.
+    /// </summary>
+    function Contact(const AName: string; const AEmail: string = ''): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets license information.
+    /// </summary>
+    function License(const AName: string; const AUrl: string = ''): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets custom Swagger UI path (default: /swagger).
+    /// </summary>
+    function SwaggerPath(const APath: string): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Sets custom Swagger JSON path (default: /swagger.json).
+    /// </summary>
+    function SwaggerJsonPath(const APath: string): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Enables Bearer token authentication (JWT).
+    /// </summary>
+    function BearerAuth(const AFormat: string = 'JWT'; const ADescription: string = 'Bearer token authentication'): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Enables API Key authentication.
+    /// </summary>
+    function ApiKeyAuth(const AKeyName: string = 'X-API-Key'; ALocation: TApiKeyLocation = aklHeader; const ADescription: string = 'API Key authentication'): TOpenAPIBuilder;
+    
+    /// <summary>
+    ///   Adds a global response (e.g., 400, 500) to all operations.
+    /// </summary>
+    function GlobalResponse(ACode: Integer; const ADescription: string): TOpenAPIBuilder;
+
+    /// <summary>
+    ///   Returns the built OpenAPI options.
+    /// </summary>
+    function Build: TOpenAPIOptions;
+    
+    /// <summary>
+    ///   Implicit conversion to TOpenAPIOptions for direct use in UseSwagger.
+    /// </summary>
+    class operator Implicit(const ABuilder: TOpenAPIBuilder): TOpenAPIOptions;
+  end;
+
+  /// <summary>
   ///   Generates OpenAPI 3.0 documentation from endpoint metadata.
   /// </summary>
   TOpenAPIGenerator = class
@@ -129,6 +210,13 @@ type
     /// </summary>
     function GenerateJson(const AEndpoints: TArray<TEndpointMetadata>): string;
   end;
+
+/// <summary>
+///   Global helper function for creating OpenAPI/Swagger configuration.
+///   Usage: App.Builder.UseSwagger(Swagger.Title('My API').Version('v1'));
+/// </summary>
+function Swagger: TOpenAPIBuilder;
+
 
 implementation
 
@@ -201,7 +289,130 @@ begin
   Result.Servers[NewLength - 1].Description := ADescription;
 end;
 
+{ Swagger helper function }
 
+function Swagger: TOpenAPIBuilder;
+begin
+  Result := TOpenAPIBuilder.Create;
+end;
+
+{ TOpenAPIBuilder }
+
+procedure TOpenAPIBuilder.EnsureInitialized;
+begin
+  if not FInitialized then
+  begin
+    FOptions := TOpenAPIOptions.Default;
+    FInitialized := True;
+  end;
+end;
+
+class function TOpenAPIBuilder.Create: TOpenAPIBuilder;
+begin
+  Result.FOptions := TOpenAPIOptions.Default;
+  Result.FInitialized := True;
+end;
+
+function TOpenAPIBuilder.Title(const ATitle: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.Title := ATitle;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.Description(const ADescription: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.Description := ADescription;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.Version(const AVersion: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.Version := AVersion;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.Server(const AUrl: string; const ADescription: string): TOpenAPIBuilder;
+var
+  NewLength: Integer;
+begin
+  EnsureInitialized;
+  NewLength := Length(FOptions.Servers) + 1;
+  SetLength(FOptions.Servers, NewLength);
+  FOptions.Servers[NewLength - 1].Url := AUrl;
+  FOptions.Servers[NewLength - 1].Description := ADescription;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.Contact(const AName: string; const AEmail: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.ContactName := AName;
+  FOptions.ContactEmail := AEmail;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.License(const AName: string; const AUrl: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.LicenseName := AName;
+  FOptions.LicenseUrl := AUrl;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.SwaggerPath(const APath: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.SwaggerPath := APath;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.SwaggerJsonPath(const APath: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.SwaggerJsonPath := APath;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.BearerAuth(const AFormat: string; const ADescription: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.EnableBearerAuth := True;
+  FOptions.BearerFormat := AFormat;
+  FOptions.BearerDescription := ADescription;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.ApiKeyAuth(const AKeyName: string; ALocation: TApiKeyLocation; const ADescription: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  FOptions.EnableApiKeyAuth := True;
+  FOptions.ApiKeyName := AKeyName;
+  FOptions.ApiKeyLocation := ALocation;
+  FOptions.ApiKeyDescription := ADescription;
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.GlobalResponse(ACode: Integer; const ADescription: string): TOpenAPIBuilder;
+begin
+  EnsureInitialized;
+  SetLength(FOptions.GlobalResponses, Length(FOptions.GlobalResponses) + 1);
+  FOptions.GlobalResponses[High(FOptions.GlobalResponses)] := TPair<Integer, string>.Create(ACode, ADescription);
+  Result := Self;
+end;
+
+function TOpenAPIBuilder.Build: TOpenAPIOptions;
+begin
+  EnsureInitialized;
+  Result := FOptions;
+end;
+
+class operator TOpenAPIBuilder.Implicit(const ABuilder: TOpenAPIBuilder): TOpenAPIOptions;
+begin
+  Result := ABuilder.FOptions;
+end;
 
 { TOpenAPIGenerator }
 

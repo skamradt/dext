@@ -42,7 +42,7 @@ uses
 type
   TControllerMethod = record
     Method: TRttiMethod;
-    RouteAttribute: DextRouteAttribute;
+    RouteAttribute: RouteAttribute;
     Path: string;
     HttpMethod: string;
   end;
@@ -50,7 +50,7 @@ type
   TControllerInfo = record
     RttiType: TRttiType;
     Methods: TArray<TControllerMethod>;
-    ControllerAttribute: DextControllerAttribute;
+    ControllerAttribute: ControllerAttribute;
   end;
 
   TCachedMethod = record
@@ -142,10 +142,10 @@ begin
             // ✅ PROCURAR ATRIBUTOS [DextGet], [DextPost], etc.
             for Attr in Attributes do
             begin
-              if Attr is DextRouteAttribute then
+              if Attr is RouteAttribute then
               begin
                 MethodInfo.Method := Method;
-                MethodInfo.RouteAttribute := DextRouteAttribute(Attr);
+                MethodInfo.RouteAttribute := RouteAttribute(Attr);
                 MethodInfo.Path := MethodInfo.RouteAttribute.Path;
                 MethodInfo.HttpMethod := MethodInfo.RouteAttribute.Method;
 
@@ -168,9 +168,9 @@ begin
             var TypeAttributes := RttiType.GetAttributes;
             for Attr in TypeAttributes do
             begin
-              if Attr is DextControllerAttribute then
+              if Attr is ControllerAttribute then
               begin
-                ControllerInfo.ControllerAttribute := DextControllerAttribute(Attr);
+                ControllerInfo.ControllerAttribute := ControllerAttribute(Attr);
                 Break;
               end;
             end;

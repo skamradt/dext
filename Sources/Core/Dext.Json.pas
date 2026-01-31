@@ -105,7 +105,7 @@ type
   /// <summary>
   ///   Defines the casing style for JSON property names.
   /// </summary>
-  TDextCaseStyle = (
+  TCaseStyle = (
     /// <summary>Keep names as they are in the record/class.</summary>
     Unchanged, 
     /// <summary>Convert to camelCase (e.g., myProperty).</summary>
@@ -115,31 +115,40 @@ type
     /// <summary>Convert to snake_case (e.g., my_property).</summary>
     SnakeCase
   );
+  
+  /// <summary>Deprecated alias for TCaseStyle.</summary>
+  TDextCaseStyle = TCaseStyle deprecated 'Use TCaseStyle instead';
 
   /// <summary>
   ///   Defines how enumerations are serialized.
   /// </summary>
-  TDextEnumStyle = (
+  TEnumStyle = (
     /// <summary>Serialize as the underlying integer value.</summary>
     AsNumber, 
     /// <summary>Serialize as the string name of the enum value.</summary>
     AsString
   );
+  
+  /// <summary>Deprecated alias for TEnumStyle.</summary>
+  TDextEnumStyle = TEnumStyle deprecated 'Use TEnumStyle instead';
 
   /// <summary>
   ///   Defines JSON output formatting.
   /// </summary>
-  TDextFormatting = (
+  TJsonFormatting = (
     /// <summary>Compact JSON (no whitespace).</summary>
     None, 
     /// <summary>Indented JSON for readability.</summary>
     Indented
   );
+  
+  /// <summary>Deprecated alias for TJsonFormatting.</summary>
+  TDextFormatting = TJsonFormatting deprecated 'Use TJsonFormatting instead';
 
   /// <summary>
   ///   Defines standard date/time formats.
   /// </summary>
-  TDextDateFormat = (
+  TDateFormat = (
     /// <summary>ISO 8601 format (e.g., "2025-11-16T11:07:37.565").</summary>
     ISO8601,        
     /// <summary>Unix timestamp (seconds since epoch).</summary>
@@ -147,6 +156,9 @@ type
     /// <summary>Custom format string.</summary>
     CustomFormat    
   );
+  
+  /// <summary>Deprecated alias for TDateFormat.</summary>
+  TDextDateFormat = TDateFormat deprecated 'Use TDateFormat instead';
 
   /// <summary>
   ///   Utilities for JSON manipulation, including casing.
@@ -156,83 +168,86 @@ type
     class function ToCamelCase(const S: string): string; static;
     class function ToPascalCase(const S: string): string; static;
     class function ToSnakeCase(const S: string): string; static;
-    class function ApplyCaseStyle(const S: string; Style: TDextCaseStyle): string; static;
+    class function ApplyCaseStyle(const S: string; Style: TCaseStyle): string; static;
   end;
 
   /// <summary>
   ///   Configuration settings for the JSON serializer.
+  ///   Use the global function JsonSettings to get a default instance.
   /// </summary>
-  TDextSettings = record
+  TJsonSettings = record
   public
-    Formatting: TDextFormatting;
+    Formatting: TJsonFormatting;
     IgnoreDefaultValues: Boolean;
-    IgnoreNullValues: Boolean;
+    FIgnoreNullValues: Boolean;
     DateFormat: string;
-    CaseStyle: TDextCaseStyle;
-    EnumStyle: TDextEnumStyle;
-    CaseInsensitive: Boolean;
-    DateFormatStyle: TDextDateFormat;
+    CaseStyle: TCaseStyle;
+    EnumStyle: TEnumStyle;
+    FCaseInsensitive: Boolean;
+    DateFormatStyle: TDateFormat;
     
     /// <summary>
     ///   Returns the default settings.
     /// </summary>
-    class function Default: TDextSettings; static;
+    class function Default: TJsonSettings; static;
     
     /// <summary>
     ///   Returns settings configured for indented output.
     /// </summary>
-    class function Indented: TDextSettings; static;
+    class function Indented: TJsonSettings; static;
     
-    /// <summary>
-    ///   Returns a new settings instance with CamelCase enabled.
-    /// </summary>
-    function WithCamelCase: TDextSettings;
+    // =====================================================================
+    // New API (without 'With' prefix)
+    // =====================================================================
     
-    /// <summary>
-    ///   Returns a new settings instance with PascalCase enabled.
-    /// </summary>
-    function WithPascalCase: TDextSettings;
+    /// <summary>Enables CamelCase naming.</summary>
+    function CamelCase: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance with SnakeCase enabled.
-    /// </summary>
-    function WithSnakeCase: TDextSettings;
+    /// <summary>Enables PascalCase naming.</summary>
+    function PascalCase: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance with Enums serialized as strings.
-    /// </summary>
-    function WithEnumAsString: TDextSettings;
+    /// <summary>Enables snake_case naming.</summary>
+    function SnakeCase: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance with Enums serialized as numbers.
-    /// </summary>
-    function WithEnumAsNumber: TDextSettings;
+    /// <summary>Serializes enums as strings.</summary>
+    function EnumAsString: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance that ignores null values during serialization.
-    /// </summary>
-    function WithIgnoreNullValues: TDextSettings;
+    /// <summary>Serializes enums as numbers.</summary>
+    function EnumAsNumber: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance with case-insensitive property matching.
-    /// </summary>
-    function WithCaseInsensitive: TDextSettings;
+    /// <summary>Ignores null values during serialization.</summary>
+    function IgnoreNullValues: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance using ISO 8601 date format.
-    /// </summary>
-    function WithISODateFormat: TDextSettings;
+    /// <summary>Enables case-insensitive property matching.</summary>
+    function CaseInsensitive: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance using Unix Timestamp date format.
-    /// </summary>
-    function WithUnixTimestamp: TDextSettings;
+    /// <summary>Uses ISO 8601 date format.</summary>
+    function ISODateFormat: TJsonSettings;
     
-    /// <summary>
-    ///   Returns a new settings instance using a custom date format.
-    /// </summary>
-    function WithCustomDateFormat(const Format: string): TDextSettings;
+    /// <summary>Uses Unix Timestamp date format.</summary>
+    function UnixTimestamp: TJsonSettings;
+    
+    /// <summary>Uses a custom date format.</summary>
+    function CustomDateFormat(const Format: string): TJsonSettings;
+    
+    // =====================================================================
+    // Deprecated API (with 'With' prefix) - for backward compatibility
+    // =====================================================================
+    
+    function WithCamelCase: TJsonSettings; deprecated 'Use CamelCase instead';
+    function WithPascalCase: TJsonSettings; deprecated 'Use PascalCase instead';
+    function WithSnakeCase: TJsonSettings; deprecated 'Use SnakeCase instead';
+    function WithEnumAsString: TJsonSettings; deprecated 'Use EnumAsString instead';
+    function WithEnumAsNumber: TJsonSettings; deprecated 'Use EnumAsNumber instead';
+    function WithIgnoreNullValues: TJsonSettings; deprecated 'Use IgnoreNullValues instead';
+    function WithCaseInsensitive: TJsonSettings; deprecated 'Use CaseInsensitive instead';
+    function WithISODateFormat: TJsonSettings; deprecated 'Use ISODateFormat instead';
+    function WithUnixTimestamp: TJsonSettings; deprecated 'Use UnixTimestamp instead';
+    function WithCustomDateFormat(const Format: string): TJsonSettings; deprecated 'Use CustomDateFormat instead';
   end;
+  
+  /// <summary>Deprecated alias for TJsonSettings.</summary>
+  TDextSettings = TJsonSettings deprecated 'Use TJsonSettings instead';
 
   /// <summary>
   ///   Main entry point for JSON serialization and deserialization.
@@ -240,19 +255,19 @@ type
   TDextJson = class
   private
     class var FProvider: IDextJsonProvider;
-    class var FDefaultSettings: TDextSettings;
+    class var FDefaultSettings: TJsonSettings;
     class function GetProvider: IDextJsonProvider; static;
   public
     /// <summary>
     ///   Sets the default settings to be used for all serialization/deserialization
     ///   operations that don't explicitly provide settings.
     /// </summary>
-    class procedure SetDefaultSettings(const ASettings: TDextSettings); static;
+    class procedure SetDefaultSettings(const ASettings: TJsonSettings); static;
     
     /// <summary>
     ///   Gets the current default settings.
     /// </summary>
-    class function GetDefaultSettings: TDextSettings; static;
+    class function GetDefaultSettings: TJsonSettings; static;
     /// <summary>
     ///   Gets or sets the JSON provider (driver) to be used.
     ///   Defaults to JsonDataObjects if not set.
@@ -267,7 +282,7 @@ type
     /// <summary>
     ///   Deserializes a JSON string into a value of type T using custom settings.
     /// </summary>
-    class function Deserialize<T>(const AJson: string; const ASettings: TDextSettings): T; overload; static;
+    class function Deserialize<T>(const AJson: string; const ASettings: TJsonSettings): T; overload; static;
     
     /// <summary>
     ///   Deserializes a JSON string into a TValue based on the provided type info.
@@ -277,7 +292,7 @@ type
     /// <summary>
     ///   Deserializes a JSON string into a TValue based on the provided type info with custom settings.
     /// </summary>
-    class function Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TDextSettings): TValue; overload; static;
+    class function Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TJsonSettings): TValue; overload; static;
     
     /// <summary>
     ///   Deserializes a JSON string into a record TValue.
@@ -292,7 +307,7 @@ type
     /// <summary>
     ///   Serializes a value of type T into a JSON string using custom settings.
     /// </summary>
-    class function Serialize<T>(const AValue: T; const ASettings: TDextSettings): string; overload; static;
+    class function Serialize<T>(const AValue: T; const ASettings: TJsonSettings): string; overload; static;
 
     /// <summary>
     ///   Serializes a TValue into a JSON string using default settings.
@@ -306,7 +321,7 @@ type
   /// </summary>
   TDextSerializer = class
   private
-    FSettings: TDextSettings;
+    FSettings: TJsonSettings;
   protected
     function GetFieldName(AField: TRttiField): string;
     function GetRecordName(ARttiType: TRttiType): string;
@@ -328,7 +343,7 @@ type
     function GetArrayElementType(AType: PTypeInfo): PTypeInfo;
     function ApplyCaseStyle(const AName: string): string;
   public
-    constructor Create(const ASettings: TDextSettings);
+    constructor Create(const ASettings: TJsonSettings);
     function Deserialize<T>(const AJson: string): T;
     function DeserializeRecord(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
     function DeserializeObject(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
@@ -416,6 +431,18 @@ type
     /// <summary>Creates a new JSON builder instance.</summary>
     class function New: TJsonBuilder;
   end;
+
+/// <summary>
+///   Returns a default TJsonSettings instance for fluent configuration.
+///   Usage: DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
+/// </summary>
+function JsonSettings: TJsonSettings;
+
+/// <summary>
+///   Sets the default JSON settings globally. Shorthand for TDextJson.SetDefaultSettings.
+///   Usage: DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
+/// </summary>
+procedure DefaultJsonSettings(const ASettings: TJsonSettings);
 
 implementation
 
@@ -509,12 +536,12 @@ begin
   end;
 end;
 
-class function TJsonUtils.ApplyCaseStyle(const S: string; Style: TDextCaseStyle): string;
+class function TJsonUtils.ApplyCaseStyle(const S: string; Style: TCaseStyle): string;
 begin
   case Style of
-    TDextCaseStyle.CamelCase: Result := ToCamelCase(S);
-    TDextCaseStyle.PascalCase: Result := ToPascalCase(S);
-    TDextCaseStyle.SnakeCase: Result := ToSnakeCase(S);
+    TCaseStyle.CamelCase: Result := ToCamelCase(S);
+    TCaseStyle.PascalCase: Result := ToPascalCase(S);
+    TCaseStyle.SnakeCase: Result := ToSnakeCase(S);
   else
     Result := S;
   end;
@@ -536,87 +563,159 @@ begin
   FFormat := AFormat;
 end;
 
-{ TDextSettings }
+{ JsonSettings global function }
 
-class function TDextSettings.Default: TDextSettings;
+function JsonSettings: TJsonSettings;
 begin
-  Result.Formatting := TDextFormatting.None;
-  Result.IgnoreNullValues := False;
+  Result := TJsonSettings.Default;
+end;
+
+{ DefaultJsonSettings global procedure }
+
+procedure DefaultJsonSettings(const ASettings: TJsonSettings);
+begin
+  TDextJson.SetDefaultSettings(ASettings);
+end;
+
+{ TJsonSettings }
+
+class function TJsonSettings.Default: TJsonSettings;
+begin
+  Result.Formatting := TJsonFormatting.None;
+  Result.FIgnoreNullValues := False;
   Result.IgnoreDefaultValues := False;
   Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
-  Result.DateFormatStyle := TDextDateFormat.ISO8601;
-  Result.CaseStyle := TDextCaseStyle.Unchanged;
-  Result.EnumStyle := TDextEnumStyle.AsNumber;
-  Result.CaseInsensitive := False;
+  Result.DateFormatStyle := TDateFormat.ISO8601;
+  Result.CaseStyle := TCaseStyle.Unchanged;
+  Result.EnumStyle := TEnumStyle.AsNumber;
+  Result.FCaseInsensitive := False;
 end;
 
-class function TDextSettings.Indented: TDextSettings;
+class function TJsonSettings.Indented: TJsonSettings;
 begin
   Result := Default;
-  Result.Formatting := TDextFormatting.Indented;
+  Result.Formatting := TJsonFormatting.Indented;
 end;
 
-function TDextSettings.WithCamelCase: TDextSettings;
+// =====================================================================
+// New API implementations (without 'With' prefix)
+// =====================================================================
+
+function TJsonSettings.CamelCase: TJsonSettings;
 begin
   Result := Self;
-  Result.CaseStyle := TDextCaseStyle.CamelCase;
+  Result.CaseStyle := TCaseStyle.CamelCase;
 end;
 
-function TDextSettings.WithPascalCase: TDextSettings;
+function TJsonSettings.PascalCase: TJsonSettings;
 begin
   Result := Self;
-  Result.CaseStyle := TDextCaseStyle.PascalCase;
+  Result.CaseStyle := TCaseStyle.PascalCase;
 end;
 
-function TDextSettings.WithSnakeCase: TDextSettings;
+function TJsonSettings.SnakeCase: TJsonSettings;
 begin
   Result := Self;
-  Result.CaseStyle := TDextCaseStyle.SnakeCase;
+  Result.CaseStyle := TCaseStyle.SnakeCase;
 end;
 
-function TDextSettings.WithUnixTimestamp: TDextSettings;
+function TJsonSettings.EnumAsString: TJsonSettings;
 begin
   Result := Self;
-  Result.DateFormatStyle := TDextDateFormat.UnixTimestamp;
+  Result.EnumStyle := TEnumStyle.AsString;
+end;
+
+function TJsonSettings.EnumAsNumber: TJsonSettings;
+begin
+  Result := Self;
+  Result.EnumStyle := TEnumStyle.AsNumber;
+end;
+
+function TJsonSettings.IgnoreNullValues: TJsonSettings;
+begin
+  Result := Self;
+  Result.FIgnoreNullValues := True;
+end;
+
+function TJsonSettings.CaseInsensitive: TJsonSettings;
+begin
+  Result := Self;
+  Result.FCaseInsensitive := True;
+end;
+
+function TJsonSettings.ISODateFormat: TJsonSettings;
+begin
+  Result := Self;
+  Result.DateFormatStyle := TDateFormat.ISO8601;
+  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
+end;
+
+function TJsonSettings.UnixTimestamp: TJsonSettings;
+begin
+  Result := Self;
+  Result.DateFormatStyle := TDateFormat.UnixTimestamp;
   Result.DateFormat := '';
 end;
 
-function TDextSettings.WithEnumAsString: TDextSettings;
+function TJsonSettings.CustomDateFormat(const Format: string): TJsonSettings;
 begin
   Result := Self;
-  Result.EnumStyle := TDextEnumStyle.AsString;
-end;
-
-function TDextSettings.WithEnumAsNumber: TDextSettings;
-begin
-  Result := Self;
-  Result.EnumStyle := TDextEnumStyle.AsNumber;
-end;
-
-function TDextSettings.WithIgnoreNullValues: TDextSettings;
-begin
-  Result := Self;
-  Result.IgnoreNullValues := True;
-end;
-
-function TDextSettings.WithISODateFormat: TDextSettings;
-begin
-  Result := Self;
-  Result.DateFormatStyle := TDextDateFormat.ISO8601;
-  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
-end;
-
-function TDextSettings.WithCaseInsensitive: TDextSettings;
-begin
-  Result := Self;
-  Result.CaseInsensitive := True;
-end;
-
-function TDextSettings.WithCustomDateFormat(const Format: string): TDextSettings;
-begin
-  Result := Self;
-  Result.DateFormatStyle := TDextDateFormat.CustomFormat;
+  Result.DateFormatStyle := TDateFormat.CustomFormat;
   Result.DateFormat := Format;
+end;
+
+// =====================================================================
+// Deprecated API implementations (delegate to new methods)
+// =====================================================================
+
+function TJsonSettings.WithCamelCase: TJsonSettings;
+begin
+  Result := CamelCase;
+end;
+
+function TJsonSettings.WithPascalCase: TJsonSettings;
+begin
+  Result := PascalCase;
+end;
+
+function TJsonSettings.WithSnakeCase: TJsonSettings;
+begin
+  Result := SnakeCase;
+end;
+
+function TJsonSettings.WithEnumAsString: TJsonSettings;
+begin
+  Result := EnumAsString;
+end;
+
+function TJsonSettings.WithEnumAsNumber: TJsonSettings;
+begin
+  Result := EnumAsNumber;
+end;
+
+function TJsonSettings.WithIgnoreNullValues: TJsonSettings;
+begin
+  Result := IgnoreNullValues;
+end;
+
+function TJsonSettings.WithCaseInsensitive: TJsonSettings;
+begin
+  Result := CaseInsensitive;
+end;
+
+function TJsonSettings.WithISODateFormat: TJsonSettings;
+begin
+  Result := ISODateFormat;
+end;
+
+function TJsonSettings.WithUnixTimestamp: TJsonSettings;
+begin
+  Result := UnixTimestamp;
+end;
+
+function TJsonSettings.WithCustomDateFormat(const Format: string): TJsonSettings;
+begin
+  Result := CustomDateFormat(Format);
 end;
 
 { TDextJson }
@@ -626,7 +725,7 @@ begin
   Result := Deserialize<T>(AJson, GetDefaultSettings);
 end;
 
-class function TDextJson.Deserialize<T>(const AJson: string; const ASettings: TDextSettings): T;
+class function TDextJson.Deserialize<T>(const AJson: string; const ASettings: TJsonSettings): T;
 var
   Serializer: TDextSerializer;
 begin
@@ -667,7 +766,7 @@ begin
   end;
 end;
 
-class function TDextJson.Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TDextSettings): TValue;
+class function TDextJson.Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TJsonSettings): TValue;
 var
   Serializer: TDextSerializer;
   JsonNode: IDextJsonNode;
@@ -714,7 +813,7 @@ begin
   Result := Serialize<T>(AValue, GetDefaultSettings);
 end;
 
-class function TDextJson.Serialize<T>(const AValue: T; const ASettings: TDextSettings): string;
+class function TDextJson.Serialize<T>(const AValue: T; const ASettings: TJsonSettings): string;
 var
   Serializer: TDextSerializer;
 begin
@@ -730,7 +829,7 @@ class function TDextJson.Serialize(const AValue: TValue): string;
 var
   Serializer: TDextSerializer;
 begin
-  Serializer := TDextSerializer.Create(TDextSettings.Default);
+  Serializer := TDextSerializer.Create(TJsonSettings.Default);
   try
     Result := Serializer.Serialize(AValue);
   finally
@@ -740,7 +839,7 @@ end;
 
 { TDextSerializer }
 
-constructor TDextSerializer.Create(const ASettings: TDextSettings);
+constructor TDextSerializer.Create(const ASettings: TJsonSettings);
 begin
   inherited Create;
   FSettings := ASettings;
@@ -826,7 +925,7 @@ begin
       ActualPropName := PropName;
       Found := AJson.Contains(PropName);
 
-      if (not Found) and FSettings.CaseInsensitive then
+      if (not Found) and FSettings.FCaseInsensitive then
       begin
          // Simple scan
          var LowerProp := LowerCase(PropName);
@@ -924,7 +1023,7 @@ begin
       Found := AJson.Contains(FieldName);
 
       // Se não encontrou e CaseInsensitive está habilitado, buscar ignorando case
-      if (not Found) and FSettings.CaseInsensitive then
+      if (not Found) and FSettings.FCaseInsensitive then
       begin
         // Precisamos iterar pelas chaves do JSON para encontrar uma correspondência case-insensitive
         // Como não temos acesso direto às chaves via interface, vamos tentar variações comuns
@@ -1155,7 +1254,7 @@ begin
   else
     JsonNode := ValueToJson(TValue.From<T>(AValue));
     
-  if FSettings.Formatting = TDextFormatting.Indented then
+  if FSettings.Formatting = TJsonFormatting.Indented then
     Result := JsonNode.ToJson(True)
   else
     Result := JsonNode.ToJson(False);
@@ -1173,7 +1272,7 @@ begin
   else
     JsonNode := ValueToJson(AValue);
     
-  if FSettings.Formatting = TDextFormatting.Indented then
+  if FSettings.Formatting = TJsonFormatting.Indented then
     Result := JsonNode.ToJson(True)
   else
     Result := JsonNode.ToJson(False);
@@ -1254,9 +1353,9 @@ begin
          (FieldValue.TypeInfo <> TypeInfo(Boolean)) then
       begin
         case FSettings.EnumStyle of
-          TDextEnumStyle.AsString:
+          TEnumStyle.AsString:
             Result.SetString(FieldName, GetEnumName(FieldValue.TypeInfo, FieldValue.AsOrdinal));
-          TDextEnumStyle.AsNumber:
+          TEnumStyle.AsNumber:
             Result.SetInteger(FieldName, FieldValue.AsOrdinal);
         end;
         Continue;
@@ -1286,11 +1385,11 @@ begin
                 Result.SetString(FieldName, FormatDateTime(CustomFormat, FieldValue.AsExtended))
               else
                 case FSettings.DateFormatStyle of
-                  TDextDateFormat.ISO8601:
+                  TDateFormat.ISO8601:
                     Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
-                  TDextDateFormat.UnixTimestamp:
+                  TDateFormat.UnixTimestamp:
                     Result.SetInt64(FieldName, DateTimeToUnix(FieldValue.AsExtended));
-                  TDextDateFormat.CustomFormat:
+                  TDateFormat.CustomFormat:
                     Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
                 end;
             end
@@ -1418,7 +1517,7 @@ begin
       end;
 
       // Handle null/empty values
-      if FSettings.IgnoreNullValues and PropValue.IsEmpty then
+      if FSettings.FIgnoreNullValues and PropValue.IsEmpty then
         Continue;
 
       // Serialize based on property type
@@ -1495,7 +1594,7 @@ begin
   else
     FieldValue := TValue.Empty;
 
-  if FSettings.IgnoreNullValues and FieldValue.IsEmpty then
+  if FSettings.FIgnoreNullValues and FieldValue.IsEmpty then
     Exit(True);
 
   if FSettings.IgnoreDefaultValues then
@@ -1590,16 +1689,16 @@ begin
   Result := FProvider;
 end;
 
-class procedure TDextJson.SetDefaultSettings(const ASettings: TDextSettings);
+class procedure TDextJson.SetDefaultSettings(const ASettings: TJsonSettings);
 begin
   FDefaultSettings := ASettings;
 end;
 
-class function TDextJson.GetDefaultSettings: TDextSettings;
+class function TDextJson.GetDefaultSettings: TJsonSettings;
 begin
   // If not explicitly set, return the default
-  if (FDefaultSettings.DateFormat = '') and not FDefaultSettings.CaseInsensitive then
-    Result := TDextSettings.Default
+  if (FDefaultSettings.DateFormat = '') and not FDefaultSettings.FCaseInsensitive then
+    Result := TJsonSettings.Default
   else
     Result := FDefaultSettings;
 end;
