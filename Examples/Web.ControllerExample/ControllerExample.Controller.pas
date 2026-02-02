@@ -89,7 +89,7 @@ type
   end;
 
   // Controller Class (Instance-based with DI)
-  [DextController('/api/greet')]
+  [ApiController('/api/greet')]
   // TODO : Rename Attribute
   [Authorize('Bearer')] // ? Protect entire controller
   TGreetingController = class
@@ -100,27 +100,27 @@ type
     // Constructor Injection!
     constructor Create(AService: IGreetingService; Settings: IOptions<TMySettings>);
 
-    [DextGet('/{name}')]
+    [HttpGet('/{name}')]
     procedure GetGreeting(Ctx: IHttpContext; [FromRoute] const Name: string); virtual;
 
-    [DextGet('/negotiated')]
+    [HttpGet('/negotiated')]
     [AllowAnonymous]
     procedure GetNegotiated(Ctx: IHttpContext); virtual;
 
-    [DextPost('')]
+    [HttpPost('')]
     procedure CreateGreeting(Ctx: IHttpContext; const Request: TGreetingRequest); virtual;
 
-    [DextGet('/search')]
+    [HttpGet('/search')]
     procedure SearchGreeting(Ctx: IHttpContext; const Filter: TGreetingFilter); virtual;
 
-    [DextGet('/config')]
+    [HttpGet('/config')]
     procedure GetConfig(Ctx: IHttpContext); virtual;
   end;
 
-  [DextController('/api/auth')]
+  [ApiController('/api/auth')]
   TAuthController = class
   public
-    [DextPost('/login')]
+    [HttpPost('/login')]
     [Authorize('Bearer')] // Just to show it appears in Swagger, but AllowAnonymous overrides
     [AllowAnonymous]
     procedure Login(Ctx: IHttpContext; const Request: TLoginRequest);
@@ -152,57 +152,57 @@ type
   /// <summary>
   ///   Controller demonstrating all Action Filter features
   /// </summary>
-  [DextController('/api/filters')]
+  [ApiController('/api/filters')]
   [LogAction] // ✅ Controller-level filter: logs ALL methods
   TFiltersController = class
   public
     // Example 1: Built-in LogAction filter
-    [DextGet('/simple')]
+    [HttpGet('/simple')]
     procedure SimpleEndpoint(Ctx: IHttpContext);
 
     // Example 2: Multiple filters
-    [DextGet('/cached')]
+    [HttpGet('/cached')]
     [ResponseCache(60, 'public')] // Cache for 60 seconds
     [AddHeader('X-Custom-Header', 'Dext-Rocks')]
     procedure CachedEndpoint(Ctx: IHttpContext);
 
     // Example 3: Header validation
-    [DextPost('/secure')]
+    [HttpPost('/secure')]
     [RequireHeader('X-API-Key', 'API Key is required')]
     procedure SecureEndpoint(Ctx: IHttpContext);
 
     // Example 4: Custom filters
-    [DextGet('/admin')]
+    [HttpGet('/admin')]
     [RequireAdminRole]
     [TimingFilter]
     procedure AdminEndpoint(Ctx: IHttpContext);
 
     // Example 5: Short-circuit demonstration
-    [DextGet('/protected')]
+    [HttpGet('/protected')]
     [RequireHeader('Authorization', 'Authorization header required')]
     procedure ProtectedEndpoint(Ctx: IHttpContext);
   end;
 
-  [DextController('/api/list')]
+  [ApiController('/api/list')]
   TListTestController = class
   public
-    [DextGet('')]
+    [HttpGet('')]
     [AllowAnonymous]
     procedure GetPeople(Ctx: IHttpContext);
   end;
 
-  [DextController('/api/object')]
+  [ApiController('/api/object')]
   TObjectTestController = class
   public
-    [DextGet('')]
+    [HttpGet('')]
     [AllowAnonymous]
     procedure GetPerson(Ctx: IHttpContext);
 
-    [DextGet('/nested')]
+    [HttpGet('/nested')]
     [AllowAnonymous]
     procedure GetPersonWithAddress(Ctx: IHttpContext);
     
-    [DextGet('/list')]
+    [HttpGet('/list')]
     [AllowAnonymous]
     procedure GetPeopleList(Ctx: IHttpContext);
   end;
@@ -533,3 +533,4 @@ initialization
   TObjectTestController.ClassName;
 
 end.
+

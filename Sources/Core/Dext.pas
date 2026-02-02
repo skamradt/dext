@@ -550,7 +550,7 @@ const
 ///
 function Prop(const Name: string): TPropExpression;
 function JsonSettings: TJsonSettings;
-procedure DefaultJsonSettings(const Settings: TJsonSettings);
+procedure JsonDefaultSettings(const Settings: TJsonSettings);
 
 implementation
 
@@ -559,7 +559,7 @@ begin
   Result := TPropExpression.Create(Name);
 end;
 
-procedure DefaultJsonSettings(const Settings: TJsonSettings);
+procedure JsonDefaultSettings(const Settings: TJsonSettings);
 begin
   TDextJson.SetDefaultSettings(Settings);
 end;

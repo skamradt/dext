@@ -130,11 +130,11 @@ type
   ///     class helper inheritance across packages (Core → Entity → Web).
   ///   </para>
   /// </remarks>
-  TDextServices = class
+  TDextServices = record
   private
     FServices: IServiceCollection;
   public
-    constructor Create(AServices: IServiceCollection); overload;
+    constructor Create(AServices: IServiceCollection);
     class function New: TDextServices; static;
     function Unwrap: IServiceCollection;
     procedure AddRange(const AOther: TDextServices);
@@ -170,23 +170,12 @@ type
     function BuildServiceProvider: IServiceProvider;
   end;
 
-  /// <summary>
-  ///   Base class helper for TDextServices. Extended by Entity and Web packages.
-  /// </summary>
-  /// <remarks>
-  ///   This helper is intentionally minimal. Specialized packages (Dext.Entity, Dext.Web)
-  ///   add their own methods by inheriting from this helper:
-  ///   - Dext.Entity: TDextEntityServicesHelper = class helper(TDextServicesHelper) for TDextServices
-  ///   - Dext.Web: TDextWebServicesHelper = class helper(TDextEntityServicesHelper) for TDextServices
-  /// </remarks>
-  TDextServicesHelper = class helper for TDextServices
-  public
-    // Base helper - currently empty. Subpackages extend via inheritance.
-  end;
+
 
 
   TDextDIFactory = class
   public
+    class var CreateServiceCollectionFunc: TFunc<IServiceCollection>;
     class function CreateServiceCollection: IServiceCollection;
   end;
 
@@ -314,7 +303,6 @@ end;
 
 constructor TDextServices.Create(AServices: IServiceCollection);
 begin
-  inherited Create;
   FServices := AServices;
 end;
 
@@ -325,7 +313,7 @@ end;
 
 procedure TDextServices.AddRange(const AOther: TDextServices);
 begin
-  if (FServices <> nil) and (AOther <> nil) and (AOther.FServices <> nil) then
+  if (FServices <> nil) and (AOther.FServices <> nil) then
     FServices.AddRange(AOther.FServices);
 end;
 
@@ -446,9 +434,10 @@ end;
 
 class function TDextDIFactory.CreateServiceCollection: IServiceCollection;
 begin
-  // Create and return a new TDextServiceCollection instance
-  // This was returning nil, causing all the memory leak issues!
-  Result := TDextServiceCollection.Create;
+  if Assigned(CreateServiceCollectionFunc) then
+    Result := CreateServiceCollectionFunc()
+  else
+    raise EDextDIException.Create('DI Factory not initialized. Make sure Dext.DI.Core is in your uses.');
 end;
 
 end.

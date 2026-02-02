@@ -434,15 +434,15 @@ type
 
 /// <summary>
 ///   Returns a default TJsonSettings instance for fluent configuration.
-///   Usage: DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
+///   Usage: JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
 /// </summary>
 function JsonSettings: TJsonSettings;
 
 /// <summary>
 ///   Sets the default JSON settings globally. Shorthand for TDextJson.SetDefaultSettings.
-///   Usage: DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
+///   Usage: JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
 /// </summary>
-procedure DefaultJsonSettings(const ASettings: TJsonSettings);
+procedure JsonDefaultSettings(const ASettings: TJsonSettings);
 
 implementation
 
@@ -570,9 +570,9 @@ begin
   Result := TJsonSettings.Default;
 end;
 
-{ DefaultJsonSettings global procedure }
+{ JsonDefaultSettings global procedure }
 
-procedure DefaultJsonSettings(const ASettings: TJsonSettings);
+procedure JsonDefaultSettings(const ASettings: TJsonSettings);
 begin
   TDextJson.SetDefaultSettings(ASettings);
 end;

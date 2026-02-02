@@ -5,11 +5,11 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  Dext,
-  Dext.Collections,
   Customer.Entity,
   Customer.Service,
-  Customer.ViewModel;
+  Customer.ViewModel,
+  Dext,
+  Dext.Collections;
 
 type
 {$M+}

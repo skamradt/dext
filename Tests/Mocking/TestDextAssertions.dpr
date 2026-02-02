@@ -400,6 +400,8 @@ begin
   
   // BeSameDateAs
   try
+    // Use fixed date to avoid midnight crossing issues
+    NowTime := EncodeDateTime(2026, 1, 1, 12, 0, 0, 0);
     ShouldDate(NowTime).BeSameDateAs(NowTime + 0.1); // Same day, different time
     Pass('BeSameDateAs - ignoring time');
   except

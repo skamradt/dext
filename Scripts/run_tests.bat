@@ -12,8 +12,9 @@ call "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
 set FAILED_TESTS=
 set SUCCESS_COUNT=0
 set FAIL_COUNT=0
-set SKIPPED_COUNT=0
 set BUILD_FAIL_COUNT=0
+set BUILD_SUCCESS_COUNT=0
+set "OUTPUT_DIR=%~dp0..\Tests\Output"
 
 echo ==========================================
 echo Step 1: Building All Tests
@@ -22,18 +23,24 @@ echo.
 set /A buildnbr=0
 set /A buildcnt=0
 
+REM Count test projects first
 for /r "%~dp0..\Tests" %%f in (*.dproj) do (
-   set /A buildcnt+=1
+   set "PROJ_NAME=%%~nf"
+   echo !PROJ_NAME! | findstr /i "test" >nul
+   if !ERRORLEVEL! EQU 0 (
+      set /A buildcnt+=1
+   )
 )
 
+REM Build each test project
 for /r "%~dp0..\Tests" %%f in (*.dproj) do (
-    SET /A buildnbr+=1
-    title Building Test !buildnbr! of %buildcnt%
     set "PROJECT_NAME=%%~nf"
     set "PROJECT_FILE=%%f"
     
     echo !PROJECT_NAME! | findstr /i "test" >nul
     if !ERRORLEVEL! EQU 0 (
+        SET /A buildnbr+=1
+        title Building Test !buildnbr! of %buildcnt%
         call :build_project "!PROJECT_NAME!" "!PROJECT_FILE!"
     )
 )
@@ -44,21 +51,16 @@ echo Step 2: Running All Tests
 echo ==========================================
 echo.
 set /A testnbr=0
-set /A testcnt=0
 
+REM Run each test that was successfully built
 for /r "%~dp0..\Tests" %%f in (*.dproj) do (
-   set /A testcnt+=1
-)
-
-for /r "%~dp0..\Tests" %%f in (*.dproj) do (
-    SET /A testnbr+=1
-    title Executing Test !testnbr! of %testcnt%
     set "PROJECT_NAME=%%~nf"
-    set "PROJECT_DIR=%%~dpf"
     
     echo !PROJECT_NAME! | findstr /i "test" >nul
     if !ERRORLEVEL! EQU 0 (
-        call :run_project "!PROJECT_NAME!" "!PROJECT_DIR!"
+        SET /A testnbr+=1
+        title Executing Test !testnbr!
+        call :run_project "!PROJECT_NAME!"
     )
 )
 
@@ -66,11 +68,12 @@ echo.
 echo ==========================================
 echo Test Summary
 echo ==========================================
-title   
+title Dext Tests Complete
+echo Build Success:  %BUILD_SUCCESS_COUNT%
 echo Build Failures: %BUILD_FAIL_COUNT%
-echo Passed:  %SUCCESS_COUNT%
-echo Failed:  %FAIL_COUNT%
-echo Skipped: %SKIPPED_COUNT%
+echo.
+echo Tests Passed:   %SUCCESS_COUNT%
+echo Tests Failed:   %FAIL_COUNT%
 
 if not "%FAILED_TESTS%"=="" (
     echo.
@@ -104,74 +107,48 @@ if not "%FAILED_TESTS%"=="" (
 goto :eof
 
 REM ---------------------------------------------------------------------------
-REM Subroutines
+REM Build subroutine
 REM ---------------------------------------------------------------------------
-
 :build_project
     set "P_NAME=%~1"
     set "P_FILE=%~2"
     
-    echo Building: !P_NAME!
-    REM Use OutputPath override to ensure all tests go to Tests\Output
-    msbuild "!P_FILE!" /t:Make /p:Config=Debug /p:Platform=Win32 /p:DCC_ExeOutput="%~dp0..\Tests\Output" /v:minimal /nologo
+    echo Building: %P_NAME%
+    msbuild "%P_FILE%" /t:Make /p:Config=Debug /p:Platform=Win32 /p:DCC_ExeOutput="%OUTPUT_DIR%" /v:minimal /nologo
     
-    if !ERRORLEVEL! NEQ 0 (
-        echo [BUILD FAILED] !P_NAME!
+    if %ERRORLEVEL% NEQ 0 (
+        echo [BUILD FAILED] %P_NAME%
         set /a BUILD_FAIL_COUNT+=1
     ) else (
-        echo [BUILD OK] !P_NAME!
+        echo [BUILD OK] %P_NAME%
+        set /a BUILD_SUCCESS_COUNT+=1
     )
     echo.
-    exit /b 0
+    goto :eof
 
+REM ---------------------------------------------------------------------------
+REM Run subroutine  
+REM ---------------------------------------------------------------------------
 :run_project
     set "P_NAME=%~1"
-    set "P_DIR=%~2"
+    set "EXE_FILE=%OUTPUT_DIR%\%P_NAME%.exe"
+    
+    if not exist "%EXE_FILE%" goto :eof
     
     echo.
     echo ==========================================
-    echo Testing: !P_NAME!
+    echo Testing: %P_NAME%
     echo ==========================================
+    echo Running: %EXE_FILE%
     
-    set "EXE_FOUND="
-    set "EXE_PATH="
+    "%EXE_FILE%" -no-wait
     
-    REM Priority 1: Check shared Tests\Output (as requested by user)
-    if exist "%~dp0..\Tests\Output\!P_NAME!.exe" (
-        set "EXE_PATH=%~dp0..\Tests\Output\!P_NAME!.exe"
-        set "EXE_FOUND=1"
-    )
-    
-    REM Priority 2: Check local Output
-    if not defined EXE_FOUND (
-        if exist "!P_DIR!Output\!P_NAME!.exe" (
-            set "EXE_PATH=!P_DIR!Output\!P_NAME!.exe"
-            set "EXE_FOUND=1"
-        )
-    )
-    
-    REM Priority 3: Check standard Delphi output folders
-    if not defined EXE_FOUND (
-        if exist "!P_DIR!Win32\Debug\!P_NAME!.exe" (
-            set "EXE_PATH=!P_DIR!Win32\Debug\!P_NAME!.exe"
-            set "EXE_FOUND=1"
-        )
-    )
-
-    if defined EXE_FOUND (
-        echo Running: !EXE_PATH!
-        "!EXE_PATH!" -no-wait
-        
-        if !ERRORLEVEL! EQU 0 (
-            echo [PASSED] !P_NAME!
-            set /a SUCCESS_COUNT+=1
-        ) else (
-            echo [FAILED] !P_NAME! (Exit code: !ERRORLEVEL!)
-            set FAILED_TESTS=!FAILED_TESTS! !P_NAME!
-            set /a FAIL_COUNT+=1
-        )
+    if %ERRORLEVEL% EQU 0 (
+        echo [PASSED] %P_NAME%
+        set /a SUCCESS_COUNT+=1
     ) else (
-        echo [SKIPPED] !P_NAME! - Executable not found
-        set /a SKIPPED_COUNT+=1
+        echo [FAILED] %P_NAME% - Exit code: %ERRORLEVEL%
+        set "FAILED_TESTS=%FAILED_TESTS% %P_NAME%"
+        set /a FAIL_COUNT+=1
     )
-    exit /b 0
+    goto :eof

@@ -92,7 +92,7 @@ begin
 
   try
     // Use CaseInsensitive because JSON keys are lowercase (id, name) and properties are PascalCase (Id, Name)
-    Thread := TDextJson.Deserialize<TThread>(Json, TDextSettings.Default.WithCaseInsensitive);
+    Thread := TDextJson.Deserialize<TThread>(Json, TJsonSettings.Default.CaseInsensitive);
     try
       Writeln('Thread ID: ' + Thread.Id.ToString);
       Writeln('Thread Name: ' + Thread.Name);

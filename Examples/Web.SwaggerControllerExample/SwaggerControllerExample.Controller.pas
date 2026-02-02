@@ -1,4 +1,4 @@
-unit SwaggerControllerExample.Controller;
+﻿unit SwaggerControllerExample.Controller;
 
 {
   Controller demonstrating Swagger/OpenAPI documentation with MVC Controllers.
@@ -26,14 +26,14 @@ type
   ///   Controller for managing books in the library.
   ///   Demonstrates attribute-based Swagger documentation.
   /// </summary>
-  [DextController('/api/books')]
+  [ApiController('/api/books')]
   [SwaggerTag('Books')]
   TBooksController = class
   public
     /// <summary>
     ///   Lists all books in the catalog.
     /// </summary>
-    [DextGet('')]
+    [HttpGet('')]
     [AllowAnonymous]
     [SwaggerOperation('List all books', 'Returns a list of all books in the library catalog')]
     [SwaggerResponse(200, 'List of books', 'application/json')]
@@ -42,7 +42,7 @@ type
     /// <summary>
     ///   Gets a specific book by ID.
     /// </summary>
-    [DextGet('/{id}')]
+    [HttpGet('/{id}')]
     [AllowAnonymous]
     [SwaggerOperation('Get book by ID', 'Returns detailed information about a specific book')]
     [SwaggerResponse(200, 'Book found', 'application/json')]
@@ -53,7 +53,7 @@ type
     ///   Creates a new book.
     ///   Note: In production, add [Authorize('bearerAuth')] to require authentication.
     /// </summary>
-    [DextPost('')]
+    [HttpPost('')]
     [SwaggerOperation('Create a new book', 'Creates a new book entry')]
     [SwaggerResponse(201, 'Book created', 'application/json')]
     [SwaggerResponse(400, 'Invalid request')]
@@ -63,7 +63,7 @@ type
     ///   Updates book availability.
     ///   Note: In production, add [Authorize('bearerAuth')] to require authentication.
     /// </summary>
-    [DextPatch('/{id}/availability')]
+    [HttpPatch('/{id}/availability')]
     [SwaggerOperation('Update book availability', 'Updates the availability status of a book')]
     [SwaggerResponse(200, 'Availability updated')]
     [SwaggerResponse(404, 'Book not found')]
@@ -73,7 +73,7 @@ type
     ///   Deletes a book.
     ///   Note: In production, add [Authorize('bearerAuth')] to require authentication.
     /// </summary>
-    [DextDelete('/{id}')]
+    [HttpDelete('/{id}')]
     [SwaggerOperation('Delete a book', 'Removes a book from the catalog')]
     [SwaggerResponse(204, 'Book deleted')]
     [SwaggerResponse(404, 'Book not found')]
@@ -83,11 +83,11 @@ type
   /// <summary>
   ///   System endpoints (health, version).
   /// </summary>
-  [DextController('/api')]
+  [ApiController('/api')]
   [SwaggerTag('System')]
   TSystemController = class
   public
-    [DextGet('/health')]
+    [HttpGet('/health')]
     [AllowAnonymous]
     [SwaggerOperation('Health check', 'Returns the health status of the API')]
     [SwaggerResponse(200, 'Service is healthy')]
@@ -97,7 +97,7 @@ type
   /// <summary>
   ///   Authentication controller for demo purposes.
   /// </summary>
-  [DextController('/api/auth')]
+  [ApiController('/api/auth')]
   [SwaggerTag('Auth')]
   TAuthController = class
   public
@@ -105,7 +105,7 @@ type
     ///   Login endpoint - returns a demo JWT token.
     ///   Use any username/password for demo purposes.
     /// </summary>
-    [DextPost('/login')]
+    [HttpPost('/login')]
     [AllowAnonymous]
     [SwaggerOperation('Login', 'Returns a demo JWT token for testing authenticated endpoints')]
     [SwaggerResponse(200, 'Login successful')]
@@ -280,3 +280,4 @@ initialization
   InitializeSampleData;
 
 end.
+

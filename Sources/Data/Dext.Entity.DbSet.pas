@@ -530,14 +530,25 @@ begin
      var DiscVal := Reader.GetValue(FMap.DiscriminatorColumn).AsVariant;
      var SubMap := FContext.ModelBuilder.FindMapByDiscriminator(TypeInfo(T), DiscVal);
      if (SubMap <> nil) and (SubMap.EntityType <> TypeInfo(T)) then
-       Result := T(TActivator.CreateInstance(GetTypeData(SubMap.EntityType)^.ClassType, []))
+     begin
+       var ObjInstance := TActivator.CreateInstance(GetTypeData(SubMap.EntityType)^.ClassType, []);
+       if not ObjInstance.InheritsFrom(TClass(T)) then
+       begin
+          ObjInstance.Free;
+          raise EInvalidCast.CreateFmt('Cannot cast %s to %s in discriminator hydration', 
+            [ObjInstance.ClassName, PTypeInfo(TypeInfo(T))^.Name]);
+       end;
+       Result := T(ObjInstance);
+     end
      else
        Result := TActivator.CreateInstance<T>;
   end
   else
     Result := TActivator.CreateInstance<T>;
-  if Tracking and (PKVal <> '') then
-    FIdentityMap.Add(PKVal, Result);
+
+  try
+    if Tracking and (PKVal <> '') then
+      FIdentityMap.Add(PKVal, Result);
     
   // Inject lazy loading proxies
   TLazyInjector.Inject(FContext, Result);
@@ -560,7 +571,9 @@ begin
       try
         // Determine Converter: Check Property Map first (Attributes/Fluent), then Registry default
         var Converter: ITypeConverter := nil;
-        if FMap <> nil then
+        
+        // Safety check for Property Map
+        if (FMap <> nil) and (FMap.Properties <> nil) then
         begin
           var PropMap: TPropertyMap;
           if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
@@ -583,8 +596,31 @@ begin
           TReflection.SetValue(Pointer(Result), Prop, Val);
       except
         on E: Exception do
-          SafeWriteLn(Format('ERROR setting prop %s from col %s: %s', [Prop.Name, ColName, E.Message]));
+        begin
+          // Re-raise with context to help debugging
+          raise Exception.CreateFmt('Error hydrating property %s.%s from column %s (Value Type: %s): %s', 
+            [PTypeInfo(TypeInfo(T))^.Name, Prop.Name, ColName, Val.TypeInfo.Name, E.Message]);
+        end;
       end;
+    end;
+  end; // End Loop
+  
+  except
+    on E: Exception do
+    begin
+      // Cleanup logic to prevent leaks
+      if Tracking and (PKVal <> '') then
+      begin
+        // Remove from map (which owns objects) -> trigger destructor
+        if FIdentityMap.ContainsKey(PKVal) then
+           FIdentityMap.Remove(PKVal); 
+      end
+      else
+      begin
+        // Not in map, free manually
+        Result.Free;
+      end;
+      raise;
     end;
   end;
 end;

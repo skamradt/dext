@@ -1,4 +1,4 @@
-unit ModelBinding.Controller;
+﻿unit ModelBinding.Controller;
 
 interface
 
@@ -48,31 +48,31 @@ type
   // CONTROLLER
   // -------------------------------------------------------------------------
   
-  [DextController('/api/controller')]
+  [ApiController('/api/controller')]
   TModelBindingController = class
   public
     // Test 1: Header binding in controller
-    [DextGet('/header')]
+    [HttpGet('/header')]
     [AllowAnonymous]
     procedure GetWithHeader(Ctx: IHttpContext; Request: TControllerHeaderRequest);
     
     // Test 2: Query binding in controller
-    [DextGet('/query')]
+    [HttpGet('/query')]
     [AllowAnonymous]
     procedure GetWithQuery(Ctx: IHttpContext; Request: TControllerQueryRequest);
     
     // Test 3: Body binding in controller
-    [DextPost('/body')]
+    [HttpPost('/body')]
     [AllowAnonymous]
     procedure PostWithBody(Ctx: IHttpContext; Request: TControllerBodyRequest);
     
     // Test 4: Mixed binding in controller (Header + Body)
-    [DextPost('/mixed')]
+    [HttpPost('/mixed')]
     [AllowAnonymous]
     procedure PostWithMixed(Ctx: IHttpContext; Request: TControllerMixedRequest);
     
     // Test 5: Route + Query parameters
-    [DextGet('/route/{id}')]
+    [HttpGet('/route/{id}')]
     [AllowAnonymous]
     procedure GetWithRoute(Ctx: IHttpContext; [FromRoute] Id: Integer; [FromQuery] Details: string);
   end;
@@ -86,28 +86,28 @@ var
 
 procedure TModelBindingController.GetWithHeader(Ctx: IHttpContext; Request: TControllerHeaderRequest);
 begin
-  WriteLn(Format('[Controller] GetWithHeader -> TenantId=%s', [Request.TenantId]));
+  WriteLn(Format('[ApiController] GetWithHeader -> TenantId=%s', [Request.TenantId]));
   Ctx.Response.Json(Format('{"source":"controller-header","tenantId":"%s"}', 
     [Request.TenantId]));
 end;
 
 procedure TModelBindingController.GetWithQuery(Ctx: IHttpContext; Request: TControllerQueryRequest);
 begin
-  WriteLn(Format('[Controller] GetWithQuery -> Query=%s, Page=%d', [Request.Query, Request.Page]));
+  WriteLn(Format('[ApiController] GetWithQuery -> Query=%s, Page=%d', [Request.Query, Request.Page]));
   Ctx.Response.Json(Format('{"source":"controller-query","query":"%s","page":%d}', 
     [Request.Query, Request.Page]));
 end;
 
 procedure TModelBindingController.PostWithBody(Ctx: IHttpContext; Request: TControllerBodyRequest);
 begin
-  WriteLn(Format('[Controller] PostWithBody -> Name=%s, Email=%s', [Request.Name, Request.Email]));
+  WriteLn(Format('[ApiController] PostWithBody -> Name=%s, Email=%s', [Request.Name, Request.Email]));
   Ctx.Response.Status(201).Json(Format('{"source":"controller-body","name":"%s","email":"%s"}', 
     [Request.Name, Request.Email]));
 end;
 
 procedure TModelBindingController.PostWithMixed(Ctx: IHttpContext; Request: TControllerMixedRequest);
 begin
-  WriteLn(Format('[Controller] PostWithMixed -> TenantId=%s, Name=%s, Price=%.2f', 
+  WriteLn(Format('[ApiController] PostWithMixed -> TenantId=%s, Name=%s, Price=%.2f', 
     [Request.TenantId, Request.Name, Double(Request.Price)], JsonFormat));
     
   if Request.TenantId = '' then
@@ -123,7 +123,7 @@ end;
 
 procedure TModelBindingController.GetWithRoute(Ctx: IHttpContext; Id: Integer; Details: string);
 begin
-  WriteLn(Format('[Controller] GetWithRoute -> Id=%d, Details=%s', [Id, Details]));
+  WriteLn(Format('[ApiController] GetWithRoute -> Id=%d, Details=%s', [Id, Details]));
   Ctx.Response.Json(Format('{"source":"controller-route","id":%d,"details":"%s"}', 
     [Id, Details]));
 end;
@@ -136,3 +136,4 @@ initialization
   JsonFormat.DecimalSeparator := '.';
 
 end.
+

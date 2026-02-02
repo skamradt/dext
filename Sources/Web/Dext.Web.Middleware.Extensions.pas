@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -50,7 +50,6 @@ implementation
 
 uses
   Dext.DI.Interfaces,
-  Dext.DI.Extensions,
   Dext.Logging.Console;
 
 { TApplicationBuilderMiddlewareExtensions }

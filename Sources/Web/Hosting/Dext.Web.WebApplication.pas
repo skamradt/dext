@@ -143,7 +143,7 @@ begin
     TConfigurationRoot,
     function(Provider: IServiceProvider): TObject
     begin
-      Result := LConfig as TConfigurationRoot;
+      Result := LConfig as TObject;
     end
   );
 
@@ -388,6 +388,8 @@ begin
     
   // Release active host reference
   FActiveHost := nil;
+  FAppBuilder := nil;
+  FScanner := nil;
 
   // Update State: Running -> Stopping
   if StateControl <> nil then
@@ -413,6 +415,10 @@ begin
     
   // Explicitly release provider reference to ensure cleanup
   FServiceProvider := nil;
+
+  // ✅ Break circular references by niling interfaces that might be captured in closures
+  FServices := nil;
+  FConfiguration := nil;
 end;
 
 procedure TWebApplication.Run;

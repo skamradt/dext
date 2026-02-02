@@ -12,12 +12,12 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
-  Dext,              // Core facade: DI, Logging, Validation
-  Dext.Collections,
-  Dext.Entity,       // ORM facade: DbContext, DbSet
-  Dext.Core.SmartTypes,
   Customer.Entity,
-  Customer.Context;
+  Customer.Context,
+  Dext.Core.SmartTypes,
+  Dext,              // Core facade
+  Dext.Collections,
+  Dext.Entity;       // ORM facade
 
 type
   {$M+}

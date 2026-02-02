@@ -109,6 +109,7 @@ type
   TDextServiceCollection = class(TInterfacedObject, IServiceCollection)
   private
     FDescriptors: TObjectList<TServiceDescriptor>;
+    FLock: TCriticalSection;
   public
     constructor Create;
     destructor Destroy; override;
@@ -174,11 +175,13 @@ constructor TDextServiceCollection.Create;
 begin
   inherited Create;
   FDescriptors := TObjectList<TServiceDescriptor>.Create(True);
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TDextServiceCollection.Destroy;
 begin
   FDescriptors.Free;
+  FLock.Free;
   inherited Destroy;
 end;
 
@@ -188,9 +191,14 @@ function TDextServiceCollection.AddSingleton(const AServiceType: TServiceType;
 var
   Descriptor: TServiceDescriptor;
 begin
-  Descriptor := TServiceDescriptor.Create(
-    AServiceType, AImplementationClass, TServiceLifetime.Singleton, AFactory);
-  FDescriptors.Add(Descriptor);
+  FLock.Enter;
+  try
+    Descriptor := TServiceDescriptor.Create(
+      AServiceType, AImplementationClass, TServiceLifetime.Singleton, AFactory);
+    FDescriptors.Add(Descriptor);
+  finally
+    FLock.Leave;
+  end;
   Result := Self;
 end;
 
@@ -200,10 +208,15 @@ function TDextServiceCollection.AddSingleton(const AServiceType: TServiceType;
 var
   Descriptor: TServiceDescriptor;
 begin
-  Descriptor := TServiceDescriptor.Create(
-    AServiceType, nil, TServiceLifetime.Singleton, nil);
-  Descriptor.Instance := AInstance;  // Set the pre-created instance
-  FDescriptors.Add(Descriptor);
+  FLock.Enter;
+  try
+    Descriptor := TServiceDescriptor.Create(
+      AServiceType, nil, TServiceLifetime.Singleton, nil);
+    Descriptor.Instance := AInstance;  // Set the pre-created instance
+    FDescriptors.Add(Descriptor);
+  finally
+    FLock.Leave;
+  end;
   Result := Self;
 end;
 
@@ -213,9 +226,14 @@ function TDextServiceCollection.AddTransient(const AServiceType: TServiceType;
 var
   Descriptor: TServiceDescriptor;
 begin
-  Descriptor := TServiceDescriptor.Create(
-    AServiceType, AImplementationClass, TServiceLifetime.Transient, AFactory);
-  FDescriptors.Add(Descriptor);
+  FLock.Enter;
+  try
+    Descriptor := TServiceDescriptor.Create(
+      AServiceType, AImplementationClass, TServiceLifetime.Transient, AFactory);
+    FDescriptors.Add(Descriptor);
+  finally
+    FLock.Leave;
+  end;
   Result := Self;
 end;
 
@@ -225,9 +243,14 @@ function TDextServiceCollection.AddScoped(const AServiceType: TServiceType;
 var
   Descriptor: TServiceDescriptor;
 begin
-  Descriptor := TServiceDescriptor.Create(
-    AServiceType, AImplementationClass, TServiceLifetime.Scoped, AFactory);
-  FDescriptors.Add(Descriptor);
+  FLock.Enter;
+  try
+    Descriptor := TServiceDescriptor.Create(
+      AServiceType, AImplementationClass, TServiceLifetime.Scoped, AFactory);
+    FDescriptors.Add(Descriptor);
+  finally
+    FLock.Leave;
+  end;
   Result := Self;
 end;
 
@@ -239,8 +262,13 @@ begin
   if Assigned(AOther) and (TObject(AOther) is TDextServiceCollection) then
   begin
     OtherColl := TDextServiceCollection(TObject(AOther));
-    for Desc in OtherColl.FDescriptors do
-      FDescriptors.Add(Desc.Clone);
+    FLock.Enter;
+    try
+      for Desc in OtherColl.FDescriptors do
+        FDescriptors.Add(Desc.Clone);
+    finally
+      FLock.Leave;
+    end;
   end;
 end;
 
@@ -548,5 +576,12 @@ function TDextServiceScope.GetServiceProvider: IServiceProvider;
 begin
   Result := FServiceProvider;
 end;
+
+initialization
+  TDextDIFactory.CreateServiceCollectionFunc := 
+    function: IServiceCollection
+    begin
+      Result := TDextServiceCollection.Create;
+    end;
 
 end.

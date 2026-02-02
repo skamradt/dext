@@ -114,7 +114,7 @@ begin
   WriteLn('► Testing UTF-8 Deserializer (TUUID)...');
   
   // This tests the TUtf8JsonSerializer used in ModelBinding (POST requests)
-  Json := '{\"Id\": \"3A4E1A9B-A4AD-D844-8920-E8DD00916690\", \"Name\": \"Test User\"}';
+  Json := '{"Id": "3A4E1A9B-A4AD-D844-8920-E8DD00916690", "Name": "Test User"}';
   JsonBytes := TEncoding.UTF8.GetBytes(Json);
   Span := TByteSpan.FromBytes(JsonBytes);
   
@@ -141,7 +141,7 @@ var
 begin
   WriteLn('► Testing UTF-8 Deserializer (TGUID)...');
   
-  Json := '{\"Id\": \"5B1A1E5A-ADA4-4448-892D-E8DD00916690\", \"Name\": \"GUID Test\"}';
+  Json := '{"Id": "5B1A1E5A-ADA4-4448-892D-E8DD00916690", "Name": "GUID Test"}';
   JsonBytes := TEncoding.UTF8.GetBytes(Json);
   Span := TByteSpan.FromBytes(JsonBytes);
   

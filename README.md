@@ -241,7 +241,8 @@ uses
   Dext.Web;
 
 begin
-  var App := TDextApplication.Create;
+  // The global function WebApplication returns IWebApplication (ARC safe)
+  var App := WebApplication;
   var Builder := App.Builder;
 
   // Simple Route

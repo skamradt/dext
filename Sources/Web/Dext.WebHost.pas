@@ -78,8 +78,7 @@ begin
   // Release closures to break reference cycles
   FAppConfig := nil;
   FServicesConfig := nil;
-  // Free class instance (TDextServices is now a class, not record)
-  FServices.Free;
+  // TDextServices is a record, no need to free
   inherited;
 end;
 

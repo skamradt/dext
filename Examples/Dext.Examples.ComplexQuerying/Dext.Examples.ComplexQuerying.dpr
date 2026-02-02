@@ -49,7 +49,7 @@ begin
   var WebApp := App.GetBuilder;
 
   // Global JSON settings
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
+  JsonDefaultSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
 
   // Exception Handler
   WebApp.UseExceptionHandler;

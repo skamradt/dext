@@ -8,22 +8,23 @@ Controllers fornecem uma abordagem baseada em classes, estilo MVC, para organiza
 
 ```pascal
 type
+  [ApiController]
   [Route('/api/users')]
-  TUsersController = class(TController)
+  TUsersController = class // Não precisa mais herdar de TController
   public
     [HttpGet]
     function GetAll: IActionResult;
     
-    [HttpGet('/{id}')]
+    [HttpGet('{id}')]
     function Get(Id: Int64): IActionResult;
     
     [HttpPost]
     function Create([Body] User: TUser): IActionResult;
     
-    [HttpPut('/{id}')]
+    [HttpPut('{id}')]
     function Update(Id: Int64; [Body] User: TUser): IActionResult;
     
-    [HttpDelete('/{id}')]
+    [HttpDelete('{id}')]
     function Delete(Id: Int64): IActionResult;
   end;
 ```
@@ -66,7 +67,9 @@ App.Configure(procedure(App: IApplicationBuilder)
 
 ```pascal
 type
-  TUsersController = class(TController)
+  [ApiController]
+  [Route('/api/users')]
+  TUsersController = class
   private
     FUserService: IUserService;
     FLogger: ILogger;
@@ -76,7 +79,6 @@ type
 
 constructor TUsersController.Create(UserService: IUserService; Logger: ILogger);
 begin
-  inherited Create;
   FUserService := UserService;
   FLogger := Logger;
 end;

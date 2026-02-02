@@ -198,7 +198,7 @@ begin
         // 6. Swagger / OpenAPI
         TSwaggerExtensions.UseSwagger(App, 
           TOpenAPIOptions.Default
-            .WithServer('http://localhost:8080', 'Local Development Server')
+            .WithServer('http://localhost:5000', 'Local Development Server')
             .WithGlobalResponse(429, 'Too Many Requests (Rate Limit Exceeded)')
             .WithGlobalResponse(500, 'Internal Server Error'));
         
@@ -329,7 +329,7 @@ begin
       .Build;
 
     WriteLn('===========================================');
-    WriteLn('Server running on http://localhost:8080');
+    WriteLn('Server running on http://localhost:5000');
     WriteLn('===========================================');
     WriteLn;
     WriteLn('Rate Limiting Examples:');
@@ -337,18 +337,18 @@ begin
     WriteLn;
     WriteLn('Test Commands:');
     WriteLn;
-    WriteLn('curl http://localhost:8080/api/users/123');
-    WriteLn('curl http://localhost:8080/api/users/456/name');
-    WriteLn('curl -X POST http://localhost:8080/api/users -H "Content-Type: application/json" -d "{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"age\":30}"');
-    WriteLn('curl -X PUT http://localhost:8080/api/users/789 -H "Content-Type: application/json" -d "{\"name\":\"Jane Smith\",\"email\":\"jane@example.com\"}"');
-    WriteLn('curl -X DELETE http://localhost:8080/api/users/999');
-    WriteLn('curl http://localhost:8080/api/posts/hello-world');
-    WriteLn('curl http://localhost:8080/api/health');
-    WriteLn('curl -v http://localhost:8080/api/cached');
-    WriteLn('curl -v http://localhost:8080/api/error');
-    WriteLn('curl http://localhost:8080/index.html');
-    WriteLn('curl http://localhost:8080/swagger');
-    WriteLn('curl http://localhost:8080/api/request-context');
+    WriteLn('curl http://localhost:5000/api/users/123');
+    WriteLn('curl http://localhost:5000/api/users/456/name');
+    WriteLn('curl -X POST http://localhost:5000/api/users -H "Content-Type: application/json" -d "{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"age\":30}"');
+    WriteLn('curl -X PUT http://localhost:5000/api/users/789 -H "Content-Type: application/json" -d "{\"name\":\"Jane Smith\",\"email\":\"jane@example.com\"}"');
+    WriteLn('curl -X DELETE http://localhost:5000/api/users/999');
+    WriteLn('curl http://localhost:5000/api/posts/hello-world');
+    WriteLn('curl http://localhost:5000/api/health');
+    WriteLn('curl -v http://localhost:5000/api/cached');
+    WriteLn('curl -v http://localhost:5000/api/error');
+    WriteLn('curl http://localhost:5000/index.html');
+    WriteLn('curl http://localhost:5000/swagger');
+    WriteLn('curl http://localhost:5000/api/request-context');
     WriteLn;
     WriteLn('Press Enter to stop the server...');
     Host.Run;

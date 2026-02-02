@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -446,16 +446,16 @@ type
   TRouteMatcher = Dext.Web.Routing.TRouteMatcher;
   ERouteException = Dext.Web.Routing.ERouteException;
 
-  // Dext.Web.Routing.Attributes - New Names (preferred)
+  // Dext.Web.Routing.Attributes - New Names (ASP.NET Core style)
   RouteAttribute = Dext.Web.Routing.Attributes.RouteAttribute;
-  GetAttribute = Dext.Web.Routing.Attributes.GetAttribute;
-  PostAttribute = Dext.Web.Routing.Attributes.PostAttribute;
-  PutAttribute = Dext.Web.Routing.Attributes.PutAttribute;
-  DeleteAttribute = Dext.Web.Routing.Attributes.DeleteAttribute;
-  PatchAttribute = Dext.Web.Routing.Attributes.PatchAttribute;
-  HeadAttribute = Dext.Web.Routing.Attributes.HeadAttribute;
-  OptionsAttribute = Dext.Web.Routing.Attributes.OptionsAttribute;
-  ControllerAttribute = Dext.Web.Routing.Attributes.ControllerAttribute;
+  HttpGet = Dext.Web.Routing.Attributes.HttpGetAttribute;
+  HttpPost = Dext.Web.Routing.Attributes.HttpPostAttribute;
+  HttpPut = Dext.Web.Routing.Attributes.HttpPutAttribute;
+  HttpDelete = Dext.Web.Routing.Attributes.HttpDeleteAttribute;
+  HttpPatch = Dext.Web.Routing.Attributes.HttpPatchAttribute;
+  HttpHead = Dext.Web.Routing.Attributes.HttpHeadAttribute;
+  HttpOptions = Dext.Web.Routing.Attributes.HttpOptionsAttribute;
+  ApiController = Dext.Web.Routing.Attributes.ApiControllerAttribute;
   HttpException = Dext.Web.Routing.Attributes.HttpException;
 
 {$WARNINGS OFF}
@@ -557,13 +557,27 @@ const
   // {END_DEXT_ALIASES}
 
 type
+  {$IFDEF DEXT_ENABLE_ENTITY}
+  // Dext.Entity type aliases for TWebServicesHelper
+  TDbContext = Dext.Entity.TDbContext;
+  TDbContextOptions = Dext.Entity.TDbContextOptions;
+  {$ENDIF}
+
   /// <summary>
   ///   Class helper for TDextServices to add web framework features.
   /// </summary>
-  TWebServicesHelper = class helper({$IFDEF DEXT_ENABLE_ENTITY}TDextEntityServicesHelper{$ELSE}TDextServicesHelper{$ENDIF}) for TDextServices
+  TWebServicesHelper = record helper for TDextServices
   public
+    {$IFDEF DEXT_ENABLE_ENTITY}
     /// <summary>
-    ///   Scans the application for controllers (classes with [DextController]) and registers them in the DI container.
+    ///   Registers a DbContext with the dependency injection container.
+    /// </summary>
+    function AddDbContext<T: TDbContext, constructor>(Config: TProc<TDbContextOptions>): TDextServices; overload;
+    function AddDbContext<T: TDbContext, constructor>(const AConfig: IConfigurationSection): TDextServices; overload;
+    {$ENDIF}
+
+    /// <summary>
+    ///   Scans the application for controllers (classes with [ApiController]) and registers them in the DI container.
     /// </summary>
     function AddControllers: TDextServices;
     
@@ -586,6 +600,11 @@ type
     ///   Configures a settings class (IOptions&lt;T&gt;) from a specific configuration section.
     /// </summary>
     function Configure<T: class, constructor>(Section: IConfigurationSection): TDextServices; overload;
+
+    /// <summary>
+    ///   Enables content negotiation and registers default formatters.
+    /// </summary>
+    function AddContentNegotiation: TDextServices;
   end;
 
   TDextWebServicesHelper = TWebServicesHelper;
@@ -826,6 +845,11 @@ procedure RespondNoContent(const AContext: IHttpContext);
 
 implementation
 
+uses
+  Dext.Options.Extensions,
+  Dext.Configuration.Binder;
+
+
 function WebApplication: IWebApplication;
 begin
   Result := TWebApplication.Create;
@@ -901,6 +925,12 @@ end;
 function TWebServicesHelper.Configure<T>(Section: IConfigurationSection): TDextServices;
 begin
   TOptionsServiceCollectionExtensions.Configure<T>(Self.Unwrap, Section);
+  Result := Self;
+end;
+
+function TWebServicesHelper.AddContentNegotiation: TDextServices;
+begin
+  TWebDIHelpers.AddContentNegotiation(Self.Unwrap);
   Result := Self;
 end;
 
@@ -1223,5 +1253,27 @@ begin
   Result := Self;
 end;
 
+{ TWebServicesHelper }
+
+{$IFDEF DEXT_ENABLE_ENTITY}
+function TWebServicesHelper.AddDbContext<T>(Config: TProc<TDbContextOptions>): TDextServices;
+begin
+  Dext.Entity.TPersistence.AddDbContext<T>(Self.Unwrap, Config);
+  Result := Self;
+end;
+
+function TWebServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
+begin
+  Result := AddDbContext<T>(
+    procedure(Options: TDbContextOptions)
+    begin
+      Dext.Configuration.Binder.TConfigurationBinder.Bind(AConfig, Options);
+    end
+  );
+end;
+{$ENDIF}
+
 end.
+
+
 

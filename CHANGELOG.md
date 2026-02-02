@@ -6,6 +6,83 @@
 
 ---
 
+## 2026-02-01 - Zero-Leak Architecture & Attribute Revamp
+
+### ⚠️ Breaking Changes & Modernization
+
+#### TDextServices Refactoring
+**[PT-BR]** `TDextServices` e os Builders (`AddHealthChecks`, `AddBackgroundServices`) agora são **Records**. Não é mais necessário (nem possível) chamar `.Free`. Isso elimina os memory leaks causados por capturas de ciclos em closures.
+
+**[EN]** `TDextServices` and Builders (`AddHealthChecks`, `AddBackgroundServices`) are now **Records**. It is no longer necessary (nor possible) to call `.Free`. This eliminates memory leaks caused by cycle captures in closures.
+
+#### New Attribute Names (Parity with .NET)
+
+| Antes / Before | Depois / After |
+|----------------|----------------|
+| `[Controller]` | `[ApiController]` |
+| `[Get]` | `[HttpGet]` |
+| `[Post]` | `[HttpPost]` |
+| `[Put]` | `[HttpPut]` |
+| `[Delete]` | `[HttpDelete]` |
+| `[Patch]` | `[HttpPatch]` |
+
+**[PT-BR]** Os atributos antigos continuam funcionando mas estão **deprecated**. Use preferred names para melhor compatibilidade com o ecossistema .NET. O novo atributo `[Route]` agora é suportado na classe para prefixos de rota.
+
+**[EN]** Old attributes still work but are **deprecated**. Use preferred names for better compatibility with the .NET ecosystem. The new `[Route]` attribute is now supported at the class level for route prefixes.
+
+**Novo Exemplo / New Example:**
+```pascal
+[ApiController]
+[Route('/api/orders')]
+TOrdersController = class
+  [HttpGet]
+  procedure GetAll(Ctx: IHttpContext);
+  
+  [HttpPost('{id}/cancel')]
+  procedure Cancel(Ctx: IHttpContext; [FromRoute] Id: string);
+end;
+```
+
+#### Deprecated Extensions (Memory Leak Fixes)
+
+**[PT-BR]** As seguintes classes foram marcadas como **deprecated** por causarem memory leaks ou serem redundantes com a nova API `TDextServices`:
+
+**[EN]** The following classes have been marked as **deprecated** because they caused memory leaks or are redundant with the new `TDextServices` API:
+
+| Classe Deprecated | Substituição / Replacement |
+|-------------------|----------------------------|
+| `TServiceCollectionExtensions` | `TDextServices` |
+| `TServiceProviderExtensions` | `IServiceProvider.GetService<T>` |
+| `TApplicationBuilderModelBindingExtensions` | `TApplicationBuilderExtensions` |
+| `TApplicationBuilderWithModelBinding` | `TApplicationBuilderExtensions.MapPost<T>` |
+
+**Antes / Before (memory leak):**
+```pascal
+TApplicationBuilderModelBindingExtensions
+  .WithModelBinding(App)
+  .MapPost<TUserRequest>('/api/users',
+    procedure(Req: TUserRequest)
+    var UserService: IUserIntegrationService;
+    begin
+      UserService := TServiceProviderExtensions.GetService<IUserIntegrationService>(App.GetServiceProvider);
+      UserService.ProcessUser(Req);
+    end
+  );
+```
+
+**Depois / After (sem leak, DI automático):**
+```pascal
+TApplicationBuilderExtensions.MapPost<TUserRequest, IUserIntegrationService>(App, '/api/users',
+  procedure(Req: TUserRequest; UserService: IUserIntegrationService)
+  begin
+    // Service injetado automaticamente!
+    UserService.ProcessUser(Req);
+  end
+);
+```
+
+---
+
 ## 2026-01-31 - API Cleanup: JSON, CORS & Swagger
 
 ### ⚠️ Breaking Changes (com compatibilidade / with backward compatibility)

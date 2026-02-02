@@ -118,13 +118,16 @@ begin
 end;
 
 constructor TTestServiceProvider.Create(const BaseServices: TDextServices);
+var
+  BaseCollection: IServiceCollection;
 begin
   inherited Create;
-  // Note: We don't own BaseServices when passed in - it's the caller's responsibility
-  // For safety, we'll create a new one and copy services if needed
+  // TDextServices is a record - we create a new one and copy services
   FServices := TDextServices.New;
-  if BaseServices <> nil then
-    FServices.Unwrap.AddRange(BaseServices.Unwrap);
+  // Copy services from BaseServices if it has an underlying collection
+  BaseCollection := BaseServices.Unwrap;
+  if Assigned(BaseCollection) then
+    FServices.Unwrap.AddRange(BaseCollection);
   FMocks := TDictionary<TGUID, IInterface>.Create;
   FBuilt := False;
 end;
@@ -132,8 +135,8 @@ end;
 destructor TTestServiceProvider.Destroy;
 begin
   FMocks.Free;
-  // Always free since we always own (either created via New or created fresh in overload)
-  FServices.Free;
+  // TDextServices is a record, no need to free - the underlying IServiceCollection
+  // is managed by reference counting
   inherited;
 end;
 

@@ -50,7 +50,7 @@ type
   TControllerInfo = record
     RttiType: TRttiType;
     Methods: TArray<TControllerMethod>;
-    ControllerAttribute: ControllerAttribute;
+    ControllerAttribute: ApiControllerAttribute;
   end;
 
   TCachedMethod = record
@@ -139,7 +139,7 @@ begin
 
             var Attributes := Method.GetAttributes;
 
-            // ✅ PROCURAR ATRIBUTOS [DextGet], [DextPost], etc.
+            // ✅ PROCURAR ATRIBUTOS [HttpGet], [HttpPost], etc.
             for Attr in Attributes do
             begin
               if Attr is RouteAttribute then
@@ -163,14 +163,14 @@ begin
             ControllerInfo.RttiType := RttiType;
             ControllerInfo.Methods := MethodsList.ToArray;
 
-            // ✅ VERIFICAR ATRIBUTO [DextController] PARA PREFIXO
+            // ✅ VERIFICAR ATRIBUTO [ApiController] PARA PREFIXO
             ControllerInfo.ControllerAttribute := nil;
             var TypeAttributes := RttiType.GetAttributes;
             for Attr in TypeAttributes do
             begin
-              if Attr is ControllerAttribute then
+              if Attr is ApiControllerAttribute then
               begin
-                ControllerInfo.ControllerAttribute := ControllerAttribute(Attr);
+                ControllerInfo.ControllerAttribute := ApiControllerAttribute(Attr);
                 Break;
               end;
             end;
@@ -623,6 +623,7 @@ begin
 end;
 
 end.
+
 
 
 

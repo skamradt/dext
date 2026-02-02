@@ -13,20 +13,20 @@ uses
   Dext.MM,
   System.SysUtils,
   System.Rtti,
+  Dext.Utils,
+  Dext.Collections,
+  Customer.Entity in 'Features\Customers\Customer.Entity.pas',
+  Customer.Service in 'Features\Customers\Customer.Service.pas',
+  Customer.Controller in 'Features\Customers\Customer.Controller.pas',
+  Customer.ViewModel in 'Features\Customers\Customer.ViewModel.pas',
+  Customer.Rules in 'Features\Customers\Customer.Rules.pas',
   Dext,
   Dext.Assertions,
   Dext.Mocks,
   Dext.Mocks.Matching,
   Dext.Testing.Attributes,
   Dext.Testing.Runner,
-  Dext.Testing.Fluent,
-  Dext.Utils,
-  Dext.Collections,
-  Customer.Entity,
-  Customer.Service,
-  Customer.Controller,
-  Customer.ViewModel,
-  Customer.Rules;
+  Dext.Testing.Fluent;
 
 type
   /// <summary>

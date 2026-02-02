@@ -64,7 +64,7 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\Output\$(ProductVersion)_$(Platform)_$(Config);Features\Customers;Data;App;Features\Layout;Middleware;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>..\Output</DCC_ExeOutput>
     </PropertyGroup>
@@ -136,6 +136,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="Features\Customers\Customer.Entity.pas"/>
+        <DCCReference Include="Features\Customers\Customer.Service.pas"/>
+        <DCCReference Include="Features\Customers\Customer.Controller.pas"/>
+        <DCCReference Include="Features\Customers\Customer.ViewModel.pas"/>
+        <DCCReference Include="Features\Customers\Customer.Rules.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

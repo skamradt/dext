@@ -17,42 +17,30 @@ uses
   Dext.Web;
 
 begin
-  TWebHostBuilder.CreateDefault(nil)
-    .UseUrls('http://localhost:5000')
-    .Configure(procedure(App: IApplicationBuilder)
-      begin
-        // Simple text response
-        App.MapGet('/hello', procedure(Ctx: IHttpContext)
-          begin
-            Ctx.Response.Write('Hello, World!');
-          end);
+  var App := WebApplication;
+  var Builder := App.Builder;
 
-        // JSON response
-        App.MapGet('/api/greet/{name}', procedure(Ctx: IHttpContext)
-          var
-            Name: string;
-          begin
-            Name := Ctx.Request.RouteParams['name'];
-            Ctx.Response.Json('{"message": "Hello, ' + Name + '!"}');
-          end);
+  // Simple text response
+  Builder.MapGet('/hello', procedure(Ctx: IHttpContext)
+    begin
+      Ctx.Response.Write('Hello, World!');
+    end);
 
-        // POST endpoint
-        App.MapPost('/api/echo', procedure(Ctx: IHttpContext)
-          var
-            SR: TStreamReader;
-            Body: string;
-          begin
-            SR := TStreamReader.Create(Ctx.Request.Body);
-            try
-              Body := SR.ReadToEnd;
-              Ctx.Response.Json(Body);
-            finally
-              SR.Free;
-            end;
-          end);
-      end)
-    .Build
-    .Run;
+  // JSON response
+  Builder.MapGet<string, IResult>('/api/greet/{name}', 
+    function(Name: string): IResult
+    begin
+      Result := Results.Json('{"message": "Hello, ' + Name + '!"}');
+    end);
+
+  // POST endpoint with Model Binding
+  Builder.MapPost<TValue, IResult>('/api/echo', 
+    function(Body: TValue): IResult
+    begin
+      Result := Results.Json(Body);
+    end);
+
+  App.Run(5000);
 end.
 ```
 
@@ -77,11 +65,10 @@ curl -X POST http://localhost:5000/api/echo -d '{"test": true}'
 
 ## What's Happening?
 
-1. `TWebHostBuilder.CreateDefault` - Creates the web server
-2. `UseUrls` - Sets the listening address
-3. `Configure` - Configures the request pipeline
-4. `MapGet/MapPost` - Registers route handlers
-5. `Build.Run` - Starts the server
+1. `WebApplication` - Creates the server and builder (ARC safe pattern)
+2. `App.Builder` - Provides access to the routing and middleware pipeline
+3. `MapGet/MapPost` - Registers route handlers with automatic injection
+4. `App.Run(5000)` - Starts the server on the specified port
 
 ## Next Steps
 

@@ -75,6 +75,18 @@ msbuild "Dext.Net.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platf
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
+echo Building DextTool...
+cd "%~dp0..\Apps\CLI"
+msbuild "DextTool.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
+
+echo.
+echo Building DextSidecar...
+cd "%~dp0..\Apps\Sidecar"
+msbuild "DextSidecar.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
+
+echo.
 echo ==========================================
 echo Build Completed Successfully!
 echo Output: %OUTPUT_PATH%

@@ -102,6 +102,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="Lib\Dext.Vcl.TrayIcon.pas"/>
         <DCCReference Include="..\..\Sources\Dashboard\Dext.Dashboard.TestScanner.pas"/>
         <DCCReference Include="..\..\Sources\Dashboard\Dext.Dashboard.TestRunner.pas"/>
+        <DCCReference Include="..\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

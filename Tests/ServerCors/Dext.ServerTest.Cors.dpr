@@ -109,9 +109,9 @@ begin
           procedure(CorsBuilder: TCorsBuilder)
           begin
             CorsBuilder
-              .WithOrigins(['http://localhost:3000', 'http://127.0.0.1:3000'])
-              .WithMethods(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
-              .WithHeaders(['Content-Type', 'Authorization'])
+              .Origins(['http://localhost:3000', 'http://127.0.0.1:3000'])
+              .Methods(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+              .Headers(['Content-Type', 'Authorization'])
               .AllowCredentials;
           end);
 

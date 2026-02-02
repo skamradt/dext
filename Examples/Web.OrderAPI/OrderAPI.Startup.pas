@@ -51,7 +51,7 @@ var
   SwaggerOpts: TOpenAPIOptions;
 begin
   // JSON global settings
-  DefaultJsonSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
+  JsonDefaultSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
 
   // Middleware Pipeline
   CorsOpts := TCorsOptions.Create;

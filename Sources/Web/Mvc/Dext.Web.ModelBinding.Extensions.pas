@@ -1,4 +1,4 @@
-{***************************************************************************}
+ï»¿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -23,7 +23,7 @@
 {  Created: 2025-12-08                                                      }
 {                                                                           }
 {***************************************************************************}
-unit Dext.Web.ModelBinding.Extensions;
+unit Dext.Web.ModelBinding.Extensions deprecated 'Use TApplicationBuilderExtensions instead';
 
 interface
 
@@ -35,13 +35,13 @@ uses
   Dext.Web.ModelBinding;
 
 type
-  // ? INTERFACE FINAL (sem genéricos)
+  // ? INTERFACE FINAL (sem genÃ©ricos)
   IApplicationBuilderWithModelBinding = interface
     ['{8A3B7C5D-2E4F-4A9D-B1C6-9F7E5D3A2B1C}']
     function Build: IApplicationBuilder;
   end;
 
-  // ? BUILDER CONCRETO (com genéricos)
+  // ? BUILDER CONCRETO (com genÃ©ricos)
   TApplicationBuilderWithModelBinding = class(TInterfacedObject, IApplicationBuilderWithModelBinding)
   private
     FBuilder: TApplicationBuilder;
@@ -49,11 +49,11 @@ type
   public
     constructor Create(ABuilder: TApplicationBuilder);
 
-    // ? MÉTODOS GENÉRICOS (apenas na classe)
+    // ? MÃ‰TODOS GENÃ‰RICOS (apenas na classe)
     function MapPost<T>(const Path: string; Handler: TProc<T>): TApplicationBuilderWithModelBinding;
     function MapGet<T>(const Path: string; Handler: TProc<T>): TApplicationBuilderWithModelBinding;
 
-    // ? MÉTODO FINAL (retorna interface)
+    // ? MÃ‰TODO FINAL (retorna interface)
     function Build: IApplicationBuilder;
   end;
 

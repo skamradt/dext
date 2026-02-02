@@ -6,8 +6,10 @@ uses
   System.Classes,
   System.SysUtils,
   System.Generics.Collections,
+  Dext,
   Dext.Entity,
-  Dext.Collections, // Add Collections
+  Dext.Collections,
+  Dext.Types.Lazy,         // Required for Lazy<T> (generic types cannot be aliased)
   Dext.Specifications.Base,
   Dext.Types.Nullable;
 
@@ -333,7 +335,7 @@ begin
   // Initialize FUsers with empty list
   // This is needed for manually created entities (not from DB)
   // For entities from DB, TLazyInjector will replace this with TLazyLoader
-  FUsers := Lazy<IList<TUser>>.CreateFrom(TCollections.CreateObjectList<TUser>(False), True);
+  FUsers := Lazy<IList<TUser>>.CreateFrom(TCollections.CreateObjectList<TUser>(False));
 end;
 
 destructor TAddress.Destroy;

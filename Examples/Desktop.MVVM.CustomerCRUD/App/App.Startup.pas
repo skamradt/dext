@@ -12,16 +12,17 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
-  Dext,
-  Dext.Configuration.Interfaces,
-  Dext.Configuration.Yaml,
-  Dext.Entity,
-  Dext.UI.Navigator.Interfaces,
-  Dext.UI.Navigator,
   Customer.Entity,
   Customer.Service,
   Customer.Controller,
-  Customer.Context;
+  Customer.Context,
+  Dext,
+  Dext.Configuration.Interfaces,
+  Dext.Configuration.Yaml,
+  Dext.Configuration.Binder, // Added for TConfigurationBinder
+  Dext.Entity,
+  Dext.UI.Navigator.Interfaces,
+  Dext.UI.Navigator;
 
 type
   /// <summary>
@@ -70,7 +71,12 @@ begin
   FServices.AddSingleton<ILogger>(FLogger);
   
   // Register DB Context from configuration
-  FServices.AddDbContext<TCustomerContext>(FConfig.GetSection('Database'));
+  FServices.AddDbContext<TCustomerContext>(
+    procedure(Options: TDbContextOptions)
+    begin
+      TConfigurationBinder.Bind(FConfig.GetSection('Database'), Options);
+    end
+  );
   
   // Register Customer Service
   FServices.AddSingleton<ICustomerService, TCustomerService>;

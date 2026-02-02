@@ -45,11 +45,11 @@ begin
     // ✨ CORS with Fluent API
     Builder.UseCors(procedure(Cors: TCorsBuilder)
     begin
-      Cors.WithOrigins(['http://localhost:5173'])
-          .WithMethods(['GET', 'POST', 'PUT', 'DELETE'])
+      Cors.Origins(['http://localhost:5173'])
+          .Methods(['GET', 'POST', 'PUT', 'DELETE'])
           .AllowAnyHeader
           .AllowCredentials
-          .WithMaxAge(3600);
+          .MaxAge(3600);
     end);
 
     // Static Files

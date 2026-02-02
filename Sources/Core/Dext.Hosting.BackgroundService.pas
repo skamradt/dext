@@ -90,13 +90,12 @@ type
     procedure StopAsync(Token: ICancellationToken = nil);
   end;
 
-  TBackgroundServiceBuilder = class
+  TBackgroundServiceBuilder = record
   private
     FServices: IServiceCollection;
     FHostedServices: TList<TClass>;
   public
     constructor Create(Services: IServiceCollection);
-    destructor Destroy; override;
     function AddHostedService<T: class, constructor>: TBackgroundServiceBuilder;
     procedure Build;
   end;
@@ -217,30 +216,28 @@ end;
 
 constructor TBackgroundServiceBuilder.Create(Services: IServiceCollection);
 begin
-  inherited Create;
   FServices := Services;
   FHostedServices := TList<TClass>.Create;
-end;
-
-destructor TBackgroundServiceBuilder.Destroy;
-begin
-  FHostedServices.Free;
-  inherited;
 end;
 
 function TBackgroundServiceBuilder.AddHostedService<T>: TBackgroundServiceBuilder;
 begin
   // Register as singleton
   FServices.AddSingleton(TServiceType.FromClass(T), T);
-  FHostedServices.Add(T);
+  
+  if not FHostedServices.Contains(T) then
+    FHostedServices.Add(T);
+    
   Result := Self;
 end;
 
 procedure TBackgroundServiceBuilder.Build;
 var
   CapturedServices: TArray<TClass>;
+  LHostedServices: TList<TClass>;
 begin
-  CapturedServices := FHostedServices.ToArray;
+  LHostedServices := FHostedServices;
+  CapturedServices := LHostedServices.ToArray;
   
   // ✅ Register as INTERFACE to enable ARC management
   FServices.AddSingleton(
@@ -265,7 +262,9 @@ begin
       Result := Manager;
     end
   );
-  Self.Free;
+  
+  // Safe to free the list now, the captured array keeps the classes
+  LHostedServices.Free;
 end;
 
 end.

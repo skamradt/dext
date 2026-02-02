@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -51,10 +51,19 @@ implementation
 
 uses
   System.TypInfo,
-  Dext.DI.Extensions,
   Dext.Logging.Console;
 
 type
+  TLoggerFactoryOwner = class
+  private
+    FFactory: TLoggerFactory;
+    FIntf: ILoggerFactory;
+  public
+    constructor Create(AFactory: TLoggerFactory);
+    destructor Destroy; override;
+    property Factory: TLoggerFactory read FFactory;
+  end;
+
   TLoggingBuilder = class(TInterfacedObject, ILoggingBuilder)
   private
     FServices: IServiceCollection;
@@ -72,6 +81,25 @@ type
     function ExtractProviders: TList<ILoggerProvider>;
     function GetMinLevel: TLogLevel;
   end;
+
+{ TLoggerFactoryOwner }
+
+constructor TLoggerFactoryOwner.Create(AFactory: TLoggerFactory);
+begin
+  inherited Create;
+  FFactory := AFactory;
+  FIntf := AFactory;
+end;
+
+destructor TLoggerFactoryOwner.Destroy;
+begin
+  if FIntf <> nil then
+  begin
+    FIntf.Dispose;
+    FIntf := nil;
+  end;
+  inherited;
+end;
 
 { TLoggingBuilder }
 
@@ -143,16 +171,46 @@ begin
   LProvidersList.Free;
   LMinLevel := LBuilderObj.GetMinLevel;
   
-  // Create TLoggerFactory instance
-  var Factory := TLoggerFactory.Create;
-  Factory.SetMinimumLevel(LMinLevel);
-  for var P in LProvidersArray do
-    Factory.AddProvider(P);
-  
-  // Register using instance registration (no closure capture!)
+  // Capture state for factory delegate
+  var CapturedMinLevel := LMinLevel;
+  // Dynamic arrays are managed types, so they are safely captured by value (copy-on-write reference)
+  var CapturedProviders := LProvidersArray;
+
+  // 1. Register Owner (as concrete singleton Class) to ensure lifecycle destruction
+  AServices.AddSingleton(
+    TServiceType.FromClass(TLoggerFactoryOwner),
+    nil,
+    function(Provider: IServiceProvider): TObject
+    var
+      Factory: TLoggerFactory;
+      Owner: TLoggerFactoryOwner;
+      P: ILoggerProvider;
+    begin
+      Factory := TLoggerFactory.Create;
+      try
+        Factory.SetMinimumLevel(CapturedMinLevel);
+        for P in CapturedProviders do
+          Factory.AddProvider(P);
+          
+        Owner := TLoggerFactoryOwner.Create(Factory);
+        Result := Owner;
+      except
+        Factory.Free;
+        raise;
+      end;
+    end
+  );
+
+  // 2. Register ILoggerFactory to resolve via Owner
   AServices.AddSingleton(
     TServiceType.FromInterface(ILoggerFactory),
-    Factory
+    nil,
+    function(Provider: IServiceProvider): TObject
+    begin
+      // Resolve owner (guaranteed to exist and be managed)
+      var Owner := Provider.GetService(TServiceType.FromClass(TLoggerFactoryOwner)) as TLoggerFactoryOwner;
+      Result := Owner.Factory;
+    end
   );
     
   // Register generic ILogger (default) - Resolve from ILoggerFactory

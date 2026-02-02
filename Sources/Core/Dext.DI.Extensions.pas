@@ -1,4 +1,4 @@
-{***************************************************************************}
+ï»¿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -23,7 +23,7 @@
 {  Created: 2025-12-08                                                      }
 {                                                                           }
 {***************************************************************************}
-unit Dext.DI.Extensions;
+unit Dext.DI.Extensions deprecated 'Use TDextServices instead';
 
 interface
 
@@ -102,7 +102,7 @@ begin
     TServiceType.FromClass(T), T, AFactory);
 end;
 
-// Implementações para interfaces
+// ImplementaÃ§Ãµes para interfaces
 class function TServiceCollectionExtensions.AddSingleton<TService, TImplementation>(
   const ACollection: IServiceCollection;
   const AFactory: TFunc<IServiceProvider, TObject>): IServiceCollection;

@@ -53,43 +53,43 @@ type
   // ===========================================================================
   
   /// <summary>Marks a method as handling HTTP GET requests.</summary>
-  GetAttribute = class(RouteAttribute)
+  HttpGetAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP POST requests.</summary>
-  PostAttribute = class(RouteAttribute)
+  HttpPostAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP PUT requests.</summary>
-  PutAttribute = class(RouteAttribute)
+  HttpPutAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP DELETE requests.</summary>
-  DeleteAttribute = class(RouteAttribute)
+  HttpDeleteAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP PATCH requests.</summary>
-  PatchAttribute = class(RouteAttribute)
+  HttpPatchAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP HEAD requests.</summary>
-  HeadAttribute = class(RouteAttribute)
+  HttpHeadAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
 
   /// <summary>Marks a method as handling HTTP OPTIONS requests.</summary>
-  OptionsAttribute = class(RouteAttribute)
+  HttpOptionsAttribute = class(RouteAttribute)
   public
     constructor Create(const APath: string = '');
   end;
@@ -101,7 +101,7 @@ type
   /// <summary>
   ///   Marks a class as an API controller with an optional route prefix.
   /// </summary>
-  ControllerAttribute = class(TCustomAttribute)
+  ApiControllerAttribute = class(TCustomAttribute)
   private
     FPrefix: string;
   public
@@ -131,29 +131,29 @@ type
   /// <summary>Deprecated. Use RouteAttribute instead.</summary>
   DextRouteAttribute = RouteAttribute deprecated 'Use RouteAttribute instead';
   
-  /// <summary>Deprecated. Use GetAttribute instead.</summary>
-  DextGetAttribute = GetAttribute deprecated 'Use GetAttribute instead';
-  
-  /// <summary>Deprecated. Use PostAttribute instead.</summary>
-  DextPostAttribute = PostAttribute deprecated 'Use PostAttribute instead';
-  
-  /// <summary>Deprecated. Use PutAttribute instead.</summary>
-  DextPutAttribute = PutAttribute deprecated 'Use PutAttribute instead';
-  
-  /// <summary>Deprecated. Use DeleteAttribute instead.</summary>
-  DextDeleteAttribute = DeleteAttribute deprecated 'Use DeleteAttribute instead';
-  
-  /// <summary>Deprecated. Use PatchAttribute instead.</summary>
-  DextPatchAttribute = PatchAttribute deprecated 'Use PatchAttribute instead';
-  
-  /// <summary>Deprecated. Use HeadAttribute instead.</summary>
-  DextHeadAttribute = HeadAttribute deprecated 'Use HeadAttribute instead';
-  
-  /// <summary>Deprecated. Use OptionsAttribute instead.</summary>
-  DextOptionsAttribute = OptionsAttribute deprecated 'Use OptionsAttribute instead';
-  
-  /// <summary>Deprecated. Use ControllerAttribute instead.</summary>
-  DextControllerAttribute = ControllerAttribute deprecated 'Use ControllerAttribute instead';
+  /// <summary>Deprecated. Use HttpGetAttribute instead.</summary>
+  DextGetAttribute = HttpGetAttribute deprecated 'Use HttpGetAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPostAttribute instead.</summary>
+  DextPostAttribute = HttpPostAttribute deprecated 'Use HttpPostAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPutAttribute instead.</summary>
+  DextPutAttribute = HttpPutAttribute deprecated 'Use HttpPutAttribute instead';
+
+  /// <summary>Deprecated. Use HttpDeleteAttribute instead.</summary>
+  DextDeleteAttribute = HttpDeleteAttribute deprecated 'Use HttpDeleteAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPatchAttribute instead.</summary>
+  DextPatchAttribute = HttpPatchAttribute deprecated 'Use HttpPatchAttribute instead';
+
+  /// <summary>Deprecated. Use HttpHeadAttribute instead.</summary>
+  DextHeadAttribute = HttpHeadAttribute deprecated 'Use HttpHeadAttribute instead';
+
+  /// <summary>Deprecated. Use HttpOptionsAttribute instead.</summary>
+  DextOptionsAttribute = HttpOptionsAttribute deprecated 'Use HttpOptionsAttribute instead';
+
+  /// <summary>Deprecated. Use ApiControllerAttribute instead.</summary>
+  DextControllerAttribute = ApiControllerAttribute deprecated 'Use ApiControllerAttribute instead';
   
   /// <summary>Deprecated. Use HttpException instead.</summary>
   EDextHttpException = HttpException deprecated 'Use HttpException instead';
@@ -169,58 +169,58 @@ begin
   FMethod := AMethod;
 end;
 
-{ GetAttribute }
+{ HttpGetAttribute }
 
-constructor GetAttribute.Create(const APath: string);
+constructor HttpGetAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'GET');
 end;
 
-{ PostAttribute }
+{ HttpPostAttribute }
 
-constructor PostAttribute.Create(const APath: string);
+constructor HttpPostAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'POST');
 end;
 
-{ PutAttribute }
+{ HttpPutAttribute }
 
-constructor PutAttribute.Create(const APath: string);
+constructor HttpPutAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'PUT');
 end;
 
-{ DeleteAttribute }
+{ HttpDeleteAttribute }
 
-constructor DeleteAttribute.Create(const APath: string);
+constructor HttpDeleteAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'DELETE');
 end;
 
-{ PatchAttribute }
+{ HttpPatchAttribute }
 
-constructor PatchAttribute.Create(const APath: string);
+constructor HttpPatchAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'PATCH');
 end;
 
-{ HeadAttribute }
+{ HttpHeadAttribute }
 
-constructor HeadAttribute.Create(const APath: string);
+constructor HttpHeadAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'HEAD');
 end;
 
-{ OptionsAttribute }
+{ HttpOptionsAttribute }
 
-constructor OptionsAttribute.Create(const APath: string);
+constructor HttpOptionsAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'OPTIONS');
 end;
 
-{ ControllerAttribute }
+{ ApiControllerAttribute }
 
-constructor ControllerAttribute.Create(const APrefix: string);
+constructor ApiControllerAttribute.Create(const APrefix: string);
 begin
   inherited Create;
   FPrefix := APrefix;

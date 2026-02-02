@@ -53,7 +53,7 @@
         <UWP_DelphiLogo44>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
         <Custom_Styles>&quot;Windows11 Impressive Dark SE|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Impressive_Dark_SE.vsf&quot;</Custom_Styles>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\Output\$(ProductVersion)_$(Platform)_$(Config);Features\Customers;Data;App;Features\Layout;Middleware;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>..\Output</DCC_ExeOutput>
         <VerInfo_Locale>1046</VerInfo_Locale>

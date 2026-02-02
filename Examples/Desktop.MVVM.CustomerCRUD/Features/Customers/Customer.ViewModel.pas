@@ -5,10 +5,10 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  Dext,
-  Dext.Collections,
   Customer.Entity,
-  Customer.Rules;
+  Customer.Rules,
+  Dext,
+  Dext.Collections;
 
 type
   /// <summary>
