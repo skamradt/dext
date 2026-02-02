@@ -12,7 +12,7 @@ begin
   try
     WriteLn('🛒 Starting DextStore API...');
     
-    var App := TDextApplication.Create;
+    var App: IWebApplication := TDextApplication.Create;
     App.UseStartup(TStartup.Create);
     
     WriteLn('🚀 Server running on http://localhost:9000');

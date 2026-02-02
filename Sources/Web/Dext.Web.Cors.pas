@@ -222,7 +222,7 @@ type
     class operator Implicit(const AValue: TCorsOptions): TValue;
   end;
 
-function Cors: TCorsBuilder;
+function CorsOptions: TCorsBuilder;
 
 implementation
 
@@ -231,7 +231,7 @@ uses
 
 { TStringArrayHelper }
 
-function Cors: TCorsBuilder;
+function CorsOptions: TCorsBuilder;
 begin
   Result := TCorsBuilder.Create;
 end;

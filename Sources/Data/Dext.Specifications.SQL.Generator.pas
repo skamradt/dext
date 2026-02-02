@@ -94,8 +94,10 @@ type
   TSQLColumnMapper<T: class> = class(TInterfacedObject, ISQLColumnMapper)
   private
     FNamingStrategy: INamingStrategy;
+    FRttiContext: TRttiContext;
   public
     constructor Create(ANamingStrategy: INamingStrategy = nil);
+    destructor Destroy; override;
     function MapColumn(const AName: string): string;
     property NamingStrategy: INamingStrategy read FNamingStrategy write FNamingStrategy;
   end;
@@ -117,6 +119,7 @@ type
     FParamCount: Integer;
     FMap: TEntityMap;
     FNamingStrategy: INamingStrategy;
+    FRttiContext: TRttiContext;
     // Properties to control filtering
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
@@ -654,19 +657,24 @@ constructor TSQLColumnMapper<T>.Create(ANamingStrategy: INamingStrategy);
 begin
   inherited Create;
   FNamingStrategy := ANamingStrategy;
+  FRttiContext := TRttiContext.Create;
+end;
+
+destructor TSQLColumnMapper<T>.Destroy;
+begin
+  FRttiContext.Free;
+  inherited;
 end;
 
 function TSQLColumnMapper<T>.MapColumn(const AName: string): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
   PropMap: TPropertyMap;
 begin
   Result := AName;
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   Prop := Typ.GetProperty(AName);
   if Prop <> nil then
   begin
@@ -698,11 +706,13 @@ begin
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
   FParams := TDictionary<string, TValue>.Create;
   FParamCount := 0;
+  FRttiContext := TRttiContext.Create;
 end;
 
 destructor TSQLGenerator<T>.Destroy;
 begin
   FParams.Free;
+  FRttiContext.Free;
   inherited;
 end;
 
@@ -714,7 +724,6 @@ end;
 
 function TSQLGenerator<T>.GetTableName: string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Attr: TCustomAttribute;
 begin
@@ -723,8 +732,7 @@ begin
   else
   begin
     Result := '';
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     
     // Check TableAttribute
     for Attr in Typ.GetAttributes do
@@ -752,27 +760,25 @@ begin
   if (FSchema <> '') and FDialect.UseSchemaPrefix then
     Result := FDialect.QuoteIdentifier(FSchema) + '.' + Result;
 end;
-
 function TSQLGenerator<T>.TryUnwrapSmartValue(var AValue: TValue): Boolean;
 var
-  Ctx: TRttiContext;
   RType: TRttiType;
   FValue: TRttiField;
 begin
   Result := False;
   if AValue.Kind = tkRecord then
   begin
-    Ctx := TRttiContext.Create;
-    RType := Ctx.GetType(AValue.TypeInfo);
+    RType := FRttiContext.GetType(AValue.TypeInfo);
     if RType <> nil then
     begin
-      // Check if it's a Smart Type (Prop<T>)
-      FValue := RType.GetField('FValue');
-      if (FValue <> nil) and 
-         (RType.Name.Contains('Prop<') or (RType.GetProperty('Value') <> nil)) then
-      begin
-        AValue := FValue.GetValue(AValue.GetReferenceToRawData);
-        Result := True;
+        // Check if it's a Smart Type (Prop<T>)
+        FValue := RType.GetField('FValue');
+        if (FValue <> nil) and 
+           (RType.Name.Contains('Prop<') or RType.Name.Contains('TProp') or 
+            (RType.Name.EndsWith('Type') and (RType.TypeKind = tkRecord))) then
+        begin
+          AValue := FValue.GetValue(AValue.GetReferenceToRawData);
+          Result := True;
       end;
     end;
   end;
@@ -780,7 +786,6 @@ end;
 
 function TSQLGenerator<T>.GetSoftDeleteFilter: string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Attr: TCustomAttribute;
   SoftDeleteAttr: SoftDeleteAttribute;
@@ -799,8 +804,7 @@ begin
   NotDeletedVal := False;
   TargetPropType := nil;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   if Typ = nil then Exit;
   
   // 1. Check Fluent Mapping
@@ -1003,7 +1007,6 @@ end;
 
 function TSQLGenerator<T>.GenerateInsert(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1018,10 +1021,7 @@ var
 begin
   FParams.Clear;
   FParamCount := 0;
-  
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
-  
+  Typ := FRttiContext.GetType(T);
   SBCols := TStringBuilder.Create;
   SBVals := TStringBuilder.Create;
   try
@@ -1150,7 +1150,6 @@ end;
 
 function TSQLGenerator<T>.GenerateInsertTemplate(out AProps: TList<TPair<TRttiProperty, string>>): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1159,8 +1158,7 @@ var
   IsAutoInc, IsMapped, First: Boolean;
   PropMap: TPropertyMap;
 begin
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBCols := TStringBuilder.Create;
   SBVals := TStringBuilder.Create;
@@ -1231,7 +1229,6 @@ end;
 
 function TSQLGenerator<T>.GenerateUpdate(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1249,8 +1246,7 @@ begin
   FParams.Clear;
   FParamCount := 0;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBSet := TStringBuilder.Create;
   SBWhere := TStringBuilder.Create;
@@ -1403,7 +1399,6 @@ end;
 
 function TSQLGenerator<T>.GenerateDelete(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1416,8 +1411,7 @@ begin
   FParams.Clear;
   FParamCount := 0;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBWhere := TStringBuilder.Create;
   try
@@ -1503,7 +1497,6 @@ var
   Prop: TRttiProperty;
   ColName: string;
   Attr: TCustomAttribute;
-  Ctx: TRttiContext;
   Typ: TRttiType;
   First: Boolean;
   SelectedCols: TArray<string>;
@@ -1565,8 +1558,7 @@ begin
     if Length(SelectedCols) > 0 then
     begin
       // Custom projection - translate property names to column names
-      Ctx := TRttiContext.Create;
-      Typ := Ctx.GetType(T);
+      Typ := FRttiContext.GetType(T);
       
       for i := 0 to High(SelectedCols) do
       begin
@@ -1608,8 +1600,7 @@ begin
     else
     begin
       // Select all mapped columns
-      Ctx := TRttiContext.Create;
-      Typ := Ctx.GetType(T);
+      Typ := FRttiContext.GetType(T);
       First := True;
       
       for Prop in Typ.GetProperties do
@@ -1691,8 +1682,7 @@ begin
         
         SortCol := OrderBy[i].GetPropertyName;
         // Lookup column name (simplified)
-        Ctx := TRttiContext.Create;
-        Typ := Ctx.GetType(T);
+        Typ := FRttiContext.GetType(T);
         P := Typ.GetProperty(SortCol);
         if P <> nil then
         begin
@@ -1758,7 +1748,6 @@ var
   Prop: TRttiProperty;
   ColName: string;
   Attr: TCustomAttribute;
-  Ctx: TRttiContext;
   Typ: TRttiType;
   First, IsMapped: Boolean;
   PropMap: TPropertyMap;
@@ -1772,8 +1761,7 @@ begin
     SB.Append('SELECT ');
 
     // Select all mapped columns
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     First := True;
 
     for Prop in Typ.GetProperties do
@@ -1922,7 +1910,6 @@ end;
 
 function TSQLGenerator<T>.GenerateCreateTable(const ATableName: string): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1951,8 +1938,7 @@ begin
   PKCols := TList<string>.Create;
   FKConstraints := TList<string>.Create;
   try
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     First := True;
     HasAutoInc := False;
     
@@ -2001,7 +1987,7 @@ begin
              FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
           
              if (Prop.PropertyType.TypeKind = tkClass) and 
-                TSQLGeneratorHelper.GetRelatedTableAndPK(Ctx, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
+                TSQLGeneratorHelper.GetRelatedTableAndPK(FRttiContext, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
              begin
                  LConstraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
                    [FDialect.QuoteIdentifier(FKColName), 

@@ -51,10 +51,7 @@ begin
     var Builder := App.Builder;
 
     // CORS
-    var corsOptions := Builder.CreateCorsOptions;
-    corsOptions.AllowedOrigins := ['http://localhost:5173'];
-    corsOptions.AllowCredentials := True;
-    Builder.UseCors(corsOptions);
+    Builder.UseCors(CorsOptions.Origins(['http://localhost:5173']).AllowCredentials.Build);
 
     // Static Files
     Builder.UseStaticFiles(Builder.CreateStaticFileOptions);

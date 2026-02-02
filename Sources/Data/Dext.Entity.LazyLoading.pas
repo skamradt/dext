@@ -164,14 +164,18 @@ var
   Field: TRttiField;
 begin
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(AEntity.ClassType);
-  
-  for Field in Typ.GetFields do
-  begin
-    if Field.FieldType.Name.StartsWith('Lazy<') then
+  try
+    Typ := Ctx.GetType(AEntity.ClassType);
+    
+    for Field in Typ.GetFields do
     begin
-      InjectField(AContext, AEntity, Field);
+      if Field.FieldType.Name.StartsWith('Lazy<') then
+      begin
+        InjectField(AContext, AEntity, Field);
+      end;
     end;
+  finally
+    Ctx.Free;
   end;
 end;
 
@@ -322,10 +326,12 @@ var
   ExpectedClass: TClass;
   UseExistingInterface: Boolean;
 begin
+  if FLoaded then Exit;
+  
+  Ctx := TRttiContext.Create;
   try
-    Ctx := TRttiContext.Create;
-    
-    if FIsCollection then
+    try
+      if FIsCollection then
     begin
         // Load Collection
         Prop := Ctx.GetType(FEntity.ClassType).GetProperty(FPropName);
@@ -457,7 +463,7 @@ begin
             end;
         end;
     end
-    else
+  else
     begin
         // Load Reference (unchanged logic)
         FKPropName := FPropName + 'Id';
@@ -482,10 +488,12 @@ begin
     
     FLoaded := True;
   except
-    // If loading fails, we just mark as loaded to avoid infinite loops/retries
-    // and let the value be default (nil/empty)
-    FLoaded := True;
+    on E: Exception do
+      FLoaded := True;
   end;
+finally
+  Ctx.Free;
+end;
 end;
 
 end.

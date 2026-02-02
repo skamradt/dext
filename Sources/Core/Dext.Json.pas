@@ -588,6 +588,7 @@ end;
 
 class function TJsonSettings.Default: TJsonSettings;
 begin
+  FillChar(Result, SizeOf(Result), 0);
   Result.Formatting := TJsonFormatting.None;
   Result.FIgnoreNullValues := False;
   Result.IgnoreDefaultValues := False;
@@ -893,7 +894,6 @@ end;
 
 function TDextSerializer.DeserializeObject(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
 var
-  Context: TRttiContext;
   RttiType: TRttiType;
   Prop: TRttiProperty;
   PropName: string;
@@ -901,111 +901,100 @@ var
   Found: Boolean;
   Instance: TObject;
 begin
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(AType);
-    
-    // Create Instance using TActivator for full DI support and robust constructor resolution
-    if FSettings.FServiceProvider <> nil then
-       Instance := TActivator.CreateInstance(FSettings.FServiceProvider, GetTypeData(AType)^.ClassType)
-    else
-       Instance := TActivator.CreateInstance(GetTypeData(AType)^.ClassType, []);
-    
-    Result := Instance;
+  RttiType := TReflection.GetMetadata(AType).RttiType;
+  
+  // Create Instance using TActivator for full DI support and robust constructor resolution
+  if FSettings.FServiceProvider <> nil then
+     Instance := TActivator.CreateInstance(FSettings.FServiceProvider, GetTypeData(AType)^.ClassType)
+  else
+     Instance := TActivator.CreateInstance(GetTypeData(AType)^.ClassType, []);
+  
+  Result := Instance;
 
+  for Prop in RttiType.GetProperties do
+  begin
+    if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
+      Continue;
 
-    for Prop in RttiType.GetProperties do
+    if not Prop.IsWritable then
+      Continue;
+
+    PropName := ApplyCaseStyle(Prop.Name);
+    
+    // Check JsonName
+    for var Attr in Prop.GetAttributes do
+      if Attr is JsonNameAttribute then
+      begin
+        PropName := JsonNameAttribute(Attr).Name;
+        Break;
+      end;
+
+    ActualPropName := PropName;
+    Found := AJson.Contains(PropName);
+
+    if (not Found) and FSettings.FCaseInsensitive then
     begin
-      if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
-        Continue;
-
-      if not Prop.IsWritable then
-        Continue;
-
-      PropName := ApplyCaseStyle(Prop.Name);
-      
-      // Check JsonName
-      for var Attr in Prop.GetAttributes do
-        if Attr is JsonNameAttribute then
-        begin
-          PropName := JsonNameAttribute(Attr).Name;
-          Break;
-        end;
-
-      ActualPropName := PropName;
-      Found := AJson.Contains(PropName);
-
-      if (not Found) and FSettings.FCaseInsensitive then
-      begin
-         // Simple scan
-         var LowerProp := LowerCase(PropName);
-         // This is inefficient but functional for now. 
-         // Optimize later by iterating JSON keys once if performance needed.
-         for var I := 0 to AJson.GetCount - 1 do
-         begin
-            var Key := AJson.GetName(I);
-            if LowerCase(Key) = LowerProp then
-            begin
-               ActualPropName := Key;
-               Found := True;
-               Break;
-            end;
-         end;
-      end;
-
-      if not Found then Continue;
-
-      // Deserialization Logic (Similar to DeserializeRecord but for Properties)
-      var Node := AJson.GetNode(ActualPropName);
-      if Node <> nil then
-      begin
-        var Val: TValue;
-        case Node.GetNodeType of
-          jntString: Val := TValue.From<string>(Node.AsString);
-          jntNumber: 
-            begin
-              if (Prop.PropertyType.Handle = TypeInfo(Integer)) then
-                Val := TValue.From<Integer>(Node.AsInteger)
-              else if (Prop.PropertyType.Handle = TypeInfo(Int64)) then
-                Val := TValue.From<Int64>(Node.AsInt64)
-              else
-                Val := TValue.From<Double>(Node.AsDouble);
-            end;
-          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-          jntObject: 
-            begin
-              if (Prop.PropertyType.TypeKind = tkClass) then
-                Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
-              else if (Prop.PropertyType.TypeKind = tkRecord) then
-                Val := DeserializeRecord(Node as IDextJsonObject, Prop.PropertyType.Handle)
-              else
-                Val := TValue.Empty;
-            end;
-          jntArray: 
-            begin
-              if IsArrayType(Prop.PropertyType.Handle) then
-                Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
-              else if IsListType(Prop.PropertyType.Handle) then
-                Val := DeserializeList(Node as IDextJsonArray, Prop.PropertyType.Handle)
-              else
-                Val := TValue.Empty;
-            end;
-          else Val := TValue.Empty;
-        end;
-        
-        if not Val.IsEmpty then
-          TReflection.SetValue(Instance, Prop, Val);
-      end;
+       // Simple scan
+       var LowerProp := LowerCase(PropName);
+       for var I := 0 to AJson.GetCount - 1 do
+       begin
+          var Key := AJson.GetName(I);
+          if LowerCase(Key) = LowerProp then
+          begin
+             ActualPropName := Key;
+             Found := True;
+             Break;
+          end;
+       end;
     end;
 
-  finally
-    Context.Free;
+    if not Found then Continue;
+
+    var Node := AJson.GetNode(ActualPropName);
+    if Node <> nil then
+    begin
+      var Val: TValue;
+      case Node.GetNodeType of
+        jntString: Val := TValue.From<string>(Node.AsString);
+        jntNumber: 
+          begin
+            if (Prop.PropertyType.Handle = TypeInfo(Integer)) then
+              Val := TValue.From<Integer>(Node.AsInteger)
+            else if (Prop.PropertyType.Handle = TypeInfo(Int64)) then
+              Val := TValue.From<Int64>(Node.AsInt64)
+            else
+              Val := TValue.From<Double>(Node.AsDouble);
+          end;
+        jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+        jntObject: 
+          begin
+            if (Prop.PropertyType.TypeKind = tkClass) then
+              Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
+            else if (Prop.PropertyType.TypeKind = tkRecord) then
+              Val := DeserializeRecord(Node as IDextJsonObject, Prop.PropertyType.Handle)
+            else
+              Val := TValue.Empty;
+          end;
+        jntArray: 
+          begin
+            if IsArrayType(Prop.PropertyType.Handle) then
+              Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
+            else if IsListType(Prop.PropertyType.Handle) then
+              Val := DeserializeList(Node as IDextJsonArray, Prop.PropertyType.Handle)
+            else
+              Val := TValue.Empty;
+          end;
+        else Val := TValue.Empty;
+      end;
+      
+      if not Val.IsEmpty then
+        TReflection.SetValue(Instance, Prop, Val);
+    end;
   end;
 end;
 
 function TDextSerializer.DeserializeRecord(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
 var
-  Context: TRttiContext;
   RttiType: TRttiType;
   Field: TRttiField;
   FieldName: string;
@@ -1019,125 +1008,111 @@ begin
     Exit(TValue.From<TUUID>(TUUID.FromString(AJson.GetString(ValueField))));
 
   TValue.Make(nil, AType, Result);
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(AType);
+  RttiType := TReflection.GetMetadata(AType).RttiType;
 
-    for Field in RttiType.GetFields do
+  for Field in RttiType.GetFields do
+  begin
+    if ShouldSkipField(Field, Result) then
+      Continue;
+
+    FieldName := GetFieldName(Field);
+    ActualFieldName := FieldName;
+    Found := AJson.Contains(FieldName);
+
+    if (not Found) and FSettings.FCaseInsensitive then
     begin
-      if ShouldSkipField(Field, Result) then
-        Continue;
-
-      FieldName := GetFieldName(Field);
-      ActualFieldName := FieldName;
-      Found := AJson.Contains(FieldName);
-
-      // Se não encontrou e CaseInsensitive está habilitado, buscar ignorando case
-      if (not Found) and FSettings.FCaseInsensitive then
+      var LowerFieldName := LowerCase(FieldName);
+      var UpperFieldName := UpperCase(FieldName);
+      
+      if AJson.Contains(LowerFieldName) then
       begin
-        // Precisamos iterar pelas chaves do JSON para encontrar uma correspondência case-insensitive
-        // Como não temos acesso direto às chaves via interface, vamos tentar variações comuns
-        var LowerFieldName := LowerCase(FieldName);
-        var UpperFieldName := UpperCase(FieldName);
-        
-        // Tentar lowercase
-        if AJson.Contains(LowerFieldName) then
+        ActualFieldName := LowerFieldName;
+        Found := True;
+      end
+      else if AJson.Contains(UpperFieldName) then
+      begin
+        ActualFieldName := UpperFieldName;
+        Found := True;
+      end
+      else if Length(FieldName) > 0 then
+      begin
+        var CamelCaseName := LowerCase(FieldName[1]) + Copy(FieldName, 2, Length(FieldName) - 1);
+        if AJson.Contains(CamelCaseName) then
         begin
-          ActualFieldName := LowerFieldName;
+          ActualFieldName := CamelCaseName;
           Found := True;
-        end
-        // Tentar uppercase
-        else if AJson.Contains(UpperFieldName) then
-        begin
-          ActualFieldName := UpperFieldName;
-          Found := True;
-        end
-        // Tentar primeira letra minúscula (camelCase)
-        else if Length(FieldName) > 0 then
-        begin
-          var CamelCaseName := LowerCase(FieldName[1]) + Copy(FieldName, 2, Length(FieldName) - 1);
-          if AJson.Contains(CamelCaseName) then
-          begin
-            ActualFieldName := CamelCaseName;
-            Found := True;
-          end;
         end;
-      end;
-
-      if not Found then
-        Continue;
-
-      if Field.FieldType.Handle = TypeInfo(TGUID) then
-      begin
-        try
-          var GuidStr := AJson.GetString(ActualFieldName).Trim;
-          
-          // StringToGUID requires braces, add if missing
-          if (GuidStr <> '') and (not GuidStr.StartsWith('{')) then
-            GuidStr := '{' + GuidStr + '}';
-            
-          FieldValue := TValue.From<TGUID>(StringToGUID(GuidStr));
-        except
-          FieldValue := TValue.From<TGUID>(TGUID.Empty);
-        end;
-        Field.SetValue(Result.GetReferenceToRawData, FieldValue);
-        Continue;
-      end;
-
-      if Field.FieldType.Handle = TypeInfo(TUUID) then
-      begin
-        try
-          FieldValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(ActualFieldName)));
-        except
-          FieldValue := TValue.From<TUUID>(TUUID.Null);
-        end;
-        Field.SetValue(Result.GetReferenceToRawData, FieldValue);
-        Continue;
-      end;
-
-      var Node := AJson.GetNode(ActualFieldName);
-      if Node <> nil then
-      begin
-        var Val: TValue;
-        case Node.GetNodeType of
-          jntString: Val := TValue.From<string>(Node.AsString);
-          jntNumber:
-            begin
-              if (Field.FieldType.Handle = TypeInfo(Integer)) then
-                Val := TValue.From<Integer>(Node.AsInteger)
-              else if (Field.FieldType.Handle = TypeInfo(Int64)) then
-                Val := TValue.From<Int64>(Node.AsInt64)
-              else
-                Val := TValue.From<Double>(Node.AsDouble);
-            end;
-          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-          jntObject: 
-             begin
-               if (Field.FieldType.TypeKind = tkClass) then
-                 Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
-               else if (Field.FieldType.TypeKind = tkRecord) then
-                 Val := DeserializeRecord(Node as IDextJsonObject, Field.FieldType.Handle)
-               else
-                 Val := TValue.Empty;
-             end;
-          jntArray: 
-             begin
-               if IsArrayType(Field.FieldType.Handle) then
-                 Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
-               else if IsListType(Field.FieldType.Handle) then
-                 Val := DeserializeList(Node as IDextJsonArray, Field.FieldType.Handle)
-               else
-                 Val := TValue.Empty;
-             end;
-          else Val := TValue.Empty;
-        end;
-
-        if not Val.IsEmpty then
-          TReflection.SetValue(Result.GetReferenceToRawData, Field, Val);
       end;
     end;
-  finally
-    Context.Free;
+
+    if not Found then
+      Continue;
+
+    if Field.FieldType.Handle = TypeInfo(TGUID) then
+    begin
+      try
+        var GuidStr := AJson.GetString(ActualFieldName).Trim;
+        if (GuidStr <> '') and (not GuidStr.StartsWith('{')) then
+          GuidStr := '{' + GuidStr + '}';
+        FieldValue := TValue.From<TGUID>(StringToGUID(GuidStr));
+      except
+        FieldValue := TValue.From<TGUID>(TGUID.Empty);
+      end;
+      Field.SetValue(Result.GetReferenceToRawData, FieldValue);
+      Continue;
+    end;
+
+    if Field.FieldType.Handle = TypeInfo(TUUID) then
+    begin
+      try
+        FieldValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(ActualFieldName)));
+      except
+        FieldValue := TValue.From<TUUID>(TUUID.Null);
+      end;
+      Field.SetValue(Result.GetReferenceToRawData, FieldValue);
+      Continue;
+    end;
+
+    var Node := AJson.GetNode(ActualFieldName);
+    if Node <> nil then
+    begin
+      var Val: TValue;
+      case Node.GetNodeType of
+        jntString: Val := TValue.From<string>(Node.AsString);
+        jntNumber:
+          begin
+            if (Field.FieldType.Handle = TypeInfo(Integer)) then
+              Val := TValue.From<Integer>(Node.AsInteger)
+            else if (Field.FieldType.Handle = TypeInfo(Int64)) then
+              Val := TValue.From<Int64>(Node.AsInt64)
+            else
+              Val := TValue.From<Double>(Node.AsDouble);
+          end;
+        jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+        jntObject: 
+           begin
+             if (Field.FieldType.TypeKind = tkClass) then
+               Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
+             else if (Field.FieldType.TypeKind = tkRecord) then
+               Val := DeserializeRecord(Node as IDextJsonObject, Field.FieldType.Handle)
+             else
+               Val := TValue.Empty;
+           end;
+        jntArray: 
+           begin
+             if IsArrayType(Field.FieldType.Handle) then
+               Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
+             else if IsListType(Field.FieldType.Handle) then
+               Val := DeserializeList(Node as IDextJsonArray, Field.FieldType.Handle)
+             else
+               Val := TValue.Empty;
+           end;
+        else Val := TValue.Empty;
+      end;
+
+      if not Val.IsEmpty then
+        TReflection.SetValue(Result.GetReferenceToRawData, Field, Val);
+    end;
   end;
 end;
 
@@ -1290,7 +1265,6 @@ end;
 
 function TDextSerializer.SerializeRecord(const AValue: TValue): IDextJsonObject;
 var
-  Context: TRttiContext;
   Field: TRttiField;
   FieldName: string;
   FieldValue: TValue;
@@ -1313,66 +1287,95 @@ begin
   end;
 
   Result := TDextJson.Provider.CreateObject;
+  RttiType := TReflection.GetMetadata(AValue.TypeInfo).RttiType;
 
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(AValue.TypeInfo);
-    for Field in RttiType.GetFields do
+  for Field in RttiType.GetFields do
+  begin
+    if ShouldSkipField(Field, AValue) then
+      Continue;
+
+    FieldName := GetFieldName(Field);
+    FieldValue := Field.GetValue(AValue.GetReferenceToRawData);
+
+    // Smart Properties Support: Unwrap Prop<T>
+    if (FieldValue.Kind = tkRecord) and (FieldValue.TypeInfo <> nil) and
+       TReflection.IsSmartProp(FieldValue.TypeInfo) then
     begin
-      if ShouldSkipField(Field, AValue) then
-        Continue;
+      var Meta := TReflection.GetMetadata(FieldValue.TypeInfo);
+      if Meta.ValueField <> nil then
+        FieldValue := Meta.ValueField.GetValue(FieldValue.GetReferenceToRawData);
+    end;
 
-      FieldName := GetFieldName(Field);
-      FieldValue := Field.GetValue(AValue.GetReferenceToRawData);
+    HasCustomFormat := False;
+    CustomFormat := '';
 
-      // Smart Properties Support: Unwrap Prop<T>
-      if (FieldValue.Kind = tkRecord) and (FieldValue.TypeInfo <> nil) and
-         Context.GetType(FieldValue.TypeInfo).Name.StartsWith('Prop<') then
+    for var Attr in Field.GetAttributes do
+    begin
+      if Attr is JsonFormatAttribute then
       begin
-        var FValField := Context.GetType(FieldValue.TypeInfo).GetField('FValue');
-        if FValField <> nil then
-          FieldValue := FValField.GetValue(FieldValue.GetReferenceToRawData);
+        HasCustomFormat := True;
+        CustomFormat := JsonFormatAttribute(Attr).Format;
+        Break;
       end;
+    end;
 
-      HasCustomFormat := False;
-      CustomFormat := '';
+    if (Field.FieldType.Handle = TypeInfo(TGUID)) or (FieldValue.TypeInfo = TypeInfo(TGUID)) then
+    begin
+      Result.SetString(FieldName, GUIDToString(FieldValue.AsType<TGUID>));
+      Continue;
+    end;
 
-      for var Attr in Field.GetAttributes do
-      begin
-        if Attr is JsonFormatAttribute then
+    if (Field.FieldType.Handle = TypeInfo(TUUID)) or (FieldValue.TypeInfo = TypeInfo(TUUID)) then
+    begin
+      Result.SetString(FieldName, FieldValue.AsType<TUUID>.ToString);
+      Continue;
+    end;
+
+    if (FieldValue.TypeInfo.Kind = tkEnumeration) and
+       (FieldValue.TypeInfo <> TypeInfo(Boolean)) then
+    begin
+      case FSettings.EnumStyle of
+        TEnumStyle.AsString:
+          Result.SetString(FieldName, GetEnumName(FieldValue.TypeInfo, FieldValue.AsOrdinal));
+        TEnumStyle.AsNumber:
+          Result.SetInteger(FieldName, FieldValue.AsOrdinal);
+      end;
+      Continue;
+    end;
+
+    case FieldValue.TypeInfo.Kind of
+      tkInteger, tkInt64:
         begin
-          HasCustomFormat := True;
-          CustomFormat := JsonFormatAttribute(Attr).Format;
-          Break;
+          var ForceString := False;
+          for var Attr in Field.GetAttributes do
+            if Attr is JsonStringAttribute then
+              ForceString := True;
+
+          if ForceString then
+            Result.SetString(FieldName, IntToJsonString(FieldValue.AsInt64))
+          else
+            Result.SetInt64(FieldName, FieldValue.AsInt64);
         end;
-      end;
 
-      if (Field.FieldType.Handle = TypeInfo(TGUID)) or (FieldValue.TypeInfo = TypeInfo(TGUID)) then
-      begin
-        Result.SetString(FieldName, GUIDToString(FieldValue.AsType<TGUID>));
-        Continue;
-      end;
-
-      if (Field.FieldType.Handle = TypeInfo(TUUID)) or (FieldValue.TypeInfo = TypeInfo(TUUID)) then
-      begin
-        Result.SetString(FieldName, FieldValue.AsType<TUUID>.ToString);
-        Continue;
-      end;
-
-      if (FieldValue.TypeInfo.Kind = tkEnumeration) and
-         (FieldValue.TypeInfo <> TypeInfo(Boolean)) then
-      begin
-        case FSettings.EnumStyle of
-          TEnumStyle.AsString:
-            Result.SetString(FieldName, GetEnumName(FieldValue.TypeInfo, FieldValue.AsOrdinal));
-          TEnumStyle.AsNumber:
-            Result.SetInteger(FieldName, FieldValue.AsOrdinal);
-        end;
-        Continue;
-      end;
-
-      case FieldValue.TypeInfo.Kind of
-        tkInteger, tkInt64:
+      tkFloat:
+        begin
+        if (FieldValue.TypeInfo = TypeInfo(TDateTime)) or 
+           (FieldValue.TypeInfo = TypeInfo(TDate)) or 
+           (FieldValue.TypeInfo = TypeInfo(TTime)) then
+          begin
+            if HasCustomFormat then
+              Result.SetString(FieldName, FormatDateTime(CustomFormat, FieldValue.AsExtended))
+            else
+              case FSettings.DateFormatStyle of
+                TDateFormat.ISO8601:
+                  Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
+                TDateFormat.UnixTimestamp:
+                  Result.SetInt64(FieldName, DateTimeToUnix(FieldValue.AsExtended));
+                TDateFormat.CustomFormat:
+                  Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
+              end;
+          end
+          else
           begin
             var ForceString := False;
             for var Attr in Field.GetAttributes do
@@ -1380,94 +1383,59 @@ begin
                 ForceString := True;
 
             if ForceString then
-              Result.SetString(FieldName, IntToJsonString(FieldValue.AsInt64))
+              Result.SetString(FieldName, FloatToJsonString(FieldValue.AsExtended))
             else
-              Result.SetInt64(FieldName, FieldValue.AsInt64);
+              Result.SetDouble(FieldName, FieldValue.AsExtended);
           end;
+        end;
 
-        tkFloat:
+      tkString, tkLString, tkWString, tkUString:
+        begin
+          var ForceNumber := False;
+          for var Attr in Field.GetAttributes do
+            if Attr is JsonNumberAttribute then
+              ForceNumber := True;
+
+          if ForceNumber then
           begin
-          if (FieldValue.TypeInfo = TypeInfo(TDateTime)) or 
-             (FieldValue.TypeInfo = TypeInfo(TDate)) or 
-             (FieldValue.TypeInfo = TypeInfo(TTime)) then
-            begin
-              if HasCustomFormat then
-                Result.SetString(FieldName, FormatDateTime(CustomFormat, FieldValue.AsExtended))
-              else
-                case FSettings.DateFormatStyle of
-                  TDateFormat.ISO8601:
-                    Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
-                  TDateFormat.UnixTimestamp:
-                    Result.SetInt64(FieldName, DateTimeToUnix(FieldValue.AsExtended));
-                  TDateFormat.CustomFormat:
-                    Result.SetString(FieldName, FormatDateTime(FSettings.DateFormat, FieldValue.AsExtended));
-                end;
-            end
-            else
-            begin
-              var ForceString := False;
-              for var Attr in Field.GetAttributes do
-                if Attr is JsonStringAttribute then
-                  ForceString := True;
-
-              if ForceString then
-                Result.SetString(FieldName, FloatToJsonString(FieldValue.AsExtended))
-              else
-                Result.SetDouble(FieldName, FieldValue.AsExtended);
-            end;
+            var NumValue := JsonStringToFloat(FieldValue.AsString);
+            Result.SetDouble(FieldName, NumValue);
+          end
+          else
+          begin
+            Result.SetString(FieldName, FieldValue.AsString);
           end;
+        end;
 
-        tkString, tkLString, tkWString, tkUString:
+      tkEnumeration:
+        begin
+          if FieldValue.TypeInfo = TypeInfo(Boolean) then
           begin
-            var ForceNumber := False;
+            var ForceString := False;
             for var Attr in Field.GetAttributes do
-              if Attr is JsonNumberAttribute then
-                ForceNumber := True;
+              if Attr is JsonStringAttribute then
+                ForceString := True;
 
-            if ForceNumber then
-            begin
-              var NumValue := JsonStringToFloat(FieldValue.AsString);
-              Result.SetDouble(FieldName, NumValue);
-            end
+            if ForceString then
+              Result.SetString(FieldName, BoolToStr(FieldValue.AsBoolean, True).ToLower)
             else
-            begin
-              Result.SetString(FieldName, FieldValue.AsString);
-            end;
-          end;
+              Result.SetBoolean(FieldName, FieldValue.AsBoolean);
+          end
+          else
+            Result.SetString(FieldName, GetEnumName(FieldValue.TypeInfo, FieldValue.AsOrdinal));
+        end;
 
-        tkEnumeration:
-          begin
-            if FieldValue.TypeInfo = TypeInfo(Boolean) then
-            begin
-              var ForceString := False;
-              for var Attr in Field.GetAttributes do
-                if Attr is JsonStringAttribute then
-                  ForceString := True;
-
-              if ForceString then
-                Result.SetString(FieldName, BoolToStr(FieldValue.AsBoolean, True))
-              else
-                Result.SetBoolean(FieldName, FieldValue.AsBoolean);
-            end
-            else
-              Result.SetString(FieldName, GetEnumName(FieldValue.TypeInfo, FieldValue.AsOrdinal));
-          end;
-
-        tkRecord:
-          begin
-            var NestedRecord := SerializeRecord(FieldValue);
-            Result.SetObject(FieldName, NestedRecord);
-          end;
-      end;
+      tkRecord:
+        begin
+          var NestedRecord := SerializeRecord(FieldValue);
+          Result.SetObject(FieldName, NestedRecord);
+        end;
     end;
-  finally
-    Context.Free;
   end;
 end;
 
 function TDextSerializer.SerializeObject(const AValue: TValue): IDextJsonObject;
 var
-  Context: TRttiContext;
   Prop: TRttiProperty;
   PropName: string;
   PropValue: TValue;
@@ -1483,108 +1451,103 @@ begin
   if Obj = nil then
     Exit;
 
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(Obj.ClassType);
-    
-    for Prop in RttiType.GetProperties do
-    begin
-      // Skip non-public/published properties
-      if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
-        Continue;
-        
-      // Skip if has JsonIgnore attribute
-      var ShouldSkip := False;
-      for var Attr in Prop.GetAttributes do
-        if Attr is JsonIgnoreAttribute then
-        begin
-          ShouldSkip := True;
-          Break;
-        end;
+  RttiType := TReflection.GetMetadata(Obj.ClassInfo).RttiType;
+  
+  for Prop in RttiType.GetProperties do
+  begin
+    // Skip non-public/published properties
+    if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
+      Continue;
       
-      if ShouldSkip then
-        Continue;
-
-      PropName := ApplyCaseStyle(Prop.Name);
-      
-      // Check for JsonName attribute
-      for var Attr in Prop.GetAttributes do
-        if Attr is JsonNameAttribute then
-        begin
-          PropName := JsonNameAttribute(Attr).Name;
-          Break;
-        end;
-
-      PropValue := Prop.GetValue(Obj);
-
-      // Smart Properties Support: Unwrap Prop<T>
-      if (PropValue.Kind = tkRecord) and (PropValue.TypeInfo <> nil) and
-         Context.GetType(PropValue.TypeInfo).Name.StartsWith('Prop<') then
+    // Skip if has JsonIgnore attribute
+    var ShouldSkip := False;
+    for var Attr in Prop.GetAttributes do
+      if Attr is JsonIgnoreAttribute then
       begin
-        var FValField := Context.GetType(PropValue.TypeInfo).GetField('FValue');
-        if FValField <> nil then
-          PropValue := FValField.GetValue(PropValue.GetReferenceToRawData);
+        ShouldSkip := True;
+        Break;
+      end;
+    
+    if ShouldSkip then
+      Continue;
+
+    PropName := ApplyCaseStyle(Prop.Name);
+    
+    // Check for JsonName attribute
+    for var Attr in Prop.GetAttributes do
+      if Attr is JsonNameAttribute then
+      begin
+        PropName := JsonNameAttribute(Attr).Name;
+        Break;
       end;
 
-      // Handle null/empty values
-      if FSettings.FIgnoreNullValues and PropValue.IsEmpty then
-        Continue;
+    PropValue := Prop.GetValue(Obj);
 
-      // Serialize based on property type
-      case PropValue.TypeInfo.Kind of
-        tkInteger, tkInt64:
-          Result.SetInt64(PropName, PropValue.AsInt64);
-
-        tkFloat:
-          begin
-            if (PropValue.TypeInfo = TypeInfo(TDateTime)) or 
-               (PropValue.TypeInfo = TypeInfo(TDate)) or 
-               (PropValue.TypeInfo = TypeInfo(TTime)) then
-              Result.SetString(PropName, FormatDateTime(FSettings.DateFormat, PropValue.AsExtended))
-            else
-              Result.SetDouble(PropName, PropValue.AsExtended);
-          end;
-
-        tkString, tkLString, tkWString, tkUString:
-          Result.SetString(PropName, PropValue.AsString);
-
-        tkEnumeration:
-          begin
-            if PropValue.TypeInfo = TypeInfo(Boolean) then
-              Result.SetBoolean(PropName, PropValue.AsBoolean)
-            else
-              Result.SetString(PropName, GetEnumName(PropValue.TypeInfo, PropValue.AsOrdinal));
-          end;
-
-        tkRecord:
-          begin
-            if PropValue.TypeInfo = TypeInfo(TGUID) then
-              Result.SetString(PropName, GUIDToString(PropValue.AsType<TGUID>))
-            else if PropValue.TypeInfo = TypeInfo(TUUID) then
-              Result.SetString(PropName, PropValue.AsType<TUUID>.ToString)
-            else
-            begin
-              var NestedRecord := SerializeRecord(PropValue);
-              Result.SetObject(PropName, NestedRecord);
-            end;
-          end;
-
-        tkClass:
-          begin
-            if PropValue.AsObject = nil then
-              Result.SetNull(PropName)
-            else if IsListType(PropValue.TypeInfo) then
-              Result.SetArray(PropName, SerializeList(PropValue))
-            else
-              Result.SetObject(PropName, SerializeObject(PropValue));
-          end;
-
-        tkDynArray:
-          Result.SetArray(PropName, SerializeArray(PropValue));
-      end;
+    // Smart Properties Support: Unwrap Prop<T>
+    if (PropValue.Kind = tkRecord) and (PropValue.TypeInfo <> nil) and
+       TReflection.IsSmartProp(PropValue.TypeInfo) then
+    begin
+      var Meta := TReflection.GetMetadata(PropValue.TypeInfo);
+      if Meta.ValueField <> nil then
+        PropValue := Meta.ValueField.GetValue(PropValue.GetReferenceToRawData);
     end;
-  finally
-    Context.Free;
+
+    // Handle null/empty values
+    if FSettings.FIgnoreNullValues and PropValue.IsEmpty then
+      Continue;
+
+    // Serialize based on property type
+    case PropValue.TypeInfo.Kind of
+      tkInteger, tkInt64:
+        Result.SetInt64(PropName, PropValue.AsInt64);
+
+      tkFloat:
+        begin
+          if (PropValue.TypeInfo = TypeInfo(TDateTime)) or 
+             (PropValue.TypeInfo = TypeInfo(TDate)) or 
+             (PropValue.TypeInfo = TypeInfo(TTime)) then
+            Result.SetString(PropName, FormatDateTime(FSettings.DateFormat, PropValue.AsExtended))
+          else
+            Result.SetDouble(PropName, PropValue.AsExtended);
+        end;
+
+      tkString, tkLString, tkWString, tkUString:
+        Result.SetString(PropName, PropValue.AsString);
+
+      tkEnumeration:
+        begin
+          if PropValue.TypeInfo = TypeInfo(Boolean) then
+            Result.SetBoolean(PropName, PropValue.AsBoolean)
+          else
+            Result.SetString(PropName, GetEnumName(PropValue.TypeInfo, PropValue.AsOrdinal));
+        end;
+
+      tkRecord:
+        begin
+          if PropValue.TypeInfo = TypeInfo(TGUID) then
+            Result.SetString(PropName, GUIDToString(PropValue.AsType<TGUID>))
+          else if PropValue.TypeInfo = TypeInfo(TUUID) then
+            Result.SetString(PropName, PropValue.AsType<TUUID>.ToString)
+          else
+          begin
+            var NestedRecord := SerializeRecord(PropValue);
+            Result.SetObject(PropName, NestedRecord);
+          end;
+        end;
+
+      tkClass:
+        begin
+          if PropValue.AsObject = nil then
+            Result.SetNull(PropName)
+          else if IsListType(PropValue.TypeInfo) then
+            Result.SetArray(PropName, SerializeList(PropValue))
+          else
+            Result.SetObject(PropName, SerializeObject(PropValue));
+        end;
+
+      tkDynArray:
+        Result.SetArray(PropName, SerializeArray(PropValue));
+    end;
   end;
 end;
 

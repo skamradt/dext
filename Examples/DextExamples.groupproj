@@ -93,6 +93,9 @@
         <Projects Include="Core.TestHttpParser\Core.TestHttpParser.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Web.FoodDelivery\DextFood.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -371,14 +374,23 @@
     <Target Name="Core_TestHttpParser:Make">
         <MSBuild Projects="Core.TestHttpParser\Core.TestHttpParser.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DextFood">
+        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj"/>
+    </Target>
+    <Target Name="DextFood:Clean">
+        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextFood:Make">
+        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DatabaseAsApi;Web_DextStore;Web_Dext_Starter_Admin;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_SwaggerExample;Web_SwaggerControllerExample;Web_TaskFlowAPI;Web_UUIDExample;Web_TUUIDBindingExample;Web_OrderAPI;Web_StreamingDemo;Dext_Examples_MultiTenancy;Dext_Examples_ComplexQuerying;DesktopMVUCounter;DesktopMVUCounterFrame;DesktopMVVMCustomerCRUD;CustomerCRUD_Tests;RestClientDemo;Core_TestHttpParser"/>
+        <CallTarget Targets="Core_TestConfig;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DatabaseAsApi;Web_DextStore;Web_Dext_Starter_Admin;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_SwaggerExample;Web_SwaggerControllerExample;Web_TaskFlowAPI;Web_UUIDExample;Web_TUUIDBindingExample;Web_OrderAPI;Web_StreamingDemo;Dext_Examples_MultiTenancy;Dext_Examples_ComplexQuerying;DesktopMVUCounter;DesktopMVUCounterFrame;DesktopMVVMCustomerCRUD;CustomerCRUD_Tests;RestClientDemo;Core_TestHttpParser;DextFood"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DatabaseAsApi:Clean;Web_DextStore:Clean;Web_Dext_Starter_Admin:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_SwaggerExample:Clean;Web_SwaggerControllerExample:Clean;Web_TaskFlowAPI:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;Web_OrderAPI:Clean;Web_StreamingDemo:Clean;Dext_Examples_MultiTenancy:Clean;Dext_Examples_ComplexQuerying:Clean;DesktopMVUCounter:Clean;DesktopMVUCounterFrame:Clean;DesktopMVVMCustomerCRUD:Clean;CustomerCRUD_Tests:Clean;RestClientDemo:Clean;Core_TestHttpParser:Clean"/>
+        <CallTarget Targets="Core_TestConfig:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DatabaseAsApi:Clean;Web_DextStore:Clean;Web_Dext_Starter_Admin:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_SwaggerExample:Clean;Web_SwaggerControllerExample:Clean;Web_TaskFlowAPI:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;Web_OrderAPI:Clean;Web_StreamingDemo:Clean;Dext_Examples_MultiTenancy:Clean;Dext_Examples_ComplexQuerying:Clean;DesktopMVUCounter:Clean;DesktopMVUCounterFrame:Clean;DesktopMVVMCustomerCRUD:Clean;CustomerCRUD_Tests:Clean;RestClientDemo:Clean;Core_TestHttpParser:Clean;DextFood:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DatabaseAsApi:Make;Web_DextStore:Make;Web_Dext_Starter_Admin:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_SwaggerExample:Make;Web_SwaggerControllerExample:Make;Web_TaskFlowAPI:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;Web_OrderAPI:Make;Web_StreamingDemo:Make;Dext_Examples_MultiTenancy:Make;Dext_Examples_ComplexQuerying:Make;DesktopMVUCounter:Make;DesktopMVUCounterFrame:Make;DesktopMVVMCustomerCRUD:Make;CustomerCRUD_Tests:Make;RestClientDemo:Make;Core_TestHttpParser:Make"/>
+        <CallTarget Targets="Core_TestConfig:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DatabaseAsApi:Make;Web_DextStore:Make;Web_Dext_Starter_Admin:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_SwaggerExample:Make;Web_SwaggerControllerExample:Make;Web_TaskFlowAPI:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;Web_OrderAPI:Make;Web_StreamingDemo:Make;Dext_Examples_MultiTenancy:Make;Dext_Examples_ComplexQuerying:Make;DesktopMVUCounter:Make;DesktopMVUCounterFrame:Make;DesktopMVVMCustomerCRUD:Make;CustomerCRUD_Tests:Make;RestClientDemo:Make;Core_TestHttpParser:Make;DextFood:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

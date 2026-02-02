@@ -282,8 +282,9 @@ var
   PropMap: TPropertyMap;
 begin
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(FEntityType);
-  if Typ = nil then Exit;
+  try
+    Typ := Ctx.GetType(FEntityType);
+    if Typ = nil then Exit;
 
   for Attr in Typ.GetAttributes do
   begin
@@ -298,6 +299,9 @@ begin
     if Attr is InheritanceAttribute then FInheritanceStrategy := InheritanceAttribute(Attr).Strategy;
     if Attr is DiscriminatorColumnAttribute then FDiscriminatorColumn := DiscriminatorColumnAttribute(Attr).Name;
     if Attr is DiscriminatorValueAttribute then FDiscriminatorValue := DiscriminatorValueAttribute(Attr).Value;
+  end;
+  finally
+    Ctx.Free;
   end;
 
   for Prop in Typ.GetProperties do
@@ -788,20 +792,24 @@ var
 begin
   Result := nil;
   Ctx := TRttiContext.Create;
-  BaseTyp := Ctx.GetType(ABaseType);
-  if BaseTyp = nil then Exit;
-  
-  for Map in FMaps.Values do
-  begin
-    if (Map.DiscriminatorValue <> Null) and (Map.DiscriminatorValue = AValue) then
+  try
+    BaseTyp := Ctx.GetType(ABaseType);
+    if BaseTyp = nil then Exit;
+    
+    for Map in FMaps.Values do
     begin
-       Typ := Ctx.GetType(Map.EntityType);
-       if (Typ <> nil) and (Typ is TRttiInstanceType) and (BaseTyp is TRttiInstanceType) then
-       begin
-         if TRttiInstanceType(Typ).MetaclassType.InheritsFrom(TRttiInstanceType(BaseTyp).MetaclassType) then
-           Exit(Map);
-       end;
+      if (Map.DiscriminatorValue <> Null) and (Map.DiscriminatorValue = AValue) then
+      begin
+         Typ := Ctx.GetType(Map.EntityType);
+         if (Typ <> nil) and (Typ is TRttiInstanceType) and (BaseTyp is TRttiInstanceType) then
+         begin
+           if TRttiInstanceType(Typ).MetaclassType.InheritsFrom(TRttiInstanceType(BaseTyp).MetaclassType) then
+             Exit(Map);
+         end;
+      end;
     end;
+  finally
+    Ctx.Free;
   end;
 end;
 

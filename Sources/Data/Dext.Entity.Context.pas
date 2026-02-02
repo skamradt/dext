@@ -837,6 +837,7 @@ begin
   finally
     Created.Free;
     Nodes.Free;
+    Ctx.Free;
   end;
 end;
 
@@ -1121,7 +1122,8 @@ var
   ListType: TRttiType;
 begin
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(FParent.ClassType);
+  try
+    Typ := Ctx.GetType(FParent.ClassType);
   Prop := Typ.GetProperty(FPropName);
   if Prop = nil then
     raise Exception.CreateFmt('Property %s not found on %s', [FPropName, Typ.Name]);
@@ -1233,13 +1235,16 @@ begin
   );
   
   var Results := DbSet.ListObjects(Expr);
-  // Add results to collection
-  for var ChildObj in Results do
-  begin
-    if IsInterface then
-      AddMethod.Invoke(Val, [ChildObj])
-    else
-      AddMethod.Invoke(ListObj, [ChildObj]);
+    // Add results to collection
+    for var ChildObj in Results do
+    begin
+      if IsInterface then
+        AddMethod.Invoke(Val, [ChildObj])
+      else
+        AddMethod.Invoke(ListObj, [ChildObj]);
+    end;
+  finally
+    Ctx.Free;
   end;
 end;
 

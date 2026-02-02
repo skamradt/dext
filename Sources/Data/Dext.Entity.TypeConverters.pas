@@ -829,8 +829,25 @@ end;
 { TPropConverter }
 
 function TPropConverter.CanConvert(ATypeInfo: PTypeInfo): Boolean;
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
 begin
-  Result := (ATypeInfo <> nil) and string(ATypeInfo.Name).StartsWith('Prop<');
+  Result := False;
+  if ATypeInfo = nil then Exit;
+  
+  if string(ATypeInfo.Name).StartsWith('Prop<') then
+    Exit(True);
+
+  // Fallback for aliased types: look for FValue field
+  Ctx := TRttiContext.Create;
+  try
+    Typ := Ctx.GetType(ATypeInfo);
+    if (Typ <> nil) and (Typ.TypeKind = tkRecord) then
+      Result := Typ.GetField('FValue') <> nil;
+  finally
+    Ctx.Free;
+  end;
 end;
 
 function TPropConverter.ToDatabase(const AValue: TValue; ADialect: TDatabaseDialect): TValue;
@@ -842,26 +859,30 @@ var
   InnerConverter: ITypeConverter;
 begin
   if AValue.IsEmpty then Exit(TValue.Empty);
-
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(AValue.TypeInfo);
-  // Use Field 'FValue' instead of Property 'Value' to avoid potential RTTI property access issues on generic records
-  Field := Typ.GetField('FValue');
-  
-  if Field <> nil then
-  begin
-    ValPropType := Field.FieldType.Handle;
-    Result := Field.GetValue(AValue.GetReferenceToRawData);
+  try
+    Typ := Ctx.GetType(AValue.TypeInfo);
+    // Use Field 'FValue' instead of Property 'Value' to avoid potential RTTI property access issues on generic records
+    Field := Typ.GetField('FValue');
     
-    // Recursive conversion
-    if Result.IsEmpty then Exit(Result);
-    
-    InnerConverter := TTypeConverterRegistry.Instance.GetConverter(ValPropType);
-    if InnerConverter <> nil then
-      Result := InnerConverter.ToDatabase(Result, ADialect);
-  end
-  else
-    Result := AValue;
+    if Field <> nil then
+    begin
+      ValPropType := Field.FieldType.Handle;
+      Result := Field.GetValue(AValue.GetReferenceToRawData);
+      
+      // Recursive conversion
+      if not Result.IsEmpty then
+      begin
+        InnerConverter := TTypeConverterRegistry.Instance.GetConverter(ValPropType);
+        if InnerConverter <> nil then
+          Result := InnerConverter.ToDatabase(Result, ADialect);
+      end;
+    end
+    else
+      Result := AValue;
+  finally
+    Ctx.Free;
+  end;
 end;
 
 function TPropConverter.FromDatabase(const AValue: TValue; ATypeInfo: PTypeInfo): TValue;
@@ -873,10 +894,13 @@ var
   UnwrappedValue: TValue;
 begin
   TValue.Make(nil, ATypeInfo, Result); // Initialize Prop<T> result
+  // Zero-init record memory to avoid garbage in managed interface/string fields
+  FillChar(Result.GetReferenceToRawData^, ATypeInfo.TypeData.RecSize, 0);
   
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(ATypeInfo);
-  Field := Typ.GetField('FValue');
+  try
+    Typ := Ctx.GetType(ATypeInfo);
+    Field := Typ.GetField('FValue');
   
   if Field <> nil then
   begin
@@ -891,6 +915,9 @@ begin
     end;
       
     Field.SetValue(Result.GetReferenceToRawData, UnwrappedValue);
+  end;
+  finally
+    Ctx.Free;
   end;
 end;
 

@@ -833,7 +833,7 @@ type
 // ===========================================================================
 
 function WebApplication: IWebApplication;
-function Cors: TCorsBuilder;
+function CorsOptions: TCorsBuilder;
 function Swagger: TOpenAPIBuilder;
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
@@ -855,7 +855,7 @@ begin
   Result := TWebApplication.Create;
 end;
 
-function Cors: TCorsBuilder;
+function CorsOptions: TCorsBuilder;
 begin
   Result := TCorsBuilder.Create;
 end;

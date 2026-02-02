@@ -75,7 +75,7 @@ begin
     .UseHttpLogging;
 
   // 🛡️ Configuração granular de CORS
-  Builder.UseCors(Cors
+  Builder.UseCors(CorsOptions
     .AllowAnyOrigin
     .AllowAnyMethod
     .AllowAnyHeader);

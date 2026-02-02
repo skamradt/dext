@@ -116,4 +116,34 @@ Se você passar uma classe para um endpoint (POST/PUT), o Dext usará o `TActiva
 
 ---
 
+## 8. Ciclo de Vida do Startup (Classe vs Interface)
+
+Um erro sutil, mas fatal, ocorre na inicialização da aplicação (`dpr`) se você misturar referências de classe e interface para o objeto `App`.
+
+### A Armadilha do Startup
+Se você declarar a variável `App` usando inferência de tipo (que assume a classe concreta):
+
+```pascal
+var App := TDextApplication.Create; // O compilador assume o tipo TDextApplication (Classe)
+App.UseStartup(TStartup.Create);
+App.Run;
+```
+
+**Sintoma**: Um erro `Invalid pointer operation` ou `Access Violation` ocorre exatamente no final da execução, na saída do método `Startup.Configure`.
+
+**Causa**: O framework espera uma interface `IWebApplication`. Ao usar a classe concreta, o ciclo de vida do ARC (Automatic Reference Counting) pode se confundir quando o objeto sai de contexto no final do `Configure`, tentando destruir o objeto prematuramente ou liberando ponteiros inválidos.
+
+### A Solução
+Declare sempre a variável `App` explicitamente como a interface `IWebApplication`:
+
+```pascal
+var App: IWebApplication := TDextApplication.Create; // USAR SEMPRE INTERFACE
+App.UseStartup(TStartup.Create);
+App.Run;
+```
+
+Isso garante que o Delphi gerencie o contador de referências corretamente durante todo o pipeline de inicialização e encerramento.
+
+---
+
 [← Solução de Problemas](troubleshooting.md) | [Índice do Livro →](../README.md)

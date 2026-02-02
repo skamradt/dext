@@ -804,7 +804,8 @@ begin
     AutoIncColumn := '';
     AutoIncProp := nil;
     Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    try
+      Typ := Ctx.GetType(T);
     
     for Prop in Typ.GetProperties do
     begin
@@ -898,6 +899,9 @@ begin
      var NewId := GetEntityId(T(AEntity)); 
      if not FIdentityMap.ContainsKey(NewId) then
        FIdentityMap.Add(NewId, T(AEntity));
+    finally
+      Ctx.Free;
+    end;
   finally
     Generator.Free;
   end;
@@ -1288,35 +1292,39 @@ begin
   IDs := TList<TValue>.Create;
   FKMap := TDictionary<T, TValue>.Create;
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
-  var NavProp := Typ.GetProperty(PropertyToCheck);
-  if NavProp = nil then Exit;
-  var FoundFK := '';
-  var FKAttr := NavProp.GetAttribute<ForeignKeyAttribute>;
-  if FKAttr <> nil then
-  begin
-    for var Pair in FColumns do
+  try
+    Typ := Ctx.GetType(T);
+    var NavProp := Typ.GetProperty(PropertyToCheck);
+    if NavProp = nil then Exit;
+    var FoundFK := '';
+    var FKAttr := NavProp.GetAttribute<ForeignKeyAttribute>;
+    if FKAttr <> nil then
     begin
-      if SameText(Pair.Value, FKAttr.ColumnName) then
+      for var Pair in FColumns do
       begin
-        FoundFK := Pair.Key;
-        Break;
+        if SameText(Pair.Value, FKAttr.ColumnName) then
+        begin
+          FoundFK := Pair.Key;
+          Break;
+        end;
       end;
     end;
-  end;
-  if FoundFK = '' then
-    FoundFK := PropertyToCheck + 'Id';
-  var FKProp := Typ.GetProperty(FoundFK);
-  if FKProp = nil then Exit;
-  for Ent in AEntities do
-  begin
-    Val := FKProp.GetValue(Pointer(Ent));
-    if TryUnwrapAndValidateFK(Val, Ctx) then
+    if FoundFK = '' then
+      FoundFK := PropertyToCheck + 'Id';
+    var FKProp := Typ.GetProperty(FoundFK);
+    if FKProp = nil then Exit;
+    for Ent in AEntities do
     begin
-      if not IDs.Contains(Val) then
-        IDs.Add(Val);
-      FKMap.Add(Ent, Val);
+      Val := FKProp.GetValue(Pointer(Ent));
+      if TryUnwrapAndValidateFK(Val, Ctx) then
+      begin
+        if not IDs.Contains(Val) then
+          IDs.Add(Val);
+        FKMap.Add(Ent, Val);
+      end;
     end;
+  finally
+    Ctx.Free;
   end;
 end;
 
