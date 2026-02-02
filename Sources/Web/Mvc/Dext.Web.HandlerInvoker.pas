@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -127,18 +127,33 @@ begin
 end;
 
 function THandlerInvoker.Validate(const AValue: TValue): Boolean;
+var
+  ValidationResult: TValidationResult;
+  I: Integer;
 begin
-  if AValue.Kind <> tkRecord then Exit(True);
+  Result := True;
+  
+  // Handle Arrays/Collections
+  if AValue.Kind = tkDynArray then
+  begin
+    for I := 0 to AValue.GetArrayLength - 1 do
+    begin
+      if not Validate(AValue.GetArrayElement(I)) then
+        Exit(False); // Stop at first item with errors for now, or collect all?
+    end;
+    Exit;
+  end;
 
-  var ValidationResult := TValidator.Validate(AValue);
+  if (AValue.Kind <> tkRecord) and (AValue.Kind <> tkClass) then Exit(True);
+  if (AValue.Kind = tkClass) and (AValue.AsObject = nil) then Exit(True);
+
+  ValidationResult := TValidator.Validate(AValue);
   try
     if not ValidationResult.IsValid then
     begin
       FContext.Response.Status(400).Json(TDextJson.Serialize(ValidationResult.Errors));
       Result := False;
-    end
-    else
-      Result := True;
+    end;
   finally
     ValidationResult.Free;
   end;
@@ -214,12 +229,21 @@ function THandlerInvoker.Invoke<T>(AHandler: THandlerProc<T>): Boolean;
 var
   Arg1: T;
 begin
-  Arg1 := ResolveArgument<T>;
+  try
+    Arg1 := ResolveArgument<T>;
 
-  if not Validate(TValue.From<T>(Arg1)) then Exit(False);
+    if not Validate(TValue.From<T>(Arg1)) then Exit(False);
 
-  AHandler(Arg1);
-  Result := True;
+    AHandler(Arg1);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+      FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
+      Result := False;
+    end;
+  end;
 end;
 
 function THandlerInvoker.Invoke<T1, T2>(AHandler: THandlerProc<T1, T2>): Boolean;
@@ -227,14 +251,23 @@ var
   Arg1: T1;
   Arg2: T2;
 begin
-  Arg1 := ResolveArgument<T1>;
-  Arg2 := ResolveArgument<T2>;
+  try
+    Arg1 := ResolveArgument<T1>;
+    Arg2 := ResolveArgument<T2>;
 
-  if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
-  if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+    if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+    if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
 
-  AHandler(Arg1, Arg2);
-  Result := True;
+    AHandler(Arg1, Arg2);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+      FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
+      Result := False;
+    end;
+  end;
 end;
 
 function THandlerInvoker.Invoke<T1, T2, T3>(AHandler: THandlerProc<T1, T2, T3>): Boolean;
@@ -272,18 +305,27 @@ var
   Res: TResult;
   ResIntf: IResult;
 begin
-  Arg1 := ResolveArgument<T>;
+  try
+    Arg1 := ResolveArgument<T>;
 
-  // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
-  if (TypeInfo(T) <> TypeInfo(TGUID)) and (TypeInfo(T) <> TypeInfo(TUUID)) then
-  begin
-    if not Validate(TValue.From<T>(Arg1)) then Exit(False);
+    // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
+    if (TypeInfo(T) <> TypeInfo(TGUID)) and (TypeInfo(T) <> TypeInfo(TUUID)) then
+    begin
+      if not Validate(TValue.From<T>(Arg1)) then Exit(False);
+    end;
+
+    Res := AHandler(Arg1);
+    if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
+      ResIntf.Execute(FContext);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+      FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
+      Result := False;
+    end;
   end;
-
-  Res := AHandler(Arg1);
-  if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
-    ResIntf.Execute(FContext);
-  Result := True;
 end;
 
 function THandlerInvoker.Invoke<T1, T2, TResult>(AHandler: THandlerResultFunc<T1, T2, TResult>): Boolean;
@@ -293,23 +335,32 @@ var
   Res: TResult;
   ResIntf: IResult;
 begin
-  Arg1 := ResolveArgument<T1>;
-  Arg2 := ResolveArgument<T2>;
+  try
+    Arg1 := ResolveArgument<T1>;
+    Arg2 := ResolveArgument<T2>;
 
-  // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
-  if (TypeInfo(T1) <> TypeInfo(TGUID)) and (TypeInfo(T1) <> TypeInfo(TUUID)) then
-  begin
-    if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
-  end;
-  if (TypeInfo(T2) <> TypeInfo(TGUID)) and (TypeInfo(T2) <> TypeInfo(TUUID)) then
-  begin
-    if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
-  end;
+    // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
+    if (TypeInfo(T1) <> TypeInfo(TGUID)) and (TypeInfo(T1) <> TypeInfo(TUUID)) then
+    begin
+      if not Validate(TValue.From<T1>(Arg1)) then Exit(False);
+    end;
+    if (TypeInfo(T2) <> TypeInfo(TGUID)) and (TypeInfo(T2) <> TypeInfo(TUUID)) then
+    begin
+      if not Validate(TValue.From<T2>(Arg2)) then Exit(False);
+    end;
 
-  Res := AHandler(Arg1, Arg2);
-  if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
-    ResIntf.Execute(FContext);
-  Result := True;
+    Res := AHandler(Arg1, Arg2);
+    if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
+      ResIntf.Execute(FContext);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+      FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
+      Result := False;
+    end;
+  end;
 end;
 
 function THandlerInvoker.Invoke<T1, T2, T3, TResult>(AHandler: THandlerResultFunc<T1, T2, T3, TResult>): Boolean;

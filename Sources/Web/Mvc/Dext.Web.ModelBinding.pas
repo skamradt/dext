@@ -361,7 +361,7 @@ begin
     
     // Fallback to legacy string based for now in the non-generic untyped method
     JsonString := TEncoding.UTF8.GetString(Bytes);
-    Settings := TJsonSettings.Default.CaseInsensitive;
+    Settings := TJsonSettings.Default.CaseInsensitive.ServiceProvider(Context.Services);
     Result := TDextJson.Deserialize(AType, JsonString, Settings);
     
   except

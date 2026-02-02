@@ -34,6 +34,8 @@ uses
   System.SysUtils,
   System.TypInfo,
   Dext.Types.UUID,
+  Dext.DI.Interfaces,
+  Dext.Core.Activator,
   Dext.Json.Types;
 
 type
@@ -185,6 +187,7 @@ type
     EnumStyle: TEnumStyle;
     FCaseInsensitive: Boolean;
     DateFormatStyle: TDateFormat;
+    FServiceProvider: Dext.DI.Interfaces.IServiceProvider;
     
     /// <summary>
     ///   Returns the default settings.
@@ -230,6 +233,9 @@ type
     /// <summary>Uses a custom date format.</summary>
     function CustomDateFormat(const Format: string): TJsonSettings;
     
+    /// <summary>Sets the service provider for DI-enabled instantiation.</summary>
+    function ServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
+    
     // =====================================================================
     // Deprecated API (with 'With' prefix) - for backward compatibility
     // =====================================================================
@@ -244,6 +250,7 @@ type
     function WithISODateFormat: TJsonSettings; deprecated 'Use ISODateFormat instead';
     function WithUnixTimestamp: TJsonSettings; deprecated 'Use UnixTimestamp instead';
     function WithCustomDateFormat(const Format: string): TJsonSettings; deprecated 'Use CustomDateFormat instead';
+    function WithServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings; deprecated 'Use ServiceProvider instead';
   end;
   
   /// <summary>Deprecated alias for TJsonSettings.</summary>
@@ -664,6 +671,12 @@ begin
   Result.DateFormat := Format;
 end;
 
+function TJsonSettings.ServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
+begin
+  Result := Self;
+  Result.FServiceProvider := AProvider;
+end;
+
 // =====================================================================
 // Deprecated API implementations (delegate to new methods)
 // =====================================================================
@@ -716,6 +729,11 @@ end;
 function TJsonSettings.WithCustomDateFormat(const Format: string): TJsonSettings;
 begin
   Result := CustomDateFormat(Format);
+end;
+
+function TJsonSettings.WithServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
+begin
+  Result := ServiceProvider(AProvider);
 end;
 
 { TDextJson }
@@ -882,27 +900,19 @@ var
   ActualPropName: string;
   Found: Boolean;
   Instance: TObject;
-  CreateMethod: TRttiMethod;
 begin
   Context := TRttiContext.Create;
   try
     RttiType := Context.GetType(AType);
     
-    // Create Instance
-    CreateMethod := RttiType.GetMethod('Create');
-    if (CreateMethod <> nil) and (Length(CreateMethod.GetParameters) = 0) then
-    begin
-      Result := CreateMethod.Invoke(RttiType.AsInstance.MetaclassType, []);
-      Instance := Result.AsObject;
-    end
+    // Create Instance using TActivator for full DI support and robust constructor resolution
+    if FSettings.FServiceProvider <> nil then
+       Instance := TActivator.CreateInstance(FSettings.FServiceProvider, GetTypeData(AType)^.ClassType)
     else
-    begin
-       // Try parameterless constructor if found by naming convention or common pattern?
-       // For now, assume parameterless Create exists or use Activator if we had one.
-       // Fallback: try to find any constructor?
-       // Dext.Core.Activator uses a more robust approach, but here we stick to RTTI for now.
-       raise EDextJsonException.CreateFmt('Cannot find parameterless constructor for %s', [AType.NameFld.ToString]);
-    end;
+       Instance := TActivator.CreateInstance(GetTypeData(AType)^.ClassType, []);
+    
+    Result := Instance;
+
 
     for Prop in RttiType.GetProperties do
     begin

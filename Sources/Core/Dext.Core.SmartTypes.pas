@@ -104,6 +104,7 @@ type
   ///   When FInfo is assigned (via TPrototype), operators generate Expression Trees.
   ///   When FInfo is nil (normal usage), operators perform runtime comparisons.
   /// </summary>
+  {$RTTI EXPLICIT FIELDS([vcPrivate..vcPublished])}
   Prop<T> = record
   private
     FValue: T;

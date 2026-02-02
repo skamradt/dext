@@ -317,7 +317,12 @@ begin
             FPKColumns.Add(ColName);
       end;
     end;
-    FProps.Add(ColName.ToLower, Prop);
+
+    // Navigation properties (Lazy<T>) should not be hydrated from DB fields directly
+    // They are handled by the Lazy Injector. We only add them to FColumns for SQL generation.
+    if not Prop.PropertyType.Name.StartsWith('Lazy<') then
+      FProps.Add(ColName.ToLower, Prop);
+      
     FColumns.Add(Prop.Name, ColName);
     
     // Check for backing field mapping - either explicit from fluent mapping or auto-detect for Smart Types
@@ -1241,7 +1246,7 @@ begin
       begin
         SafeWriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
         raise;
-    end;
+      end;
     end;
 
     if (LSpec <> nil) and (Length(LSpec.GetIncludes) > 0) then

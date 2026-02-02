@@ -97,6 +97,7 @@
 - [Referência do Sistema de Tipos](apendice/sistema-tipos.md)
 - [Dialetos de Banco de Dados](apendice/dialetos.md)
 - [Solução de Problemas](apendice/solucao-problemas.md)
+- [Guia de Depuração Avançada](apendice/debug-avancado.md)
 
 ---
 

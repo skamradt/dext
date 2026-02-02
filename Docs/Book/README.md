@@ -97,6 +97,7 @@
 - [Type System Reference](appendix/type-system.md)
 - [Database Dialects](appendix/dialects.md)
 - [Troubleshooting](appendix/troubleshooting.md)
+- [Advanced Debugging Guide](appendix/debugging-guide.md)
 
 ---
 
