@@ -37,6 +37,7 @@ uses
   Dext.Entity.Core,
   Dext.Entity.Attributes,
   Dext.Types.Lazy,
+  Dext.Types.Nullable,
   Dext.Specifications.Types,
   Dext.Specifications.Interfaces,
   Dext.Core.Activator;
@@ -85,62 +86,26 @@ implementation
 /// </summary>
 function TryUnwrapAndValidateFK(var AValue: TValue; AContext: TRttiContext): Boolean;
 var
-  RType: TRttiType;
-  TypeName: string;
-  Fields: TArray<TRttiField>;
-  HasValueField, ValueField: TRttiField;
-  HasValue: Boolean;
+  Helper: TNullableHelper;
   Instance: Pointer;
 begin
   Result := False;
   
   // Handle Nullable<T> unwrapping
-  if AValue.Kind = tkRecord then
+  if IsNullable(AValue.TypeInfo) then
   begin
-    RType := AContext.GetType(AValue.TypeInfo);
-    if RType <> nil then
-    begin
-      TypeName := RType.Name;
+      Helper := TNullableHelper.Create(AValue.TypeInfo);
+      Instance := AValue.GetReferenceToRawData;
       
-      // Check if it's a Nullable<T> by name (Delphi doesn't generate RTTI for generic record properties)
-      if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+      if not Helper.HasValue(Instance) then
       begin
-        // Access fields directly since GetProperty won't work for generic records
-        Fields := RType.GetFields;
-        HasValueField := nil;
-        ValueField := nil;
-        
-        // Find fHasValue and fValue fields
-        for var Field in Fields do
-        begin
-          if Field.Name.ToLower.Contains('hasvalue') then
-            HasValueField := Field
-          else if Field.Name.ToLower = 'fvalue' then
-            ValueField := Field;
-        end;
-        
-        if (HasValueField <> nil) and (ValueField <> nil) then
-        begin
-          Instance := AValue.GetReferenceToRawData;
-          
-          // Check HasValue - it can be a string (Spring4D) or Boolean
-          var HasValueVal := HasValueField.GetValue(Instance);
-          if HasValueVal.Kind = tkUString then
-            HasValue := HasValueVal.AsString <> ''
-          else if HasValueVal.Kind = tkEnumeration then
-            HasValue := HasValueVal.AsBoolean
-          else
-            HasValue := False;
-            
-          if not HasValue then Exit; // Null, nothing to load
-          
-          // Get the actual value
-          AValue := ValueField.GetValue(Instance);
-        end
-        else
-          Exit; // Couldn't find fields, treat as invalid
+        // Null value is valid (conceptually) but means "no FK to traverse"
+        // Return False to skip loading
+        Exit; 
       end;
-    end;
+        
+      // Get the underlying value
+      AValue := Helper.GetValue(Instance);
   end;
 
   if AValue.IsEmpty then Exit;
@@ -293,6 +258,7 @@ function TLazyLoader.GetValue: TValue;
 begin
   if not FLoaded then
     LoadValue;
+
   Result := FValue;
 end;
 
@@ -468,6 +434,7 @@ begin
         // Load Reference (unchanged logic)
         FKPropName := FPropName + 'Id';
         FKProp := Ctx.GetType(FEntity.ClassType).GetProperty(FKPropName);
+        
         if FKProp <> nil then
         begin
             FKVal := FKProp.GetValue(FEntity);
@@ -481,7 +448,8 @@ begin
                 TargetSet := GetDbContext.DataSet(TargetType);
                 LoadedObj := TargetSet.FindObject(FKVal.AsVariant);
                 
-                FValue := TValue.From(LoadedObj);
+                if LoadedObj <> nil then
+                     FValue := TValue.From(LoadedObj);
             end;
         end;
     end;
@@ -489,7 +457,10 @@ begin
     FLoaded := True;
   except
     on E: Exception do
+    begin
+      // Suppress loading errors for now
       FLoaded := True;
+    end;
   end;
 finally
   Ctx.Free;

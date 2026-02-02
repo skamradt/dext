@@ -832,11 +832,19 @@ function TPropConverter.CanConvert(ATypeInfo: PTypeInfo): Boolean;
 var
   Ctx: TRttiContext;
   Typ: TRttiType;
+  TypeName: string;
 begin
   Result := False;
   if ATypeInfo = nil then Exit;
   
-  if string(ATypeInfo.Name).StartsWith('Prop<') then
+  TypeName := string(ATypeInfo.Name);
+  
+  // Explicitly exclude Nullable types as they are handled by TValueConverter/TReflection
+  // and require setting FHasValue which TPropConverter doesn't do.
+  if TypeName.StartsWith('Nullable<') or TypeName.StartsWith('TNullable') then
+    Exit(False);
+  
+  if TypeName.StartsWith('Prop<') then
     Exit(True);
 
   // Fallback for aliased types: look for FValue field

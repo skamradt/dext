@@ -180,6 +180,9 @@ type
 
 implementation
 
+uses
+  Dext.Core.Reflection;
+
 { TSQLParamCollector }
 
 constructor TSQLParamCollector.Create(AParams: TDictionary<string, TValue>);
@@ -1075,11 +1078,21 @@ begin
       
       Val := Prop.GetValue(Pointer(AEntity));
       
-      // Check for Nullable<T>
-      if IsNullable(Val.TypeInfo) then
+      // Check for Nullable<T> using TReflection (Cached & Reliable)
+      var Meta := TReflection.GetMetadata(Val.TypeInfo);
+      if Meta.IsNullable and (Meta.HasValueField <> nil) then
       begin
-        NullableHelper := TNullableHelper.Create(Val.TypeInfo);
-        if not NullableHelper.HasValue(Val.GetReferenceToRawData) then
+        // Check HasValue directly via Field
+        // Note: Field.GetValue returns TValue, we check boolean state
+        var HasValueVal := Meta.HasValueField.GetValue(Val.GetReferenceToRawData);
+        var HasValue: Boolean := False;
+        
+        if HasValueVal.Kind = tkUString then
+           HasValue := HasValueVal.AsString <> ''
+        else if HasValueVal.Kind = tkEnumeration then
+           HasValue := HasValueVal.AsBoolean;
+
+        if not HasValue then
         begin
           // It is NULL.
           SBVals.Append('NULL');
@@ -1087,8 +1100,9 @@ begin
         end
         else
         begin
-          // It has value. Extract it.
-          Val := NullableHelper.GetValue(Val.GetReferenceToRawData);
+          // It has value. Extract it using ValueField
+          if Meta.ValueField <> nil then
+             Val := Meta.ValueField.GetValue(Val.GetReferenceToRawData);
         end;
       end;
 

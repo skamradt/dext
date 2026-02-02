@@ -596,9 +596,13 @@ begin
         
         // Use centralized reflection helper that handles Smart Types, Nullables and conversion
         if FFields.TryGetValue(ColName.ToLower, Field) then
-          TReflection.SetValue(Pointer(Result), Field, Val)
+        begin
+          TReflection.SetValue(Pointer(Result), Field, Val);
+        end
         else if FProps.TryGetValue(ColName.ToLower, Prop) then
+        begin
           TReflection.SetValue(Pointer(Result), Prop, Val);
+        end;
       except
         on E: Exception do
         begin
