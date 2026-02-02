@@ -86,4 +86,34 @@ Dext uses `TFormatSettings.Invariant` for JSON parsing. If your app crashes with
 
 ---
 
+## 6. Internal Memory Laws (RTTI & Managed Records)
+
+If you are developing or extending the framework, or using complex types like `Prop<T>` (Smart Types), you must know the Delphi memory laws applied to Dext:
+
+### The Law of Record Initialization
+Records containing managed fields (interfaces, strings, dynamic arrays) **must** be explicitly initialized if they are created via direct memory manipulation or `TValue.Make`.
+- **Symptom**: `Invalid pointer operation` or random `Access Violation` during `TReflection.SetValue`.
+- **Cause**: Delphi RTTI attempts to free the "garbage pointer" that was in memory before assigning the new interface value.
+- **Solution**: The framework now handles this automatically, but if you create records manually, use `FillChar(Ptr^, Size, 0)` on newly created records to ensure everything starts as `nil`.
+
+### The Law of RTTI Lifecycle (Dangling Pointers)
+RTTI objects (`TRttiType`, `TRttiField`, `TRttiProperty`) are only valid as long as their `TRttiContext` exists.
+- **Symptom**: Access Violation on the second or third execution of an endpoint, but works on the first.
+- **Cause**: Type metadata was cached, but the `TRttiContext` that generated it was destroyed (e.g., it was a local variable in a constructor), leaving pointers pointing to freed memory.
+- **Solution**: Always use Dext's reflection infrastructure (`TReflection`), which maintains a stable global context throughout the application's life.
+
+---
+
+## 7. Model Binding with Dependency Injection
+
+Dext now supports dependency injection directly in the class binding process.
+
+### How it Works
+If you pass a class to an endpoint (POST/PUT), Dext will use the `TActivator` to instantiate it. This means if your class has dependencies in the constructor (like a Logger or a Configuration), they will be automatically resolved.
+
+- **Configuration**: The binding automatically injects the current request's `ServiceProvider` into the serializer.
+- **Advantage**: Your entities and input models can be "smart" and have access to system services from birth.
+
+---
+
 [← Troubleshooting](troubleshooting.md) | [Book Index →](../README.md)

@@ -86,4 +86,34 @@ O Dext utiliza `TFormatSettings.Invariant` para o parsing de JSON. Se sua aplica
 
 ---
 
+## 6. Leis de Memória Interna (RTTI & Managed Records)
+
+Se você estiver desenvolvendo ou estendendo o framework, ou usando tipos complexos como `Prop<T>` (Smart Types), deve conhecer as leis de memória do Delphi aplicadas ao Dext:
+
+### A Lei da Inicialização de Records
+Records que contêm campos gerenciados (interfaces, strings, arrays dinâmicos) **devem** ser explicitamente inicializados se forem criados via manipulação direta de memória ou `TValue.Make`.
+- **Sintoma**: `Invalid pointer operation` ou `Access Violation` aleatório durante o `TReflection.SetValue`.
+- **Causa**: O RTTI do Delphi tenta liberar o "ponteiro lixo" que estava na memória antes de atribuir o novo valor da interface.
+- **Solução**: O framework agora faz isso automaticamente, mas se você criar records manualmente, use `FillChar(Ptr^, Size, 0)` em records recém-criados para garantir que tudo comece como `nil`.
+
+### A Lei do Ciclo de Vida do RTTI (Dangling Pointers)
+Objetos de RTTI (`TRttiType`, `TRttiField`, `TRttiProperty`) são válidos apenas enquanto o seu `TRttiContext` existir.
+- **Sintoma**: Access Violation na segunda ou terceira execução de um endpoint, mas funciona na primeira.
+- **Causa**: O metadado do tipo foi cacheado, mas o `TRttiContext` que o gerou foi destruído (ex: era uma variável local de um construtor), deixando ponteiros apontando para memória liberada.
+- **Solução**: Use sempre a infraestrutura de reflexão do Dext (`TReflection`), que mantém um contexto global estável durante toda a vida da aplicação.
+
+---
+
+## 7. Model Binding com Injeção de Dependências
+
+O Dext agora suporta injeção de dependências diretamente no processo de binding de classes.
+
+### Como funciona
+Se você passar uma classe para um endpoint (POST/PUT), o Dext usará o `TActivator` para instanciá-la. Isso significa que se sua classe tiver dependências no construtor (como um Logger ou uma Configuração), elas serão resolvidas automaticamente.
+
+- **Configuração**: O binding injeta automaticamente o `ServiceProvider` da requisição atual no serializador.
+- **Vantagem**: Suas entidades e modelos de entrada podem ser "inteligentes" e ter acesso a serviços do sistema desde o nascimento.
+
+---
+
 [← Solução de Problemas](troubleshooting.md) | [Índice do Livro →](../README.md)
