@@ -1483,6 +1483,7 @@ begin
 
     PropValue := Prop.GetValue(Obj);
 
+
     // Smart Properties Support: Unwrap Prop<T>
     if (PropValue.Kind = tkRecord) and (PropValue.TypeInfo <> nil) and
        TReflection.IsSmartProp(PropValue.TypeInfo) then

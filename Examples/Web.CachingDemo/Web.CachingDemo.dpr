@@ -27,8 +27,8 @@ begin
       procedure(Cache: TResponseCacheBuilder)
       begin
         Cache
-          .WithDefaultDuration(30)
-          .WithMaxSize(100)
+          .DefaultDuration(30)
+          .MaxSize(100)
           .VaryByQueryString;
       end);
       

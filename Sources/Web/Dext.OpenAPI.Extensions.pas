@@ -284,13 +284,13 @@ begin
     
     if RequestType <> nil then 
     begin
-      SafeWriteLn('DEBUG: Setting RequestType for ' + Metadata.Path + ' to ' + string(RequestType.Name));
+      // SafeWriteLn('DEBUG: Setting RequestType for ' + Metadata.Path + ' to ' + string(RequestType.Name));
       Metadata.RequestType := RequestType;
     end;
       
     if ResponseType <> nil then 
     begin
-      SafeWriteLn('DEBUG: Setting ResponseType for ' + Metadata.Path + ' to ' + string(ResponseType.Name));
+      // SafeWriteLn('DEBUG: Setting ResponseType for ' + Metadata.Path + ' to ' + string(ResponseType.Name));
       Metadata.ResponseType := ResponseType;
     end;
       

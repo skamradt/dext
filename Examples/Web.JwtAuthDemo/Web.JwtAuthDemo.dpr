@@ -9,7 +9,6 @@ uses
   System.DateUtils,
   System.Rtti,
   Dext.Web.WebApplication,
-  Dext.DI.Extensions,
   Dext.Web.Interfaces,
   Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.Results,

@@ -1,4 +1,4 @@
-﻿program DextFood;
+﻿program Web.DextFood;
 
 {$APPTYPE CONSOLE}
 
@@ -9,7 +9,6 @@ uses
   DextFood.Startup in 'DextFood.Startup.pas',
   DextFood.Domain in 'DextFood.Domain.pas',
   DextFood.Services in 'DextFood.Services.pas',
-  DextFood.Hubs in 'DextFood.Hubs.pas',
   DextFood.DbSeeder in 'DextFood.DbSeeder.pas';
 
 begin
@@ -32,6 +31,7 @@ begin
     Writeln('  GET  /health');
     Writeln('  POST /api/orders');
     Writeln('  GET  /api/orders/high-value');
+    Writeln('  CRUD /api/super-orders');
     Writeln;
     Writeln('Pressione Enter para encerrar.');
     

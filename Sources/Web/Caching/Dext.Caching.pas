@@ -202,12 +202,12 @@ type
     /// <summary>
     ///   Sets the default cache duration in seconds.
     /// </summary>
-    function WithDefaultDuration(ASeconds: Integer): TResponseCacheBuilder;
+    function DefaultDuration(ASeconds: Integer): TResponseCacheBuilder;
     
     /// <summary>
     ///   Sets the maximum cache size (for memory store).
     /// </summary>
-    function WithMaxSize(ASize: Integer): TResponseCacheBuilder;
+    function MaxSize(ASize: Integer): TResponseCacheBuilder;
     
     /// <summary>
     ///   Enables varying cache by query string.
@@ -227,7 +227,7 @@ type
     /// <summary>
     ///   Sets a custom cache store implementation.
     /// </summary>
-    function WithStore(const AStore: ICacheStore): TResponseCacheBuilder;
+    function Store(const AStore: ICacheStore): TResponseCacheBuilder;
     
     /// <summary>
     ///   Builds and returns the cache options.
@@ -693,13 +693,13 @@ begin
   FOptions := TResponseCacheOptions.Create;
 end;
 
-function TResponseCacheBuilder.WithDefaultDuration(ASeconds: Integer): TResponseCacheBuilder;
+function TResponseCacheBuilder.DefaultDuration(ASeconds: Integer): TResponseCacheBuilder;
 begin
   FOptions.DefaultDuration := ASeconds;
   Result := Self;
 end;
 
-function TResponseCacheBuilder.WithMaxSize(ASize: Integer): TResponseCacheBuilder;
+function TResponseCacheBuilder.MaxSize(ASize: Integer): TResponseCacheBuilder;
 begin
   FOptions.MaxSize := ASize;
   Result := Self;
@@ -731,7 +731,7 @@ begin
   Result := Self;
 end;
 
-function TResponseCacheBuilder.WithStore(const AStore: ICacheStore): TResponseCacheBuilder;
+function TResponseCacheBuilder.Store(const AStore: ICacheStore): TResponseCacheBuilder;
 begin
   FOptions.CacheStore := AStore;
   Result := Self;

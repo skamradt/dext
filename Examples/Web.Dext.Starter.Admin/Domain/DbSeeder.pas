@@ -6,7 +6,6 @@ uses
   System.SysUtils,
   System.Hash,
   Dext.DI.Interfaces,
-  Dext.DI.Extensions,
   Dext.Entity,
   DbContext,
   User,

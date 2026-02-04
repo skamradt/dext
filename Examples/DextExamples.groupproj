@@ -12,13 +12,10 @@
         <Projects Include="Desktop.MVVM.CustomerCRUD\CustomerCRUD.Tests.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.FoodDelivery\DextFood.dproj">
+        <Projects Include="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Desktop.MVU.Counter\DesktopMVUCounter.dproj">
@@ -42,28 +39,34 @@
         <Projects Include="Net.RestClient.Demo\RestClientDemo.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Web.CachingDemo\Web.CachingDemo.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="Web.ControllerExample\Web.ControllerExample.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.ControllerExample\Web.ControllerExample.FluentAPI.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.CachingDemo\Web.CachingDemo.dproj">
+        <Projects Include="Web.DatabaseAsApi\Web.DatabaseAsApi.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.DatabaseAsApi\Web.DatabaseAsApi.dproj">
+        <Projects Include="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.DextStore\Web.DextStore.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj">
+        <Projects Include="Web.FoodDelivery\Web.DextFood.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.JwtAuthDemo\Web.JwtAuthDemo.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.MinimalAPI\Web.MinimalAPIExample.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Web.OrderAPI\Web.OrderAPI.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.RateLimitDemo\Web.RateLimitDemo.dproj">
@@ -75,25 +78,22 @@
         <Projects Include="Web.SslDemo\Web.SslDemo.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.SwaggerExample\Web.SwaggerExample.dproj">
+        <Projects Include="Web.StreamingDemo\Web.StreamingDemo.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.SwaggerControllerExample\Web.SwaggerControllerExample.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.TaskFlowAPI\Web.TaskFlowAPI.dproj">
+        <Projects Include="Web.SwaggerExample\Web.SwaggerExample.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.UUIDExample\Web.UUIDExample.dproj">
+        <Projects Include="Web.TaskFlowAPI\Web.TaskFlowAPI.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Web.OrderAPI\Web.OrderAPI.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="Web.StreamingDemo\Web.StreamingDemo.dproj">
+        <Projects Include="Web.UUIDExample\Web.UUIDExample.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -131,14 +131,14 @@
     <Target Name="CustomerCRUD_Tests:Make">
         <MSBuild Projects="Desktop.MVVM.CustomerCRUD\CustomerCRUD.Tests.dproj" Targets="Make"/>
     </Target>
-    <Target Name="DextFood">
-        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj"/>
+    <Target Name="Dext_Examples_ComplexQuerying">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj"/>
     </Target>
-    <Target Name="DextFood:Clean">
-        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj" Targets="Clean"/>
+    <Target Name="Dext_Examples_ComplexQuerying:Clean">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="DextFood:Make">
-        <MSBuild Projects="Web.FoodDelivery\DextFood.dproj" Targets="Make"/>
+    <Target Name="Dext_Examples_ComplexQuerying:Make">
+        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Make"/>
     </Target>
     <Target Name="Dext_Examples_MultiTenancy">
         <MSBuild Projects="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj"/>
@@ -148,15 +148,6 @@
     </Target>
     <Target Name="Dext_Examples_MultiTenancy:Make">
         <MSBuild Projects="Dext.Examples.MultiTenancy\Dext.Examples.MultiTenancy.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Dext_Examples_ComplexQuerying">
-        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj"/>
-    </Target>
-    <Target Name="Dext_Examples_ComplexQuerying:Clean">
-        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Dext_Examples_ComplexQuerying:Make">
-        <MSBuild Projects="Dext.Examples.ComplexQuerying\Dext.Examples.ComplexQuerying.dproj" Targets="Make"/>
     </Target>
     <Target Name="DesktopMVUCounter">
         <MSBuild Projects="Desktop.MVU.Counter\DesktopMVUCounter.dproj"/>
@@ -221,6 +212,15 @@
     <Target Name="RestClientDemo:Make">
         <MSBuild Projects="Net.RestClient.Demo\RestClientDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Web_CachingDemo">
+        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj"/>
+    </Target>
+    <Target Name="Web_CachingDemo:Clean">
+        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_CachingDemo:Make">
+        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Web_ControllerExample">
         <MSBuild Projects="Web.ControllerExample\Web.ControllerExample.dproj"/>
     </Target>
@@ -239,15 +239,6 @@
     <Target Name="Web_ControllerExample_FluentAPI:Make">
         <MSBuild Projects="Web.ControllerExample\Web.ControllerExample.FluentAPI.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Web_CachingDemo">
-        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj"/>
-    </Target>
-    <Target Name="Web_CachingDemo:Clean">
-        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Web_CachingDemo:Make">
-        <MSBuild Projects="Web.CachingDemo\Web.CachingDemo.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Web_DatabaseAsApi">
         <MSBuild Projects="Web.DatabaseAsApi\Web.DatabaseAsApi.dproj"/>
     </Target>
@@ -256,6 +247,15 @@
     </Target>
     <Target Name="Web_DatabaseAsApi:Make">
         <MSBuild Projects="Web.DatabaseAsApi\Web.DatabaseAsApi.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin">
+        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin:Clean">
+        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_Dext_Starter_Admin:Make">
+        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Make"/>
     </Target>
     <Target Name="Web_DextStore">
         <MSBuild Projects="Web.DextStore\Web.DextStore.dproj"/>
@@ -266,14 +266,14 @@
     <Target Name="Web_DextStore:Make">
         <MSBuild Projects="Web.DextStore\Web.DextStore.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Web_Dext_Starter_Admin">
-        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj"/>
+    <Target Name="Web_DextFood">
+        <MSBuild Projects="Web.FoodDelivery\Web.DextFood.dproj"/>
     </Target>
-    <Target Name="Web_Dext_Starter_Admin:Clean">
-        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Clean"/>
+    <Target Name="Web_DextFood:Clean">
+        <MSBuild Projects="Web.FoodDelivery\Web.DextFood.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Web_Dext_Starter_Admin:Make">
-        <MSBuild Projects="Web.Dext.Starter.Admin\Web.Dext.Starter.Admin.dproj" Targets="Make"/>
+    <Target Name="Web_DextFood:Make">
+        <MSBuild Projects="Web.FoodDelivery\Web.DextFood.dproj" Targets="Make"/>
     </Target>
     <Target Name="Web_JwtAuthDemo">
         <MSBuild Projects="Web.JwtAuthDemo\Web.JwtAuthDemo.dproj"/>
@@ -292,6 +292,15 @@
     </Target>
     <Target Name="Web_MinimalAPIExample:Make">
         <MSBuild Projects="Web.MinimalAPI\Web.MinimalAPIExample.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_OrderAPI">
+        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj"/>
+    </Target>
+    <Target Name="Web_OrderAPI:Clean">
+        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_OrderAPI:Make">
+        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj" Targets="Make"/>
     </Target>
     <Target Name="Web_RateLimitDemo">
         <MSBuild Projects="Web.RateLimitDemo\Web.RateLimitDemo.dproj"/>
@@ -320,14 +329,14 @@
     <Target Name="Web_SslDemo:Make">
         <MSBuild Projects="Web.SslDemo\Web.SslDemo.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Web_SwaggerExample">
-        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj"/>
+    <Target Name="Web_StreamingDemo">
+        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj"/>
     </Target>
-    <Target Name="Web_SwaggerExample:Clean">
-        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj" Targets="Clean"/>
+    <Target Name="Web_StreamingDemo:Clean">
+        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Web_SwaggerExample:Make">
-        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj" Targets="Make"/>
+    <Target Name="Web_StreamingDemo:Make">
+        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Web_SwaggerControllerExample">
         <MSBuild Projects="Web.SwaggerControllerExample\Web.SwaggerControllerExample.dproj"/>
@@ -338,6 +347,15 @@
     <Target Name="Web_SwaggerControllerExample:Make">
         <MSBuild Projects="Web.SwaggerControllerExample\Web.SwaggerControllerExample.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Web_SwaggerExample">
+        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj"/>
+    </Target>
+    <Target Name="Web_SwaggerExample:Clean">
+        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_SwaggerExample:Make">
+        <MSBuild Projects="Web.SwaggerExample\Web.SwaggerExample.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Web_TaskFlowAPI">
         <MSBuild Projects="Web.TaskFlowAPI\Web.TaskFlowAPI.dproj"/>
     </Target>
@@ -346,15 +364,6 @@
     </Target>
     <Target Name="Web_TaskFlowAPI:Make">
         <MSBuild Projects="Web.TaskFlowAPI\Web.TaskFlowAPI.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Web_UUIDExample">
-        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj"/>
-    </Target>
-    <Target Name="Web_UUIDExample:Clean">
-        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Web_UUIDExample:Make">
-        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Make"/>
     </Target>
     <Target Name="Web_TUUIDBindingExample">
         <MSBuild Projects="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj"/>
@@ -365,32 +374,23 @@
     <Target Name="Web_TUUIDBindingExample:Make">
         <MSBuild Projects="Web.TUUIDBindingExample\Web.TUUIDBindingExample.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Web_OrderAPI">
-        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj"/>
+    <Target Name="Web_UUIDExample">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj"/>
     </Target>
-    <Target Name="Web_OrderAPI:Clean">
-        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj" Targets="Clean"/>
+    <Target Name="Web_UUIDExample:Clean">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Web_OrderAPI:Make">
-        <MSBuild Projects="Web.OrderAPI\Web.OrderAPI.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Web_StreamingDemo">
-        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj"/>
-    </Target>
-    <Target Name="Web_StreamingDemo:Clean">
-        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Web_StreamingDemo:Make">
-        <MSBuild Projects="Web.StreamingDemo\Web.StreamingDemo.dproj" Targets="Make"/>
+    <Target Name="Web_UUIDExample:Make">
+        <MSBuild Projects="Web.UUIDExample\Web.UUIDExample.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Core_TestConfig;Core_TestHttpParser;CustomerCRUD_Tests;DextFood;Dext_Examples_MultiTenancy;Dext_Examples_ComplexQuerying;DesktopMVUCounter;DesktopMVUCounterFrame;DesktopMVVMCustomerCRUD;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;RestClientDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_CachingDemo;Web_DatabaseAsApi;Web_DextStore;Web_Dext_Starter_Admin;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_SwaggerExample;Web_SwaggerControllerExample;Web_TaskFlowAPI;Web_UUIDExample;Web_TUUIDBindingExample;Web_OrderAPI;Web_StreamingDemo"/>
+        <CallTarget Targets="Core_TestConfig;Core_TestHttpParser;CustomerCRUD_Tests;Dext_Examples_ComplexQuerying;Dext_Examples_MultiTenancy;DesktopMVUCounter;DesktopMVUCounterFrame;DesktopMVVMCustomerCRUD;Orm_EntityDemo;Orm_EntityStyles;Orm_SpecificationDemo;RestClientDemo;Web_CachingDemo;Web_ControllerExample;Web_ControllerExample_FluentAPI;Web_DatabaseAsApi;Web_Dext_Starter_Admin;Web_DextStore;Web_DextFood;Web_JwtAuthDemo;Web_MinimalAPIExample;Web_OrderAPI;Web_RateLimitDemo;Web_SmartPropsDemo;Web_SslDemo;Web_StreamingDemo;Web_SwaggerControllerExample;Web_SwaggerExample;Web_TaskFlowAPI;Web_TUUIDBindingExample;Web_UUIDExample"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Core_TestConfig:Clean;Core_TestHttpParser:Clean;CustomerCRUD_Tests:Clean;DextFood:Clean;Dext_Examples_MultiTenancy:Clean;Dext_Examples_ComplexQuerying:Clean;DesktopMVUCounter:Clean;DesktopMVUCounterFrame:Clean;DesktopMVVMCustomerCRUD:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;RestClientDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_CachingDemo:Clean;Web_DatabaseAsApi:Clean;Web_DextStore:Clean;Web_Dext_Starter_Admin:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_SwaggerExample:Clean;Web_SwaggerControllerExample:Clean;Web_TaskFlowAPI:Clean;Web_UUIDExample:Clean;Web_TUUIDBindingExample:Clean;Web_OrderAPI:Clean;Web_StreamingDemo:Clean"/>
+        <CallTarget Targets="Core_TestConfig:Clean;Core_TestHttpParser:Clean;CustomerCRUD_Tests:Clean;Dext_Examples_ComplexQuerying:Clean;Dext_Examples_MultiTenancy:Clean;DesktopMVUCounter:Clean;DesktopMVUCounterFrame:Clean;DesktopMVVMCustomerCRUD:Clean;Orm_EntityDemo:Clean;Orm_EntityStyles:Clean;Orm_SpecificationDemo:Clean;RestClientDemo:Clean;Web_CachingDemo:Clean;Web_ControllerExample:Clean;Web_ControllerExample_FluentAPI:Clean;Web_DatabaseAsApi:Clean;Web_Dext_Starter_Admin:Clean;Web_DextStore:Clean;Web_DextFood:Clean;Web_JwtAuthDemo:Clean;Web_MinimalAPIExample:Clean;Web_OrderAPI:Clean;Web_RateLimitDemo:Clean;Web_SmartPropsDemo:Clean;Web_SslDemo:Clean;Web_StreamingDemo:Clean;Web_SwaggerControllerExample:Clean;Web_SwaggerExample:Clean;Web_TaskFlowAPI:Clean;Web_TUUIDBindingExample:Clean;Web_UUIDExample:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Core_TestConfig:Make;Core_TestHttpParser:Make;CustomerCRUD_Tests:Make;DextFood:Make;Dext_Examples_MultiTenancy:Make;Dext_Examples_ComplexQuerying:Make;DesktopMVUCounter:Make;DesktopMVUCounterFrame:Make;DesktopMVVMCustomerCRUD:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;RestClientDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_CachingDemo:Make;Web_DatabaseAsApi:Make;Web_DextStore:Make;Web_Dext_Starter_Admin:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_SwaggerExample:Make;Web_SwaggerControllerExample:Make;Web_TaskFlowAPI:Make;Web_UUIDExample:Make;Web_TUUIDBindingExample:Make;Web_OrderAPI:Make;Web_StreamingDemo:Make"/>
+        <CallTarget Targets="Core_TestConfig:Make;Core_TestHttpParser:Make;CustomerCRUD_Tests:Make;Dext_Examples_ComplexQuerying:Make;Dext_Examples_MultiTenancy:Make;DesktopMVUCounter:Make;DesktopMVUCounterFrame:Make;DesktopMVVMCustomerCRUD:Make;Orm_EntityDemo:Make;Orm_EntityStyles:Make;Orm_SpecificationDemo:Make;RestClientDemo:Make;Web_CachingDemo:Make;Web_ControllerExample:Make;Web_ControllerExample_FluentAPI:Make;Web_DatabaseAsApi:Make;Web_Dext_Starter_Admin:Make;Web_DextStore:Make;Web_DextFood:Make;Web_JwtAuthDemo:Make;Web_MinimalAPIExample:Make;Web_OrderAPI:Make;Web_RateLimitDemo:Make;Web_SmartPropsDemo:Make;Web_SslDemo:Make;Web_StreamingDemo:Make;Web_SwaggerControllerExample:Make;Web_SwaggerExample:Make;Web_TaskFlowAPI:Make;Web_TUUIDBindingExample:Make;Web_UUIDExample:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

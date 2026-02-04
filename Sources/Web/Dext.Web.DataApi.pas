@@ -44,6 +44,7 @@ type
     FRolesForRead: string;   // Comma-separated roles for GET operations
     FRolesForWrite: string;  // Comma-separated roles for POST/PUT/DELETE
     FNamingStrategy: TCaseStyle;
+    FContextClass: TClass;
     // Swagger options (disabled by default)
     FEnableSwagger: Boolean;
     FSwaggerTag: string;
@@ -55,6 +56,7 @@ type
     property RequireAuthentication: Boolean read FRequireAuthentication write FRequireAuthentication;
     property RolesForRead: string read FRolesForRead write FRolesForRead;
     property RolesForWrite: string read FRolesForWrite write FRolesForWrite;
+    property ContextClass: TClass read FContextClass write FContextClass;
     property EnableSwagger: Boolean read FEnableSwagger write FEnableSwagger;
     property SwaggerTag: string read FSwaggerTag write FSwaggerTag;
     property SwaggerDescription: string read FSwaggerDescription write FSwaggerDescription;
@@ -75,6 +77,8 @@ type
     function UseSwagger: TDataApiOptions<T>;
     function Tag(const ATag: string): TDataApiOptions<T>;
     function Description(const ADescription: string): TDataApiOptions<T>;
+
+    function DbContext<TCtx: class>: TDataApiOptions<T>;
   end;
 
   TDataApiHandler<T: class> = class
@@ -234,6 +238,13 @@ begin
   Result := Self;
 end;
 
+// function TDataApiOptions<T>.DbContext<TCtx>: TDataApiOptions<T>; // Placeholder
+function TDataApiOptions<T>.DbContext<TCtx>: TDataApiOptions<T>;
+begin
+  FContextClass := TCtx;
+  Result := Self;
+end;
+
 { TDataApiHandler<T> }
 
 constructor TDataApiHandler<T>.Create(const APath: string; AOptions: TDataApiOptions<T>; ADbContext: TDbContext);
@@ -257,15 +268,26 @@ end;
 function TDataApiHandler<T>.GetDbContext(const Context: IHttpContext): TDbContext;
 var
   Obj: TObject;
+  TargetClass: TClass;
 begin
   if FUseExplicitContext then
     Result := FDbContext
   else
   begin
+    // Determine which context class to resolve
+    if (FOptions <> nil) and (FOptions.ContextClass <> nil) then
+      TargetClass := FOptions.ContextClass
+    else
+      TargetClass := TDbContext;
+
     // Resolve from DI using TServiceType
-    Obj := Context.Services.GetService(TServiceType.FromClass(TDbContext));
+    Obj := Context.Services.GetService(TServiceType.FromClass(TargetClass));
     if Obj = nil then
-      raise Exception.Create('TDbContext not registered in DI container. Use Map(App, Path, DbContext) or register TDbContext in ConfigureServices.');
+      raise Exception.CreateFmt('%s not registered in DI container. Use Map(App, Path, DbContext) or register it in ConfigureServices.', [TargetClass.ClassName]);
+    
+    if not (Obj is TDbContext) then
+      raise Exception.CreateFmt('Service resolved for %s is not a TDbContext descendant.', [TargetClass.ClassName]);
+      
     Result := TDbContext(Obj);
   end;
 end;
@@ -512,8 +534,44 @@ end;
 
 
 function GetJsonVal(const AVal: TValue): string;
+var
+  FS: TFormatSettings;
 begin
    if AVal.IsEmpty then Exit('null');
+   
+   // Prepare invariant format settings for JSON (dot separator)
+   FS := TFormatSettings.Create;
+   FS.DecimalSeparator := '.';
+   
+   // Smart Properties Support: Unwrap Prop<T> before serialization
+   if (AVal.Kind = tkRecord) and (AVal.TypeInfo <> nil) and 
+      string(AVal.TypeInfo.Name).StartsWith('Prop<') then
+   begin
+     var Ctx := TRttiContext.Create;
+     try
+        var RecType := Ctx.GetType(AVal.TypeInfo).AsRecord;
+        if RecType <> nil then
+        begin
+          var Field := RecType.GetField('FValue');
+          if Field <> nil then
+          begin
+             Result := GetJsonVal(Field.GetValue(AVal.GetReferenceToRawData));
+             Exit;
+          end;
+        end;
+     finally
+        Ctx.Free;
+     end;
+   end;
+
+   // Try to use framework serializer for other complex types (objects/arrays)
+   if AVal.Kind in [tkRecord, tkMRecord, tkDynArray, tkArray, tkClass] then
+   begin
+     // For normal records/objects, delegate to Dext.Json
+     Result := TDextJson.Serialize(AVal);
+     Exit;
+   end;
+
    case AVal.Kind of
      tkInteger, tkInt64: Result := IntToStr(AVal.AsInt64);
      tkFloat: 
@@ -521,7 +579,7 @@ begin
        if AVal.TypeInfo = TypeInfo(TDateTime) then
          Result := '"' + DateToISO8601(AVal.AsType<TDateTime>) + '"'
        else
-         Result := FloatToStr(AVal.AsExtended); // TODO: Locale independent
+         Result := FloatToStr(AVal.AsExtended, FS);
      end;
      tkString, tkUString, tkWString, tkChar, tkWChar: Result := '"' + EscapeJsonString(AVal.AsString) + '"';
      tkEnumeration:
@@ -645,7 +703,8 @@ begin
     end;
     
     // Get filtered entities
-    DbSet := DbCtx.DataSet(TypeInfo(T));
+    // Use Entities<T> to ensure DbSet is created/cached even if not explicitly defined in DbContext properties
+    DbSet := DbCtx.Entities<T>;
     Entities := DbSet.ListObjects(FilterExpr);
     
     // Build JSON response with pagination

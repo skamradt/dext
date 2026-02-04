@@ -10,6 +10,10 @@ uses
   Dext.Entity,           // Facade para ORM (TDbContext, TSnakeCaseNamingStrategy)
   Dext.Entity.Core,      // Explicitly needed for IDbSet<T>
   Dext.Web,
+  Dext.RateLimiting,
+  Dext.RateLimiting.Policy,
+  Dext.Caching,
+  Dext.Web.DataApi,
   DextFood.Domain;
 
 type
@@ -39,7 +43,6 @@ implementation
 uses
   Dext.Json,
   DextFood.Services,
-  DextFood.Hubs,
   DextFood.DbSeeder;
 
 { TAppDbContext }
@@ -74,6 +77,16 @@ begin
     .UseExceptionHandler
     .UseHttpLogging;
 
+  // 🚦 Rate Limiting (100 reqs/min)
+  Builder.UseRateLimiting(TRateLimitPolicy.FixedWindow(100, 60));
+
+  // 💾 Response Caching
+  Builder.UseResponseCache(
+    procedure(Cache: TResponseCacheBuilder)
+    begin
+      Cache.DefaultDuration(10).VaryByQueryString;
+    end);
+
   // 🛡️ Configuração granular de CORS
   Builder.UseCors(CorsOptions
     .AllowAnyOrigin
@@ -88,9 +101,6 @@ begin
     begin
       Ctx.Response.Json('{"status": "healthy"}');
     end);
-
-  // Real-time Hub
-  //Builder.MapHub<TOrderHub>('/hubs/orders');
 
   // Minimal API Tipada
   Builder.MapPost<IOrderService, IHttpContext, IResult>('/api/orders',
@@ -111,6 +121,14 @@ begin
       var List := Db.Orders.Where(Order.Total > 50).ToList;
       Result := Results.Ok(List);
     end);
+
+  // 🚀 Feature: Database as API (CRUD instantâneo para Pedidos)
+  TDataApiHandler<TOrder>.Map(Builder, '/api/super-orders',
+    TDataApiOptions<TOrder>.Create
+      .DbContext<TAppDbContext> // Resolve via DI no runtime
+      .UseSnakeCase
+      .UseSwagger // Aparece no Swagger!
+      .Tag('Super Orders'));
 
   // Controllers
   App.MapControllers;

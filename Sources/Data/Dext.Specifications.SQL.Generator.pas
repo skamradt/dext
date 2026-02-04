@@ -1019,7 +1019,6 @@ var
   Val: TValue;
   SQLCast: string;
   Converter: ITypeConverter;
-  NullableHelper: TNullableHelper;
   PropMap: TPropertyMap;
 begin
   FParams.Clear;

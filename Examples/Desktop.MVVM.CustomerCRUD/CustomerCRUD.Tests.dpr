@@ -357,6 +357,13 @@ begin
   
   FController := TCustomerController.Create(FServiceMock.Instance, FLoggerMock.Instance);
   FController.View := FViewMock.Instance;
+
+  // Setup ViewMock to free the ViewModel to prevent memory leaks in tests
+  FViewMock.Setup.Callback(procedure(Args: TArray<TValue>)
+    begin
+      if Length(Args) > 0 then
+        Args[0].AsType<TCustomerViewModel>.Free;
+    end).When.ShowEditView(Arg.Any<TCustomerViewModel>);
 end;
 
 procedure TCustomerControllerTests.TearDown;

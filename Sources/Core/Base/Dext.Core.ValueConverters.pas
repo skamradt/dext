@@ -443,10 +443,21 @@ begin
     if (S.Contains('-') or S.Contains(':') or S.Contains('/')) and (not S.StartsWith('{')) then
     begin
        var Dt: TDateTime;
-       if TryParseCommonDate(S, Dt) then
+     if TryParseCommonDate(S, Dt) then
          Val := Dt
        else
-         Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
+       begin
+         try
+           // SQLite format: 2026-01-31 11:38:13.975
+           // Try to normalize to ISO8601
+           if TryISO8601ToDate(StringReplace(S, ' ', 'T', [rfReplaceAll]), Dt) then
+             Val := Dt
+           else
+             Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
+         except
+           Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
+         end;
+       end;
     end
     else
       Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
@@ -468,16 +479,30 @@ function TVariantToDateTimeConverter.Convert(const AValue: TValue; ATargetType: 
 var
   V: Variant;
   Dt: TDateTime;
+  S: string;
 begin
   V := AValue.AsVariant;
   if VarIsNull(V) then Exit(0.0);
   
   if VarIsNumeric(V) then
     Result := VarToDateTime(V)
-  else if TryParseCommonDate(VarToStr(V), Dt) then
-    Result := Dt
-  else
-    Result := 0.0;
+  else 
+  begin
+    S := VarToStr(V);
+    if TryParseCommonDate(S, Dt) then
+      Result := Dt
+    else
+    begin
+      try
+         if TryISO8601ToDate(StringReplace(S, ' ', 'T', [rfReplaceAll]), Dt) then
+           Result := Dt
+         else
+           Result := 0.0;
+      except
+         Result := 0.0;
+      end;
+    end;
+  end;
 end;
 
 { TVariantToDateConverter }

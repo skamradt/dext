@@ -740,6 +740,11 @@ type
     function UseRateLimiting(const APolicy: TRateLimitPolicy): AppBuilder; overload;
 
     // -------------------------------------------------------------------------
+    // ?? Response Caching
+    // -------------------------------------------------------------------------
+    function UseResponseCache(AConfigurator: TProc<TResponseCacheBuilder>): AppBuilder; overload;
+
+    // -------------------------------------------------------------------------
     // ??? Routing - POST
     // -------------------------------------------------------------------------
     
@@ -988,12 +993,6 @@ begin
   Result := Self;
 end;
 
-function THttpAppBuilderHelper.UseRateLimiting(const APolicy: TRateLimitPolicy): AppBuilder;
-begin
-  TApplicationBuilderRateLimitExtensions.UseRateLimiting(Self.Unwrap, APolicy);
-  Result := Self;
-end;
-
 function THttpAppBuilderHelper.UseCors(AConfigurator: TProc<TCorsBuilder>): AppBuilder;
 begin
   TApplicationBuilderCorsExtensions.UseCors(Self.Unwrap, AConfigurator);
@@ -1094,6 +1093,27 @@ end;
 function THttpAppBuilderHelper.UseStaticFiles: AppBuilder;
 begin
   TApplicationBuilderStaticFilesExtensions.UseStaticFiles(Self.Unwrap);
+  Result := Self;
+end;
+
+
+// -------------------------------------------------------------------------
+// THttpAppBuilderHelper (Rate Limiting Extensions)
+// -------------------------------------------------------------------------
+
+function THttpAppBuilderHelper.UseRateLimiting(const APolicy: TRateLimitPolicy): AppBuilder;
+begin
+  TApplicationBuilderRateLimitExtensions.UseRateLimiting(Self.Unwrap, APolicy);
+  Result := Self;
+end;
+
+// -------------------------------------------------------------------------
+// THttpAppBuilderHelper (Response Caching Extensions)
+// -------------------------------------------------------------------------
+
+function THttpAppBuilderHelper.UseResponseCache(AConfigurator: TProc<TResponseCacheBuilder>): AppBuilder;
+begin
+  TApplicationBuilderCacheExtensions.UseResponseCache(Self.Unwrap, AConfigurator);
   Result := Self;
 end;
 
