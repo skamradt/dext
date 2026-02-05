@@ -333,7 +333,12 @@ type
     ///   Use this for classes defined in the main program (.dpr)
     ///   where RTTI discovery may not work automatically.
     /// </summary>
-    class procedure RegisterFixture(AClass: TClass);
+    class procedure RegisterFixture(AClass: TClass); overload;
+    
+    /// <summary>
+    ///   Registers multiple test fixture classes at once.
+    /// </summary>
+    class procedure RegisterFixture(const AClasses: array of TClass); overload;
 
     /// <summary>
     ///   Enables debug output during discovery phase.
@@ -1671,6 +1676,14 @@ begin
       SafeWriteLn('    No test methods found');
     Fixture.Free;
   end;
+end;
+
+class procedure TTestRunner.RegisterFixture(const AClasses: array of TClass);
+var
+  FixtureClass: TClass;
+begin
+  for FixtureClass in AClasses do
+    RegisterFixture(FixtureClass);
 end;
 
 class procedure TTestRunner.SetDebugDiscovery(AValue: Boolean);

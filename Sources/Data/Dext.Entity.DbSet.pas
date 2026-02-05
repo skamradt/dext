@@ -71,6 +71,7 @@ type
     FFields: TDictionary<string, TRttiField>; // Added for field mapping support
     FColumns: TDictionary<string, string>;      
     FIdentityMap: TObjectDictionary<string, T>; 
+    FOrphans: TObjectList<T>; // Stores detached objects until DbSet is destroyed
     FMap: TEntityMap;
     // Filters control
     FIgnoreQueryFilters: Boolean;
@@ -243,6 +244,7 @@ begin
   FPKColumns := TList<string>.Create;
   FRttiContext := TRttiContext.Create;
   FIdentityMap := TObjectDictionary<string, T>.Create([doOwnsValues]);
+  FOrphans := TObjectList<T>.Create(True); // Owns objects - will free on destroy
   FIgnoreQueryFilters := False;
   FOnlyDeleted := False;
   MapEntity;
@@ -252,6 +254,7 @@ destructor TDbSet<T>.Destroy;
 begin
   FRttiContext.Free;
   FIdentityMap.Free;
+  FOrphans.Free; // Frees all detached objects
   FProps.Free;
   FFields.Free; // Free field mapping dictionary
   FColumns.Free;
@@ -1180,10 +1183,16 @@ procedure TDbSet<T>.DetachAll;
 var
   Key: string;
   Keys: TArray<string>;
+  Pair: TPair<string, T>;
 begin
   Keys := FIdentityMap.Keys.ToArray;
   for Key in Keys do
-    FIdentityMap.ExtractPair(Key);
+  begin
+    Pair := FIdentityMap.ExtractPair(Key);
+    // Move to orphans list so it gets freed when DbSet is destroyed
+    if Pair.Value <> nil then
+      FOrphans.Add(Pair.Value);
+  end;
 end;
 
 function TDbSet<T>.ListObjects(const AExpression: IExpression): IList<TObject>;

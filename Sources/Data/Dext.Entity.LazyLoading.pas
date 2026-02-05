@@ -447,7 +447,7 @@ begin
     end
   else
     begin
-        // Load Reference (unchanged logic)
+        // Load Reference
         FKPropName := FPropName + 'Id';
         FKProp := Ctx.GetType(FEntity.ClassType).GetProperty(FKPropName);
         
@@ -459,13 +459,36 @@ begin
             if TryUnwrapAndValidateFK(FKVal, Ctx) then
             begin
                 Prop := Ctx.GetType(FEntity.ClassType).GetProperty(FPropName);
-                TargetType := Prop.PropertyType.Handle;
+                TypeName := Prop.PropertyType.Name;
                 
-                TargetSet := GetDbContext.DataSet(TargetType);
-                LoadedObj := TargetSet.FindObject(FKVal.AsVariant);
+                // Extract inner type from Lazy<T>
+                if TypeName.StartsWith('Lazy<') then
+                begin
+                  StartPos := Pos('<', TypeName);
+                  EndPos := Pos('>', TypeName);
+                  if (StartPos > 0) and (EndPos > StartPos) then
+                  begin
+                    ItemTypeName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+                    ItemType := Ctx.FindType(ItemTypeName);
+                    if ItemType <> nil then
+                      TargetType := ItemType.Handle
+                    else
+                      TargetType := nil;
+                  end
+                  else
+                    TargetType := nil;
+                end
+                else
+                  TargetType := Prop.PropertyType.Handle;
                 
-                if LoadedObj <> nil then
-                     FValue := TValue.From(LoadedObj);
+                if TargetType <> nil then
+                begin
+                  TargetSet := GetDbContext.DataSet(TargetType);
+                  LoadedObj := TargetSet.FindObject(FKVal.AsVariant);
+                  
+                  if LoadedObj <> nil then
+                       FValue := TValue.From(LoadedObj);
+                end;
             end;
         end;
     end;

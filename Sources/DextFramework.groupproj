@@ -36,6 +36,9 @@
         <Projects Include="..\Tests\Testing\TestORMRelationships.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\Tests\Entity\TestORMFeaturesIntegration.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -143,14 +146,23 @@
     <Target Name="TestORMRelationships:Make">
         <MSBuild Projects="..\Tests\Testing\TestORMRelationships.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestORMFeaturesIntegration">
+        <MSBuild Projects="..\Tests\Entity\TestORMFeaturesIntegration.dproj"/>
+    </Target>
+    <Target Name="TestORMFeaturesIntegration:Clean">
+        <MSBuild Projects="..\Tests\Entity\TestORMFeaturesIntegration.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestORMFeaturesIntegration:Make">
+        <MSBuild Projects="..\Tests\Entity\TestORMFeaturesIntegration.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextSidecar;DextTool;TestORMRelationships"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextSidecar;DextTool;TestORMRelationships;TestORMFeaturesIntegration"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;TestORMRelationships:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;TestORMRelationships:Clean;TestORMFeaturesIntegration:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;TestORMRelationships:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;TestORMRelationships:Make;TestORMFeaturesIntegration:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
