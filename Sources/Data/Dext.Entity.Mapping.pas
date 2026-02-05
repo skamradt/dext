@@ -134,6 +134,14 @@ type
     Converter: ITypeConverter;
     DataType: TFieldType;
     ConverterClass: TClass;
+    // Optimistic Concurrency
+    IsVersion: Boolean;
+    // Audit Timestamps
+    IsCreatedAt: Boolean;
+    IsUpdatedAt: Boolean;
+    // JSON Column Support
+    IsJsonColumn: Boolean;
+    UseJsonB: Boolean; // PostgreSQL JSONB vs JSON
     constructor Create(const APropName: string);
   end;
 
@@ -384,7 +392,8 @@ begin
             (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) or
             (Attr is TypeConverterAttribute) or (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or
             (Attr is HasOneAttribute) or (Attr is InversePropertyAttribute) or (Attr is DeleteBehaviorAttribute) or
-            (Attr is ManyToManyAttribute) then
+            (Attr is ManyToManyAttribute) or (Attr is VersionAttribute) or (Attr is CreatedAtAttribute) or
+            (Attr is UpdatedAtAttribute) or (Attr is JsonColumnAttribute) then
         begin
           if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
           
@@ -445,6 +454,20 @@ begin
             PropMap.IsNavigation := True;
           end;
           if Attr is DeleteBehaviorAttribute then PropMap.DeleteBehavior := DeleteBehaviorAttribute(Attr).Behavior;
+          
+          // Optimistic Concurrency
+          if Attr is VersionAttribute then PropMap.IsVersion := True;
+          
+          // Audit Timestamps
+          if Attr is CreatedAtAttribute then PropMap.IsCreatedAt := True;
+          if Attr is UpdatedAtAttribute then PropMap.IsUpdatedAt := True;
+          
+          // JSON Column
+          if Attr is JsonColumnAttribute then
+          begin
+            PropMap.IsJsonColumn := True;
+            PropMap.UseJsonB := JsonColumnAttribute(Attr).UseJsonB;
+          end;
         end;
       end;
       
@@ -534,6 +557,12 @@ begin
   DataType := ftUnknown;
   ConverterClass := nil;
   Converter := nil;
+  // New fields
+  IsVersion := False;
+  IsCreatedAt := False;
+  IsUpdatedAt := False;
+  IsJsonColumn := False;
+  UseJsonB := True; // Default for PostgreSQL
 end;
 
 { TRelationshipBuilder<T> }

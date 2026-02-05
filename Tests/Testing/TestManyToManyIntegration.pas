@@ -122,7 +122,7 @@ procedure TManyToManyIntegrationTests.Setup;
 var
   DbConn: IDbConnection;
 begin
-  FEntities := TObjectList<TObject>.Create(True);
+  FEntities := TObjectList<TObject>.Create(False); // ORM manages object lifetime
   // Create In-Memory SQLite Connection
   FConn := TFDConnection.Create(nil);
   FConn.DriverName := 'SQLite';
@@ -160,8 +160,9 @@ end;
 
 procedure TManyToManyIntegrationTests.Teardown;
 begin
-  if FContext <> nil then FContext.Free;
+  // Free FEntities first (doesn't own objects), then context (which frees via IdentityMap)
   if FEntities <> nil then FEntities.Free;
+  if FContext <> nil then FContext.Free;
   if FConn <> nil then FConn.Free;
 end;
 
