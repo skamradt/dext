@@ -40,8 +40,11 @@ uses
 type
 
 
+  TRelationshipType = (rtNone, rtOneToMany, rtManyToOne, rtOneToOne, rtManyToMany);
+
   // Forward declarations
   IPropertyBuilder<T: class> = interface;
+  IRelationshipBuilder<T: class> = interface;
 
   /// <summary>
   ///   Fluent interface to configure an entity.
@@ -55,6 +58,27 @@ type
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
     function Prop(const APropertyName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
+    
+    // Relationships
+    function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasOne(const APropertyName: string): IRelationshipBuilder<T>;
+    function BelongsTo(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
+  end;
+
+  /// <summary>
+  ///   Fluent interface to configure a relationship.
+  /// </summary>
+  IRelationshipBuilder<T: class> = interface
+    ['{50000000-0000-0000-0000-000000000004}']
+    function WithOne(const AInversePropName: string = ''): IRelationshipBuilder<T>;
+    function WithMany(const AInversePropName: string = ''): IRelationshipBuilder<T>;
+    function HasForeignKey(const AFKPropertyName: string): IRelationshipBuilder<T>;
+    function HasPrincipalKey(const AKeyPropertyName: string): IRelationshipBuilder<T>;
+    function OnDelete(AAction: TCascadeAction): IRelationshipBuilder<T>;
+    // Many-to-Many specific
+    function UsingEntity(const AJoinTableName: string): IRelationshipBuilder<T>; overload;
+    function UsingEntity(const AJoinTableName, ALeftKey, ARightKey: string): IRelationshipBuilder<T>; overload;
   end;
 
   /// <summary>
@@ -98,6 +122,15 @@ type
     Precision: Integer;
     Scale: Integer;
     IsIgnored: Boolean;
+    IsNavigation: Boolean;
+    Relationship: TRelationshipType;
+    InverseProperty: string;
+    PrincipalKey: string;
+    DeleteBehavior: TCascadeAction;
+    // Many-to-Many Join Table
+    JoinTableName: string;
+    LeftKeyColumn: string;
+    RightKeyColumn: string;
     Converter: ITypeConverter;
     DataType: TFieldType;
     ConverterClass: TClass;
@@ -175,6 +208,12 @@ type
     function HasConverter(AConverterClass: TClass): TEntityBuilder<T>;
     function Ignore: TEntityBuilder<T>;
     
+    // Relationship Support (Returning IRelationshipBuilder)
+    function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasOne(const APropertyName: string): IRelationshipBuilder<T>;
+    function BelongsTo(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
+    
     // Soft Delete Configuration
     function HasSoftDelete(const APropertyName: string): TEntityBuilder<T>; overload;
     function HasSoftDelete(const APropertyName: string; const ADeletedValue, ANotDeletedValue: Variant): TEntityBuilder<T>; overload;
@@ -196,6 +235,10 @@ type
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
     function Prop(const APropertyName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
+    function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasOne(const APropertyName: string): IRelationshipBuilder<T>;
+    function BelongsTo(const APropertyName: string): IRelationshipBuilder<T>;
+    function HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
     function HasSoftDelete(const APropertyName: string): IEntityTypeBuilder<T>; overload;
     function HasSoftDelete(const APropertyName: string; const ADeletedValue, ANotDeletedValue: Variant): IEntityTypeBuilder<T>; overload;
   end;
@@ -254,6 +297,21 @@ type
     class property Instance: TModelBuilder read FInstance;
   end;
 
+  TRelationshipBuilder<T: class> = class(TInterfacedObject, IRelationshipBuilder<T>)
+  private
+    FMap: TEntityMap;
+    FPropMap: TPropertyMap;
+  public
+    constructor Create(AMap: TEntityMap; APropMap: TPropertyMap);
+    function WithOne(const AInversePropName: string = ''): IRelationshipBuilder<T>;
+    function WithMany(const AInversePropName: string = ''): IRelationshipBuilder<T>;
+    function HasForeignKey(const AFKPropertyName: string): IRelationshipBuilder<T>;
+    function HasPrincipalKey(const AKeyPropertyName: string): IRelationshipBuilder<T>;
+    function OnDelete(AAction: TCascadeAction): IRelationshipBuilder<T>;
+    function UsingEntity(const AJoinTableName: string): IRelationshipBuilder<T>; overload;
+    function UsingEntity(const AJoinTableName, ALeftKey, ARightKey: string): IRelationshipBuilder<T>; overload;
+  end;
+
 implementation
 
 { TEntityMap }
@@ -286,55 +344,69 @@ begin
     Typ := Ctx.GetType(FEntityType);
     if Typ = nil then Exit;
 
-  for Attr in Typ.GetAttributes do
-  begin
-    if Attr is TableAttribute then FTableName := TableAttribute(Attr).Name;
-    if Attr is SoftDeleteAttribute then
+    for Attr in Typ.GetAttributes do
     begin
-      FIsSoftDelete := True;
-      FSoftDeleteProp := SoftDeleteAttribute(Attr).ColumnName;
-      FSoftDeleteDeletedValue := SoftDeleteAttribute(Attr).DeletedValue;
-      FSoftDeleteNotDeletedValue := SoftDeleteAttribute(Attr).NotDeletedValue;
+      if Attr is TableAttribute then FTableName := TableAttribute(Attr).Name;
+      if Attr is SoftDeleteAttribute then
+      begin
+        FIsSoftDelete := True;
+        FSoftDeleteProp := SoftDeleteAttribute(Attr).ColumnName;
+        FSoftDeleteDeletedValue := SoftDeleteAttribute(Attr).DeletedValue;
+        FSoftDeleteNotDeletedValue := SoftDeleteAttribute(Attr).NotDeletedValue;
+      end;
+      if Attr is InheritanceAttribute then FInheritanceStrategy := InheritanceAttribute(Attr).Strategy;
+      if Attr is DiscriminatorColumnAttribute then FDiscriminatorColumn := DiscriminatorColumnAttribute(Attr).Name;
+      if Attr is DiscriminatorValueAttribute then FDiscriminatorValue := DiscriminatorValueAttribute(Attr).Value;
     end;
-    if Attr is InheritanceAttribute then FInheritanceStrategy := InheritanceAttribute(Attr).Strategy;
-    if Attr is DiscriminatorColumnAttribute then FDiscriminatorColumn := DiscriminatorColumnAttribute(Attr).Name;
-    if Attr is DiscriminatorValueAttribute then FDiscriminatorValue := DiscriminatorValueAttribute(Attr).Value;
-  end;
-  finally
-    Ctx.Free;
-  end;
-
-  for Prop in Typ.GetProperties do
-  begin
-    PropMap := nil;
-    for Attr in Prop.GetAttributes do
+    
+    for Prop in Typ.GetProperties do
     begin
-       if (Attr is ColumnAttribute) or (Attr is PKAttribute) or (Attr is AutoIncAttribute) or 
-          (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) or
-          (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) or
-          (Attr is TypeConverterAttribute) then
-       begin
-         if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
-         
-         if Attr is ColumnAttribute then PropMap.ColumnName := ColumnAttribute(Attr).Name;
-         if Attr is FieldAttribute then 
-         begin
-           if FieldAttribute(Attr).Name <> '' then
-             PropMap.FieldName := FieldAttribute(Attr).Name
-           else
-             PropMap.FieldName := 'F' + Prop.Name;
-         end;
-         if Attr is PKAttribute then 
-         begin
-           PropMap.IsPK := True;
-           if not FKeys.Contains(Prop.Name) then FKeys.Add(Prop.Name);
-         end;
-         if Attr is AutoIncAttribute then PropMap.IsAutoInc := True;
+      PropMap := nil;
+      
+      // Auto-detect Navigation properties (Classes/Interfaces)
+      // We do this BEFORE attribute discovery so attributes can override it if needed.
+      if Prop.PropertyType.TypeKind in [tkClass, tkInterface] then
+      begin
+        // Filter out standard persistable classes if any. 
+        // For now, if it's a class or interface, we assume it's NOT a plain column.
+        PropMap := GetOrAddProperty(Prop.Name);
+        PropMap.IsNavigation := True;
+        if Prop.PropertyType.TypeKind = tkInterface then
+          PropMap.Relationship := rtOneToMany // Likely IList<T>
+        else
+          PropMap.Relationship := rtManyToOne; // Likely an entity reference
+      end;
+
+      for Attr in Prop.GetAttributes do
+      begin
+        if (Attr is ColumnAttribute) or (Attr is PrimaryKeyAttribute) or (Attr is AutoIncAttribute) or 
+            (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) or
+            (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) or
+            (Attr is TypeConverterAttribute) or (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or
+            (Attr is HasOneAttribute) or (Attr is InversePropertyAttribute) or (Attr is DeleteBehaviorAttribute) or
+            (Attr is ManyToManyAttribute) then
+        begin
+          if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
+          
+          if Attr is ColumnAttribute then PropMap.ColumnName := ColumnAttribute(Attr).Name;
+          if Attr is FieldAttribute then 
+          begin
+            if FieldAttribute(Attr).Name <> '' then
+              PropMap.FieldName := FieldAttribute(Attr).Name
+            else
+              PropMap.FieldName := 'F' + Prop.Name;
+          end;
+          if Attr is PrimaryKeyAttribute then 
+          begin
+            PropMap.IsPK := True;
+            if not FKeys.Contains(Prop.Name) then FKeys.Add(Prop.Name);
+          end;
+          if Attr is AutoIncAttribute then PropMap.IsAutoInc := True;
           if Attr is NotMappedAttribute then PropMap.IsIgnored := True;
           if Attr is ForeignKeyAttribute then PropMap.ForeignKeyColumn := ForeignKeyAttribute(Attr).ColumnName;
           if Attr is DbTypeAttribute then PropMap.DataType := TFieldType(DbTypeAttribute(Attr).DataType);
           if Attr is TypeConverterAttribute then PropMap.ConverterClass := TypeConverterAttribute(Attr).ConverterClass;
-          
+
           if Attr is RequiredAttribute then PropMap.IsRequired := True;
           if Attr is MaxLengthAttribute then PropMap.MaxLength := MaxLengthAttribute(Attr).Length;
           if Attr is PrecisionAttribute then
@@ -342,49 +414,82 @@ begin
             PropMap.Precision := PrecisionAttribute(Attr).Precision;
             PropMap.Scale := PrecisionAttribute(Attr).Scale;
           end;
-       end;
-    end;
-    
-    // Resolve Converter (Optimization)
-    // Even if no attributes, we might want to resolve converter for standard types (like TDateTime or Enums)
-    if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
-    
-    if PropMap <> nil then
-    begin
-       // If a specific converter class is defined (fluent or attribute), use it
-       if (PropMap.ConverterClass <> nil) then
-       begin
-          // We need to instantiate it. For now, assume parameterless constructor or standard pattern.
-          // TValueConverterRegistry helpers often take instances.
-          // Ideally, we should cache these instances or use Dependency Injection.
-          // Simple instantiation via RTTI for now.
-          // Simple instantiation via RTTI for now.
-          var RttiCtx := TRttiContext.Create;
-          try
-             var RType := RttiCtx.GetType(PropMap.ConverterClass);
-             if (RType <> nil) and (RType.IsInstance) then
-             begin
-                 var Method := RType.GetMethod('Create');
-                 if Method <> nil then
-                    PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
-                 else
-                 begin
-                    // Try basic Create
-                    var Obj := PropMap.ConverterClass.Create;
-                    if Supports(Obj, ITypeConverter, PropMap.Converter) then
-                       // OK
-                    else
-                       PropMap.Converter := nil; 
-                 end;
-             end;
-          finally
-             RttiCtx.Free;
-          end;
-       end;
 
-       if PropMap.Converter = nil then
-         PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+          // Relationships
+          if Attr is HasManyAttribute then 
+          begin
+            PropMap.Relationship := rtOneToMany;
+            PropMap.IsNavigation := True;
+          end;
+          if Attr is BelongsToAttribute then 
+          begin
+            PropMap.Relationship := rtManyToOne;
+            PropMap.IsNavigation := True;
+          end;
+          if Attr is HasOneAttribute then 
+          begin
+            PropMap.Relationship := rtOneToOne;
+            PropMap.IsNavigation := True;
+          end;
+          if Attr is ManyToManyAttribute then 
+          begin
+            PropMap.Relationship := rtManyToMany;
+            PropMap.IsNavigation := True;
+            PropMap.JoinTableName := ManyToManyAttribute(Attr).JoinTableName;
+            PropMap.LeftKeyColumn := ManyToManyAttribute(Attr).LeftKeyColumn;
+            PropMap.RightKeyColumn := ManyToManyAttribute(Attr).RightKeyColumn;
+          end;
+          if Attr is InversePropertyAttribute then 
+          begin
+            PropMap.InverseProperty := InversePropertyAttribute(Attr).Name;
+            PropMap.IsNavigation := True;
+          end;
+          if Attr is DeleteBehaviorAttribute then PropMap.DeleteBehavior := DeleteBehaviorAttribute(Attr).Behavior;
+        end;
+      end;
+      
+      // Resolve Converter (Optimization)
+      // Even if no attributes, we might want to resolve converter for standard types (like TDateTime or Enums)
+      if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
+      
+      if PropMap <> nil then
+      begin
+        // If a specific converter class is defined (fluent or attribute), use it
+        if (PropMap.ConverterClass <> nil) then
+        begin
+            // We need to instantiate it. For now, assume parameterless constructor or standard pattern.
+            // TValueConverterRegistry helpers often take instances.
+            // Ideally, we should cache these instances or use Dependency Injection.
+            // Simple instantiation via RTTI for now.
+            var RttiCtx := TRttiContext.Create;
+            try
+              var RType := RttiCtx.GetType(PropMap.ConverterClass);
+              if (RType <> nil) and (RType.IsInstance) then
+              begin
+                  var Method := RType.GetMethod('Create');
+                  if Method <> nil then
+                      PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
+                  else
+                  begin
+                      // Try basic Create
+                      var Obj := PropMap.ConverterClass.Create;
+                      if Supports(Obj, ITypeConverter, PropMap.Converter) then
+                        // OK
+                      else
+                        PropMap.Converter := nil; 
+                  end;
+              end;
+            finally
+              RttiCtx.Free;
+            end;
+        end;
+
+        if PropMap.Converter = nil then
+          PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+      end;
     end;
+  finally
+    Ctx.Free;
   end;
 end;
 
@@ -418,9 +523,70 @@ begin
   Precision := 0;
   Scale := 0;
   IsIgnored := False;
+  IsNavigation := False;
+  Relationship := rtNone;
+  InverseProperty := '';
+  PrincipalKey := '';
+  DeleteBehavior := caNoAction;
+  JoinTableName := '';
+  LeftKeyColumn := '';
+  RightKeyColumn := '';
   DataType := ftUnknown;
   ConverterClass := nil;
   Converter := nil;
+end;
+
+{ TRelationshipBuilder<T> }
+
+constructor TRelationshipBuilder<T>.Create(AMap: TEntityMap; APropMap: TPropertyMap);
+begin
+  inherited Create;
+  FMap := AMap;
+  FPropMap := APropMap;
+end;
+
+function TRelationshipBuilder<T>.WithOne(const AInversePropName: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.InverseProperty := AInversePropName;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.WithMany(const AInversePropName: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.InverseProperty := AInversePropName;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.HasForeignKey(const AFKPropertyName: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.ForeignKeyColumn := AFKPropertyName;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.HasPrincipalKey(const AKeyPropertyName: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.PrincipalKey := AKeyPropertyName;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.OnDelete(AAction: TCascadeAction): IRelationshipBuilder<T>;
+begin
+  FPropMap.DeleteBehavior := AAction;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.UsingEntity(const AJoinTableName: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.JoinTableName := AJoinTableName;
+  Result := Self;
+end;
+
+function TRelationshipBuilder<T>.UsingEntity(const AJoinTableName, ALeftKey, ARightKey: string): IRelationshipBuilder<T>;
+begin
+  FPropMap.JoinTableName := AJoinTableName;
+  FPropMap.LeftKeyColumn := ALeftKey;
+  FPropMap.RightKeyColumn := ARightKey;
+  Result := Self;
 end;
 
 { TEntityBuilder<T> }
@@ -528,6 +694,46 @@ begin
   Result := Self;
 end;
 
+function TEntityBuilder<T>.HasMany(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtOneToMany;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityBuilder<T>.HasOne(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtOneToOne;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityBuilder<T>.BelongsTo(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtManyToOne;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityBuilder<T>.HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtManyToMany;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
 function TEntityBuilder<T>.HasSoftDelete(const APropertyName: string): TEntityBuilder<T>;
 begin
   Result := HasSoftDelete(APropertyName, True, False);
@@ -602,6 +808,46 @@ function TEntityTypeBuilder<T>.Ignore(const APropertyName: string): IEntityTypeB
 begin
   FMap.GetOrAddProperty(APropertyName).IsIgnored := True;
   Result := Self;
+end;
+
+function TEntityTypeBuilder<T>.HasMany(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtOneToMany;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityTypeBuilder<T>.HasOne(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtOneToOne;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityTypeBuilder<T>.BelongsTo(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtManyToOne;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
+end;
+
+function TEntityTypeBuilder<T>.HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
+var
+  LProp: TPropertyMap;
+begin
+  LProp := FMap.GetOrAddProperty(APropertyName);
+  LProp.IsNavigation := True;
+  LProp.Relationship := rtManyToMany;
+  Result := TRelationshipBuilder<T>.Create(FMap, LProp);
 end;
 
 function TEntityTypeBuilder<T>.HasSoftDelete(const APropertyName: string): IEntityTypeBuilder<T>;

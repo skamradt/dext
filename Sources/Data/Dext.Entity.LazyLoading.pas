@@ -36,6 +36,8 @@ uses
   Dext.Collections,
   Dext.Entity.Core,
   Dext.Entity.Attributes,
+  Dext.Entity.Mapping,
+  Dext.Entity.Drivers.Interfaces,
   Dext.Types.Lazy,
   Dext.Types.Nullable,
   Dext.Specifications.Types,
@@ -65,9 +67,11 @@ type
     FLoaded: Boolean;
     FValue: TValue;
     FIsCollection: Boolean;
+    FOwnsValue: Boolean; // Added flag
     
     function GetDbContext: IDbContext;
     procedure LoadValue;
+    procedure LoadManyToMany(Prop: TRttiProperty; const PropMap: TPropertyMap; const Ctx: TRttiContext);
     
     // ILazy implementation
     function GetIsValueCreated: Boolean;
@@ -228,16 +232,14 @@ begin
   FIsCollection := AIsCollection;
   FLoaded := False;
   FValue := AExistingValue; // Store existing list if any
+  FOwnsValue := False; // Default no ownership unless we create a non-refcounted object
 end;
 
 destructor TLazyLoader.Destroy;
 begin
-  if FIsCollection and FLoaded and (not FValue.IsEmpty) then
+  if FIsCollection and FLoaded and (not FValue.IsEmpty) and FOwnsValue then
   begin
-    // If it's a collection, we own the TList/TObjectList created in LoadValue
-    // BUT since we might be using a shared interface list (reference counted), 
-    // simply freeing the object might be dangerous if implicit.
-    // Generally, if it holds an Interface, we do NOT free it.
+    // If it's a collection and we explicitly own it (e.g. TObjectList)
     if FValue.Kind = tkClass then
       FValue.AsObject.Free;
   end;
@@ -291,6 +293,8 @@ var
   IntVal: Integer;
   ExpectedClass: TClass;
   UseExistingInterface: Boolean;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
   if FLoaded then Exit;
   
@@ -301,16 +305,28 @@ begin
     begin
         // Load Collection
         Prop := Ctx.GetType(FEntity.ClassType).GetProperty(FPropName);
-        FKName := '';
-        if Prop <> nil then
+        if Prop = nil then Exit;
+        
+        // Check if this is a Many-to-Many relationship
+        Map := TEntityMap(GetDbContext.GetMapping(FEntity.ClassInfo));
+        if (Map <> nil) and Map.Properties.TryGetValue(FPropName, PropMap) then
         begin
-           for Attr in Prop.GetAttributes do
-             if Attr is ForeignKeyAttribute then
-             begin
-               FKName := ForeignKeyAttribute(Attr).ColumnName;
-               Break;
-             end;
+          if (PropMap.Relationship = rtManyToMany) and (PropMap.JoinTableName <> '') then
+          begin
+            LoadManyToMany(Prop, PropMap, Ctx);
+            FLoaded := True;
+            Exit;
+          end;
         end;
+        
+        // Standard One-to-Many loading
+        FKName := '';
+        for Attr in Prop.GetAttributes do
+          if Attr is ForeignKeyAttribute then
+          begin
+            FKName := ForeignKeyAttribute(Attr).ColumnName;
+            Break;
+          end;
         
         TypeName := Prop.PropertyType.Name;
         StartPos := Pos('<', TypeName);
@@ -465,6 +481,213 @@ begin
 finally
   Ctx.Free;
 end;
+end;
+
+procedure TLazyLoader.LoadManyToMany(Prop: TRttiProperty; const PropMap: TPropertyMap; const Ctx: TRttiContext);
+var
+  SQL: string;
+  SB: TStringBuilder;
+  Cmd: IDbCommand;
+  Reader: IDbReader;
+  EntityId: string;
+  RelatedIds: TList<TValue>;
+  ItemTypeName: string;
+  ItemType: TRttiType;
+  TypeName: string;
+  StartPos, EndPos: Integer;
+  RelatedDbSet: IDbSet;
+  ResList: IList<TObject>;
+  IdValues: TArray<Variant>;
+  Expr: IExpression;
+  PropHelper: TPropExpression;
+  ListObj: TObject;
+  AddMethod: TRttiMethod;
+  Obj: TObject;
+  UseExistingInterface: Boolean;
+  ListType: TRttiType;
+begin
+  // Get entity's primary key value
+  EntityId := GetDbContext.DataSet(FEntity.ClassInfo).GetEntityId(FEntity);
+  if EntityId = '' then Exit;
+  
+  // Build SQL to query join table
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('SELECT ');
+    SB.Append(GetDbContext.Dialect.QuoteIdentifier(PropMap.RightKeyColumn));
+    SB.Append(' FROM ');
+    SB.Append(GetDbContext.Dialect.QuoteIdentifier(PropMap.JoinTableName));
+    SB.Append(' WHERE ');
+    SB.Append(GetDbContext.Dialect.QuoteIdentifier(PropMap.LeftKeyColumn));
+    SB.Append(' = :p1');
+    SQL := SB.ToString;
+  finally
+    SB.Free;
+  end;
+  
+  // Unwrap Lazy<T> to get the actual List type name
+  TypeName := Prop.PropertyType.Name;
+  if TypeName.Contains('Lazy<') then
+  begin
+    StartPos := Pos('Lazy<', TypeName);
+    if StartPos > 0 then
+       TypeName := Copy(TypeName, StartPos + 5, Length(TypeName) - StartPos - 5);
+  end;
+
+  // Execute query
+  RelatedIds := TList<TValue>.Create;
+  try
+    Cmd := GetDbContext.Connection.CreateCommand(SQL);
+    Cmd.AddParam('p1', TValue.From<string>(EntityId));
+    Reader := Cmd.ExecuteQuery;
+    
+    while Reader.Next do
+      RelatedIds.Add(Reader.GetValue(0));
+      
+    // Get target item type from collection's generic argument
+    StartPos := Pos('<', TypeName);
+    EndPos := Pos('>', TypeName);
+    
+    if (StartPos > 0) and (EndPos > StartPos) then
+    begin
+        // Extract inner type name e.g. 'Unit.TItem' from 'IList<Unit.TItem>'
+        ItemTypeName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+        ItemType := Ctx.FindType(ItemTypeName);
+    end
+    else
+        ItemType := nil;
+
+    if RelatedIds.Count = 0 then
+    begin
+      // No related items, ensure empty collection
+      if FValue.IsEmpty then
+      begin
+        if TypeName.Contains('IList<') then
+        begin
+          ListObj := nil;
+          if ItemType <> nil then
+          begin
+             // Try to find generic TSmartList<ItemType>
+             var ListTypeName := 'Dext.Collections.TSmartList<' + ItemType.QualifiedName + '>';
+             var SmartListType := Ctx.FindType(ListTypeName);
+             if SmartListType <> nil then
+               ListObj := TActivator.CreateInstance(SmartListType.AsInstance.MetaclassType, [False]);
+          end;
+          
+          if ListObj = nil then
+             ListObj := TSmartList<TObject>.Create(False);
+             
+          FValue := TValue.From(ListObj);
+        end;
+      end;
+      Exit;
+    end;
+    
+    if ItemType = nil then Exit;
+    
+    // Load related objects
+    RelatedDbSet := GetDbContext.DataSet(ItemType.Handle);
+    
+    SetLength(IdValues, RelatedIds.Count);
+    for var i := 0 to RelatedIds.Count - 1 do
+      IdValues[i] := RelatedIds[i].AsVariant;
+    
+    PropHelper := TPropExpression.Create('Id');
+    Expr := PropHelper.&In(IdValues);
+    ResList := RelatedDbSet.ListObjects(Expr);
+    
+    // Populate collection
+    UseExistingInterface := False;
+    ListObj := nil;
+    
+    if not FValue.IsEmpty then
+    begin
+      if FValue.Kind = tkInterface then
+        UseExistingInterface := True
+      else if FValue.IsObject then
+        ListObj := FValue.AsObject;
+    end;
+    
+    if not UseExistingInterface and (ListObj = nil) then
+    begin
+      // Create new collection
+      if TypeName.Contains('IList<') then
+      begin
+          if ItemType <> nil then
+          begin
+             var ListTypeName := 'Dext.Collections.TSmartList<' + ItemType.QualifiedName + '>';
+             var SmartListType := Ctx.FindType(ListTypeName);
+             if SmartListType <> nil then
+               ListObj := TActivator.CreateInstance(SmartListType.AsInstance.MetaclassType, [False]);
+          end;
+          
+          if ListObj = nil then
+             ListObj := TSmartList<TObject>.Create(False);
+             
+          FValue := TValue.From(ListObj);
+      end
+      else 
+      begin
+        // For TObjectList<T> or others
+        ListType := Ctx.FindType(TypeName);
+        if ListType <> nil then
+        begin
+           if TypeName.Contains('TObjectList<') then
+           begin
+             ListObj := TActivator.CreateInstance(ListType.AsInstance.MetaclassType, [False]); // OwnsObjects=False
+             FOwnsValue := True;
+           end
+           else
+           begin
+             ListObj := TActivator.CreateInstance(ListType.AsInstance.MetaclassType, [False]); // OwnsObjects=False
+             FOwnsValue := True;
+           end;
+        end;
+      end;
+      
+      if ListObj = nil then Exit;
+    end;
+    
+    // Get Add method
+    if UseExistingInterface then
+      AddMethod := Prop.PropertyType.GetMethod('Add') // Careful: Prop.PropertyType is Lazy<T>, not IList<T>
+      // Wait! Prop.PropertyType IS Lazy<T>.
+      // We need Method on the INTERFACE type.
+      // But RTTI for Interface property on Lazy Record? No.
+      // We need RTTI for the List Type.
+    else
+      AddMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Add');
+
+    if UseExistingInterface then
+    begin
+       // If usage existing interface (FValue), we need 'Add' method of that interface.
+       // We can get it from the TypeName we extracted?
+       ListType := Ctx.FindType(TypeName);
+       if ListType <> nil then
+         AddMethod := ListType.GetMethod('Add');
+    end; 
+      
+    if AddMethod = nil then Exit;
+    
+    // Add items to collection
+    for Obj in ResList do
+    begin
+      if Obj = nil then Continue;
+      try
+        if UseExistingInterface then
+          AddMethod.Invoke(FValue, [Obj])
+        else
+          AddMethod.Invoke(ListObj, [Obj]);
+      except
+        // Ignore errors adding items
+      end;
+    end;
+    
+    if not UseExistingInterface then
+      FValue := TValue.From(ListObj);
+  finally
+    RelatedIds.Free;
+  end;
 end;
 
 end.

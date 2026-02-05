@@ -110,11 +110,13 @@ begin
   Result := FindCmdLineSwitch('no-wait', ['-', '\'], True);
   if not Result then
   begin
-    if IsConsoleAvailable then
+    {$WARN SYMBOL_PLATFORM OFF}
+    if IsConsoleAvailable {$IFDEF MSWINDOWS}and (DebugHook <> 0){$ENDIF} then
     begin
       System.Write('Press <ENTER> to continue...');
       System.ReadLn;
     end;
+    {$WARN SYMBOL_PLATFORM ON}
   end;
 end;
 

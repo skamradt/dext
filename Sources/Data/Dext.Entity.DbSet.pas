@@ -84,6 +84,7 @@ type
     procedure ExtractForeignKeys(const AEntities: IList<T>; PropertyToCheck: string;
       out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
     procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
+    procedure LoadManyToMany(const AEntities: IList<T>; const NavPropName: string; const PropMap: TPropertyMap);
     function CreateGenerator: TSqlGenerator<T>;
     procedure ResetQueryFlags;
     procedure HandleTimestamps(const AEntity: TObject; AIsInsert: Boolean);
@@ -176,6 +177,21 @@ type
     ///   The prototype lifecycle is managed by this DbSet.
     /// </summary>
     function Prototype<TEntity: class>: TEntity; overload;
+    
+    /// <summary>
+    ///   Links two entities in a Many-to-Many relationship.
+    /// </summary>
+    procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    
+    /// <summary>
+    ///   Unlinks two entities in a Many-to-Many relationship.
+    /// </summary>
+    procedure UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    
+    /// <summary>
+    ///   Syncronizes a Many-to-Many relationship, replacing all existing links with new ones.
+    /// </summary>
+    procedure SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
   end;
 
 implementation
@@ -312,7 +328,7 @@ begin
     begin
       for Attr in Prop.GetAttributes do
       begin
-        if Attr is PKAttribute then
+        if Attr is PrimaryKeyAttribute then
           if not FPKColumns.Contains(ColName) then
             FPKColumns.Add(ColName);
       end;
@@ -454,7 +470,7 @@ begin
     for Prop in Typ.GetProperties do
     begin
       for Attr in Prop.GetAttributes do
-        if Attr is PKAttribute then
+        if Attr is PrimaryKeyAttribute then
           Exit(Prop.GetValue(AObject));
     end;
     Prop := Typ.GetProperty('Id');
@@ -1394,10 +1410,279 @@ begin
 end;
 
 procedure TDbSet<T>.DoLoadIncludes(const AEntities: IList<T>; const AIncludes: TArray<string>);
+var
+  PropMap: TPropertyMap;
 begin
   if (AEntities = nil) or (AEntities.Count = 0) then Exit;
   for var IncludePath in AIncludes do
+  begin
+    // Check if this is a Many-to-Many relationship
+    PropMap := nil;
+    if (FMap <> nil) and FMap.Properties.TryGetValue(IncludePath, PropMap) then
+    begin
+      if PropMap.Relationship = rtManyToMany then
+      begin
+        LoadManyToMany(AEntities, IncludePath, PropMap);
+        Continue;
+      end;
+    end;
+    // Standard One-to-Many / Many-to-One loading
     LoadAndAssign(AEntities, IncludePath);
+  end;
+end;
+
+procedure TDbSet<T>.LoadManyToMany(const AEntities: IList<T>; const NavPropName: string; const PropMap: TPropertyMap);
+var
+  NavProp: TRttiProperty;
+  SQL: string;
+  EntityIds: TList<TValue>;
+  Ent: T;
+  EntId: TValue;
+  Reader: IDbReader;
+  TargetIds: TDictionary<string, TList<TValue>>; // EntityId -> List of RelatedIds
+  RelatedDbSet: IDbSet;
+  TargetType: TRttiType;
+  AllRelatedIds: TList<TValue>;
+  RelatedObjects: TDictionary<string, TObject>; // RelatedId -> Object
+  ListIntf: IInterface;
+  Ctx: TRttiContext;
+begin
+  if PropMap.JoinTableName = '' then Exit;
+  
+  NavProp := FRttiContext.GetType(T).GetProperty(NavPropName);
+  if NavProp = nil then Exit;
+  
+  // Collect all entity IDs
+  EntityIds := TList<TValue>.Create;
+  try
+    for Ent in AEntities do
+    begin
+      EntId := GetRelatedId(Ent);
+      if not EntityIds.Contains(EntId) then
+        EntityIds.Add(EntId);
+    end;
+    if EntityIds.Count = 0 then Exit;
+    
+    // Build SQL to query join table
+    // SELECT left_key, right_key FROM JoinTable WHERE left_key IN (?, ?, ...)
+    var SB := TStringBuilder.Create;
+    try
+      SB.Append('SELECT ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(PropMap.LeftKeyColumn));
+      SB.Append(', ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(PropMap.RightKeyColumn));
+      SB.Append(' FROM ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(PropMap.JoinTableName));
+      SB.Append(' WHERE ');
+      SB.Append(FContext.Dialect.QuoteIdentifier(PropMap.LeftKeyColumn));
+      SB.Append(' IN (');
+      for var i := 0 to EntityIds.Count - 1 do
+      begin
+        if i > 0 then SB.Append(', ');
+        SB.Append(':p' + IntToStr(i + 1));
+      end;
+      SB.Append(')');
+      SQL := SB.ToString;
+    finally
+      SB.Free;
+    end;
+    
+    // Execute query
+    // Execute query
+    var Cmd := FContext.Connection.CreateCommand(SQL);
+    for var i := 0 to EntityIds.Count - 1 do
+      Cmd.AddParam('p' + IntToStr(i + 1), EntityIds[i]);
+      
+    Reader := Cmd.ExecuteQuery;
+    
+    // Build mapping: EntityId -> List of RelatedIds
+    TargetIds := TObjectDictionary<string, TList<TValue>>.Create([doOwnsValues]);
+    AllRelatedIds := TList<TValue>.Create;
+    try
+      while Reader.Next do
+      begin
+        var LeftKey := Reader.GetValue(0).ToString;
+        var RightKey := Reader.GetValue(1);
+        
+        if not TargetIds.ContainsKey(LeftKey) then
+          TargetIds.Add(LeftKey, TList<TValue>.Create);
+        TargetIds[LeftKey].Add(RightKey);
+        
+        if not AllRelatedIds.Contains(RightKey) then
+          AllRelatedIds.Add(RightKey);
+      end;
+      
+      if AllRelatedIds.Count = 0 then Exit;
+      
+      // Get target type from collection's generic argument
+      Ctx := TRttiContext.Create;
+      try
+        TargetType := nil;
+        var PropType := NavProp.PropertyType;
+        if PropType.TypeKind = tkInterface then
+        begin
+          // IList<TRelated> - extract TRelated
+          var TypeName := PropType.Name;
+          // Parse generic: IList<TRelated>
+          var StartPos := Pos('<', TypeName);
+          var EndPos := Pos('>', TypeName);
+          if (StartPos > 0) and (EndPos > StartPos) then
+          begin
+            var GenericTypeName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+            TargetType := Ctx.FindType(GenericTypeName);
+          end;
+        end;
+        
+        if TargetType = nil then Exit;
+        
+        // Load all related objects
+        RelatedDbSet := FContext.DataSet(TargetType.Handle);
+        var IdValues: TArray<Variant>;
+        SetLength(IdValues, AllRelatedIds.Count);
+        for var i := 0 to AllRelatedIds.Count - 1 do
+          IdValues[i] := AllRelatedIds[i].AsVariant;
+        
+        var RelatedExpr: IExpression := TPropExpression.Create('Id').&In(IdValues);
+        var LoadedList := RelatedDbSet.ListObjects(RelatedExpr);
+        
+        // Build lookup map
+        RelatedObjects := TDictionary<string, TObject>.Create;
+        try
+          for var Obj in LoadedList do
+          begin
+            var ObjId := RelatedDbSet.GetEntityId(Obj);
+            RelatedObjects.AddOrSetValue(ObjId, Obj);
+          end;
+          
+          // Assign to each entity's collection
+          for Ent in AEntities do
+          begin
+            EntId := GetRelatedId(Ent);
+            var EntIdStr := EntId.ToString;
+            
+            // Get or create collection
+            var CollValue := NavProp.GetValue(Pointer(Ent));
+
+            if CollValue.IsEmpty or (CollValue.AsInterface = nil) then
+            begin
+              // Create new collection - use TSmartList<TObject> as fallback
+              var CollObj := TSmartList<TObject>.Create;
+              NavProp.SetValue(Pointer(Ent), CollObj);
+              CollValue := NavProp.GetValue(Pointer(Ent));
+            end;
+            
+            // Get IList interface
+            if Supports(CollValue.AsInterface, IList<TObject>, ListIntf) then
+            begin
+              var TheList := IList<TObject>(ListIntf);
+              
+              // Add related objects
+              if TargetIds.ContainsKey(EntIdStr) then
+              begin
+                for var RelId in TargetIds[EntIdStr] do
+                begin
+                  var RelIdStr := RelId.ToString;
+                  if RelatedObjects.ContainsKey(RelIdStr) then
+                    TheList.Add(RelatedObjects[RelIdStr]);
+                end;
+              end;
+            end;
+          end;
+        finally
+          RelatedObjects.Free;
+        end;
+      finally
+        Ctx.Free;
+      end;
+    finally
+      TargetIds.Free;
+      AllRelatedIds.Free;
+    end;
+  finally
+    EntityIds.Free;
+  end;
+end;
+
+procedure TDbSet<T>.LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+var
+  PropMap: TPropertyMap;
+  SQL: string;
+  EntityId, RelatedId: TValue;
+begin
+  if FMap = nil then Exit;
+  if not FMap.Properties.TryGetValue(APropertyName, PropMap) then Exit;
+  if PropMap.Relationship <> rtManyToMany then Exit;
+  if PropMap.JoinTableName = '' then Exit;
+  
+  EntityId := GetRelatedId(AEntity);
+  RelatedId := GetRelatedId(ARelatedEntity);
+  
+  SQL := TJoinTableSQLHelper.GenerateInsert(FContext.Dialect,
+    PropMap.JoinTableName, PropMap.LeftKeyColumn, PropMap.RightKeyColumn);
+    
+  var Cmd := FContext.Connection.CreateCommand(SQL);
+  Cmd.AddParam('p1', EntityId);
+  Cmd.AddParam('p2', RelatedId);
+  Cmd.Execute;
+end;
+
+procedure TDbSet<T>.UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+var
+  PropMap: TPropertyMap;
+  SQL: string;
+  EntityId, RelatedId: TValue;
+begin
+  if FMap = nil then Exit;
+  if not FMap.Properties.TryGetValue(APropertyName, PropMap) then Exit;
+  if PropMap.Relationship <> rtManyToMany then Exit;
+  if PropMap.JoinTableName = '' then Exit;
+  
+  EntityId := GetRelatedId(AEntity);
+  RelatedId := GetRelatedId(ARelatedEntity);
+  
+  SQL := TJoinTableSQLHelper.GenerateDelete(FContext.Dialect,
+    PropMap.JoinTableName, PropMap.LeftKeyColumn, PropMap.RightKeyColumn);
+    
+  var Cmd := FContext.Connection.CreateCommand(SQL);
+  Cmd.AddParam('p1', EntityId);
+  Cmd.AddParam('p2', RelatedId);
+  Cmd.Execute;
+end;
+
+procedure TDbSet<T>.SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
+var
+  PropMap: TPropertyMap;
+  SQL: string;
+  EntityId, RelatedId: TValue;
+  RelEnt: TObject;
+begin
+  if FMap = nil then Exit;
+  if not FMap.Properties.TryGetValue(APropertyName, PropMap) then Exit;
+  if PropMap.Relationship <> rtManyToMany then Exit;
+  if PropMap.JoinTableName = '' then Exit;
+  
+  EntityId := GetRelatedId(AEntity);
+  
+  // First, delete all existing links for this entity
+  SQL := TJoinTableSQLHelper.GenerateDeleteByLeft(FContext.Dialect,
+    PropMap.JoinTableName, PropMap.LeftKeyColumn);
+    
+  var Cmd := FContext.Connection.CreateCommand(SQL);
+  Cmd.AddParam('p1', EntityId);
+  Cmd.Execute;
+  
+  // Then, insert new links
+  SQL := TJoinTableSQLHelper.GenerateInsert(FContext.Dialect,
+    PropMap.JoinTableName, PropMap.LeftKeyColumn, PropMap.RightKeyColumn);
+    
+  for RelEnt in ARelatedEntities do
+  begin
+    RelatedId := GetRelatedId(RelEnt);
+    var CmdLoop := FContext.Connection.CreateCommand(SQL);
+    CmdLoop.AddParam('p1', EntityId);
+    CmdLoop.AddParam('p2', RelatedId);
+    CmdLoop.Execute;
+  end;
 end;
 
 function TDbSet<T>.Find(const AId: Variant): T;

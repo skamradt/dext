@@ -64,6 +64,7 @@ type
   TInheritanceStrategy = Dext.Entity.Attributes.TInheritanceStrategy;
   TableAttribute = Dext.Entity.Attributes.TableAttribute;
   ColumnAttribute = Dext.Entity.Attributes.ColumnAttribute;
+  PrimaryKeyAttribute = Dext.Entity.Attributes.PrimaryKeyAttribute;
   PKAttribute = Dext.Entity.Attributes.PKAttribute;
   AutoIncAttribute = Dext.Entity.Attributes.AutoIncAttribute;
   RequiredAttribute = Dext.Entity.Attributes.RequiredAttribute;
@@ -78,6 +79,13 @@ type
   SoftDeleteAttribute = Dext.Entity.Attributes.SoftDeleteAttribute;
   TCascadeAction = Dext.Entity.Attributes.TCascadeAction;
   ForeignKeyAttribute = Dext.Entity.Attributes.ForeignKeyAttribute;
+  FKAttribute = Dext.Entity.Attributes.FKAttribute;
+  HasManyAttribute = Dext.Entity.Attributes.HasManyAttribute;
+  BelongsToAttribute = Dext.Entity.Attributes.BelongsToAttribute;
+  HasOneAttribute = Dext.Entity.Attributes.HasOneAttribute;
+  ManyToManyAttribute = Dext.Entity.Attributes.ManyToManyAttribute;
+  InversePropertyAttribute = Dext.Entity.Attributes.InversePropertyAttribute;
+  DeleteBehaviorAttribute = Dext.Entity.Attributes.DeleteBehaviorAttribute;
   InheritanceAttribute = Dext.Entity.Attributes.InheritanceAttribute;
   DiscriminatorColumnAttribute = Dext.Entity.Attributes.DiscriminatorColumnAttribute;
   DiscriminatorValueAttribute = Dext.Entity.Attributes.DiscriminatorValueAttribute;
@@ -296,6 +304,7 @@ type
   ISQLColumnMapper = Dext.Specifications.SQL.Generator.ISQLColumnMapper;
   TSQLWhereGenerator = Dext.Specifications.SQL.Generator.TSQLWhereGenerator;
   TSQLGeneratorHelper = Dext.Specifications.SQL.Generator.TSQLGeneratorHelper;
+  TJoinTableSQLHelper = Dext.Specifications.SQL.Generator.TJoinTableSQLHelper;
   TSQLParamCollector = Dext.Specifications.SQL.Generator.TSQLParamCollector;
   // TSQLColumnMapper<T> = Dext.Specifications.SQL.Generator.TSQLColumnMapper<T>;
   // TSQLGenerator<T> = Dext.Specifications.SQL.Generator.TSQLGenerator<T>;

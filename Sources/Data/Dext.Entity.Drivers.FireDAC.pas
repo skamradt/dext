@@ -150,8 +150,7 @@ type
 implementation
 
 uses
-  FireDAC.ConsoleUI.Wait,
-  Dext.Utils;
+  FireDAC.ConsoleUI.Wait;
 
 { TFireDACTransaction }
 
@@ -309,6 +308,7 @@ begin
   FDialect := ADialect;
   FQuery := TFDQuery.Create(nil);
   FQuery.Connection := FConnection;
+  FQuery.ResourceOptions.ParamCreate := True;
 end;
 
 destructor TFireDACCommand.Destroy;
@@ -326,10 +326,7 @@ begin
     SetParamValue(Param, AValue);
   except
     on E: Exception do
-    begin
-      SafeWriteLn(Format('CRITICAL ERROR in AddParam(%s): %s', [AName, E.Message]));
       raise;
-    end;
   end;
 end;
 
@@ -637,7 +634,6 @@ end;
 
 function TFireDACCommand.ExecuteNonQuery: Integer;
 begin
-  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   FQuery.ExecSQL;
   Result := FQuery.RowsAffected;
 end;
@@ -648,7 +644,6 @@ var
   i: Integer;
   Src, Dest: TFDParam;
 begin
-  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   // Create a new Query for the Reader to allow independent iteration
   Q := TFDQuery.Create(nil);
   try
@@ -677,7 +672,6 @@ end;
 
 function TFireDACCommand.ExecuteScalar: TValue;
 begin
-  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   FQuery.Open;
   try
     if not FQuery.Eof then
@@ -691,6 +685,7 @@ end;
 
 procedure TFireDACCommand.SetSQL(const ASQL: string);
 begin
+  FQuery.Params.Clear;
   FQuery.SQL.Text := ASQL;
 end;
 

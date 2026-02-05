@@ -32,6 +32,7 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.SysUtils,
+  System.StrUtils,
   System.TypInfo,
   Dext.Types.UUID,
   Dext.DI.Interfaces,
@@ -263,7 +264,15 @@ type
   private
     class var FProvider: IDextJsonProvider;
     class var FDefaultSettings: TJsonSettings;
+    class var FInterfaceMappings: TDictionary<string, string>;
     class function GetProvider: IDextJsonProvider; static;
+    class function GetInterfaceMappings: TDictionary<string, string>; static;
+  public
+    /// <summary>
+    ///   Registers a default implementation class for an interface type.
+    ///   Used during deserialization when an interface is encountered.
+    /// </summary>
+    class procedure RegisterImplementation(const AInterfaceName, AImplementationName: string); static;
   public
     /// <summary>
     ///   Sets the default settings to be used for all serialization/deserialization
@@ -454,10 +463,12 @@ procedure JsonDefaultSettings(const ASettings: TJsonSettings);
 implementation
 
 uses
+  System.Classes,
   System.DateUtils,
   System.Variants,
   Dext.Core.Reflection,
   Dext.Core.DateUtils,
+  Dext.Collections,
   Dext.Json.Driver.DextJsonDataObjects; // Default driver
 
 const
@@ -904,12 +915,8 @@ begin
   RttiType := TReflection.GetMetadata(AType).RttiType;
   
   // Create Instance using TActivator for full DI support and robust constructor resolution
-  if FSettings.FServiceProvider <> nil then
-     Instance := TActivator.CreateInstance(FSettings.FServiceProvider, GetTypeData(AType)^.ClassType)
-  else
-     Instance := TActivator.CreateInstance(GetTypeData(AType)^.ClassType, []);
-  
-  Result := Instance;
+  Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
+  Instance := Result.AsObject;
 
   for Prop in RttiType.GetProperties do
   begin
@@ -1677,6 +1684,18 @@ begin
     Result := FDefaultSettings;
 end;
 
+class function TDextJson.GetInterfaceMappings: TDictionary<string, string>;
+begin
+  if FInterfaceMappings = nil then
+    FInterfaceMappings := TDictionary<string, string>.Create;
+  Result := FInterfaceMappings;
+end;
+
+class procedure TDextJson.RegisterImplementation(const AInterfaceName, AImplementationName: string);
+begin
+  GetInterfaceMappings.AddOrSetValue(AInterfaceName, AImplementationName);
+end;
+
 function TDextSerializer.IsArrayType(AType: PTypeInfo): Boolean;
 begin
   Result := (AType.Kind = tkDynArray);
@@ -1747,6 +1766,7 @@ begin
   try
     for I := 0 to AJson.GetCount - 1 do
     begin
+      var Node := AJson.GetNode(I);
       case ElementType.Kind of
         tkInteger:
           ElementValue := TValue.From<Integer>(AJson.GetInteger(I));
@@ -1772,7 +1792,6 @@ begin
               ElementValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(I)))
             else
             begin
-              var Node := AJson.GetNode(I);
               if (Node <> nil) and (Node.GetNodeType = jntObject) then
                 ElementValue := DeserializeRecord(Node as IDextJsonObject, ElementType)
               else
@@ -1781,9 +1800,15 @@ begin
           end;
         tkClass:
           begin
-            var Node := AJson.GetNode(I);
             if (Node <> nil) and (Node.GetNodeType = jntObject) then
                ElementValue := DeserializeObject(Node as IDextJsonObject, ElementType)
+            else
+               ElementValue := TValue.Empty;
+          end;
+        tkDynArray:
+          begin
+            if (Node <> nil) and (Node.GetNodeType = jntArray) then
+               ElementValue := DeserializeArray(Node as IDextJsonArray, ElementType)
             else
                ElementValue := TValue.Empty;
           end;
@@ -1812,35 +1837,23 @@ end;
 function TDextSerializer.DeserializeList(AJson: IDextJsonArray; AType: PTypeInfo): TValue;
 var
   ElementType: PTypeInfo;
-  List: TObject;
   I: Integer;
   ElementValue: TValue;
   AddMethod: TRttiMethod;
-  Context: TRttiContext;
 begin
-  Context := TRttiContext.Create;
+  // TODO : Refactory and optimize
   try
-    var RttiType := Context.GetType(AType);
-    var CreateMethod: TRttiMethod := nil;
-
-    for var Method in RttiType.GetMethods do
-      if Method.IsConstructor and (Length(Method.GetParameters) = 0) then
-      begin
-        CreateMethod := Method;
-        Break;
-      end;
-
-    if CreateMethod = nil then
-      CreateMethod := RttiType.GetMethod('Create');
-
-    if CreateMethod = nil then
-      raise EDextJsonException.CreateFmt('Cannot find a suitable constructor for %s', [AType.NameFld.ToString]);
-
-    Result := CreateMethod.Invoke(AType^.TypeData^.ClassType, []);
-    List := Result.AsObject;
-
-    AddMethod := Context.GetType(AType).GetMethod('Add');
     ElementType := GetListElementType(AType);
+    if ElementType = nil then
+      raise EDextJsonException.CreateFmt('Could not determine element type for %s', [AType.NameFld.ToString]);
+
+    // Instantiate via Activator (Handles DI, Fallbacks and Factory)
+    Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
+
+    var RttiType := TReflection.GetMetadata(AType).RttiType;
+    AddMethod := RttiType.GetMethod('Add');
+    if not Assigned(AddMethod) then
+      raise EDextJsonException.CreateFmt('Could not find Add method for list type %s', [AType.NameFld.ToString]);
 
     for I := 0 to AJson.GetCount - 1 do
     begin
@@ -1858,7 +1871,7 @@ begin
           tkInteger: ElementValue := TValue.From<Integer>(AJson.GetInteger(I));
           tkInt64: ElementValue := TValue.From<Int64>(AJson.GetInt64(I));
           tkFloat: ElementValue := TValue.From<Double>(AJson.GetDouble(I));
-          tkUString, tkString, tkWString, tkLString:
+          tkString, tkLString, tkWString, tkUString:
             ElementValue := TValue.From<string>(AJson.GetString(I));
           tkEnumeration:
             if ElementType = TypeInfo(Boolean) then
@@ -1872,16 +1885,23 @@ begin
               ElementValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(I)))
             else
               ElementValue := TValue.Empty;
+          tkDynArray:
+            begin
+              if (Node <> nil) and (Node.GetNodeType = jntArray) then
+                 ElementValue := DeserializeArray(Node as IDextJsonArray, ElementType)
+              else
+                 ElementValue := TValue.Empty;
+            end;
           else
             ElementValue := TValue.Empty;
         end;
       end;
 
       if not ElementValue.IsEmpty then
-        AddMethod.Invoke(List, [ElementValue]);
+        AddMethod.Invoke(Result, [ElementValue]);
     end;
   finally
-    Context.Free;
+    // No context to free
   end;
 end;
 
@@ -2242,5 +2262,10 @@ function TJsonBuilder.ToIndentedString: string;
 begin
   Result := FRoot.JsonObj.ToJson(True);
 end;
+
+initialization
+
+finalization
+  TDextJson.FInterfaceMappings.Free;
 
 end.

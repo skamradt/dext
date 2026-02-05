@@ -157,6 +157,11 @@ type
     function OnlyDeleted: IDbSet<T>;
     function HardDelete(const AEntity: T): IDbSet<T>;
     function Restore(const AEntity: T): IDbSet<T>;
+
+    // Many-to-Many Direct Management
+    procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
   end;
 
   ICollectionEntry = interface
@@ -198,8 +203,9 @@ type
     /// <summary>
     ///   Ensures that the database schema exists.
     ///   Creates tables for all registered entities if they don't exist.
+    ///   Returns True if the schema was created, False if it already existed.
     /// </summary>
-    procedure EnsureCreated;
+    function EnsureCreated: Boolean;
 
     /// <summary>
     ///   Saves all changes made in this context to the database.

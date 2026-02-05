@@ -110,6 +110,19 @@ type
   end;
 
   /// <summary>
+  ///   Helper class to generate SQL for Many-to-Many join table operations.
+  /// </summary>
+  TJoinTableSQLHelper = class
+  public
+    class function GenerateInsert(ADialect: ISQLDialect; 
+      const AJoinTable, ALeftColumn, ARightColumn: string): string;
+    class function GenerateDelete(ADialect: ISQLDialect;
+      const AJoinTable, ALeftColumn, ARightColumn: string): string;
+    class function GenerateDeleteByLeft(ADialect: ISQLDialect;
+      const AJoinTable, ALeftColumn: string): string;
+  end;
+
+  /// <summary>
   ///   Generates SQL for CRUD operations (Insert, Update, Delete).
   /// </summary>
   TSQLGenerator<T: class> = class
@@ -335,7 +348,7 @@ begin
   begin
     for RAttr in RProp.GetAttributes do
     begin
-      if RAttr is PKAttribute then
+      if RAttr is PrimaryKeyAttribute then
       begin
         APK := RProp.Name;
         // Check for Column Attribute on PK
@@ -357,6 +370,37 @@ begin
         APK := ColumnAttribute(RAttr).Name;
     Exit(True);
   end;
+end;
+
+{ TJoinTableSQLHelper }
+
+class function TJoinTableSQLHelper.GenerateInsert(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn, ARightColumn: string): string;
+begin
+  // INSERT INTO "JoinTable" ("left_col", "right_col") VALUES (:p1, :p2)
+  Result := Format('INSERT INTO %s (%s, %s) VALUES (:p1, :p2)',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn),
+     ADialect.QuoteIdentifier(ARightColumn)]);
+end;
+
+class function TJoinTableSQLHelper.GenerateDelete(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn, ARightColumn: string): string;
+begin
+  // DELETE FROM "JoinTable" WHERE "left_col" = :p1 AND "right_col" = :p2
+  Result := Format('DELETE FROM %s WHERE %s = :p1 AND %s = :p2',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn),
+     ADialect.QuoteIdentifier(ARightColumn)]);
+end;
+
+class function TJoinTableSQLHelper.GenerateDeleteByLeft(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn: string): string;
+begin
+  // DELETE FROM "JoinTable" WHERE "left_col" = :p1
+  Result := Format('DELETE FROM %s WHERE %s = :p1',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn)]);
 end;
 
 { TSQLWhereGenerator }
@@ -1042,6 +1086,7 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation then IsMapped := False;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
@@ -1193,6 +1238,7 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation then IsMapped := False;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
@@ -1281,6 +1327,7 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation then IsMapped := False;
         if PropMap.IsPK then IsPK := True;
         // Version not yet supported in Fluent Mapping explicitly? Assuming no for now or check map.
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
@@ -1291,9 +1338,9 @@ begin
         if Attr is NotMappedAttribute then IsMapped := False;
         
         if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
+          if Attr is PrimaryKeyAttribute then IsPK := True;
           
-        if Attr is VersionAttribute then IsVersion := True; // Version attribute still respected
+        if Attr is VersionAttribute then IsVersion := True; 
         
         if (PropMap = nil) or (PropMap.ColumnName = '') then
         begin
@@ -1448,7 +1495,7 @@ begin
       for Attr in Prop.GetAttributes do
       begin
         if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
+          if Attr is PrimaryKeyAttribute then IsPK := True;
           
         if (PropMap = nil) or (PropMap.ColumnName = '') then
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
@@ -1980,7 +2027,7 @@ begin
         if Attr is NotMappedAttribute then IsMapped := False;
         
         if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
+          if Attr is PrimaryKeyAttribute then IsPK := True;
           
         if (PropMap = nil) or not PropMap.IsAutoInc then
            if Attr is AutoIncAttribute then IsAutoInc := True;

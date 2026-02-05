@@ -50,7 +50,22 @@ type
 | `[PK]` | Chave primária |
 | `[AutoInc]` | Auto-incremento |
 | `[NotMapped]` | Excluir do mapeamento |
-| `[Version]` | Concorrência otimista |
+| `[Version]` | Controle de concorrência otimista |
+| `[SoftDelete('col_deletado', 1, 0)]` | Exclusão lógica com valores para Deletado e Não Deletado |
+| `[CreatedAt]` | Timestamp automático na inserção |
+| `[UpdatedAt]` | Timestamp automático na atualização |
+
+### Dicas de Escopo de Tipo
+
+| Atributo | Descrição |
+|----------|-----------|
+| `[StringLength(100)]` | Comprimento máximo da string |
+| `[MaxLength(100)]` | Alias para StringLength |
+| `[Precision(18, 2)]` | Precisão e Escala para tipos numéricos/decimais |
+| `[Required]` | Restrição NOT NULL |
+| `[Default('valor')]` | Valor padrão no banco de dados |
+| `[JsonColumn]` | Trata a coluna como JSON (converte para objeto/lista) |
+| `[DbType(ftGuid)]` | Força um TFieldType específico para parâmetros |
 
 ### Relacionamentos
 

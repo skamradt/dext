@@ -13,6 +13,7 @@ uses
   System.TypInfo,
   System.Net.HttpClient,
   System.Net.URLClient,
+  System.NetConsts,
   System.DateUtils,
   Dext.Logging,
   Dext.Logging.Async,

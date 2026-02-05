@@ -50,7 +50,10 @@ type
 | `[PK]` | Primary key |
 | `[AutoInc]` | Auto-increment |
 | `[NotMapped]` | Exclude from mapping |
-| `[Version]` | Optimistic concurrency |
+| `[Version]` | Optimistic concurrency versioning |
+| `[SoftDelete('deleted_col', 1, 0)]` | Logical deletion with DeletedValue and NotDeletedValue |
+| `[CreatedAt]` | Automatic timestamp on insertion |
+| `[UpdatedAt]` | Automatic timestamp on update |
 
 ### Relationships
 
@@ -64,8 +67,12 @@ type
 | Attribute | Description |
 |-----------|-------------|
 | `[StringLength(100)]` | Max string length |
-| `[Required]` | NOT NULL |
-| `[Default('value')]` | Default value |
+| `[MaxLength(100)]` | Same as StringLength (Alias) |
+| `[Precision(18, 2)]` | Precision and Scale for numeric/decimal |
+| `[Required]` | NOT NULL constraint |
+| `[Default('value')]` | Default value in database |
+| `[JsonColumn]` | Treat column as JSON (converts to object/list) |
+| `[DbType(ftGuid)]` | Force a specific TFieldType for database parameter |
 
 ### Type Conversion
 

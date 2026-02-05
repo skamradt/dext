@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-02-05 - Dext.Entity: Many-to-Many & Full Attribute Suite
+
+### ✨ Nova Feature / New Feature
+
+#### Many-to-Many Relationships & WebSalesSystem Support
+**[PT-BR]** Implementação motivada por limitações de relacionamento identificadas no novo projeto `WebSalesSystem`. Suporte completo a relacionamentos Muitos-para-Muitos via atributo `[ManyToMany]`. Gerenciamento automático de tabelas de ligação, suporte a Lazy Loading e Eager Loading (`Include`). Novos métodos `LinkManyToMany`, `UnlinkManyToMany` e `SyncManyToMany` adicionados ao `IDbSet<T>`.
+
+**[EN]** Implementation driven by relationship limitations identified in the new `WebSalesSystem` project. Full support for Many-to-Many relationships via `[ManyToMany]` attribute. Automatic join table management, support for Lazy and Eager loading (`Include`). New methods `LinkManyToMany`, `UnlinkManyToMany`, and `SyncManyToMany` added to `IDbSet<T>`.
+
+#### Full Attribute Suite
+**[PT-BR]** Expansão do mapeamento para suportar os requisitos de modelagem do `WebSalesSystem`:
+- `[SoftDelete]`: Filtro automático e deleção lógica.
+- `[Version]`: Controle de concorrência otimista.
+- `[CreatedAt]` / `[UpdatedAt]`: Auditoria automática de timestamps.
+- `[JsonColumn]`: Armazenamento de objetos e listas como JSON.
+- `[DbType]`, `[Precision]`, `[MaxLength]`: Controle refinado de tipos e constraints.
+
+**[EN]** Mapping expansion to support `WebSalesSystem` modeling requirements:
+- `[SoftDelete]`: Automatic filtering and logical deletion.
+- `[Version]`: Optimistic concurrency control.
+- `[CreatedAt]` / `[UpdatedAt]`: Automatic timestamp auditing.
+- `[JsonColumn]`: Storage of objects and lists as JSON.
+- `[DbType]`, `[Precision]`, `[MaxLength]`: Refined control over types and constraints.
+
+### 🐛 Bug Fixes
+
+- **WebSalesSystem List Deserialization**: Resolvido `EBindingException` na desserialização de `IList<T>` em DTOs complexos. Implementado fallback para `TSmartList<T>` no `TActivator` quando fábricas de coleções não são encontradas.
+- **Lazy Loading Memory Leak**: Correção de `Invalid pointer operation` causado por dupla liberação de entidades. Agora o `LazyLoader` respeita o ciclo de vida do `DbContext` (`OwnsObjects := False`).
+- **FireDAC Params**: Resolvido erro de "Parameter not found" causado por limpeza incorreta de definições de parâmetros em reuso de comandos.
+- **M2M Index**: Corrigido erro de índice (off-by-one) na recuperação de IDs da tabela de ligação.
+
+---
+
 ## 2026-02-01 - Zero-Leak Architecture & Attribute Revamp
 
 ### ⚠️ Breaking Changes & Modernization

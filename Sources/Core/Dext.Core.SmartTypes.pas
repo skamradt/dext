@@ -184,6 +184,10 @@ type
     // Range
     function Between(const Lower, Upper: T): BooleanExpression;
 
+    // Order By Support
+    function Asc: IOrderBy;
+    function Desc: IOrderBy;
+
     property Name: string read GetPropertyName;
     property Value: T read FValue write FValue;
     property Expression: IExpression read GetExpression;
@@ -235,6 +239,9 @@ type
 function GetSmartValue(const AValue: TValue; const ATypeName: string): string;
 
 implementation
+
+uses
+  Dext.Specifications.OrderBy;
 
 { TPropInfo }
 
@@ -877,6 +884,22 @@ begin
   var LowerCheck := (Self >= Lower);
   var UpperCheck := (Self <= Upper);
   Result := LowerCheck and UpperCheck;
+end;
+
+function Prop<T>.Asc: IOrderBy;
+begin
+  if IsQueryMode then
+    Result := TOrderBy.Create(GetColumnName, True)
+  else
+    Result := nil; // Runtime sorting not supported via this method yet
+end;
+
+function Prop<T>.Desc: IOrderBy;
+begin
+  if IsQueryMode then
+    Result := TOrderBy.Create(GetColumnName, False)
+  else
+    Result := nil;
 end;
 
 end.

@@ -17,6 +17,10 @@ set PLATFORM=Win32
 REM Extract ProductVersion from BDS (e.g., 37.0)
 for %%i in ("%BDS%") do set PRODUCT_VERSION=%%~nxi
 
+REM Force BDSCOMMONDIR to Public Documents to match IDE default behavior
+REM (rsvars.bat often incorrectly points to current user's documents)
+set "BDSCOMMONDIR=%PUBLIC%\Documents\Embarcadero\Studio\%PRODUCT_VERSION%"
+
 REM Output paths matching .dproj configuration: $(dext)\Output\$(ProductVersion)_$(Platform)_$(Config)
 set DEXT=%~dp0..
 set OUTPUT_PATH=%DEXT%\Output\%PRODUCT_VERSION%_%PLATFORM%_%BUILD_CONFIG%

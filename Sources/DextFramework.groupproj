@@ -33,7 +33,7 @@
         <Projects Include="..\Apps\CLI\DextTool.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Examples\Web.FoodDelivery\DextFood.dproj">
+        <Projects Include="..\Tests\Testing\TestORMRelationships.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -134,23 +134,23 @@
     <Target Name="DextTool:Make">
         <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
     </Target>
-    <Target Name="DextFood">
-        <MSBuild Projects="..\Examples\Web.FoodDelivery\DextFood.dproj"/>
+    <Target Name="TestORMRelationships">
+        <MSBuild Projects="..\Tests\Testing\TestORMRelationships.dproj"/>
     </Target>
-    <Target Name="DextFood:Clean">
-        <MSBuild Projects="..\Examples\Web.FoodDelivery\DextFood.dproj" Targets="Clean"/>
+    <Target Name="TestORMRelationships:Clean">
+        <MSBuild Projects="..\Tests\Testing\TestORMRelationships.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="DextFood:Make">
-        <MSBuild Projects="..\Examples\Web.FoodDelivery\DextFood.dproj" Targets="Make"/>
+    <Target Name="TestORMRelationships:Make">
+        <MSBuild Projects="..\Tests\Testing\TestORMRelationships.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextSidecar;DextTool;DextFood"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Web_Hubs;Dext_Hosting;Dext_Testing;Dext_UI;Dext_Net;DextSidecar;DextTool;TestORMRelationships"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;DextFood:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_Testing:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;TestORMRelationships:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;DextFood:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_Testing:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;TestORMRelationships:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

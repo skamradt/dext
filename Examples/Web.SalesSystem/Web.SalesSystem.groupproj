@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B263EE02-1BB2-4E18-924C-086C299DF28C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Server\Web.SalesSystem.Minimal.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Tests\Web.SalesSystem.Tests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Web_SalesSystem_Minimal">
+        <MSBuild Projects="Server\Web.SalesSystem.Minimal.dproj"/>
+    </Target>
+    <Target Name="Web_SalesSystem_Minimal:Clean">
+        <MSBuild Projects="Server\Web.SalesSystem.Minimal.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_SalesSystem_Minimal:Make">
+        <MSBuild Projects="Server\Web.SalesSystem.Minimal.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_SalesSystem_Tests">
+        <MSBuild Projects="Tests\Web.SalesSystem.Tests.dproj"/>
+    </Target>
+    <Target Name="Web_SalesSystem_Tests:Clean">
+        <MSBuild Projects="Tests\Web.SalesSystem.Tests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_SalesSystem_Tests:Make">
+        <MSBuild Projects="Tests\Web.SalesSystem.Tests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Web_SalesSystem_Minimal;Web_SalesSystem_Tests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Web_SalesSystem_Minimal:Clean;Web_SalesSystem_Tests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Web_SalesSystem_Minimal:Make;Web_SalesSystem_Tests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
