@@ -1418,8 +1418,7 @@ begin
           Method.Invoke(Instance, []);
 
         Info.Result := trPassed;
-        Inc(FSummary.Passed);
-        // Log.Info('Passed Test: %s', [Info.DisplayName]);
+        // Note: Don't increment Passed here yet - wait until after TearDown
 
         // Check MaxTime warning
         MaxTime := GetMaxTime(Method);
@@ -1434,6 +1433,10 @@ begin
         if Assigned(Fixture.TearDownMethod) then
           Fixture.TearDownMethod.Invoke(Instance, []);
       end;
+      
+      // Only increment Passed after TearDown completes successfully
+      if Info.Result = trPassed then
+        Inc(FSummary.Passed);
     except
       on E: Exception do
       begin
