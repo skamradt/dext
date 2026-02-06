@@ -41,6 +41,7 @@ uses
   Dext.Core.SmartTypes, // Add SmartTypes unit
   Dext.Specifications.Base,
   Dext.Specifications.Interfaces,
+  Dext.Specifications.Types,
   Dext.MultiTenancy,
   Dext.Entity.Mapping;
 
@@ -137,6 +138,8 @@ type
     // Smart Properties Support
     function Where(const APredicate: TQueryPredicate<T>): TFluentQuery<T>; overload;
     function Where(const AValue: BooleanExpression): TFluentQuery<T>; overload;
+    function Where(const AExpression: TFluentExpression): TFluentQuery<T>; overload;
+    function Where(const AExpression: IExpression): TFluentQuery<T>; overload;
 
     // Lazy Queries (Deferred Execution) - Returns TFluentQuery<T>
     /// <summary>

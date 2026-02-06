@@ -48,6 +48,7 @@
 - [Entities & Mapping](05-orm/entities.md) - `[Table]`, `[Column]`, `[PK]`
 - [Querying](05-orm/querying.md) - `Where`, `OrderBy`, `Take`
 - [Smart Properties](05-orm/smart-properties.md) - Type-safe expressions
+- [JSON Queries](05-orm/json-queries.md) ⭐ **NEW** - Query JSON/JSONB columns
 - [Specifications](05-orm/specifications.md) - Reusable query patterns
 - [Relationships](05-orm/relationships.md) - 1:1, 1:N, Lazy Loading
 - [Migrations](05-orm/migrations.md) - Schema versioning

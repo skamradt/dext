@@ -45,7 +45,8 @@ uses
   Dext.Entity.TypeConverters,
   Dext.Types.Nullable,
   Dext.Types.UUID,
-  Dext.Entity.Cache;
+  Dext.Entity.Cache,
+  Dext.MultiTenancy;
 
 type
   ISQLColumnMapper = interface
@@ -69,7 +70,8 @@ type
     procedure ProcessLogical(const C: TLogicalExpression);
     procedure ProcessUnary(const C: TUnaryExpression);
     procedure ProcessConstant(const C: TConstantExpression);
-    procedure ProcessProperty(const C: TPropertyExpression);
+     procedure ProcessProperty(const C: TPropertyExpression);
+    procedure ProcessJsonProperty(const C: TJsonPropertyExpression);
     procedure ProcessLiteral(const C: TLiteralExpression);
 
     procedure ResolveSQL(const AExpression: IExpression);
@@ -89,6 +91,7 @@ type
     function Generate(const AExpression: IExpression): string;
     
     property Params: TDictionary<string, TValue> read FParams;
+    property ParamCount: Integer read FParamCount write FParamCount;
   end;
 
   TSQLColumnMapper<T: class> = class(TInterfacedObject, ISQLColumnMapper)
@@ -137,12 +140,14 @@ type
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
     FSchema: string;
+    FTenantProvider: ITenantProvider;
 
     function GetNextParamName: string;
     function GetTableName: string;
     function GetSoftDeleteFilter: string;
     function GetDiscriminatorFilter: string;
     function GetDiscriminatorValueSQL: string;
+    function GetQueryFiltersSQL: string;
 
     function GetDialectEnum: TDatabaseDialect;
     function GetJoinTypeSQL(AType: TJoinType): string;
@@ -152,7 +157,7 @@ type
     function TryUnwrapSmartValue(var AValue: TValue): Boolean;
 
   public
-    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
+    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
     destructor Destroy; override;
     
     property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
@@ -229,6 +234,8 @@ begin
   else if Ex is TConstantExpression then
     // No params
   else if Ex is TPropertyExpression then
+    // No params
+  else if Ex is TJsonPropertyExpression then
     // No params
   else if Ex is TLiteralExpression then
     ProcessLiteral(TLiteralExpression(Ex))
@@ -452,7 +459,6 @@ function TSQLWhereGenerator.Generate(const AExpression: IExpression): string;
 begin
   FSQL.Clear;
   FParams.Clear;
-  FParamCount := 0;
   
   if AExpression = nil then
     Exit('');
@@ -481,6 +487,8 @@ begin
     ProcessConstant(TConstantExpression(AExpression))
   else if AExpression is TPropertyExpression then
     ProcessProperty(TPropertyExpression(AExpression))
+  else if AExpression is TJsonPropertyExpression then
+    ProcessJsonProperty(TJsonPropertyExpression(AExpression))
   else if AExpression is TLiteralExpression then
     ProcessLiteral(TLiteralExpression(AExpression))
   else
@@ -554,7 +562,14 @@ begin
        else DialectEnum := ddSQLite;
     end;
     
-    if (DialectEnum = ddPostgreSQL) and 
+    // When comparing JSON property extraction result (returns TEXT) with non-string values,
+    // we need to cast the parameter to TEXT for PostgreSQL
+    if (DialectEnum = ddPostgreSQL) and (C.Left is TJsonPropertyExpression) and
+       (Lit.Value.Kind in [tkInteger, tkInt64, tkFloat]) then
+    begin
+      SQLCast := ':' + ParamName + '::text';
+    end
+    else if (DialectEnum = ddPostgreSQL) and 
        ((Lit.Value.TypeInfo = TypeInfo(TGUID)) or 
         (Lit.Value.TypeInfo = TypeInfo(TUUID)) or
         ((Lit.Value.Kind in [tkString, tkUString, tkWString]) and
@@ -611,9 +626,13 @@ begin
   else
   begin
     // IsNull / IsNotNull
-    FSQL.Append('(')
-        .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
-        .Append(' ')
+    FSQL.Append('(');
+    if C.Expression <> nil then
+      ResolveSQL(C.Expression)
+    else
+      FSQL.Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)));
+    
+    FSQL.Append(' ')
         .Append(GetUnaryOpSQL(C.UnaryOperator))
         .Append(')');
   end;
@@ -622,6 +641,14 @@ end;
 procedure TSQLWhereGenerator.ProcessProperty(const C: TPropertyExpression);
 begin
   FSQL.Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)));
+end;
+
+procedure TSQLWhereGenerator.ProcessJsonProperty(const C: TJsonPropertyExpression);
+var
+  Mapped: string;
+begin
+  Mapped := MapColumn(C.PropertyName);
+  FSQL.Append(FDialect.GetJsonValueSQL(QuoteColumnOrAlias(Mapped), C.JsonPath));
 end;
 
 procedure TSQLWhereGenerator.ProcessLiteral(const C: TLiteralExpression);
@@ -745,12 +772,13 @@ end;
 
 { TSQLGenerator<T> }
 
-constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
+constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
 begin
   FDialect := ADialect;
   FMap := AMap;
   if FMap = nil then
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  FTenantProvider := ATenantProvider;
   FParams := TDictionary<string, TValue>.Create;
   FParamCount := 0;
   FRttiContext := TRttiContext.Create;
@@ -1052,6 +1080,46 @@ begin
     Result := ddUnknown;
 end;
 
+function TSQLGenerator<T>.GetQueryFiltersSQL: string;
+var
+  Filter: IExpression;
+  WhereGen: TSQLWhereGenerator;
+  SB: TStringBuilder;
+  Pair: TPair<string, TValue>;
+begin
+  Result := '';
+  if FIgnoreQueryFilters then Exit;
+  if (FMap = nil) or (FMap.QueryFilters.Count = 0) then Exit;
+
+  SB := TStringBuilder.Create;
+  try
+    WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create(FNamingStrategy));
+    try
+      // Pass the current parameter count to avoid collisions
+      WhereGen.ParamCount := FParamCount;
+      
+      for Filter in FMap.QueryFilters do
+      begin
+        if SB.Length > 0 then SB.Append(' AND ');
+        SB.Append(WhereGen.Generate(Filter));
+        
+        // Merge Params
+        for Pair in WhereGen.Params do
+          FParams.AddOrSetValue(Pair.Key, Pair.Value);
+          
+        // Update local count
+        FParamCount := WhereGen.ParamCount;
+      end;
+      Result := SB.ToString;
+    finally
+      WhereGen.Free;
+    end;
+  finally
+    SB.Free;
+  end;
+
+end;
+
 function TSQLGenerator<T>.GenerateInsert(const AEntity: T): string;
 var
   Typ: TRttiType;
@@ -1160,6 +1228,11 @@ begin
         Converter := PropMap.Converter
       else
         Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
+      
+      // If property is marked as JsonColumn but has no converter, use TJsonConverter
+      if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then
+        Converter := TJsonConverter.Create(PropMap.UseJsonB);
+        
       if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
       begin
         SQLCast := Converter.GetSQLCast(':' + ParamName, GetDialectEnum);
@@ -1568,10 +1641,10 @@ var
   SoftDeleteFilter, DiscriminatorFilter: string;
   SortCol: string;
   P: TRttiProperty;
-  // Caching
   Sig: string;
   CachedSQL: string;
   Collector: TSQLParamCollector;
+  TenantId: string;
 begin
   FParams.Clear;
   FParamCount := 0;
@@ -1579,9 +1652,13 @@ begin
   // 1. Check Cache
   if ASpec <> nil then
   begin
-    Sig := Format('%s:%s:%s:Ign:%d:Del:%d', 
+    TenantId := '';
+    if Assigned(FTenantProvider) and Assigned(FTenantProvider.Tenant) then
+      TenantId := FTenantProvider.Tenant.Id;
+
+    Sig := Format('%s:%s:%s:Ign:%d:Del:%d:Ten:%s', 
       [(FDialect as TObject).ClassName, GetTableName, ASpec.GetSignature, 
-       Ord(FIgnoreQueryFilters), Ord(FOnlyDeleted)]);
+       Ord(FIgnoreQueryFilters), Ord(FOnlyDeleted), TenantId]);
     if TSQLCache.Instance.TryGetSQL(Sig, CachedSQL) then
     begin
       // Re-hydrate parameters using Collector (fast traversal)
@@ -1597,15 +1674,13 @@ begin
   end;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create(FNamingStrategy));
-    
   try
     WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    FParamCount := WhereGen.ParamCount;
     
     // Copy params
     for Pair in WhereGen.Params do
-    begin
-      FParams.Add(Pair.Key, Pair.Value);
-    end;
+      FParams.AddOrSetValue(Pair.Key, Pair.Value);
   finally
     WhereGen.Free;
   end;
@@ -1811,7 +1886,7 @@ var
   Typ: TRttiType;
   First, IsMapped: Boolean;
   PropMap: TPropertyMap;
-  SoftDeleteFilter, DiscriminatorFilter: string;
+  SoftDeleteFilter, DiscriminatorFilter, GlobalFilters, QFilters: string;
 begin
   FParams.Clear;
   FParamCount := 0;
@@ -1863,21 +1938,26 @@ begin
 
     SB.Append(' FROM ').Append(GetTableName);
 
-    // Add soft delete filter
+    // Add global filters
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
+    GlobalFilters := SoftDeleteFilter;
     
     if DiscriminatorFilter <> '' then
     begin
-       if SoftDeleteFilter <> '' then
-         SoftDeleteFilter := ' WHERE ' + SoftDeleteFilter + ' AND ' + DiscriminatorFilter
-       else
-         SoftDeleteFilter := ' WHERE ' + DiscriminatorFilter;
-    end
-    else if SoftDeleteFilter <> '' then
-       SoftDeleteFilter := ' WHERE ' + SoftDeleteFilter;
-       
-    SB.Append(SoftDeleteFilter);
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + DiscriminatorFilter;
+    end;
+    
+    QFilters := GetQueryFiltersSQL;
+    if QFilters <> '' then
+    begin
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + QFilters;
+    end;
+    
+    if GlobalFilters <> '' then
+      SB.Append(' WHERE ').Append(GlobalFilters);
 
     Result := SB.ToString;
   finally
@@ -1890,22 +1970,20 @@ var
   WhereGen: TSQLWhereGenerator;
   WhereSQL: string;
   SB: TStringBuilder;
-  SoftDeleteFilter, DiscriminatorFilter: string;
+  SoftDeleteFilter, DiscriminatorFilter, GlobalFilters, QFilters: string;
   Pair: TPair<string, TValue>;
 begin
   FParams.Clear;
   FParamCount := 0;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
-    
   try
     WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    FParamCount := WhereGen.ParamCount;
     
     // Copy params
     for Pair in WhereGen.Params do
-    begin
-      FParams.Add(Pair.Key, Pair.Value);
-    end;
+      FParams.AddOrSetValue(Pair.Key, Pair.Value);
   finally
     WhereGen.Free;
   end;
@@ -1914,29 +1992,35 @@ begin
   try
     SB.Append('SELECT COUNT(*) FROM ').Append(GetTableName);
     
-    // Append Joins
-    SB.Append(GenerateJoins(ASpec.GetJoins));
-
-    // Add soft delete filter
+    // Global filters
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
+    GlobalFilters := SoftDeleteFilter;
     
     if DiscriminatorFilter <> '' then
     begin
-       if SoftDeleteFilter <> '' then
-         SoftDeleteFilter := SoftDeleteFilter + ' AND ' + DiscriminatorFilter
-       else
-         SoftDeleteFilter := DiscriminatorFilter;
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + DiscriminatorFilter;
     end;
     
+    QFilters := GetQueryFiltersSQL;
+    if QFilters <> '' then
+    begin
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + QFilters;
+    end;
+
+    // Append Joins
+    SB.Append(GenerateJoins(ASpec.GetJoins));
+
     if WhereSQL <> '' then
     begin
       SB.Append(' WHERE ').Append(WhereSQL);
-      if SoftDeleteFilter <> '' then
-        SB.Append(' AND ').Append(SoftDeleteFilter);
+      if GlobalFilters <> '' then
+        SB.Append(' AND ').Append(GlobalFilters);
     end
-    else if SoftDeleteFilter <> '' then
-      SB.Append(' WHERE ').Append(SoftDeleteFilter);
+    else if GlobalFilters <> '' then
+      SB.Append(' WHERE ').Append(GlobalFilters);
       
     Result := SB.ToString;
   finally

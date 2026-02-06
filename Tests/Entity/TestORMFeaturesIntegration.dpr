@@ -53,6 +53,7 @@ begin
       TOptimisticConcurrencyTests, 
       TSoftDeleteTests, 
       TAuditFieldsTests,
+      TJsonQueryTests,
       TRelationshipTests
     ]);
     

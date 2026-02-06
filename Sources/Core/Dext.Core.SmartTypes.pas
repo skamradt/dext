@@ -83,6 +83,7 @@ type
     class operator Implicit(const Value: Boolean): BooleanExpression;
     class operator Implicit(const Value: BooleanExpression): Boolean;
     class operator Implicit(const Value: BooleanExpression): TFluentExpression;
+    class operator Implicit(const Value: TFluentExpression): BooleanExpression;
 
     class operator LogicalAnd(const Left, Right: BooleanExpression): BooleanExpression;
     class operator BitwiseAnd(const Left, Right: BooleanExpression): BooleanExpression;
@@ -323,6 +324,11 @@ begin
     Result := TFluentExpression.From(Value.FExpression)
   else
     Result := TFluentExpression.From(TConstantExpression.Create(Value.FRuntimeValue));
+end;
+
+class operator BooleanExpression.Implicit(const Value: TFluentExpression): BooleanExpression;
+begin
+  Result := BooleanExpression.FromQuery(Value.Expression);
 end;
 
 class operator BooleanExpression.Implicit(const Value: Boolean): BooleanExpression;

@@ -8,11 +8,12 @@ Dext.Entity é um ORM completo para Delphi com suporte a múltiplos bancos de da
 2. [Entidades & Mapeamento](entidades.md) - Atributos e configuração
 3. [Consultas](consultas.md) - API fluente de queries
 4. [Smart Properties](smart-properties.md) - Queries type-safe sem classes de metadados
-5. [Specifications](specifications.md) - Lógica de consulta reutilizável
-6. [Relacionamentos](relacionamentos.md) - 1:1, 1:N, Lazy Loading
-7. [Migrations](migrations.md) - Ciclo de vida do schema do banco
-8. [Scaffolding](scaffolding.md) - Gerar entidades a partir do BD
-9. [Multi-Tenancy](multi-tenancy.md) - Isolamento de dados SaaS
+5. [Consultas JSON](consultas-json.md) - Consultar colunas JSON/JSONB
+6. [Specifications](specifications.md) - Lógica de consulta reutilizável
+7. [Relacionamentos](relacionamentos.md) - 1:1, 1:N, Lazy Loading
+8. [Migrations](migrations.md) - Ciclo de vida do schema do banco
+9. [Scaffolding](scaffolding.md) - Gerar entidades a partir do BD
+10. [Multi-Tenancy](multi-tenancy.md) - Isolamento de dados SaaS
 
 > 📦 **Exemplos**:
 > - [Orm.EntityDemo](../../../Examples/Orm.EntityDemo/) (Padrão)

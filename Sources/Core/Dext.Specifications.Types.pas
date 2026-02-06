@@ -96,6 +96,20 @@ type
   end;
 
   /// <summary>
+  ///   Represents a reference to a property inside a JSON column.
+  /// </summary>
+  TJsonPropertyExpression = class(TAbstractExpression)
+  private
+    FPropertyName: string;
+    FJsonPath: string;
+  public
+    constructor Create(const APropertyName, AJsonPath: string);
+    property PropertyName: string read FPropertyName;
+    property JsonPath: string read FJsonPath;
+    function ToString: string; override;
+  end;
+
+  /// <summary>
   ///   Represents a literal value in an expression.
   /// </summary>
   TLiteralExpression = class(TAbstractExpression)
@@ -138,6 +152,7 @@ type
   public
     constructor Create(const AExpression: IExpression); overload; // For NOT
     constructor Create(const APropertyName: string; AOperator: TUnaryOperator); overload; // For IsNull
+    constructor Create(const AExpression: IExpression; AOperator: TUnaryOperator); overload; // For IsNull on complex expressions
     
     property Expression: IExpression read FExpression;
     property PropertyName: string read FPropertyName;
@@ -193,8 +208,10 @@ type
   TPropExpression = record
   private
     FName: string;
+    FJsonPath: string;
+    function GetLeftExp: IExpression;
   public
-    constructor Create(const AName: string);
+    constructor Create(const AName: string; const AJsonPath: string = '');
     // Comparison Operators
     class operator Equal(const Left: TPropExpression; const Right: TValue): TFluentExpression;
     class operator NotEqual(const Left: TPropExpression; const Right: TValue): TFluentExpression;
@@ -205,6 +222,9 @@ type
     
     class operator Implicit(const Value: TPropExpression): string;
     class operator Implicit(const Value: string): TPropExpression;
+
+    // JSON Support
+    function Json(const APath: string): TPropExpression;
 
     // Special Methods (Like, In, etc)
     function Like(const Pattern: string): TFluentExpression;
@@ -229,6 +249,7 @@ type
     function Asc: IOrderBy;
     function Desc: IOrderBy;
     property Name: string read FName;
+    property JsonPath: string read FJsonPath;
   end;
 
   function Prop(const AName: string): TPropExpression;
@@ -324,6 +345,20 @@ begin
   Result := FPropertyName;
 end;
 
+{ TJsonPropertyExpression }
+
+constructor TJsonPropertyExpression.Create(const APropertyName, AJsonPath: string);
+begin
+  inherited Create;
+  FPropertyName := APropertyName;
+  FJsonPath := AJsonPath;
+end;
+
+function TJsonPropertyExpression.ToString: string;
+begin
+  Result := FPropertyName + '->' + FJsonPath;
+end;
+
 { TLiteralExpression }
 
 constructor TLiteralExpression.Create(const AValue: TValue);
@@ -393,14 +428,32 @@ begin
   FOperator := AOperator;
 end;
 
+constructor TUnaryExpression.Create(const AExpression: IExpression;
+  AOperator: TUnaryOperator);
+begin
+  inherited Create;
+  FExpression := AExpression;
+  FOperator := AOperator;
+end;
+
 function TUnaryExpression.ToString: string;
 begin
   if FOperator = uoNot then
     Result := Format('(NOT %s)', [FExpression.ToString])
   else if FOperator = uoIsNull then
-    Result := Format('(%s IS NULL)', [FPropertyName])
+  begin
+    if FExpression <> nil then
+      Result := Format('(%s IS NULL)', [FExpression.ToString])
+    else
+      Result := Format('(%s IS NULL)', [FPropertyName]);
+  end
   else
-    Result := Format('(%s IS NOT NULL)', [FPropertyName]);
+  begin
+    if FExpression <> nil then
+      Result := Format('(%s IS NOT NULL)', [FExpression.ToString])
+    else
+      Result := Format('(%s IS NOT NULL)', [FPropertyName]);
+  end;
 end;
 
 { TConstantExpression }
@@ -485,49 +538,70 @@ end;
 
 { TPropExpression }
 
-constructor TPropExpression.Create(const AName: string);
+constructor TPropExpression.Create(const AName: string; const AJsonPath: string);
 begin
   FName := AName;
+  FJsonPath := AJsonPath;
+end;
+
+function TPropExpression.Json(const APath: string): TPropExpression;
+var
+  NewPath: string;
+begin
+  if FJsonPath <> '' then
+    NewPath := FJsonPath + '.' + APath
+  else
+    NewPath := APath;
+    
+  Result := TPropExpression.Create(FName, NewPath);
+end;
+
+function TPropExpression.GetLeftExp: IExpression;
+begin
+  if FJsonPath <> '' then
+    Result := TJsonPropertyExpression.Create(FName, FJsonPath)
+  else
+    Result := TPropertyExpression.Create(FName);
 end;
 
 class operator TPropExpression.Equal(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boEqual, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boEqual);
 end;
 
 class operator TPropExpression.NotEqual(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boNotEqual, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boNotEqual);
 end;
 
 class operator TPropExpression.GreaterThan(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boGreaterThan, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boGreaterThan);
 end;
 
 class operator TPropExpression.GreaterThanOrEqual(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boGreaterThanOrEqual, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boGreaterThanOrEqual);
 end;
 
 class operator TPropExpression.LessThan(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boLessThan, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boLessThan);
 end;
 
 class operator TPropExpression.LessThanOrEqual(const Left: TPropExpression; const Right: TValue): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(Left.FName, boLessThanOrEqual, Right);
+  Result.FExpression := TBinaryExpression.Create(Left.GetLeftExp, TLiteralExpression.Create(Right), boLessThanOrEqual);
 end;
 
 function TPropExpression.Like(const Pattern: string): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(FName, boLike, Pattern);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Pattern), boLike);
 end;
 
 function TPropExpression.NotLike(const Pattern: string): TFluentExpression;
 begin
-  Result.FExpression := TBinaryExpression.Create(FName, boNotLike, Pattern);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Pattern), boNotLike);
 end;
 
 function TPropExpression.StartsWith(const Value: string): TFluentExpression;
@@ -550,7 +624,7 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<string>>(Values);
-  Result.FExpression := TBinaryExpression.Create(FName, boIn, Val);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Val), boIn);
 end;
 
 class operator TPropExpression.Implicit(const Value: TPropExpression): string;
@@ -568,7 +642,7 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<Integer>>(Values);
-  Result.FExpression := TBinaryExpression.Create(FName, boIn, Val);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Val), boIn);
 end;
 
 function TPropExpression.&In(const Values: TArray<Variant>): TFluentExpression;
@@ -576,7 +650,7 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<Variant>>(Values);
-  Result.FExpression := TBinaryExpression.Create(FName, boIn, Val);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Val), boIn);
 end;
 
 function TPropExpression.NotIn(const Values: TArray<string>): TFluentExpression;
@@ -584,7 +658,7 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<string>>(Values);
-  Result.FExpression := TBinaryExpression.Create(FName, boNotIn, Val);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Val), boNotIn);
 end;
 
 function TPropExpression.NotIn(const Values: TArray<Integer>): TFluentExpression;
@@ -592,24 +666,33 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<Integer>>(Values);
-  Result.FExpression := TBinaryExpression.Create(FName, boNotIn, Val);
+  Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(Val), boNotIn);
 end;
 
 function TPropExpression.IsNull: TFluentExpression;
 begin
-  Result.FExpression := TUnaryExpression.Create(FName, uoIsNull);
+  if FJsonPath <> '' then
+    Result.FExpression := TUnaryExpression.Create(GetLeftExp, uoIsNull)
+  else
+    Result.FExpression := TUnaryExpression.Create(FName, uoIsNull);
 end;
 
 function TPropExpression.IsNotNull: TFluentExpression;
 begin
-  Result.FExpression := TUnaryExpression.Create(FName, uoIsNotNull);
+  if FJsonPath <> '' then
+     // Same for IsNotNull
+     Result.FExpression := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(nil), boNotEqual)
+  else
+    Result.FExpression := TUnaryExpression.Create(FName, uoIsNotNull);
 end;
 
 function TPropExpression.Between(const Lower, Upper: Variant): TFluentExpression;
+var
+  LowerCrit, UpperCrit: IExpression;
 begin
   // (Prop >= Lower) AND (Prop <= Upper)
-  var LowerCrit: IExpression := TBinaryExpression.Create(FName, boGreaterThanOrEqual, TValue.FromVariant(Lower));
-  var UpperCrit: IExpression := TBinaryExpression.Create(FName, boLessThanOrEqual, TValue.FromVariant(Upper));
+  LowerCrit := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(TValue.FromVariant(Lower)), boGreaterThanOrEqual);
+  UpperCrit := TBinaryExpression.Create(GetLeftExp, TLiteralExpression.Create(TValue.FromVariant(Upper)), boLessThanOrEqual);
   Result.FExpression := TLogicalExpression.Create(LowerCrit, UpperCrit, loAnd);
 end;
 

@@ -89,6 +89,9 @@ type
 
     // Explicit Dialect Identification
     function GetDialect: TDatabaseDialect;
+
+    // JSON Support
+    function GetJsonValueSQL(const AColumn, APath: string): string;
   end;
 
   /// <summary>
@@ -138,6 +141,7 @@ type
     function GenerateColumnDefinition(AColumn: TColumnDefinition): string; virtual;
 
     function GetDialect: TDatabaseDialect; virtual;
+    function GetJsonValueSQL(const AColumn, APath: string): string; virtual;
   end;
 
   /// <summary>
@@ -152,6 +156,7 @@ type
     function GetLastInsertIdSQL: string; override;
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -171,6 +176,7 @@ type
     function GetSetSchemaSQL(const ASchemaName: string): string; override;
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -209,6 +215,7 @@ type
     function UseSchemaPrefix: Boolean; override;
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -226,6 +233,7 @@ type
     
     function GenerateAlterColumn(AOp: TAlterColumnOperation): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -315,6 +323,11 @@ end;
 function TBaseDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddUnknown;
+end;
+
+function TBaseDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  raise Exception.Create('JSON queries not supported by this dialect');
 end;
 
 function TBaseDialect.GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean): string;
@@ -659,6 +672,13 @@ begin
   Result := ddSQLite;
 end;
 
+function TSQLiteDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  // Using json_extract for maximum compatibility. 
+  // Redundant identifier quoting is avoided as AColumn is already quoted.
+  Result := Format('json_extract(%s, ''$.%s'')', [AColumn, APath]);
+end;
+
 { TPostgreSQLDialect }
 
 function TPostgreSQLDialect.BooleanToSQL(AValue: Boolean): string;
@@ -741,6 +761,11 @@ end;
 function TPostgreSQLDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddPostgreSQL;
+end;
+
+function TPostgreSQLDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('%s #>> ''{%s}''', [AColumn, APath.Replace('.', ',')]);
 end;
 
 { TInterBaseDialect }
@@ -967,6 +992,11 @@ begin
   Result := ddSQLServer;
 end;
 
+function TSQLServerDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('JSON_VALUE(%s, ''$.%s'')', [AColumn, APath]);
+end;
+
 { TMySQLDialect }
 
 function TMySQLDialect.BooleanToSQL(AValue: Boolean): string;
@@ -1050,6 +1080,11 @@ end;
 function TMySQLDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddMySQL;
+end;
+
+function TMySQLDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('JSON_UNQUOTE(JSON_EXTRACT(%s, ''$.%s''))', [AColumn, APath]);
 end;
 
 { TOracleDialect }

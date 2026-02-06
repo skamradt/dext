@@ -1,5 +1,12 @@
 unit TestORMFeatures;
 
+{$I ..\..\Sources\Dext.inc}
+
+// JSON Query Tests Configuration:
+// - Define DEXT_TEST_JSON_SQLITE to use SQLite (requires sqlite3.dll with JSON1 support)
+// - Undefine DEXT_TEST_JSON_SQLITE to use PostgreSQL (default)
+{$DEFINE DEXT_TEST_JSON_SQLITE}
+
 interface
 
 uses
@@ -11,10 +18,12 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Comp.DataSet,
   FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteWrapper.Stat,
   FireDAC.Phys.SQLiteDef,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,
   FireDAC.DApt,
+  Dext,
   Dext.Assertions,
   Dext.Testing.Attributes,
   Dext.Collections,
@@ -162,6 +171,23 @@ type
     property Author: Lazy<TAuthor> read FAuthor write FAuthor;
   end;
 
+  /// <summary>
+  ///   Entity for testing JSON column queries
+  /// </summary>
+  [Table('UserMetadata')]
+  TUserMetadata = class
+  private
+    FId: Integer;
+    FName: string;
+    FSettings: string;
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
+    [JsonColumn]
+    property Settings: string read FSettings write FSettings;
+  end;
+
   // ============================================================================
   // DB CONTEXT
   // ============================================================================
@@ -177,6 +203,7 @@ type
     function Users: IDbSet<TUserWithProfile>;
     function Authors: IDbSet<TAuthor>;
     function Comments: IDbSet<TComment>;
+    function UserMetadata: IDbSet<TUserMetadata>;
   end;
 
   // ============================================================================
@@ -260,6 +287,30 @@ type
   end;
 
   [TestFixture]
+  TJsonQueryTests = class
+  private
+    class var FSQLiteDriver: TFDPhysSQLiteDriverLink;
+  private
+    FConn: TFDConnection;
+    FContext: TORMFeaturesContext;
+    FEntities: TObjectList<TObject>;
+    procedure SetupSchema;
+    procedure Track(Obj: TObject);
+  public
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+    
+    [Test]
+    procedure Test_JsonQuery_SimpleProperty;
+    [Test]
+    procedure Test_JsonQuery_NestedProperty;
+    [Test]
+    procedure Test_JsonQuery_IsNull;
+  end;
+
+  [TestFixture]
   TRelationshipTests = class
   private
     FConn: TFDConnection;
@@ -299,6 +350,7 @@ begin
   Builder.Entity<TUserWithProfile>;
   Builder.Entity<TAuthor>;
   Builder.Entity<TComment>;
+  Builder.Entity<TUserMetadata>;
 end;
 
 function TORMFeaturesContext.Products: IDbSet<TProductVersion>;
@@ -334,6 +386,11 @@ end;
 function TORMFeaturesContext.Comments: IDbSet<TComment>;
 begin
   Result := Entities<TComment>;
+end;
+
+function TORMFeaturesContext.UserMetadata: IDbSet<TUserMetadata>;
+begin
+  Result := Entities<TUserMetadata>;
 end;
 
 // ============================================================================
@@ -765,6 +822,144 @@ begin
   
   // Assert: CreatedAt should NOT change
   Should(Article.CreatedAt).Be(OriginalCreatedAt);
+end;
+
+// ============================================================================
+// TJsonQueryTests
+// ============================================================================
+
+procedure TJsonQueryTests.Setup;
+var
+  DbConn: IDbConnection;
+begin
+  FEntities := TObjectList<TObject>.Create(False);
+  FConn := TFDConnection.Create(nil);
+  
+  {$IFDEF DEXT_TEST_JSON_SQLITE}
+  // SQLite with JSON support (requires sqlite3.dll 3.9+ with JSON1 extension)
+  if FSQLiteDriver = nil then
+  begin
+    FSQLiteDriver := TFDPhysSQLiteDriverLink.Create(nil);
+    // Point to the output folder where sqlite3.dll 3.51.2 is located
+    FSQLiteDriver.VendorLib := ExtractFilePath(ParamStr(0)) + 'sqlite3.dll';
+  end;
+  FConn.DriverName := 'SQLite';
+  FConn.Params.Add('Database=:memory:');
+  {$ELSE}
+  // PostgreSQL with native JSON/JSONB support
+  FConn.DriverName := 'PG';
+  FConn.Params.Add('Server=localhost');
+  FConn.Params.Add('Database=dext_test');
+  FConn.Params.Add('User_Name=postgres');
+  FConn.Params.Add('Password=root');
+  {$ENDIF}
+  
+  FConn.LoginPrompt := False;
+  FConn.Open;
+  DbConn := TFireDACConnection.Create(FConn, False);
+  FContext := TORMFeaturesContext.Create(DbConn);
+  SetupSchema;
+end;
+
+procedure TJsonQueryTests.SetupSchema;
+begin
+  {$IFDEF DEXT_TEST_JSON_SQLITE}
+  // SQLite schema
+  FContext.Connection.CreateCommand(
+    'CREATE TABLE "UserMetadata" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "Name" TEXT, "Settings" TEXT)'
+  ).Execute;
+  {$ELSE}
+  // PostgreSQL schema with JSONB
+  try
+    FContext.Connection.CreateCommand('DROP TABLE IF EXISTS "UserMetadata"').Execute;
+  except
+    // Ignore if table doesn't exist
+  end;
+  FContext.Connection.CreateCommand(
+    'CREATE TABLE "UserMetadata" ("Id" SERIAL PRIMARY KEY, "Name" TEXT, "Settings" JSONB)'
+  ).Execute;
+  {$ENDIF}
+end;
+
+
+procedure TJsonQueryTests.Teardown;
+begin
+  FreeAndNil(FEntities);
+  FreeAndNil(FContext);
+  FreeAndNil(FConn);
+end;
+
+procedure TJsonQueryTests.Track(Obj: TObject);
+begin
+  if FEntities <> nil then FEntities.Add(Obj);
+end;
+
+procedure TJsonQueryTests.Test_JsonQuery_SimpleProperty;
+var
+  Meta: TUserMetadata;
+  Result: IList<TUserMetadata>;
+begin
+  Meta := TUserMetadata.Create; Track(Meta);
+  Meta.Name := 'Admin';
+  Meta.Settings := '{"role": "admin", "theme": "dark"}';
+  FContext.UserMetadata.Add(Meta);
+  
+  Meta := TUserMetadata.Create; Track(Meta);
+  Meta.Name := 'User';
+  Meta.Settings := '{"role": "user", "theme": "light"}';
+  FContext.UserMetadata.Add(Meta);
+  
+  FContext.SaveChanges;
+  FContext.DetachAll;
+  
+  // Act
+  Result := FContext.UserMetadata.Where(Prop('Settings').Json('role') = 'admin').ToList;
+  
+  // Assert
+  Should(Result.Count).Be(1);
+  Should(Result[0].Name).Be('Admin');
+end;
+
+procedure TJsonQueryTests.Test_JsonQuery_NestedProperty;
+var
+  Meta: TUserMetadata;
+  Result: IList<TUserMetadata>;
+begin
+  Meta := TUserMetadata.Create; Track(Meta);
+  Meta.Name := 'Deep';
+  Meta.Settings := '{"profile": {"details": {"level": 5}}}';
+  FContext.UserMetadata.Add(Meta);
+  
+  FContext.SaveChanges;
+  FContext.DetachAll;
+  
+  // Act
+  Result := FContext.UserMetadata.Where(Prop('Settings').Json('profile.details.level') = 5).ToList;
+  
+  // Assert
+  Should(Result.Count).Be(1);
+  Should(Result[0].Name).Be('Deep');
+end;
+
+procedure TJsonQueryTests.Test_JsonQuery_IsNull;
+var
+  Meta: TUserMetadata;
+  Result: IList<TUserMetadata>;
+begin
+  Meta := TUserMetadata.Create; Track(Meta);
+  Meta.Name := 'Empty';
+  Meta.Settings := '{}';
+  FContext.UserMetadata.Add(Meta);
+  
+  FContext.SaveChanges;
+  FContext.DetachAll;
+  
+  // Act: check if a missing json key results in null behavior
+  Result := FContext.UserMetadata.Where(Prop('Settings').Json('nonexistent').IsNull).ToList;
+  
+  // Assert
+  Should(Result.Count).Be(1);
+  Should(Result[0].Name).Be('Empty');
 end;
 
 // ============================================================================

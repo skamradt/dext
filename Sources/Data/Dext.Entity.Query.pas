@@ -126,6 +126,7 @@ type
     function WherePredicate(const APredicate: TPredicate<T>): TFluentQuery<T>;
     function Where(const APredicate: TQueryPredicate<T>): TFluentQuery<T>; overload;
     function Where(const AValue: BooleanExpression): TFluentQuery<T>; overload;
+    function Where(const AExpression: TFluentExpression): TFluentQuery<T>; overload;
     function Where(const AExpression: IExpression): TFluentQuery<T>; overload;
 
     /// <summary>
@@ -549,12 +550,17 @@ var
   SmartRes: BooleanExpression;
 begin
   SmartRes := APredicate(Dext.Entity.Prototype.Prototype.Entity<T>);
-  Result := Where(TFluentExpression(SmartRes));
+  Result := Where(SmartRes); // Call BooleanExpression overload
+end;
+
+function TFluentQuery<T>.Where(const AExpression: TFluentExpression): TFluentQuery<T>;
+begin
+  Result := Where(AExpression.Expression);
 end;
 
 function TFluentQuery<T>.Where(const AValue: BooleanExpression): TFluentQuery<T>;
 begin
-  Result := Where(TFluentExpression(AValue));
+  Result := Where(AValue.Expression);
 end;
 
 function TFluentQuery<T>.Where(const AExpression: IExpression): TFluentQuery<T>;

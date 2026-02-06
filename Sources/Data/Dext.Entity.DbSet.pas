@@ -148,6 +148,8 @@ type
     // Smart Properties Support
     function Where(const APredicate: TQueryPredicate<T>): TFluentQuery<T>; overload;
     function Where(const AValue: BooleanExpression): TFluentQuery<T>; overload;
+    function Where(const AExpression: TFluentExpression): TFluentQuery<T>; overload;
+    function Where(const AExpression: IExpression): TFluentQuery<T>; overload;
 
     function Query(const ASpec: ISpecification<T>): TFluentQuery<T>; overload;
     function Query(const AExpression: IExpression): TFluentQuery<T>; overload;
@@ -1906,7 +1908,17 @@ end;
 
 function TDbSet<T>.Where(const AValue: BooleanExpression): TFluentQuery<T>;
 begin
-  Result := Query(TFluentExpression(AValue));
+  Result := Query(AValue.Expression);
+end;
+
+function TDbSet<T>.Where(const AExpression: TFluentExpression): TFluentQuery<T>;
+begin
+  Result := Query(AExpression.Expression);
+end;
+
+function TDbSet<T>.Where(const AExpression: IExpression): TFluentQuery<T>;
+begin
+  Result := Query(AExpression);
 end;
 
 function TDbSet<T>.Count(const AExpression: IExpression): Integer;

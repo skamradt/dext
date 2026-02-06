@@ -35,7 +35,8 @@ uses
   System.Variants,
   Data.DB,
   Dext.Entity.Attributes,
-  Dext.Entity.TypeConverters;
+  Dext.Entity.TypeConverters,
+  Dext.Specifications.Interfaces;
 
 type
 
@@ -160,6 +161,8 @@ type
     FInheritanceStrategy: TInheritanceStrategy;
     FDiscriminatorColumn: string;
     FDiscriminatorValue: Variant;
+    // Global Query Filters
+    FQueryFilters: TList<IExpression>;
 
   public
     constructor Create(AEntityType: PTypeInfo);
@@ -174,6 +177,7 @@ type
     property SoftDeleteProp: string read FSoftDeleteProp;
     property SoftDeleteDeletedValue: Variant read FSoftDeleteDeletedValue;
     property SoftDeleteNotDeletedValue: Variant read FSoftDeleteNotDeletedValue;
+    property QueryFilters: TList<IExpression> read FQueryFilters;
     
     property InheritanceStrategy: TInheritanceStrategy read FInheritanceStrategy write FInheritanceStrategy;
     property DiscriminatorColumn: string read FDiscriminatorColumn write FDiscriminatorColumn;
@@ -225,6 +229,9 @@ type
     // Soft Delete Configuration
     function HasSoftDelete(const APropertyName: string): TEntityBuilder<T>; overload;
     function HasSoftDelete(const APropertyName: string; const ADeletedValue, ANotDeletedValue: Variant): TEntityBuilder<T>; overload;
+
+    // Global Query Filters
+    function HasQueryFilter(AFilter: IExpression): TEntityBuilder<T>;
   end;
 
   // ---------------------------------------------------------------------------
@@ -249,6 +256,7 @@ type
     function HasManyToMany(const APropertyName: string): IRelationshipBuilder<T>;
     function HasSoftDelete(const APropertyName: string): IEntityTypeBuilder<T>; overload;
     function HasSoftDelete(const APropertyName: string; const ADeletedValue, ANotDeletedValue: Variant): IEntityTypeBuilder<T>; overload;
+    function HasQueryFilter(AFilter: IExpression): IEntityTypeBuilder<T>;
   end;
 
   TPropertyBuilder<T: class> = class(TInterfacedObject, IPropertyBuilder<T>)
@@ -329,6 +337,7 @@ begin
   FEntityType := AEntityType;
   FProperties := TObjectDictionary<string, TPropertyMap>.Create([doOwnsValues]);
   FKeys := TList<string>.Create;
+  FQueryFilters := TList<IExpression>.Create;
   FIsSoftDelete := False;
   FSoftDeleteProp := '';
   FSoftDeleteDeletedValue := 1;  // Default (1 = Deleted)
@@ -518,6 +527,7 @@ end;
 
 destructor TEntityMap.Destroy;
 begin
+  FQueryFilters.Free;
   FKeys.Free;
   FProperties.Free;
   inherited;
@@ -777,6 +787,12 @@ begin
   Result := Self;
 end;
 
+function TEntityBuilder<T>.HasQueryFilter(AFilter: IExpression): TEntityBuilder<T>;
+begin
+  FMap.FQueryFilters.Add(AFilter);
+  Result := Self;
+end;
+
 
 { TEntityTypeBuilder<T> }
 
@@ -890,6 +906,12 @@ begin
   FMap.FSoftDeleteProp := APropertyName;
   FMap.FSoftDeleteDeletedValue := ADeletedValue;
   FMap.FSoftDeleteNotDeletedValue := ANotDeletedValue;
+  Result := Self;
+end;
+
+function TEntityTypeBuilder<T>.HasQueryFilter(AFilter: IExpression): IEntityTypeBuilder<T>;
+begin
+  FMap.FQueryFilters.Add(AFilter);
   Result := Self;
 end;
 

@@ -48,6 +48,7 @@
 - [Entidades & Mapeamento](05-orm/entidades.md) - `[Table]`, `[Column]`, `[PK]`
 - [Consultas](05-orm/consultas.md) - `Where`, `OrderBy`, `Take`
 - [Smart Properties](05-orm/smart-properties.md) - Expressões type-safe
+- [Consultas JSON](05-orm/consultas-json.md) ⭐ **NOVO** - Consultar colunas JSON/JSONB
 - [Specifications](05-orm/specifications.md) - Padrões de query reutilizáveis
 - [Relacionamentos](05-orm/relacionamentos.md) - 1:1, 1:N, Lazy Loading
 - [Migrations](05-orm/migrations.md) - Versionamento de schema

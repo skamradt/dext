@@ -51,6 +51,10 @@
   // ---------------------------------------------------------------------------
   // Standard Drivers
   {$DEFINE DEXT_ENABLE_DB_SQLITE}
+  // Enable SQLite JSON functions (requires sqlite3.dll compiled with SQLITE_ENABLE_JSON1)
+  {$IFDEF DEXT_ENABLE_DB_SQLITE}
+    {$DEFINE DEXT_ENABLE_SQLITE_JSON}
+  {$ENDIF}
   {$DEFINE DEXT_ENABLE_DB_POSTGRES}
   {.$DEFINE DEXT_ENABLE_DB_MYSQL}
   {.$DEFINE DEXT_ENABLE_DB_MSSQL}
