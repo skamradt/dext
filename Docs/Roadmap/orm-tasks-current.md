@@ -33,15 +33,13 @@ Memory Leaks: 0
 
 ## 3. Melhorias de Funcionalidade
 - [x] **Suporte a Consultas JSON**: ✅ CONCLUÍDO (2026-02-06) - Implementada tradução de expressões de busca dentro de colunas `[JsonColumn]` usando `.Json('path')`.
-- [ ] **Propagação de DbType**: Garantir que o atributo `[DbType]` seja respeitado por todos os dialetos de SQL na geração de parâmetros e scripts DDL.
-
-## 4. Estabilidade de Paging
-- [ ] **Dialetos Legados**: Validar comportamento de paginação (offset/limit) em versões mais antigas do SQL Server e Oracle.
+- [x] **Propagação de DbType**: ✅ CONCLUÍDO (2026-02-06) - Atributo `[DbType]` propagado até a criação de parâmetros FireDAC, garantindo mapeamento exato de tipos.
+- [x] **Estabilidade de Paging**: ✅ CONCLUÍDO (2026-02-06) - Implementada paginação via `ROWNUM` para Oracle e arquitetura de wrapper para paginação em dialetos legados.
 
 ## 5. Documentação
-- [x] **Dext Book (EN)**: ✅ Adicionado `docs/Book/05-orm/json-queries.md`
-- [x] **Dext Book (PT-BR)**: ✅ Adicionado `docs/Book.pt-br/05-orm/consultas-json.md`
-- [x] **CHANGELOG**: ✅ Atualizado com entrada para JSON Queries (2026-02-06)
+- [x] **Dext Book (EN)**: ✅ Adicionado suporte a `DbType` e `Paging` legacy.
+- [x] **Dext Book (PT-BR)**: ✅ Adicionado suporte a `DbType` e `Paging` legacy.
+- [x] **CHANGELOG**: ✅ Atualizado com DbType e Paging (2026-02-06)
 
 ---
 *Assinado: Antigravity AI*

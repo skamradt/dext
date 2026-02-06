@@ -38,6 +38,7 @@ uses
   System.Generics.Collections,
   System.DateUtils,
   Data.DB,
+  Data.FmtBcd,
   FireDAC.Comp.Client,
   FireDAC.Comp.DataSet,
   FireDAC.DApt,
@@ -94,13 +95,15 @@ type
     FDialect: TDatabaseDialect;
     FOnLog: TProc<string>;
     procedure SetParamValue(Param: TFDParam; const AValue: TValue);
+    procedure SetParamValueWithType(Param: TFDParam; const AValue: TValue; ADataType: TFieldType);
     function GetDialect: TDatabaseDialect;
   public
     constructor Create(AConnection: TFDConnection; ADialect: TDatabaseDialect);
     destructor Destroy; override;
     
     procedure SetSQL(const ASQL: string);
-    procedure AddParam(const AName: string; const AValue: TValue);
+    procedure AddParam(const AName: string; const AValue: TValue); overload;
+    procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
     procedure ClearParams;
     
     procedure Execute;
@@ -330,10 +333,74 @@ begin
   end;
 end;
 
+procedure TFireDACCommand.AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType);
+var
+  Param: TFDParam;
+begin
+  Param := FQuery.ParamByName(AName);
+  SetParamValueWithType(Param, AValue, ADataType);
+end;
+
+procedure TFireDACCommand.SetParamValueWithType(Param: TFDParam; const AValue: TValue; ADataType: TFieldType);
+begin
+  // Force the explicit data type first
+  Param.DataType := ADataType;
+  
+  if AValue.IsEmpty then
+  begin
+    Param.Clear;
+    Exit;
+  end;
+  
+  // Set value based on the explicit type
+  case ADataType of
+    ftString, ftWideString, ftMemo, ftWideMemo:
+      Param.AsWideString := AValue.AsString;
+    ftSmallint, ftInteger, ftWord, ftShortint:
+      Param.AsInteger := AValue.AsInteger;
+    ftLargeint:
+      Param.AsLargeInt := AValue.AsInt64;
+    ftFloat, ftCurrency, ftExtended:
+      Param.AsFloat := AValue.AsExtended;
+    ftBCD:
+      Param.AsBCD := AValue.AsType<Currency>;
+    ftFMTBcd:
+      Param.AsFMTBCD := StrToBcd(AValue.AsString);
+    ftDate:
+      Param.AsDate := AValue.AsType<TDate>;
+    ftTime:
+      Param.AsTime := AValue.AsType<TTime>;
+    ftDateTime, ftTimeStamp:
+      Param.AsDateTime := AValue.AsType<TDateTime>;
+    ftBoolean:
+      Param.AsBoolean := AValue.AsBoolean;
+    ftBlob, ftGraphic, ftParadoxOle, ftDBaseOle, ftTypedBinary, ftOraBlob:
+    begin
+      if AValue.TypeInfo = TypeInfo(TBytes) then
+      begin
+        var Bytes := AValue.AsType<TBytes>;
+        var RawStr: RawByteString;
+        SetLength(RawStr, Length(Bytes));
+        if Length(Bytes) > 0 then
+          Move(Bytes[0], RawStr[1], Length(Bytes));
+        Param.AsBlob := RawStr;
+      end
+      else
+        Param.Value := AValue.AsVariant;
+    end;
+    ftGuid:
+      Param.AsGUID := StringToGUID(AValue.AsString);
+  else
+    // Fallback: use variant conversion
+    Param.Value := AValue.AsVariant;
+  end;
+end;
+
 function TFireDACCommand.GetDialect: TDatabaseDialect;
 begin
   Result := FDialect;
 end;
+
 
 procedure TFireDACCommand.SetParamValue(Param: TFDParam; const AValue: TValue);
 var

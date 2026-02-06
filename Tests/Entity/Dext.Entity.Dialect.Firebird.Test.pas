@@ -65,8 +65,8 @@ begin
   AssertEqual('FALSE', FDialect.BooleanToSQL(False), 'BooleanToSQL(False) should be FALSE');
 
   // 3. Paging
-  AssertEqual('OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY', FDialect.GeneratePaging(0, 10), 'Paging (Skip 0, Take 10)');
-  AssertEqual('OFFSET 20 ROWS FETCH NEXT 50 ROWS ONLY', FDialect.GeneratePaging(20, 50), 'Paging (Skip 20, Take 50)');
+  AssertEqual('SELECT * FROM Users OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY', FDialect.GeneratePaging('SELECT * FROM Users', 0, 10), 'Paging (Skip 0, Take 10)');
+  AssertEqual('SELECT * FROM Users OFFSET 20 ROWS FETCH NEXT 50 ROWS ONLY', FDialect.GeneratePaging('SELECT * FROM Users', 20, 50), 'Paging (Skip 20, Take 50)');
 
   // 4. Column Types
   AssertEqual('INTEGER', FDialect.GetColumnType(TypeInfo(Integer)), 'Integer mapping');

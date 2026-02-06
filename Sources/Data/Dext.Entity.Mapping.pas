@@ -402,7 +402,7 @@ begin
             (Attr is TypeConverterAttribute) or (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or
             (Attr is HasOneAttribute) or (Attr is InversePropertyAttribute) or (Attr is DeleteBehaviorAttribute) or
             (Attr is ManyToManyAttribute) or (Attr is VersionAttribute) or (Attr is CreatedAtAttribute) or
-            (Attr is UpdatedAtAttribute) or (Attr is JsonColumnAttribute) then
+            (Attr is UpdatedAtAttribute) or (Attr is JsonColumnAttribute) or (Attr is DbTypeAttribute) then
         begin
           if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
           
@@ -422,7 +422,7 @@ begin
           if Attr is AutoIncAttribute then PropMap.IsAutoInc := True;
           if Attr is NotMappedAttribute then PropMap.IsIgnored := True;
           if Attr is ForeignKeyAttribute then PropMap.ForeignKeyColumn := ForeignKeyAttribute(Attr).ColumnName;
-          if Attr is DbTypeAttribute then PropMap.DataType := TFieldType(DbTypeAttribute(Attr).DataType);
+          if Attr is DbTypeAttribute then PropMap.DataType := DbTypeAttribute(Attr).DataType;
           if Attr is TypeConverterAttribute then PropMap.ConverterClass := TypeConverterAttribute(Attr).ConverterClass;
 
           if Attr is RequiredAttribute then PropMap.IsRequired := True;
@@ -727,6 +727,12 @@ begin
   Result := Self;
 end;
 
+function TEntityBuilder<T>.HasDbType(ADataType: TFieldType): TEntityBuilder<T>;
+begin
+  GetCurrentProp.DataType := ADataType;
+  Result := Self;
+end;
+
 function TEntityBuilder<T>.Ignore: TEntityBuilder<T>;
 begin
   GetCurrentProp.IsIgnored := True;
@@ -912,15 +918,6 @@ end;
 function TEntityTypeBuilder<T>.HasQueryFilter(AFilter: IExpression): IEntityTypeBuilder<T>;
 begin
   FMap.FQueryFilters.Add(AFilter);
-  Result := Self;
-end;
-
-{ TPropertyBuilder<T> }
-
-
-function TEntityBuilder<T>.HasDbType(ADataType: TFieldType): TEntityBuilder<T>;
-begin
-  GetCurrentProp.DataType := ADataType;
   Result := Self;
 end;
 

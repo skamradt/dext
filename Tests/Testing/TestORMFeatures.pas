@@ -290,6 +290,7 @@ type
   TJsonQueryTests = class
   private
     class var FSQLiteDriver: TFDPhysSQLiteDriverLink;
+    class destructor Destroy;
   private
     FConn: TFDConnection;
     FContext: TORMFeaturesContext;
@@ -887,6 +888,14 @@ begin
   FreeAndNil(FEntities);
   FreeAndNil(FContext);
   FreeAndNil(FConn);
+end;
+
+class destructor TJsonQueryTests.Destroy;
+begin
+  {$IFDEF DEXT_TEST_JSON_SQLITE}
+  if Assigned(FSQLiteDriver) then
+    FreeAndNil(FSQLiteDriver);
+  {$ENDIF}
 end;
 
 procedure TJsonQueryTests.Track(Obj: TObject);

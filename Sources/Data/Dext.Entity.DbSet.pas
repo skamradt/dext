@@ -200,6 +200,7 @@ type
 implementation
 
 uses
+  Data.DB,
   Dext.Entity.LazyLoading,
   Dext.Utils;
 
@@ -883,7 +884,13 @@ begin
     end;
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
-      Cmd.AddParam(Pair.Key, Pair.Value);
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     if UseReturning then
     begin
       RetVal := Cmd.ExecuteScalar;
@@ -1008,7 +1015,13 @@ begin
     Sql := Generator.GenerateUpdate(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
-      Cmd.AddParam(Pair.Key, Pair.Value);
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     RowsAffected := Cmd.ExecuteNonQuery;
     if RowsAffected = 0 then
       raise EOptimisticConcurrencyException.Create('Concurrency violation: The record has been modified or deleted by another user.');
@@ -1156,7 +1169,13 @@ begin
     Sql := Generator.GenerateDelete(T(AEntity));
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
-      Cmd.AddParam(Pair.Key, Pair.Value);
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     Cmd.ExecuteNonQuery;
     FIdentityMap.Remove(GetEntityId(T(AEntity)));
   finally
@@ -1267,7 +1286,13 @@ begin
       
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
-      Cmd.AddParam(Pair.Key, Pair.Value);
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     
     try
       Reader := Cmd.ExecuteQuery;
@@ -1888,7 +1913,14 @@ begin
     Sql := Generator.GenerateSelect(Spec); 
     
     Cmd := FContext.Connection.CreateCommand(Sql) as IDbCommand;
-    for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
+    for var Pair in Generator.Params do
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     
     var Reader := Cmd.ExecuteQuery;
     Result := Reader.Next;
@@ -1935,7 +1967,14 @@ begin
     Sql := Generator.GenerateCount(LSpec);
     
     Cmd := FContext.Connection.CreateCommand(Sql);
-    for var Pair in Generator.Params do Cmd.AddParam(Pair.Key, Pair.Value);
+    for var Pair in Generator.Params do
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     var Val := Cmd.ExecuteScalar;
     Result := Val.AsInteger;
   finally
@@ -1975,7 +2014,13 @@ begin
     Sql := Generator.GenerateDelete(AEntity);
     Cmd := FContext.Connection.CreateCommand(Sql);
     for var Pair in Generator.Params do
-      Cmd.AddParam(Pair.Key, Pair.Value);
+    begin
+      var ParamType: TFieldType;
+      if Generator.ParamTypes.TryGetValue(Pair.Key, ParamType) then
+        Cmd.AddParam(Pair.Key, Pair.Value, ParamType)
+      else
+        Cmd.AddParam(Pair.Key, Pair.Value);
+    end;
     Cmd.ExecuteNonQuery;
     FIdentityMap.Remove(GetEntityId(AEntity));
   finally

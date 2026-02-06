@@ -6,6 +6,46 @@
 
 ---
 
+## 🚀 2026-02-06 - Dext.Entity: DbType Propagation & Legacy Paging
+
+### ✨ Major Feature / Feature Principal
+
+> **Controle total sobre tipos de dados e suporte a bancos de dados legados!**
+>
+> **Full control over data types and support for legacy databases!**
+
+#### DbType Propagation / Propagação de DbType
+
+**[PT-BR]** O atributo `[DbType]` agora é propagado corretamente até o driver de baixo nível. Isso garante que o banco de dados receba o tipo exato de dado esperado, evitando erros de conversão implícita.
+
+- 🎯 **Mapeamento Exato** - Use `[DbType(ftDate)]` para garantir que um `TDateTime` seja enviado apenas como data.
+- 💰 **Suporte a High-Precision** - Use `[DbType(ftFMTBcd)]` para campos monetários de alta precisão.
+- 🧪 **Compatibilidade FireDAC** - Integração total com os tipos de parâmetros do FireDAC.
+
+**[EN]** The `[DbType]` attribute is now correctly propagated down to the low-level driver. This ensures the database receives the exact expected data type, avoiding implicit conversion errors.
+
+- 🎯 **Exact Mapping** - Use `[DbType(ftDate)]` to ensure a `TDateTime` is sent as date only.
+- 💰 **High-Precision Support** - Use `[DbType(ftFMTBcd)]` for high-precision currency fields.
+- 🧪 **FireDAC Compatibility** - Full integration with FireDAC parameter types.
+
+#### Legacy Paging Support / Suporte a Paginação Legada
+
+**[PT-BR]** Melhoramos a estabilidade da paginação em versões antigas de bancos de dados que não suportam a sintaxe `OFFSET/FETCH`.
+
+- 🏛️ **Oracle Legacy** - Implementada paginação robusta via `ROWNUM` compatível com Oracle 11g e anteriores.
+- 🔄 **SQL Wrapper Architecture** - Nova arquitetura de dialeto que permite "envelopar" queries para suportar qualquer estratégia de paginação.
+- 🔗 **Fluent Mapping** - Adicionado suporte a `HasDbType(ADataType)` na API fluente para configuração explícita de tipos.
+- 🐍 **Improved Snake Case** - Nova lógica no `TSnakeCaseNamingStrategy` que agora lida corretamente com acrônimos (ex: `THTTPLogEntry` vira `http_log_entry` em vez de `h_t_t_p_log_entry`).
+
+**[EN]** We've improved paging stability for older database versions that do not support the `OFFSET/FETCH` syntax.
+
+- 🏛️ **Oracle Legacy** - Robust paging implementation via `ROWNUM` compatible with Oracle 11g and earlier.
+- 🔄 **SQL Wrapper Architecture** - New dialect architecture that allows "wrapping" queries to support any paging strategy.
+- 🔗 **Fluent Mapping** - Added support for `HasDbType(ADataType)` in the fluent API for explicit type configuration.
+- 🐍 **Improved Snake Case** - New logic in `TSnakeCaseNamingStrategy` that now correctly handles acronyms (e.g., `THTTPLogEntry` becomes `http_log_entry` instead of `h_t_t_p_log_entry`).
+
+---
+
 ## 🚀 2026-02-06 - Dext.Entity: JSON Queries
 
 ### ✨ Major Feature / Feature Principal

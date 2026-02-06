@@ -85,7 +85,12 @@ type
   IDbCommand = interface
     ['{20000000-0000-0000-0000-000000000004}']
     procedure SetSQL(const ASQL: string);
-    procedure AddParam(const AName: string; const AValue: TValue);
+    procedure AddParam(const AName: string; const AValue: TValue); overload;
+    /// <summary>
+    ///   Adds a parameter with explicit data type. Use when [DbType] attribute
+    ///   specifies a different type than what would be inferred from TValue.
+    /// </summary>
+    procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
     procedure ClearParams;
     
     procedure Execute;

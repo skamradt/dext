@@ -132,6 +132,7 @@ type
   private
     FDialect: ISQLDialect;
     FParams: TDictionary<string, TValue>;
+    FParamTypes: TDictionary<string, TFieldType>;  // Explicit types from [DbType] attribute
     FParamCount: Integer;
     FMap: TEntityMap;
     FNamingStrategy: INamingStrategy;
@@ -177,6 +178,7 @@ type
     function GenerateCreateTable(const ATableName: string): string;
     
     property Params: TDictionary<string, TValue> read FParams;
+    property ParamTypes: TDictionary<string, TFieldType> read FParamTypes;
   end;
 
   TSQLParamCollector = class
@@ -780,6 +782,7 @@ begin
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
   FTenantProvider := ATenantProvider;
   FParams := TDictionary<string, TValue>.Create;
+  FParamTypes := TDictionary<string, TFieldType>.Create;
   FParamCount := 0;
   FRttiContext := TRttiContext.Create;
 end;
@@ -787,6 +790,7 @@ end;
 destructor TSQLGenerator<T>.Destroy;
 begin
   FParams.Free;
+  FParamTypes.Free;
   FRttiContext.Free;
   inherited;
 end;
@@ -1134,6 +1138,7 @@ var
   PropMap: TPropertyMap;
 begin
   FParams.Clear;
+  FParamTypes.Clear;
   FParamCount := 0;
   Typ := FRttiContext.GetType(T);
   SBCols := TStringBuilder.Create;
@@ -1170,6 +1175,16 @@ begin
         begin
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
           if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+
+        if Attr is DbTypeAttribute then
+        begin
+          if PropMap = nil then
+          begin
+            PropMap := TPropertyMap.Create(Prop.Name);
+            if FMap <> nil then FMap.Properties.Add(Prop.Name, PropMap);
+          end;
+          PropMap.DataType := DbTypeAttribute(Attr).DataType;
         end;
       end;
       
@@ -1242,6 +1257,10 @@ begin
         SBVals.Append(':').Append(ParamName);
         
       FParams.Add(ParamName, Val);
+      
+      // Store explicit type if defined via [DbType] attribute
+      if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+        FParamTypes.Add(ParamName, PropMap.DataType);
     end;
     
     // Add Discriminator
@@ -1376,6 +1395,7 @@ var
   NullableHelper: TNullableHelper;
 begin
   FParams.Clear;
+  FParamTypes.Clear;
   FParamCount := 0;
   
   Typ := FRttiContext.GetType(T);
@@ -1419,6 +1439,16 @@ begin
         begin
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
           if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+
+        if Attr is DbTypeAttribute then
+        begin
+          if PropMap = nil then
+          begin
+            PropMap := TPropertyMap.Create(Prop.Name);
+            if FMap <> nil then FMap.Properties.Add(Prop.Name, PropMap);
+          end;
+          PropMap.DataType := DbTypeAttribute(Attr).DataType;
         end;
       end;
       
@@ -1480,6 +1510,9 @@ begin
           SQLCastStr := ':' + ParamName + '::uuid';
         
         SBWhere.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(SQLCastStr);
+        
+        if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+          FParamTypes.Add(ParamName, PropMap.DataType);
       end
       else
       begin
@@ -1505,6 +1538,10 @@ begin
 
         ParamName := GetNextParamName;
         FParams.Add(ParamName, Val);
+        
+        // Store explicit type if defined via [DbType] attribute
+        if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+          FParamTypes.Add(ParamName, PropMap.DataType);
         
         if not FirstSet then SBSet.Append(', ');
         FirstSet := False;
@@ -1861,7 +1898,7 @@ begin
       Take := ASpec.GetTake;
       
       // Paging syntax generation
-      Result := SB.ToString + ' ' + FDialect.GeneratePaging(Skip, Take);
+      Result := FDialect.GeneratePaging(SB.ToString, Skip, Take);
     end
     else
     begin

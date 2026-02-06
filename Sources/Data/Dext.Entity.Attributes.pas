@@ -29,7 +29,8 @@ interface
 
 uses
   System.Rtti,
-  System.Variants;
+  System.Variants,
+  Data.DB;
 
 type
   TInheritanceStrategy = (None, TablePerHierarchy, TablePerType);
@@ -316,10 +317,10 @@ type
   /// </summary>
   DbTypeAttribute = class(TCustomAttribute)
   private
-    FDataType: Integer; // TFieldType from Data.DB mapped to int to avoid dependency in interface if needed, but usually we use TFieldType
+    FDataType: TFieldType;
   public
-    constructor Create(ADataType: Integer);
-    property DataType: Integer read FDataType; // Cast to TFieldType
+    constructor Create(ADataType: TFieldType);
+    property DataType: TFieldType read FDataType;
   end;
 
   /// <summary>
@@ -475,7 +476,7 @@ end;
 
 { DbTypeAttribute }
 
-constructor DbTypeAttribute.Create(ADataType: Integer);
+constructor DbTypeAttribute.Create(ADataType: TFieldType);
 begin
   FDataType := ADataType;
 end;

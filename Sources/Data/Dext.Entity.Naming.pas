@@ -140,7 +140,14 @@ begin
       if C.IsUpper then
       begin
         if i > 0 then
-          SB.Append('_');
+        begin
+          // Add underscore if:
+          // 1. Previous character was lowercase
+          // 2. Next character is lowercase (start of a new word after an acronym, like HTTPLog -> http_log)
+          if AName.Chars[i-1].IsLower or 
+             ((i + 1 < AName.Length) and AName.Chars[i+1].IsLower) then
+            SB.Append('_');
+        end;
         SB.Append(C.ToLower);
       end
       else

@@ -63,6 +63,8 @@ A modern ORM focused on productivity and performance.
 - **Smart Properties**: Type-safe query expressions without magic strings. Write `u.Age > 18` and get compile-time checks, IntelliSense, and automatic SQL generation. [Learn more](Docs/smart-properties.md)
 - **Change Tracking**: Automatic change tracking and optimized persistence.
 - **Advanced Types**: Native support for **UUID v7** (Time-Ordered), JSON/JSONB, and Arrays.
+- **DbType Propagation**: Explicit control over database types via `[DbType]` attribute, ensuring data integrity beyond Delphi types.
+- **Legacy Paging Support**: Automatic query wrapping (e.g., `ROWNUM`) for older versions of Oracle and SQL Server.
 - **Multi-Tenancy**:
   - **Shared Database**: Automatic filtering by `TenantId`.
   - **Schema-based Isolation**: High-performance isolation via schemas (PostgreSQL `search_path`, SQL Server prefixing).
