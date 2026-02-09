@@ -8,6 +8,8 @@ uses
   Dext.Web,
   System.SysUtils,
   Sales.Startup in 'Sales.Startup.pas',
+  Sales.Auth in 'Sales.Auth.pas',
+  Sales.Endpoints in 'Sales.Endpoints.pas',
   Sales.Domain.Entities in '..\Domain\Sales.Domain.Entities.pas',
   Sales.Domain.Models in '..\Domain\Sales.Domain.Models.pas',
   Sales.Domain.Enums in '..\Domain\Sales.Domain.Enums.pas',

@@ -31,6 +31,7 @@ interface
 uses
   System.SysUtils,
   System.Rtti,
+  System.Generics.Collections,
   Dext,
   // {BEGIN_DEXT_USES}
   // Generated Uses
@@ -74,7 +75,8 @@ type
   ShouldProperty = Dext.Assertions.ShouldProperty;
   ShouldObjectHelper = Dext.Assertions.ShouldObjectHelper;
   ShouldInterface = Dext.Assertions.ShouldInterface;
-  // ShouldList<T> = Dext.Assertions.ShouldList<T>;
+  ShouldHelper = Dext.Assertions.ShouldHelper;
+  // ShouldList<T> is used via TShould or directly from Dext.Assertions
 
   // Dext.Interception
   EInterceptionException = Dext.Interception.EInterceptionException;
@@ -232,6 +234,7 @@ function Should(const Value: TGUID): ShouldGuid; overload;
 function Should(const Value: TUUID): ShouldUUID; overload;
 function Should(const Value: Variant): ShouldVariant; overload;
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
+function Should: ShouldHelper; overload;
 
 implementation
 
@@ -247,5 +250,5 @@ function Should(const Value: TGUID): ShouldGuid; begin Result := Dext.Assertions
 function Should(const Value: TUUID): ShouldUUID; begin Result := Dext.Assertions.Should(Value); end;
 function Should(const Value: Variant): ShouldVariant; begin Result := Dext.Assertions.Should(Value); end;
 function ShouldDate(Value: TDateTime): ShouldDateTime; begin Result := Dext.Assertions.ShouldDate(Value); end;
-
+function Should: ShouldHelper; begin end;
 end.

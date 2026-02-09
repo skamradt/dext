@@ -150,7 +150,7 @@ end;
 constructor TOrder.Create;
 begin
   inherited;
-  FItems := TCollections.CreateList<TOrderItem>;
+  FItems := TCollections.CreateList<TOrderItem>(True);
 end;
 
 destructor TOrder.Destroy;

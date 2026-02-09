@@ -2,6 +2,10 @@
 # Script para testar os endpoints do projeto Sales System Minimal API
 # Garanta que o servidor esteja rodando em http://localhost:8080
 
+# Configurar encoding UTF-8 para exibir emojis e caracteres acentuados corretamente
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 $baseUrl = "http://localhost:8080"
 $token = $null
 

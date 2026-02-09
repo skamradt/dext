@@ -295,21 +295,37 @@ begin
   // Final fallback: Use naming strategy to derive from class name
   if FTableName = '' then
     FTableName := FContext.NamingStrategy.GetTableName(T);
-  for Prop in Typ.GetProperties do
-  begin
-    IsMapped := True;
-    PropMap := nil;
-    if FMap <> nil then
+    for Prop in Typ.GetProperties do
     begin
-      if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
+      IsMapped := True;
+      PropMap := nil;
+      if FMap <> nil then
       begin
-        if PropMap.IsIgnored then IsMapped := False;
+        if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
+        begin
+          if PropMap.IsIgnored then IsMapped := False;
+          if PropMap.IsNavigation and not PropMap.IsJsonColumn then IsMapped := False;
+        end;
       end;
-    end;
-    for Attr in Prop.GetAttributes do
-      if Attr is NotMappedAttribute then
+
+      // Auto-detection fallback for classes/interfaces (Relationship by convention)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
         IsMapped := False;
-    if not IsMapped then Continue;
+
+      for Attr in Prop.GetAttributes do
+      begin
+        if Attr is NotMappedAttribute then IsMapped := False;
+
+        // Attributes like [HasMany], [BelongsTo] explicitly mark it as not a simple column
+        if (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or 
+           (Attr is HasOneAttribute) or (Attr is ManyToManyAttribute) then
+          IsMapped := False;
+
+        // [JsonColumn] always forces mapping as a simple column
+        if Attr is JsonColumnAttribute then IsMapped := True;
+      end;
+      
+      if not IsMapped then Continue;
     ColName := '';
     if (PropMap <> nil) and (PropMap.ColumnName <> '') then
       ColName := PropMap.ColumnName;

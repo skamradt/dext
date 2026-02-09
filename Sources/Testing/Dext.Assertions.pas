@@ -36,15 +36,16 @@ unit Dext.Assertions;
 interface
 
 uses
-  System.SysUtils,
-  System.Rtti,
-  System.TypInfo,
+  System.DateUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
-  System.DateUtils,
   System.IOUtils,
+  System.Rtti,
+  System.SysUtils,
+  System.TypInfo,
   System.Variants,
   Dext,
+  Dext.Collections,
   Dext.Core.SmartTypes,
   Dext.Types.UUID;
 
@@ -73,6 +74,14 @@ type
     ///   Internal use only. Registers a failure respecting soft assert mode.
     /// </summary>
     class procedure RegisterFailure(const Message, Reason: string); static;
+
+    /// <summary>
+    ///   Verifies that the given action raises an exception of the specified class.
+    /// </summary>
+    /// <summary>
+    ///   Verifies that the given action raises an exception of the specified class.
+    /// </summary>
+    class procedure WillRaise(const Action: TProc; ExceptionClass: ExceptClass = nil; const MessagePart: string = ''); static;
   end;
 
   /// <summary>
@@ -189,8 +198,10 @@ type
   public
     constructor Create(const Action: TProc);
     
-    function Throw<E: Exception>: ShouldAction;
+    function Throw<E: Exception>: ShouldAction; overload;
+    function Throw(AExceptionClass: ExceptClass): ShouldAction; overload;
     function ThrowWithMessage(const ExpectedMessage: string): ShouldAction;
+    function ThrowWithMessageContaining(const Substring: string): ShouldAction;
     function NotThrow: ShouldAction;
     function Because(const Reason: string): ShouldAction;
     function &And: ShouldAction;
@@ -400,15 +411,17 @@ type
   ShouldList<T> = record
   private
     FEnumerable: IEnumerable<T>;
+    FDextEnumerable: Dext.Collections.IEnumerable<T>;
     FArray: TArray<T>;
     FIsArray: Boolean;
+    FIsDext: Boolean;
     FReason: string;
     procedure Fail(const Message: string);
     function GetCount: Integer;
   public
     constructor Create(const Value: IEnumerable<T>); overload;
     constructor Create(const Value: TArray<T>); overload;
-    
+
     function BeEmpty: ShouldList<T>;
     function NotBeEmpty: ShouldList<T>;
     function HaveCount(Expected: Integer): ShouldList<T>;
@@ -426,7 +439,13 @@ type
     function AndAlso: ShouldList<T>;
   end;
 
-  // Global helper functions for cleaner syntax
+  ShouldHelper = record
+  public
+    function List<T>(const Value: IEnumerable<T>): ShouldList<T>; overload;
+    function List<T>(const Value: TArray<T>): ShouldList<T>; overload;
+  end;
+
+// Global helper functions for cleaner syntax
 function Should(const Value: string): ShouldString; overload;
 function Should(Value: Integer): ShouldInteger; overload;
 function Should(Value: Int64): ShouldInt64; overload;
@@ -439,8 +458,7 @@ function Should(const Value: TGUID): ShouldGuid; overload;
 function Should(const Value: TUUID): ShouldUUID; overload;
 function Should(const Value: Variant): ShouldVariant; overload;
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
-
-
+function Should: ShouldHelper; overload;
 
 implementation
 
@@ -479,6 +497,14 @@ class procedure Assert.Fail(const Message: string);
 begin
   // Direct Assert.Fail should respect soft assertion context too
   Assert.RegisterFailure(Message, '');
+end;
+
+class procedure Assert.WillRaise(const Action: TProc; ExceptionClass: ExceptClass; const MessagePart: string);
+begin
+  if MessagePart = '' then
+    Should(Action).Throw(ExceptionClass)
+  else
+    Should(Action).Throw(ExceptionClass).AndAlso.ThrowWithMessageContaining(MessagePart);
 end;
 
 class procedure Assert.Multiple(const Action: TProc);
@@ -928,43 +954,44 @@ begin
 end;
 
 function ShouldAction.Throw<E>: ShouldAction;
+begin
+  Result := Throw(ExceptClass(E));
+end;
+
+function ShouldAction.Throw(AExceptionClass: ExceptClass): ShouldAction;
 var
   ThrewException: Boolean;
-  WrongType: Boolean;
   ActualClassName: string;
   ActualMessage: string;
+  Ex: Exception;
 begin
   ThrewException := False;
-  WrongType := False;
   ActualClassName := '';
   ActualMessage := '';
-  
+  FExceptionClass := nil;
+  FExceptionMessage := '';
+
   try
     FAction();
   except
-    on Ex: Exception do
+    on E: Exception do
     begin
+      Ex := E;
       ThrewException := True;
       ActualClassName := Ex.ClassName;
       ActualMessage := Ex.Message;
-      
-      if Ex is E then
-      begin
-        FExceptionClass := E;
-        FExceptionMessage := Ex.Message;
-      end
-      else
-        WrongType := True;
+      FExceptionClass := ExceptClass(Ex.ClassType);
+      FExceptionMessage := Ex.Message;
+
+      if (AExceptionClass <> nil) and (not Ex.InheritsFrom(AExceptionClass)) then
+        Fail(Format('Expected exception %s but %s was thrown: %s',
+          [AExceptionClass.ClassName, ActualClassName, ActualMessage]));
     end;
   end;
-  
+
   if not ThrewException then
-    Fail(Format('Expected exception %s but none was thrown', [E.ClassName]));
-    
-  if WrongType then
-    Fail(Format('Expected exception %s but got %s: %s',
-      [E.ClassName, ActualClassName, ActualMessage]));
-  
+    Fail(Format('Expected exception %s but none was thrown', [AExceptionClass.ClassName]));
+
   Result := Self;
 end;
 
@@ -973,6 +1000,14 @@ begin
   if FExceptionMessage <> ExpectedMessage then
     Fail(Format('Expected exception message "%s" but was "%s"',
       [ExpectedMessage, FExceptionMessage]));
+  Result := Self;
+end;
+
+function ShouldAction.ThrowWithMessageContaining(const Substring: string): ShouldAction;
+begin
+  if not FExceptionMessage.Contains(Substring) then
+    Fail(Format('Expected exception message to contain "%s" but was "%s"',
+      [Substring, FExceptionMessage]));
   Result := Self;
 end;
 
@@ -1500,17 +1535,19 @@ end;
 constructor ShouldList<T>.Create(const Value: IEnumerable<T>);
 begin
   FEnumerable := Value;
+  FDextEnumerable := nil;
   FIsArray := False;
+  FIsDext := False;
   FArray := nil;
   FReason := '';
 end;
 
-
-
 constructor ShouldList<T>.Create(const Value: TArray<T>);
 begin
   FEnumerable := nil;
+  FDextEnumerable := nil;
   FIsArray := True;
+  FIsDext := False;
   FArray := Value;
   FReason := '';
 end;
@@ -1527,6 +1564,13 @@ var
 begin
   if FIsArray then
     Result := Length(FArray)
+  else if FIsDext and (FDextEnumerable <> nil) then
+  begin
+    C := 0;
+    for Item in FDextEnumerable do
+      Inc(C);
+    Result := C;
+  end
   else if FEnumerable <> nil then
   begin
     C := 0;
@@ -1535,7 +1579,7 @@ begin
     Result := C;
   end
   else
-    Result := 0; // nil list
+    Result := 0;
 end;
 
 function ShouldList<T>.BeEmpty: ShouldList<T>;
@@ -1579,10 +1623,10 @@ function ShouldList<T>.Contain(const Item: T): ShouldList<T>;
 var
   Found: Boolean;
   EnumItem: T;
-  Comparer: IEqualityComparer<T>;
+  Comparer: System.Generics.Defaults.IEqualityComparer<T>;
 begin
   Found := False;
-  Comparer := TEqualityComparer<T>.Default;
+  Comparer := System.Generics.Defaults.TEqualityComparer<T>.Default;
   
   if FIsArray then
   begin
@@ -1612,10 +1656,10 @@ function ShouldList<T>.NotContain(const Item: T): ShouldList<T>;
 var
   Found: Boolean;
   EnumItem: T;
-  Comparer: IEqualityComparer<T>;
+  Comparer: System.Generics.Defaults.IEqualityComparer<T>;
 begin
   Found := False;
-  Comparer := TEqualityComparer<T>.Default;
+  Comparer := System.Generics.Defaults.TEqualityComparer<T>.Default;
   
   if FIsArray then
   begin
@@ -1659,7 +1703,8 @@ begin
   end
   else if FEnumerable <> nil then
   begin
-    for EnumItem in FEnumerable do
+    var Enum := FEnumerable;
+    for EnumItem in Enum do
       if not Predicate(EnumItem) then
       begin
         AllMatch := False;
@@ -1690,7 +1735,8 @@ begin
   end
   else if FEnumerable <> nil then
   begin
-    for EnumItem in FEnumerable do
+    var Enum := FEnumerable;
+    for EnumItem in Enum do
       if Predicate(EnumItem) then
       begin
         AnyMatch := True;
@@ -1721,11 +1767,11 @@ end;
 
 function ShouldList<T>.ContainInOrder(const Items: TArray<T>): ShouldList<T>;
 var
-  Comparer: IEqualityComparer<T>;
+  Comparer: System.Generics.Defaults.IEqualityComparer<T>;
   Arr: TArray<T>;
   I, J: Integer;
 begin
-  Comparer := TEqualityComparer<T>.Default;
+  Comparer := System.Generics.Defaults.TEqualityComparer<T>.Default;
   
   // Get items as array for indexing
   if FIsArray then
@@ -1756,12 +1802,12 @@ end;
 
 function ShouldList<T>.BeEquivalentTo(const Expected: TArray<T>): ShouldList<T>;
 var
-  Comparer: IEqualityComparer<T>;
+  Comparer: System.Generics.Defaults.IEqualityComparer<T>;
   Arr: TArray<T>;
   ExpItem, SrcItem: T;
   Found: Boolean;
 begin
-  Comparer := TEqualityComparer<T>.Default;
+  Comparer := System.Generics.Defaults.TEqualityComparer<T>.Default;
   
   // Get items as array
   if FIsArray then
@@ -1804,6 +1850,11 @@ begin
 end;
 
 function ShouldList<T>.&And: ShouldList<T>;
+begin
+  Result := Self;
+end;
+
+function ShouldList<T>.AndAlso: ShouldList<T>;
 begin
   Result := Self;
 end;
@@ -1881,6 +1932,11 @@ begin
   Result := ShouldInteger.Create(Value);
 end;
 
+function Should(Value: Int64): ShouldInt64;
+begin
+  Result := ShouldInt64.Create(Value);
+end;
+
 function Should(Value: Boolean): ShouldBoolean;
 begin
   Result := ShouldBoolean.Create(Value);
@@ -1906,14 +1962,19 @@ begin
   Result := ShouldInterface.Create(Value);
 end;
 
-function Should(Value: Int64): ShouldInt64;
-begin
-  Result := ShouldInt64.Create(Value);
-end;
-
 function Should(const Value: TGUID): ShouldGuid;
 begin
   Result := ShouldGuid.Create(Value);
+end;
+
+function Should(const Value: TUUID): ShouldUUID;
+begin
+  Result := ShouldUUID.Create(Value);
+end;
+
+function Should(const Value: Variant): ShouldVariant;
+begin
+  Result := ShouldVariant.Create(Value);
 end;
 
 function ShouldDate(Value: TDateTime): ShouldDateTime;
@@ -2129,11 +2190,6 @@ begin
   Result := Self;
 end;
 
-function Should(const Value: TUUID): ShouldUUID;
-begin
-  Result := ShouldUUID.Create(Value);
-end;
-
 { ShouldVariant }
 
 constructor ShouldVariant.Create(const Value: Variant);
@@ -2288,14 +2344,6 @@ begin
 end;
 
 
-
-function ShouldList<T>.AndAlso: ShouldList<T>;
-begin
-  Result := Self;
-end;
-
-
-
 function ShouldInterface.&And: ShouldInterface;
 begin
   Result := Self;
@@ -2306,9 +2354,20 @@ begin
   Result := Self;
 end;
 
-function Should(const Value: Variant): ShouldVariant;
+{ ShouldHelper }
+
+function ShouldHelper.List<T>(const Value: TArray<T>): ShouldList<T>;
 begin
-  Result := ShouldVariant.Create(Value);
+  Result := ShouldList<T>.Create(Value);
+end;
+
+function ShouldHelper.List<T>(const Value: IEnumerable<T>): ShouldList<T>;
+begin
+  Result := ShouldList<T>.Create(Value);
+end;
+
+function Should: ShouldHelper; overload;
+begin
 end;
 
 end.

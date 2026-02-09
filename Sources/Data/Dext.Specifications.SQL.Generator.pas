@@ -1159,15 +1159,25 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
-        if PropMap.IsNavigation then IsMapped := False;
+        if PropMap.IsNavigation and not PropMap.IsJsonColumn then IsMapped := False;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
+
+      // Auto-detection for navigation properties (Relationships)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
 
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
         
+        if (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or 
+           (Attr is HasOneAttribute) or (Attr is ManyToManyAttribute) then
+          IsMapped := False;
+
+        if Attr is JsonColumnAttribute then IsMapped := True;
+
         if (PropMap = nil) or not PropMap.IsAutoInc then
           if Attr is AutoIncAttribute then IsAutoInc := True;
           
@@ -1420,19 +1430,27 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
-        if PropMap.IsNavigation then IsMapped := False;
+        if PropMap.IsNavigation and not PropMap.IsJsonColumn then IsMapped := False;
         if PropMap.IsPK then IsPK := True;
         // Version not yet supported in Fluent Mapping explicitly? Assuming no for now or check map.
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
 
+      // Auto-detection for navigation properties (Relationships)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
+
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        
-        if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PrimaryKeyAttribute then IsPK := True;
-          
+
+        if (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or 
+           (Attr is HasOneAttribute) or (Attr is ManyToManyAttribute) then
+          IsMapped := False;
+
+        if Attr is JsonColumnAttribute then IsMapped := True;
+
+        if Attr is PrimaryKeyAttribute then IsPK := True;
         if Attr is VersionAttribute then IsVersion := True; 
         
         if (PropMap = nil) or (PropMap.ColumnName = '') then

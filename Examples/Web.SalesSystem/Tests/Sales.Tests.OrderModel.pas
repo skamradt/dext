@@ -74,7 +74,7 @@ end;
 procedure TOrderModelTests.Should_Initialize_Draft_Order;
 begin
   Should(FModel.Entity.Status.Value).Be(TOrderStatus.Draft);
-  Should(FModel.Entity.Items).BeEmpty;
+  Should.List<TOrderItem>(FModel.Entity.Items).BeEmpty;
   Should(FModel.Entity.Total.Value).Be(0);
 end;
 
@@ -84,7 +84,7 @@ begin
   FModel.AddItem(FProduct, 2);
 
   // Assert
-  Should(FOrder.Items).HaveCount(1);
+  Should.List<TOrderItem>(FOrder.Items).HaveCount(1);
   Should(FOrder.Total.Value).Be(200.00); // 2 * 100
   
   var Item := FOrder.Items[0];
@@ -117,7 +117,8 @@ begin
     procedure
     begin
       FModel.Submit; // Min is 10.00 in Model logic
-    end, 
+    end,
+
     EDomainError, 
     'empty' // "Cannot submit an empty order" check comes first?
   );

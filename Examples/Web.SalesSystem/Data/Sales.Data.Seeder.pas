@@ -75,7 +75,6 @@ begin
     end
     else
       Writeln('[ERROR] Could not resolve TSalesDbContext.');
-      
   finally
     Scope := nil;
   end;
