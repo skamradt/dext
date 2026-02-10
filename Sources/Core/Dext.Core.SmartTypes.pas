@@ -49,6 +49,7 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Variants,
+  Dext.Types.Nullable,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types;
 
@@ -119,6 +120,10 @@ type
     class operator Implicit(const Value: T): Prop<T>;
     class operator Implicit(const Value: Prop<T>): T;
     class operator Implicit(const Value: Prop<T>): BooleanExpression;
+
+    // Nullable<T> interop
+    class operator Implicit(const Value: Prop<T>): Nullable<T>;
+    class operator Implicit(const Value: Nullable<T>): Prop<T>;
 
     // Factory for calculated properties
     class function FromExpression(const AExpr: IExpression): Prop<T>; static;
@@ -481,6 +486,20 @@ begin
     else
       Result := BooleanExpression.FromRuntime(False);
   end;
+end;
+
+class operator Prop<T>.Implicit(const Value: Prop<T>): Nullable<T>;
+begin
+  Result := Nullable<T>.Create(Value.FValue);
+end;
+
+class operator Prop<T>.Implicit(const Value: Nullable<T>): Prop<T>;
+begin
+  if Value.HasValue then
+    Result.FValue := Value.Value
+  else
+    Result.FValue := Default(T);
+  Result.FInfo := nil;
 end;
 
 class operator Prop<T>.Equal(const LHS: Prop<T>; const RHS: T): BooleanExpression;

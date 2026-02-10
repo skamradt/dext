@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{95D92619-FC6D-48B2-8EE7-F3B915E464D9}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Server\Web.HelpDesk.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Tests\Web.HelpDesk.Tests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Web_HelpDesk">
+        <MSBuild Projects="Server\Web.HelpDesk.dproj"/>
+    </Target>
+    <Target Name="Web_HelpDesk:Clean">
+        <MSBuild Projects="Server\Web.HelpDesk.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_HelpDesk:Make">
+        <MSBuild Projects="Server\Web.HelpDesk.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_HelpDesk_Tests">
+        <MSBuild Projects="Tests\Web.HelpDesk.Tests.dproj"/>
+    </Target>
+    <Target Name="Web_HelpDesk_Tests:Clean">
+        <MSBuild Projects="Tests\Web.HelpDesk.Tests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_HelpDesk_Tests:Make">
+        <MSBuild Projects="Tests\Web.HelpDesk.Tests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Web_HelpDesk;Web_HelpDesk_Tests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Web_HelpDesk:Clean;Web_HelpDesk_Tests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Web_HelpDesk:Make;Web_HelpDesk_Tests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
