@@ -7,12 +7,12 @@ Minimal APIs provide a lightweight, lambda-based approach to building HTTP endpo
 ## Basic Endpoints
 
 ```pascal
-App.MapGet('/hello', procedure(Ctx: IHttpContext)
+Builder.MapGet('/hello', procedure(Ctx: IHttpContext)
   begin
     Ctx.Response.Write('Hello, World!');
   end);
 
-App.MapPost('/data', procedure(Ctx: IHttpContext)
+Builder.MapPost('/data', procedure(Ctx: IHttpContext)
   var
     SR: TStreamReader;
     Body: string;
@@ -41,7 +41,7 @@ type
     Id: Integer;
   end;
 
-App.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
+Builder.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
   function(Service: IUserService; Request: TUserIdRequest): IResult
   begin
     var User := Service.FindById(Request.Id);
@@ -55,7 +55,7 @@ App.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
 ### Using Context Directly
 
 ```pascal
-App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
+Builder.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
   begin
     var Id := Ctx.Request.RouteParams['id'];
     Ctx.Response.Write('User ID: ' + Id);
@@ -121,7 +121,7 @@ type
     Stock: Integer;
   end;
 
-App.MapPost<IProductService, TProductCreateRequest, IResult>('/api/products',
+Builder.MapPost<IProductService, TProductCreateRequest, IResult>('/api/products',
   function(Service: IProductService; Request: TProductCreateRequest): IResult
   begin
     // TenantId comes from header, rest from body
@@ -142,7 +142,7 @@ The generic overloads automatically inject services and bind request data:
 
 ```pascal
 // Service injection + body model binding
-App.MapPost<IUserService, TCreateUserDto, IResult>('/users',
+Builder.MapPost<IUserService, TCreateUserDto, IResult>('/users',
   function(Service: IUserService; Dto: TCreateUserDto): IResult
   var
     User: TUser;
@@ -188,7 +188,7 @@ var Service := Ctx.Services.GetService<IUserService>;
 
 ### Via Generic Injection (Recommended)
 ```pascal
-App.MapGet<IUserService, IResult>('/users',
+Builder.MapGet<IUserService, IResult>('/users',
   function(Service: IUserService): IResult
   begin
     Result := Results.Ok(Service.GetAll);
@@ -209,7 +209,7 @@ type
   end;
 
 // DTO is auto-bound from body
-App.MapPost<IUserService, TCreateUserRequest, IResult>('/users',
+Builder.MapPost<IUserService, TCreateUserRequest, IResult>('/users',
   function(Service: IUserService; Request: TCreateUserRequest): IResult
   ...
 ```

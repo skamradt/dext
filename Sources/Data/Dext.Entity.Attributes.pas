@@ -29,7 +29,8 @@ interface
 
 uses
   System.Rtti,
-  System.Variants;
+  System.Variants,
+  Data.DB;
 
 type
   TInheritanceStrategy = (None, TablePerHierarchy, TablePerType);
@@ -52,8 +53,16 @@ type
     property Name: string read FName;
   end;
 
-  PKAttribute = class(TCustomAttribute)
+  /// <summary>
+  ///   Marks a property as a Primary Key.
+  /// </summary>
+  PrimaryKeyAttribute = class(TCustomAttribute)
   end;
+
+  /// <summary>
+  ///   Alias for PrimaryKeyAttribute
+  /// </summary>
+  PKAttribute = PrimaryKeyAttribute;
 
   AutoIncAttribute = class(TCustomAttribute)
   end;
@@ -68,6 +77,17 @@ type
   ///   Specifies the maximum length of array/string data allowed in a property.
   /// </summary>
   MaxLengthAttribute = class(TCustomAttribute)
+  private
+    FLength: Integer;
+  public
+    constructor Create(ALength: Integer);
+    property Length: Integer read FLength;
+  end;
+
+  /// <summary>
+  ///   Specifies the minimum length of array/string data allowed in a property.
+  /// </summary>
+  MinLengthAttribute = class(TCustomAttribute)
   private
     FLength: Integer;
   public
@@ -195,6 +215,81 @@ type
   end;
 
   /// <summary>
+  ///   Alias for ForeignKeyAttribute
+  /// </summary>
+  FKAttribute = ForeignKeyAttribute;
+
+  /// <summary>
+  ///   Marks a collection property as a One-to-Many relationship.
+  /// </summary>
+  HasManyAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a reference property as a Many-to-One relationship.
+  /// </summary>
+  BelongsToAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a reference property as a One-to-One relationship.
+  /// </summary>
+  HasOneAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a collection property as a Many-to-Many relationship.
+  ///   Requires a join table to link the two entities.
+  /// </summary>
+  ManyToManyAttribute = class(TCustomAttribute)
+  private
+    FJoinTableName: string;
+    FLeftKeyColumn: string;
+    FRightKeyColumn: string;
+  public
+    /// <summary>
+    ///   Creates Many-to-Many with default join table naming convention.
+    /// </summary>
+    constructor Create; overload;
+    
+    /// <summary>
+    ///   Creates Many-to-Many with explicit join table name.
+    /// </summary>
+    constructor Create(const AJoinTableName: string); overload;
+    
+    /// <summary>
+    ///   Creates Many-to-Many with explicit join table and key columns.
+    /// </summary>
+    constructor Create(const AJoinTableName, ALeftKeyColumn, ARightKeyColumn: string); overload;
+    
+    property JoinTableName: string read FJoinTableName;
+    property LeftKeyColumn: string read FLeftKeyColumn;
+    property RightKeyColumn: string read FRightKeyColumn;
+  end;
+
+  /// <summary>
+  ///   Specifies the inverse navigation property on the other end of the relationship.
+  /// </summary>
+  InversePropertyAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
+
+  /// <summary>
+  ///   Specifies the delete behavior for the relationship.
+  /// </summary>
+  DeleteBehaviorAttribute = class(TCustomAttribute)
+  private
+    FBehavior: TCascadeAction;
+  public
+    constructor Create(ABehavior: TCascadeAction);
+    property Behavior: TCascadeAction read FBehavior;
+  end;
+
+  /// <summary>
   ///   Defines the inheritance strategy for the entity hierarchy.
   /// </summary>
   InheritanceAttribute = class(TCustomAttribute)
@@ -233,10 +328,10 @@ type
   /// </summary>
   DbTypeAttribute = class(TCustomAttribute)
   private
-    FDataType: Integer; // TFieldType from Data.DB mapped to int to avoid dependency in interface if needed, but usually we use TFieldType
+    FDataType: TFieldType;
   public
-    constructor Create(ADataType: Integer);
-    property DataType: Integer read FDataType; // Cast to TFieldType
+    constructor Create(ADataType: TFieldType);
+    property DataType: TFieldType read FDataType;
   end;
 
   /// <summary>
@@ -315,6 +410,43 @@ begin
   FOnUpdate := AOnUpdate;
 end;
 
+{ InversePropertyAttribute }
+
+constructor InversePropertyAttribute.Create(const AName: string);
+begin
+  FName := AName;
+end;
+
+{ DeleteBehaviorAttribute }
+
+constructor DeleteBehaviorAttribute.Create(ABehavior: TCascadeAction);
+begin
+  FBehavior := ABehavior;
+end;
+
+{ ManyToManyAttribute }
+
+constructor ManyToManyAttribute.Create;
+begin
+  FJoinTableName := '';
+  FLeftKeyColumn := '';
+  FRightKeyColumn := '';
+end;
+
+constructor ManyToManyAttribute.Create(const AJoinTableName: string);
+begin
+  FJoinTableName := AJoinTableName;
+  FLeftKeyColumn := '';
+  FRightKeyColumn := '';
+end;
+
+constructor ManyToManyAttribute.Create(const AJoinTableName, ALeftKeyColumn, ARightKeyColumn: string);
+begin
+  FJoinTableName := AJoinTableName;
+  FLeftKeyColumn := ALeftKeyColumn;
+  FRightKeyColumn := ARightKeyColumn;
+end;
+
 { InheritanceAttribute }
 
 constructor InheritanceAttribute.Create(AStrategy: TInheritanceStrategy);
@@ -355,7 +487,7 @@ end;
 
 { DbTypeAttribute }
 
-constructor DbTypeAttribute.Create(ADataType: Integer);
+constructor DbTypeAttribute.Create(ADataType: TFieldType);
 begin
   FDataType := ADataType;
 end;
@@ -370,6 +502,13 @@ end;
 { MaxLengthAttribute }
 
 constructor MaxLengthAttribute.Create(ALength: Integer);
+begin
+  FLength := ALength;
+end;
+
+{ MinLengthAttribute }
+
+constructor MinLengthAttribute.Create(ALength: Integer);
 begin
   FLength := ALength;
 end;

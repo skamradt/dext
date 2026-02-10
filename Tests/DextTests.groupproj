@@ -105,6 +105,9 @@
         <Projects Include="Mocking\TestDextAssertions.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Testing\TestAttributeRunner.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -419,14 +422,23 @@
     <Target Name="TestDextAssertions:Make">
         <MSBuild Projects="Mocking\TestDextAssertions.dproj" Targets="Make"/>
     </Target>
+    <Target Name="TestAttributeRunner">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj"/>
+    </Target>
+    <Target Name="TestAttributeRunner:Clean">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestAttributeRunner:Make">
+        <MSBuild Projects="Testing\TestAttributeRunner.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_Entity_Tests;Dext_MinimalAPITest;Dext_RouteParamsTest;Dext_ServerTest_Cors;Dext_ScopedServicesTest;Dext_ServerTest;InspectDatS;TestAdvancedTypesIntegration;TestCustomConstructors;TestFireDACPhysDriver;TestJsonCore;TestJsonUUID;TestMapper;TestMetadataCache;TestMultiTenancy;TestOrmInheritance;TestSqlGenerationAdv;TestTypeConverters;TestTypeConvertersDb;TestTypeConvertersSimple;TestUtf8Json;TestUtf8Serializer;TestUUID;Web_FrameworkTests;TestDextHubs;TestVirtualInterface;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions;TestDextMocksSimple;TestDextMocks;TestDextAssertions"/>
+        <CallTarget Targets="Dext_AppBuilderTest;Dext_DITest;Dext_Entity_Tests;Dext_MinimalAPITest;Dext_RouteParamsTest;Dext_ServerTest_Cors;Dext_ScopedServicesTest;Dext_ServerTest;InspectDatS;TestAdvancedTypesIntegration;TestCustomConstructors;TestFireDACPhysDriver;TestJsonCore;TestJsonUUID;TestMapper;TestMetadataCache;TestMultiTenancy;TestOrmInheritance;TestSqlGenerationAdv;TestTypeConverters;TestTypeConvertersDb;TestTypeConvertersSimple;TestUtf8Json;TestUtf8Serializer;TestUUID;Web_FrameworkTests;TestDextHubs;TestVirtualInterface;TestSequenceAndCallback;TestNewFeatures;TestNewAssertions;TestDextMocksSimple;TestDextMocks;TestDextAssertions;TestAttributeRunner"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_Entity_Tests:Clean;Dext_MinimalAPITest:Clean;Dext_RouteParamsTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ScopedServicesTest:Clean;Dext_ServerTest:Clean;InspectDatS:Clean;TestAdvancedTypesIntegration:Clean;TestCustomConstructors:Clean;TestFireDACPhysDriver:Clean;TestJsonCore:Clean;TestJsonUUID:Clean;TestMapper:Clean;TestMetadataCache:Clean;TestMultiTenancy:Clean;TestOrmInheritance:Clean;TestSqlGenerationAdv:Clean;TestTypeConverters:Clean;TestTypeConvertersDb:Clean;TestTypeConvertersSimple:Clean;TestUtf8Json:Clean;TestUtf8Serializer:Clean;TestUUID:Clean;Web_FrameworkTests:Clean;TestDextHubs:Clean;TestVirtualInterface:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Clean;Dext_DITest:Clean;Dext_Entity_Tests:Clean;Dext_MinimalAPITest:Clean;Dext_RouteParamsTest:Clean;Dext_ServerTest_Cors:Clean;Dext_ScopedServicesTest:Clean;Dext_ServerTest:Clean;InspectDatS:Clean;TestAdvancedTypesIntegration:Clean;TestCustomConstructors:Clean;TestFireDACPhysDriver:Clean;TestJsonCore:Clean;TestJsonUUID:Clean;TestMapper:Clean;TestMetadataCache:Clean;TestMultiTenancy:Clean;TestOrmInheritance:Clean;TestSqlGenerationAdv:Clean;TestTypeConverters:Clean;TestTypeConvertersDb:Clean;TestTypeConvertersSimple:Clean;TestUtf8Json:Clean;TestUtf8Serializer:Clean;TestUUID:Clean;Web_FrameworkTests:Clean;TestDextHubs:Clean;TestVirtualInterface:Clean;TestSequenceAndCallback:Clean;TestNewFeatures:Clean;TestNewAssertions:Clean;TestDextMocksSimple:Clean;TestDextMocks:Clean;TestDextAssertions:Clean;TestAttributeRunner:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_Entity_Tests:Make;Dext_MinimalAPITest:Make;Dext_RouteParamsTest:Make;Dext_ServerTest_Cors:Make;Dext_ScopedServicesTest:Make;Dext_ServerTest:Make;InspectDatS:Make;TestAdvancedTypesIntegration:Make;TestCustomConstructors:Make;TestFireDACPhysDriver:Make;TestJsonCore:Make;TestJsonUUID:Make;TestMapper:Make;TestMetadataCache:Make;TestMultiTenancy:Make;TestOrmInheritance:Make;TestSqlGenerationAdv:Make;TestTypeConverters:Make;TestTypeConvertersDb:Make;TestTypeConvertersSimple:Make;TestUtf8Json:Make;TestUtf8Serializer:Make;TestUUID:Make;Web_FrameworkTests:Make;TestDextHubs:Make;TestVirtualInterface:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make"/>
+        <CallTarget Targets="Dext_AppBuilderTest:Make;Dext_DITest:Make;Dext_Entity_Tests:Make;Dext_MinimalAPITest:Make;Dext_RouteParamsTest:Make;Dext_ServerTest_Cors:Make;Dext_ScopedServicesTest:Make;Dext_ServerTest:Make;InspectDatS:Make;TestAdvancedTypesIntegration:Make;TestCustomConstructors:Make;TestFireDACPhysDriver:Make;TestJsonCore:Make;TestJsonUUID:Make;TestMapper:Make;TestMetadataCache:Make;TestMultiTenancy:Make;TestOrmInheritance:Make;TestSqlGenerationAdv:Make;TestTypeConverters:Make;TestTypeConvertersDb:Make;TestTypeConvertersSimple:Make;TestUtf8Json:Make;TestUtf8Serializer:Make;TestUUID:Make;Web_FrameworkTests:Make;TestDextHubs:Make;TestVirtualInterface:Make;TestSequenceAndCallback:Make;TestNewFeatures:Make;TestNewAssertions:Make;TestDextMocksSimple:Make;TestDextMocks:Make;TestDextAssertions:Make;TestAttributeRunner:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -30,7 +30,7 @@ begin
     WriteLn('==============================================');
     WriteLn('');
 
-    var App: IWebApplication := TDextApplication.Create;
+    var App := WebApplication;
     
     // 1. Configure Startup Class
     // The framework will call ConfigureServices and Configure automatically

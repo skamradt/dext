@@ -27,6 +27,12 @@ function Invoke-DextRequest {
         try { return ($resp.Content | ConvertFrom-Json) } catch { return $resp.Content }
     }
     catch {
+        $resp = $_.Exception.Response
+        if ($resp) {
+            $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+            $errBody = $reader.ReadToEnd()
+            Write-Host "   [ERROR BODY]: $errBody" -ForegroundColor Red
+        }
         throw "Request to $Uri failed: $($_.Exception.Message)"
     }
 }

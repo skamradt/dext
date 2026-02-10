@@ -35,7 +35,7 @@ uses
   Dext.Configuration.Interfaces;
 
 type
-  TDextApplication = class(TInterfacedObject, IWebApplication, IWebHost)
+  TWebApplication = class(TInterfacedObject, IWebApplication, IWebHost)
   private
     FServices: IServiceCollection;
     FServiceProvider: IServiceProvider;
@@ -55,7 +55,7 @@ type
     function GetApplicationBuilder: IApplicationBuilder;
     function GetConfiguration: IConfiguration;
     function GetServices: TDextServices;
-    function GetBuilder: TDextAppBuilder;
+    function GetBuilder: TAppBuilder;
     function BuildServices: IServiceProvider; // ?
     function UseMiddleware(Middleware: TClass): IWebApplication;
     function UseStartup(Startup: IStartup): IWebApplication; // ? Non-generic
@@ -69,6 +69,9 @@ type
 
     property DefaultPort: Integer read FDefaultPort write FDefaultPort;
   end;
+
+  /// <deprecated>Use TWebApplication instead</deprecated>
+  TDextApplication = TWebApplication;
 
 implementation
 
@@ -88,13 +91,15 @@ uses
   Dext.Configuration.EnvironmentVariables,
   Dext.HealthChecks,
   Dext.Hosting.ApplicationLifetime,
-  Dext.Hosting.AppState,
+  Dext.Hosting.AppState
+  {$IFDEF DEXT_ENABLE_ENTITY},
   Dext.Entity.Core,
-  Dext.Entity.Migrations.Runner;
+  Dext.Entity.Migrations.Runner
+  {$ENDIF};
 
-{ TDextApplication }
+{ TWebApplication }
 
-constructor TDextApplication.Create;
+constructor TWebApplication.Create;
 var
   ConfigBuilder: IConfigurationBuilder;
 begin
@@ -138,7 +143,7 @@ begin
     TConfigurationRoot,
     function(Provider: IServiceProvider): TObject
     begin
-      Result := LConfig as TConfigurationRoot;
+      Result := LConfig as TObject;
     end
   );
 
@@ -170,7 +175,7 @@ begin
   ConfigBuilder := nil;
 end;
 
-destructor TDextApplication.Destroy;
+destructor TWebApplication.Destroy;
 begin
   Stop; // Ensure cleanup
   FAppBuilder := nil;
@@ -178,7 +183,7 @@ begin
   inherited Destroy;
 end;
 
-function TDextApplication.GetApplicationBuilder: IApplicationBuilder;
+function TWebApplication.GetApplicationBuilder: IApplicationBuilder;
 begin
   // Lazy initialization: create ApplicationBuilder with nil ServiceProvider initially.
   // The ServiceProvider will be set/updated in Run() AFTER all services are registered.
@@ -187,22 +192,22 @@ begin
   Result := FAppBuilder;
 end;
 
-function TDextApplication.GetConfiguration: IConfiguration;
+function TWebApplication.GetConfiguration: IConfiguration;
 begin
   Result := FConfiguration;
 end;
 
-function TDextApplication.GetServices: TDextServices;
+function TWebApplication.GetServices: TDextServices;
 begin
   Result := TDextServices.Create(FServices);
 end;
 
-function TDextApplication.GetBuilder: TDextAppBuilder;
+function TWebApplication.GetBuilder: TAppBuilder;
 begin
-  Result := TDextAppBuilder.Create(GetApplicationBuilder);
+  Result := TAppBuilder.Create(GetApplicationBuilder);
 end;
 
-function TDextApplication.BuildServices: IServiceProvider;
+function TWebApplication.BuildServices: IServiceProvider;
 begin
   // ? REBUILD ServiceProvider to include all services registered after Create()
   FServiceProvider := nil; // Release old provider
@@ -212,7 +217,7 @@ begin
   Result := FServiceProvider;
 end;
 
-function TDextApplication.MapControllers: IWebApplication;
+function TWebApplication.MapControllers: IWebApplication;
 var
   RouteCount: Integer;
 begin
@@ -230,7 +235,7 @@ begin
   Result := Self;
 end;
 
-procedure TDextApplication.Setup(Port: Integer);
+procedure TWebApplication.Setup(Port: Integer);
 var
   RequestHandler: TRequestDelegate;
   HostedManager: IHostedServiceManager;
@@ -264,6 +269,7 @@ begin
   if StateControl <> nil then
     StateControl.SetState(asMigrating);
 
+  {$IFDEF DEXT_ENABLE_ENTITY}
   // 🔄 Run Migrations automatically if configured
   var DbConfig := FConfiguration.GetSection('Database');
   if (DbConfig <> nil) and (SameText(DbConfig['AutoMigrate'], 'true')) then
@@ -282,6 +288,7 @@ begin
       end;
     end;
   end;
+  {$ENDIF}
   
   // Update State: Migrating -> Seeding
   if StateControl <> nil then
@@ -342,7 +349,7 @@ begin
   FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
 end;
 
-procedure TDextApplication.Teardown;
+procedure TWebApplication.Teardown;
 var
   Lifetime: THostApplicationLifetime;
   StateControl: IAppStateControl;
@@ -381,6 +388,8 @@ begin
     
   // Release active host reference
   FActiveHost := nil;
+  FAppBuilder := nil;
+  FScanner := nil;
 
   // Update State: Running -> Stopping
   if StateControl <> nil then
@@ -406,14 +415,18 @@ begin
     
   // Explicitly release provider reference to ensure cleanup
   FServiceProvider := nil;
+
+  // ✅ Break circular references by niling interfaces that might be captured in closures
+  FServices := nil;
+  FConfiguration := nil;
 end;
 
-procedure TDextApplication.Run;
+procedure TWebApplication.Run;
 begin
   Run(FDefaultPort);
 end;
 
-procedure TDextApplication.Run(Port: Integer);
+procedure TWebApplication.Run(Port: Integer);
 begin
   Setup(Port);
   try
@@ -423,24 +436,24 @@ begin
   end;
 end;
 
-procedure TDextApplication.Start;
+procedure TWebApplication.Start;
 begin
   Start(FDefaultPort);
 end;
 
-procedure TDextApplication.Start(Port: Integer);
+procedure TWebApplication.Start(Port: Integer);
 begin
   Setup(Port);
   FActiveHost.Start;
 end;
 
-function TDextApplication.UseMiddleware(Middleware: TClass): IWebApplication;
+function TWebApplication.UseMiddleware(Middleware: TClass): IWebApplication;
 begin
   GetApplicationBuilder.UseMiddleware(Middleware);
   Result := Self;
 end;
 
-function TDextApplication.UseStartup(Startup: IStartup): IWebApplication;
+function TWebApplication.UseStartup(Startup: IStartup): IWebApplication;
 begin
   // 1. Configure Services
   Startup.ConfigureServices(TDextServices.Create(FServices), FConfiguration);
@@ -451,7 +464,7 @@ begin
   Result := Self;
 end;
 
-procedure TDextApplication.Stop;
+procedure TWebApplication.Stop;
 var
   LifetimeIntf: IInterface;
 begin
@@ -471,7 +484,7 @@ begin
   Teardown;
 end;
 
-procedure TDextApplication.SetDefaultPort(Port: Integer);
+procedure TWebApplication.SetDefaultPort(Port: Integer);
 begin
   FDefaultPort := Port;
 end;

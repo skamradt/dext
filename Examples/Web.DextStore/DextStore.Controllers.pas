@@ -14,14 +14,14 @@ type
   // ===========================================================================
   // 🔐 Auth Controller
   // ===========================================================================
-  [DextController('/api/auth')]
+  [ApiController('/api/auth')]
   TAuthController = class
   private
     FTokenHandler: IJwtTokenHandler;
   public
     constructor Create(TokenHandler: IJwtTokenHandler);
     
-    [DextPost('/login')]
+    [HttpPost('/login')]
     [AllowAnonymous]
     procedure Login(Ctx: IHttpContext; const Request: TLoginRequest; [FromServices] const
       ClaimsBuilder: IClaimsBuilder);
@@ -30,20 +30,20 @@ type
   // ===========================================================================
   // 🛒 Products Controller
   // ===========================================================================
-  [DextController('/api/products')]
+  [ApiController('/api/products')]
   TProductsController = class
   private
     FService: IProductService;
   public
     constructor Create(Service: IProductService);
     
-    [DextGet('')]
+    [HttpGet('')]
     procedure GetAll(Ctx: IHttpContext);
     
-    [DextGet('/{id}')]
+    [HttpGet('/{id}')]
     procedure GetById(Ctx: IHttpContext; [FromRoute] Id: Integer);
     
-    [DextPost('')]
+    [HttpPost('')]
     [Authorize('Bearer')]
     [ValidateModel] // Validates [Required], [StringLength] etc.
     procedure CreateProduct(Ctx: IHttpContext; const Request: TCreateProductRequest);
@@ -52,7 +52,7 @@ type
   // ===========================================================================
   // 🛍️ Cart Controller
   // ===========================================================================
-  [DextController('/api/cart')]
+  [ApiController('/api/cart')]
   [Authorize('Bearer')]
   TCartController = class
   private
@@ -60,20 +60,20 @@ type
   public
     constructor Create(Service: ICartService);
     
-    [DextGet('')]
+    [HttpGet('')]
     procedure GetCart(Ctx: IHttpContext);
     
-    [DextPost('/items')]
+    [HttpPost('/items')]
     procedure AddItem(Ctx: IHttpContext; const Request: TAddToCartRequest);
     
-    [DextDelete('')]
+    [HttpDelete('')]
     procedure ClearCart(Ctx: IHttpContext);
   end;
 
   // ===========================================================================
   // 📦 Orders Controller
   // ===========================================================================
-  [DextController('/api/orders')]
+  [ApiController('/api/orders')]
   [Authorize('Bearer')]
   TOrdersController = class
   private
@@ -81,10 +81,10 @@ type
   public
     constructor Create(Service: IOrderService);
     
-    [DextPost('/checkout')]
+    [HttpPost('/checkout')]
     procedure Checkout(Ctx: IHttpContext);
     
-    [DextGet('')]
+    [HttpGet('')]
     procedure GetMyOrders(Ctx: IHttpContext);
   end;
 
@@ -225,3 +225,4 @@ initialization
   TOrdersController.ClassName;
 
 end.
+

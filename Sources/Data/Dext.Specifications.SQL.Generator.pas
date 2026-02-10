@@ -45,7 +45,8 @@ uses
   Dext.Entity.TypeConverters,
   Dext.Types.Nullable,
   Dext.Types.UUID,
-  Dext.Entity.Cache;
+  Dext.Entity.Cache,
+  Dext.MultiTenancy;
 
 type
   ISQLColumnMapper = interface
@@ -69,7 +70,8 @@ type
     procedure ProcessLogical(const C: TLogicalExpression);
     procedure ProcessUnary(const C: TUnaryExpression);
     procedure ProcessConstant(const C: TConstantExpression);
-    procedure ProcessProperty(const C: TPropertyExpression);
+     procedure ProcessProperty(const C: TPropertyExpression);
+    procedure ProcessJsonProperty(const C: TJsonPropertyExpression);
     procedure ProcessLiteral(const C: TLiteralExpression);
 
     procedure ResolveSQL(const AExpression: IExpression);
@@ -89,13 +91,16 @@ type
     function Generate(const AExpression: IExpression): string;
     
     property Params: TDictionary<string, TValue> read FParams;
+    property ParamCount: Integer read FParamCount write FParamCount;
   end;
 
   TSQLColumnMapper<T: class> = class(TInterfacedObject, ISQLColumnMapper)
   private
     FNamingStrategy: INamingStrategy;
+    FRttiContext: TRttiContext;
   public
     constructor Create(ANamingStrategy: INamingStrategy = nil);
+    destructor Destroy; override;
     function MapColumn(const AName: string): string;
     property NamingStrategy: INamingStrategy read FNamingStrategy write FNamingStrategy;
   end;
@@ -108,25 +113,42 @@ type
   end;
 
   /// <summary>
+  ///   Helper class to generate SQL for Many-to-Many join table operations.
+  /// </summary>
+  TJoinTableSQLHelper = class
+  public
+    class function GenerateInsert(ADialect: ISQLDialect; 
+      const AJoinTable, ALeftColumn, ARightColumn: string): string;
+    class function GenerateDelete(ADialect: ISQLDialect;
+      const AJoinTable, ALeftColumn, ARightColumn: string): string;
+    class function GenerateDeleteByLeft(ADialect: ISQLDialect;
+      const AJoinTable, ALeftColumn: string): string;
+  end;
+
+  /// <summary>
   ///   Generates SQL for CRUD operations (Insert, Update, Delete).
   /// </summary>
   TSQLGenerator<T: class> = class
   private
     FDialect: ISQLDialect;
     FParams: TDictionary<string, TValue>;
+    FParamTypes: TDictionary<string, TFieldType>;  // Explicit types from [DbType] attribute
     FParamCount: Integer;
     FMap: TEntityMap;
     FNamingStrategy: INamingStrategy;
+    FRttiContext: TRttiContext;
     // Properties to control filtering
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
     FSchema: string;
+    FTenantProvider: ITenantProvider;
 
     function GetNextParamName: string;
     function GetTableName: string;
     function GetSoftDeleteFilter: string;
     function GetDiscriminatorFilter: string;
     function GetDiscriminatorValueSQL: string;
+    function GetQueryFiltersSQL: string;
 
     function GetDialectEnum: TDatabaseDialect;
     function GetJoinTypeSQL(AType: TJoinType): string;
@@ -136,7 +158,7 @@ type
     function TryUnwrapSmartValue(var AValue: TValue): Boolean;
 
   public
-    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
+    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
     destructor Destroy; override;
     
     property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
@@ -156,6 +178,7 @@ type
     function GenerateCreateTable(const ATableName: string): string;
     
     property Params: TDictionary<string, TValue> read FParams;
+    property ParamTypes: TDictionary<string, TFieldType> read FParamTypes;
   end;
 
   TSQLParamCollector = class
@@ -176,6 +199,9 @@ type
   end;
 
 implementation
+
+uses
+  Dext.Core.Reflection;
 
 { TSQLParamCollector }
 
@@ -210,6 +236,8 @@ begin
   else if Ex is TConstantExpression then
     // No params
   else if Ex is TPropertyExpression then
+    // No params
+  else if Ex is TJsonPropertyExpression then
     // No params
   else if Ex is TLiteralExpression then
     ProcessLiteral(TLiteralExpression(Ex))
@@ -329,7 +357,7 @@ begin
   begin
     for RAttr in RProp.GetAttributes do
     begin
-      if RAttr is PKAttribute then
+      if RAttr is PrimaryKeyAttribute then
       begin
         APK := RProp.Name;
         // Check for Column Attribute on PK
@@ -351,6 +379,37 @@ begin
         APK := ColumnAttribute(RAttr).Name;
     Exit(True);
   end;
+end;
+
+{ TJoinTableSQLHelper }
+
+class function TJoinTableSQLHelper.GenerateInsert(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn, ARightColumn: string): string;
+begin
+  // INSERT INTO "JoinTable" ("left_col", "right_col") VALUES (:p1, :p2)
+  Result := Format('INSERT INTO %s (%s, %s) VALUES (:p1, :p2)',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn),
+     ADialect.QuoteIdentifier(ARightColumn)]);
+end;
+
+class function TJoinTableSQLHelper.GenerateDelete(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn, ARightColumn: string): string;
+begin
+  // DELETE FROM "JoinTable" WHERE "left_col" = :p1 AND "right_col" = :p2
+  Result := Format('DELETE FROM %s WHERE %s = :p1 AND %s = :p2',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn),
+     ADialect.QuoteIdentifier(ARightColumn)]);
+end;
+
+class function TJoinTableSQLHelper.GenerateDeleteByLeft(ADialect: ISQLDialect;
+  const AJoinTable, ALeftColumn: string): string;
+begin
+  // DELETE FROM "JoinTable" WHERE "left_col" = :p1
+  Result := Format('DELETE FROM %s WHERE %s = :p1',
+    [ADialect.QuoteIdentifier(AJoinTable),
+     ADialect.QuoteIdentifier(ALeftColumn)]);
 end;
 
 { TSQLWhereGenerator }
@@ -402,7 +461,6 @@ function TSQLWhereGenerator.Generate(const AExpression: IExpression): string;
 begin
   FSQL.Clear;
   FParams.Clear;
-  FParamCount := 0;
   
   if AExpression = nil then
     Exit('');
@@ -431,6 +489,8 @@ begin
     ProcessConstant(TConstantExpression(AExpression))
   else if AExpression is TPropertyExpression then
     ProcessProperty(TPropertyExpression(AExpression))
+  else if AExpression is TJsonPropertyExpression then
+    ProcessJsonProperty(TJsonPropertyExpression(AExpression))
   else if AExpression is TLiteralExpression then
     ProcessLiteral(TLiteralExpression(AExpression))
   else
@@ -504,7 +564,14 @@ begin
        else DialectEnum := ddSQLite;
     end;
     
-    if (DialectEnum = ddPostgreSQL) and 
+    // When comparing JSON property extraction result (returns TEXT) with non-string values,
+    // we need to cast the parameter to TEXT for PostgreSQL
+    if (DialectEnum = ddPostgreSQL) and (C.Left is TJsonPropertyExpression) and
+       (Lit.Value.Kind in [tkInteger, tkInt64, tkFloat]) then
+    begin
+      SQLCast := ':' + ParamName + '::text';
+    end
+    else if (DialectEnum = ddPostgreSQL) and 
        ((Lit.Value.TypeInfo = TypeInfo(TGUID)) or 
         (Lit.Value.TypeInfo = TypeInfo(TUUID)) or
         ((Lit.Value.Kind in [tkString, tkUString, tkWString]) and
@@ -561,9 +628,13 @@ begin
   else
   begin
     // IsNull / IsNotNull
-    FSQL.Append('(')
-        .Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)))
-        .Append(' ')
+    FSQL.Append('(');
+    if C.Expression <> nil then
+      ResolveSQL(C.Expression)
+    else
+      FSQL.Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)));
+    
+    FSQL.Append(' ')
         .Append(GetUnaryOpSQL(C.UnaryOperator))
         .Append(')');
   end;
@@ -572,6 +643,14 @@ end;
 procedure TSQLWhereGenerator.ProcessProperty(const C: TPropertyExpression);
 begin
   FSQL.Append(QuoteColumnOrAlias(MapColumn(C.PropertyName)));
+end;
+
+procedure TSQLWhereGenerator.ProcessJsonProperty(const C: TJsonPropertyExpression);
+var
+  Mapped: string;
+begin
+  Mapped := MapColumn(C.PropertyName);
+  FSQL.Append(FDialect.GetJsonValueSQL(QuoteColumnOrAlias(Mapped), C.JsonPath));
 end;
 
 procedure TSQLWhereGenerator.ProcessLiteral(const C: TLiteralExpression);
@@ -654,19 +733,24 @@ constructor TSQLColumnMapper<T>.Create(ANamingStrategy: INamingStrategy);
 begin
   inherited Create;
   FNamingStrategy := ANamingStrategy;
+  FRttiContext := TRttiContext.Create;
+end;
+
+destructor TSQLColumnMapper<T>.Destroy;
+begin
+  FRttiContext.Free;
+  inherited;
 end;
 
 function TSQLColumnMapper<T>.MapColumn(const AName: string): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
   PropMap: TPropertyMap;
 begin
   Result := AName;
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   Prop := Typ.GetProperty(AName);
   if Prop <> nil then
   begin
@@ -690,19 +774,24 @@ end;
 
 { TSQLGenerator<T> }
 
-constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil);
+constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
 begin
   FDialect := ADialect;
   FMap := AMap;
   if FMap = nil then
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  FTenantProvider := ATenantProvider;
   FParams := TDictionary<string, TValue>.Create;
+  FParamTypes := TDictionary<string, TFieldType>.Create;
   FParamCount := 0;
+  FRttiContext := TRttiContext.Create;
 end;
 
 destructor TSQLGenerator<T>.Destroy;
 begin
   FParams.Free;
+  FParamTypes.Free;
+  FRttiContext.Free;
   inherited;
 end;
 
@@ -714,7 +803,6 @@ end;
 
 function TSQLGenerator<T>.GetTableName: string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Attr: TCustomAttribute;
 begin
@@ -723,8 +811,7 @@ begin
   else
   begin
     Result := '';
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     
     // Check TableAttribute
     for Attr in Typ.GetAttributes do
@@ -752,27 +839,25 @@ begin
   if (FSchema <> '') and FDialect.UseSchemaPrefix then
     Result := FDialect.QuoteIdentifier(FSchema) + '.' + Result;
 end;
-
 function TSQLGenerator<T>.TryUnwrapSmartValue(var AValue: TValue): Boolean;
 var
-  Ctx: TRttiContext;
   RType: TRttiType;
   FValue: TRttiField;
 begin
   Result := False;
   if AValue.Kind = tkRecord then
   begin
-    Ctx := TRttiContext.Create;
-    RType := Ctx.GetType(AValue.TypeInfo);
+    RType := FRttiContext.GetType(AValue.TypeInfo);
     if RType <> nil then
     begin
-      // Check if it's a Smart Type (Prop<T>)
-      FValue := RType.GetField('FValue');
-      if (FValue <> nil) and 
-         (RType.Name.Contains('Prop<') or (RType.GetProperty('Value') <> nil)) then
-      begin
-        AValue := FValue.GetValue(AValue.GetReferenceToRawData);
-        Result := True;
+        // Check if it's a Smart Type (Prop<T>)
+        FValue := RType.GetField('FValue');
+        if (FValue <> nil) and 
+           (RType.Name.Contains('Prop<') or RType.Name.Contains('TProp') or 
+            (RType.Name.EndsWith('Type') and (RType.TypeKind = tkRecord))) then
+        begin
+          AValue := FValue.GetValue(AValue.GetReferenceToRawData);
+          Result := True;
       end;
     end;
   end;
@@ -780,7 +865,6 @@ end;
 
 function TSQLGenerator<T>.GetSoftDeleteFilter: string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Attr: TCustomAttribute;
   SoftDeleteAttr: SoftDeleteAttribute;
@@ -799,8 +883,7 @@ begin
   NotDeletedVal := False;
   TargetPropType := nil;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   if Typ = nil then Exit;
   
   // 1. Check Fluent Mapping
@@ -1001,9 +1084,48 @@ begin
     Result := ddUnknown;
 end;
 
+function TSQLGenerator<T>.GetQueryFiltersSQL: string;
+var
+  Filter: IExpression;
+  WhereGen: TSQLWhereGenerator;
+  SB: TStringBuilder;
+  Pair: TPair<string, TValue>;
+begin
+  Result := '';
+  if FIgnoreQueryFilters then Exit;
+  if (FMap = nil) or (FMap.QueryFilters.Count = 0) then Exit;
+
+  SB := TStringBuilder.Create;
+  try
+    WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create(FNamingStrategy));
+    try
+      // Pass the current parameter count to avoid collisions
+      WhereGen.ParamCount := FParamCount;
+      
+      for Filter in FMap.QueryFilters do
+      begin
+        if SB.Length > 0 then SB.Append(' AND ');
+        SB.Append(WhereGen.Generate(Filter));
+        
+        // Merge Params
+        for Pair in WhereGen.Params do
+          FParams.AddOrSetValue(Pair.Key, Pair.Value);
+          
+        // Update local count
+        FParamCount := WhereGen.ParamCount;
+      end;
+      Result := SB.ToString;
+    finally
+      WhereGen.Free;
+    end;
+  finally
+    SB.Free;
+  end;
+
+end;
+
 function TSQLGenerator<T>.GenerateInsert(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1013,15 +1135,12 @@ var
   Val: TValue;
   SQLCast: string;
   Converter: ITypeConverter;
-  NullableHelper: TNullableHelper;
   PropMap: TPropertyMap;
 begin
   FParams.Clear;
+  FParamTypes.Clear;
   FParamCount := 0;
-  
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
-  
+  Typ := FRttiContext.GetType(T);
   SBCols := TStringBuilder.Create;
   SBVals := TStringBuilder.Create;
   try
@@ -1040,14 +1159,25 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation and not PropMap.IsJsonColumn then IsMapped := False;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
+
+      // Auto-detection for navigation properties (Relationships)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
 
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
         
+        if (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or 
+           (Attr is HasOneAttribute) or (Attr is ManyToManyAttribute) then
+          IsMapped := False;
+
+        if Attr is JsonColumnAttribute then IsMapped := True;
+
         if (PropMap = nil) or not PropMap.IsAutoInc then
           if Attr is AutoIncAttribute then IsAutoInc := True;
           
@@ -1055,6 +1185,16 @@ begin
         begin
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
           if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+
+        if Attr is DbTypeAttribute then
+        begin
+          if PropMap = nil then
+          begin
+            PropMap := TPropertyMap.Create(Prop.Name);
+            if FMap <> nil then FMap.Properties.Add(Prop.Name, PropMap);
+          end;
+          PropMap.DataType := DbTypeAttribute(Attr).DataType;
         end;
       end;
       
@@ -1075,11 +1215,21 @@ begin
       
       Val := Prop.GetValue(Pointer(AEntity));
       
-      // Check for Nullable<T>
-      if IsNullable(Val.TypeInfo) then
+      // Check for Nullable<T> using TReflection (Cached & Reliable)
+      var Meta := TReflection.GetMetadata(Val.TypeInfo);
+      if Meta.IsNullable and (Meta.HasValueField <> nil) then
       begin
-        NullableHelper := TNullableHelper.Create(Val.TypeInfo);
-        if not NullableHelper.HasValue(Val.GetReferenceToRawData) then
+        // Check HasValue directly via Field
+        // Note: Field.GetValue returns TValue, we check boolean state
+        var HasValueVal := Meta.HasValueField.GetValue(Val.GetReferenceToRawData);
+        var HasValue: Boolean := False;
+        
+        if HasValueVal.Kind = tkUString then
+           HasValue := HasValueVal.AsString <> ''
+        else if HasValueVal.Kind = tkEnumeration then
+           HasValue := HasValueVal.AsBoolean;
+
+        if not HasValue then
         begin
           // It is NULL.
           SBVals.Append('NULL');
@@ -1087,8 +1237,9 @@ begin
         end
         else
         begin
-          // It has value. Extract it.
-          Val := NullableHelper.GetValue(Val.GetReferenceToRawData);
+          // It has value. Extract it using ValueField
+          if Meta.ValueField <> nil then
+             Val := Meta.ValueField.GetValue(Val.GetReferenceToRawData);
         end;
       end;
 
@@ -1102,6 +1253,11 @@ begin
         Converter := PropMap.Converter
       else
         Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
+      
+      // If property is marked as JsonColumn but has no converter, use TJsonConverter
+      if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then
+        Converter := TJsonConverter.Create(PropMap.UseJsonB);
+        
       if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
       begin
         SQLCast := Converter.GetSQLCast(':' + ParamName, GetDialectEnum);
@@ -1111,6 +1267,10 @@ begin
         SBVals.Append(':').Append(ParamName);
         
       FParams.Add(ParamName, Val);
+      
+      // Store explicit type if defined via [DbType] attribute
+      if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+        FParamTypes.Add(ParamName, PropMap.DataType);
     end;
     
     // Add Discriminator
@@ -1150,7 +1310,6 @@ end;
 
 function TSQLGenerator<T>.GenerateInsertTemplate(out AProps: TList<TPair<TRttiProperty, string>>): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1159,8 +1318,7 @@ var
   IsAutoInc, IsMapped, First: Boolean;
   PropMap: TPropertyMap;
 begin
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBCols := TStringBuilder.Create;
   SBVals := TStringBuilder.Create;
@@ -1182,6 +1340,7 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation then IsMapped := False;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
@@ -1231,7 +1390,6 @@ end;
 
 function TSQLGenerator<T>.GenerateUpdate(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1247,10 +1405,10 @@ var
   NullableHelper: TNullableHelper;
 begin
   FParams.Clear;
+  FParamTypes.Clear;
   FParamCount := 0;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBSet := TStringBuilder.Create;
   SBWhere := TStringBuilder.Create;
@@ -1272,24 +1430,43 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation and not PropMap.IsJsonColumn then IsMapped := False;
         if PropMap.IsPK then IsPK := True;
         // Version not yet supported in Fluent Mapping explicitly? Assuming no for now or check map.
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
       end;
 
+      // Auto-detection for navigation properties (Relationships)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
+
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        
-        if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
-          
-        if Attr is VersionAttribute then IsVersion := True; // Version attribute still respected
+
+        if (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or 
+           (Attr is HasOneAttribute) or (Attr is ManyToManyAttribute) then
+          IsMapped := False;
+
+        if Attr is JsonColumnAttribute then IsMapped := True;
+
+        if Attr is PrimaryKeyAttribute then IsPK := True;
+        if Attr is VersionAttribute then IsVersion := True; 
         
         if (PropMap = nil) or (PropMap.ColumnName = '') then
         begin
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
           if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+
+        if Attr is DbTypeAttribute then
+        begin
+          if PropMap = nil then
+          begin
+            PropMap := TPropertyMap.Create(Prop.Name);
+            if FMap <> nil then FMap.Properties.Add(Prop.Name, PropMap);
+          end;
+          PropMap.DataType := DbTypeAttribute(Attr).DataType;
         end;
       end;
       
@@ -1351,6 +1528,9 @@ begin
           SQLCastStr := ':' + ParamName + '::uuid';
         
         SBWhere.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(SQLCastStr);
+        
+        if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+          FParamTypes.Add(ParamName, PropMap.DataType);
       end
       else
       begin
@@ -1376,6 +1556,10 @@ begin
 
         ParamName := GetNextParamName;
         FParams.Add(ParamName, Val);
+        
+        // Store explicit type if defined via [DbType] attribute
+        if (PropMap <> nil) and (PropMap.DataType <> ftUnknown) then
+          FParamTypes.Add(ParamName, PropMap.DataType);
         
         if not FirstSet then SBSet.Append(', ');
         FirstSet := False;
@@ -1403,7 +1587,6 @@ end;
 
 function TSQLGenerator<T>.GenerateDelete(const AEntity: T): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1416,8 +1599,7 @@ begin
   FParams.Clear;
   FParamCount := 0;
   
-  Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(T);
+  Typ := FRttiContext.GetType(T);
   
   SBWhere := TStringBuilder.Create;
   try
@@ -1441,7 +1623,7 @@ begin
       for Attr in Prop.GetAttributes do
       begin
         if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
+          if Attr is PrimaryKeyAttribute then IsPK := True;
           
         if (PropMap = nil) or (PropMap.ColumnName = '') then
           if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
@@ -1503,7 +1685,6 @@ var
   Prop: TRttiProperty;
   ColName: string;
   Attr: TCustomAttribute;
-  Ctx: TRttiContext;
   Typ: TRttiType;
   First: Boolean;
   SelectedCols: TArray<string>;
@@ -1515,10 +1696,10 @@ var
   SoftDeleteFilter, DiscriminatorFilter: string;
   SortCol: string;
   P: TRttiProperty;
-  // Caching
   Sig: string;
   CachedSQL: string;
   Collector: TSQLParamCollector;
+  TenantId: string;
 begin
   FParams.Clear;
   FParamCount := 0;
@@ -1526,9 +1707,13 @@ begin
   // 1. Check Cache
   if ASpec <> nil then
   begin
-    Sig := Format('%s:%s:%s:Ign:%d:Del:%d', 
+    TenantId := '';
+    if Assigned(FTenantProvider) and Assigned(FTenantProvider.Tenant) then
+      TenantId := FTenantProvider.Tenant.Id;
+
+    Sig := Format('%s:%s:%s:Ign:%d:Del:%d:Ten:%s', 
       [(FDialect as TObject).ClassName, GetTableName, ASpec.GetSignature, 
-       Ord(FIgnoreQueryFilters), Ord(FOnlyDeleted)]);
+       Ord(FIgnoreQueryFilters), Ord(FOnlyDeleted), TenantId]);
     if TSQLCache.Instance.TryGetSQL(Sig, CachedSQL) then
     begin
       // Re-hydrate parameters using Collector (fast traversal)
@@ -1544,15 +1729,13 @@ begin
   end;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create(FNamingStrategy));
-    
   try
     WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    FParamCount := WhereGen.ParamCount;
     
     // Copy params
     for Pair in WhereGen.Params do
-    begin
-      FParams.Add(Pair.Key, Pair.Value);
-    end;
+      FParams.AddOrSetValue(Pair.Key, Pair.Value);
   finally
     WhereGen.Free;
   end;
@@ -1565,8 +1748,7 @@ begin
     if Length(SelectedCols) > 0 then
     begin
       // Custom projection - translate property names to column names
-      Ctx := TRttiContext.Create;
-      Typ := Ctx.GetType(T);
+      Typ := FRttiContext.GetType(T);
       
       for i := 0 to High(SelectedCols) do
       begin
@@ -1608,8 +1790,7 @@ begin
     else
     begin
       // Select all mapped columns
-      Ctx := TRttiContext.Create;
-      Typ := Ctx.GetType(T);
+      Typ := FRttiContext.GetType(T);
       First := True;
       
       for Prop in Typ.GetProperties do
@@ -1691,8 +1872,7 @@ begin
         
         SortCol := OrderBy[i].GetPropertyName;
         // Lookup column name (simplified)
-        Ctx := TRttiContext.Create;
-        Typ := Ctx.GetType(T);
+        Typ := FRttiContext.GetType(T);
         P := Typ.GetProperty(SortCol);
         if P <> nil then
         begin
@@ -1736,7 +1916,7 @@ begin
       Take := ASpec.GetTake;
       
       // Paging syntax generation
-      Result := SB.ToString + ' ' + FDialect.GeneratePaging(Skip, Take);
+      Result := FDialect.GeneratePaging(SB.ToString, Skip, Take);
     end
     else
     begin
@@ -1758,11 +1938,10 @@ var
   Prop: TRttiProperty;
   ColName: string;
   Attr: TCustomAttribute;
-  Ctx: TRttiContext;
   Typ: TRttiType;
   First, IsMapped: Boolean;
   PropMap: TPropertyMap;
-  SoftDeleteFilter, DiscriminatorFilter: string;
+  SoftDeleteFilter, DiscriminatorFilter, GlobalFilters, QFilters: string;
 begin
   FParams.Clear;
   FParamCount := 0;
@@ -1772,8 +1951,7 @@ begin
     SB.Append('SELECT ');
 
     // Select all mapped columns
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     First := True;
 
     for Prop in Typ.GetProperties do
@@ -1815,21 +1993,26 @@ begin
 
     SB.Append(' FROM ').Append(GetTableName);
 
-    // Add soft delete filter
+    // Add global filters
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
+    GlobalFilters := SoftDeleteFilter;
     
     if DiscriminatorFilter <> '' then
     begin
-       if SoftDeleteFilter <> '' then
-         SoftDeleteFilter := ' WHERE ' + SoftDeleteFilter + ' AND ' + DiscriminatorFilter
-       else
-         SoftDeleteFilter := ' WHERE ' + DiscriminatorFilter;
-    end
-    else if SoftDeleteFilter <> '' then
-       SoftDeleteFilter := ' WHERE ' + SoftDeleteFilter;
-       
-    SB.Append(SoftDeleteFilter);
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + DiscriminatorFilter;
+    end;
+    
+    QFilters := GetQueryFiltersSQL;
+    if QFilters <> '' then
+    begin
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + QFilters;
+    end;
+    
+    if GlobalFilters <> '' then
+      SB.Append(' WHERE ').Append(GlobalFilters);
 
     Result := SB.ToString;
   finally
@@ -1842,22 +2025,20 @@ var
   WhereGen: TSQLWhereGenerator;
   WhereSQL: string;
   SB: TStringBuilder;
-  SoftDeleteFilter, DiscriminatorFilter: string;
+  SoftDeleteFilter, DiscriminatorFilter, GlobalFilters, QFilters: string;
   Pair: TPair<string, TValue>;
 begin
   FParams.Clear;
   FParamCount := 0;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
-    
   try
     WhereSQL := WhereGen.Generate(ASpec.GetExpression);
+    FParamCount := WhereGen.ParamCount;
     
     // Copy params
     for Pair in WhereGen.Params do
-    begin
-      FParams.Add(Pair.Key, Pair.Value);
-    end;
+      FParams.AddOrSetValue(Pair.Key, Pair.Value);
   finally
     WhereGen.Free;
   end;
@@ -1866,29 +2047,35 @@ begin
   try
     SB.Append('SELECT COUNT(*) FROM ').Append(GetTableName);
     
-    // Append Joins
-    SB.Append(GenerateJoins(ASpec.GetJoins));
-
-    // Add soft delete filter
+    // Global filters
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
+    GlobalFilters := SoftDeleteFilter;
     
     if DiscriminatorFilter <> '' then
     begin
-       if SoftDeleteFilter <> '' then
-         SoftDeleteFilter := SoftDeleteFilter + ' AND ' + DiscriminatorFilter
-       else
-         SoftDeleteFilter := DiscriminatorFilter;
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + DiscriminatorFilter;
     end;
     
+    QFilters := GetQueryFiltersSQL;
+    if QFilters <> '' then
+    begin
+      if GlobalFilters <> '' then GlobalFilters := GlobalFilters + ' AND ';
+      GlobalFilters := GlobalFilters + QFilters;
+    end;
+
+    // Append Joins
+    SB.Append(GenerateJoins(ASpec.GetJoins));
+
     if WhereSQL <> '' then
     begin
       SB.Append(' WHERE ').Append(WhereSQL);
-      if SoftDeleteFilter <> '' then
-        SB.Append(' AND ').Append(SoftDeleteFilter);
+      if GlobalFilters <> '' then
+        SB.Append(' AND ').Append(GlobalFilters);
     end
-    else if SoftDeleteFilter <> '' then
-      SB.Append(' WHERE ').Append(SoftDeleteFilter);
+    else if GlobalFilters <> '' then
+      SB.Append(' WHERE ').Append(GlobalFilters);
       
     Result := SB.ToString;
   finally
@@ -1922,7 +2109,6 @@ end;
 
 function TSQLGenerator<T>.GenerateCreateTable(const ATableName: string): string;
 var
-  Ctx: TRttiContext;
   Typ: TRttiType;
   Prop: TRttiProperty;
   Attr: TCustomAttribute;
@@ -1951,8 +2137,7 @@ begin
   PKCols := TList<string>.Create;
   FKConstraints := TList<string>.Create;
   try
-    Ctx := TRttiContext.Create;
-    Typ := Ctx.GetType(T);
+    Typ := FRttiContext.GetType(T);
     First := True;
     HasAutoInc := False;
     
@@ -1981,7 +2166,7 @@ begin
         if Attr is NotMappedAttribute then IsMapped := False;
         
         if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PKAttribute then IsPK := True;
+          if Attr is PrimaryKeyAttribute then IsPK := True;
           
         if (PropMap = nil) or not PropMap.IsAutoInc then
            if Attr is AutoIncAttribute then IsAutoInc := True;
@@ -2001,7 +2186,7 @@ begin
              FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
           
              if (Prop.PropertyType.TypeKind = tkClass) and 
-                TSQLGeneratorHelper.GetRelatedTableAndPK(Ctx, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
+                TSQLGeneratorHelper.GetRelatedTableAndPK(FRttiContext, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
              begin
                  LConstraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
                    [FDialect.QuoteIdentifier(FKColName), 

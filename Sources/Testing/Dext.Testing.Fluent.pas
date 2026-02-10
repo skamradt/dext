@@ -195,6 +195,22 @@ type
     ///   Quick run tests in a category.
     /// </summary>
     class function RunCategory(const Category: string): Boolean; static;
+    
+    /// <summary>
+    ///   Sets the application ExitCode based on boolean success.
+    ///   True = 0 (Success), False = 1 (Error).
+    /// </summary>
+    class procedure SetExitCode(Success: Boolean); static;
+    
+    /// <summary>
+    ///   Sets application ExitCode to 0 (Success).
+    /// </summary>
+    class procedure SetResultSuccess; static;
+    
+    /// <summary>
+    ///   Sets application ExitCode to 1 (Error).
+    /// </summary>
+    class procedure SetResultError; static;
   end;
 
 implementation
@@ -461,6 +477,24 @@ begin
   Result := TTest.Configure
     .FilterByCategory(Category)
     .Run;
+end;
+
+class procedure TTest.SetExitCode(Success: Boolean);
+begin
+  if Success then
+    ExitCode := 0
+  else
+    ExitCode := 1;
+end;
+
+class procedure TTest.SetResultSuccess;
+begin
+  ExitCode := 0;
+end;
+
+class procedure TTest.SetResultError;
+begin
+  ExitCode := 1;
 end;
 
 initialization

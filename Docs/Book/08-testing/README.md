@@ -56,6 +56,30 @@ begin
 end;
 ```
 
+## Unit Testing Entities (Warning)
+
+When testing entities that use `OwnsObjects=False` for child collections (required for ORM compatibility), **you must manually free the child items** in your test's `finally` block. `Entity.Free` will only free the list container, not the items.
+
+```pascal
+var Order := TOrder.Create;
+var Item  := TOrderItem.Create;
+try
+  Order.Items.Add(Item);
+  // Test changes...
+finally
+  Order.Free;
+  Item.Free; // MUST be freed manually!
+end;
+```
+
+## Integration Testing
+
+We recommend using PowerShell scripts for full-stack integration testing.
+
+- Use `http://127.0.0.1:9000` instead of `localhost` to avoid IPv6 resolution issues.
+- Set `Accept: application/json` headers explicitly.
+- Generate local JWTs if needed for protected routes.
+
 ## Run Tests
 
 ```bash

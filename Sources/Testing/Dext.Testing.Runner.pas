@@ -333,7 +333,12 @@ type
     ///   Use this for classes defined in the main program (.dpr)
     ///   where RTTI discovery may not work automatically.
     /// </summary>
-    class procedure RegisterFixture(AClass: TClass);
+    class procedure RegisterFixture(AClass: TClass); overload;
+    
+    /// <summary>
+    ///   Registers multiple test fixture classes at once.
+    /// </summary>
+    class procedure RegisterFixture(const AClasses: array of TClass); overload;
 
     /// <summary>
     ///   Enables debug output during discovery phase.
@@ -1413,8 +1418,7 @@ begin
           Method.Invoke(Instance, []);
 
         Info.Result := trPassed;
-        Inc(FSummary.Passed);
-        // Log.Info('Passed Test: %s', [Info.DisplayName]);
+        // Note: Don't increment Passed here yet - wait until after TearDown
 
         // Check MaxTime warning
         MaxTime := GetMaxTime(Method);
@@ -1429,6 +1433,10 @@ begin
         if Assigned(Fixture.TearDownMethod) then
           Fixture.TearDownMethod.Invoke(Instance, []);
       end;
+      
+      // Only increment Passed after TearDown completes successfully
+      if Info.Result = trPassed then
+        Inc(FSummary.Passed);
     except
       on E: Exception do
       begin
@@ -1671,6 +1679,14 @@ begin
       SafeWriteLn('    No test methods found');
     Fixture.Free;
   end;
+end;
+
+class procedure TTestRunner.RegisterFixture(const AClasses: array of TClass);
+var
+  FixtureClass: TClass;
+begin
+  for FixtureClass in AClasses do
+    RegisterFixture(FixtureClass);
 end;
 
 class procedure TTestRunner.SetDebugDiscovery(AValue: Boolean);

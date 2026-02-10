@@ -40,6 +40,7 @@ type
   TReflection = class
   private
     class var FCache: TObjectDictionary<PTypeInfo, TTypeMetadata>;
+    class var FContext: TRttiContext;
     class constructor Create;
     class destructor Destroy;
   public
@@ -101,11 +102,9 @@ end;
 
 constructor TTypeMetadata.Create(AType: PTypeInfo);
 var
-  Ctx: TRttiContext;
   TypeName: string;
 begin
-  Ctx := TRttiContext.Create;
-  RttiType := Ctx.GetType(AType);
+  RttiType := TReflection.FContext.GetType(AType);
   IsSmartProp := False;
   IsNullable := False;
   ValueField := nil;
@@ -131,13 +130,21 @@ begin
         InnerType := ValueField.FieldType.Handle;
     end
     // Detect Prop<T> (Smart Type)
-    else if TypeName.Contains('Prop<') or (RttiType.GetField('FValue') <> nil) then
+    else if TypeName.Contains('Prop<') or TypeName.Contains('TProp') or (RttiType.GetField('FValue') <> nil) then
     begin
       ValueField := RttiType.GetField('FValue');
       if ValueField <> nil then
       begin
         IsSmartProp := True;
         InnerType := ValueField.FieldType.Handle;
+      end
+      else if TypeName.Contains('Prop<') then
+      begin
+         // If name matches but field not found, still mark as SmartProp
+         // to avoid falling back to incompatible Casts.
+         IsSmartProp := True;
+         // Try to find ANY field as a last resort? 
+         // No, the $RTTI directive in SmartTypes.pas is the definitive fix.
       end;
     end;
   end;
@@ -147,6 +154,7 @@ end;
 
 class constructor TReflection.Create;
 begin
+  FContext := TRttiContext.Create;
   FCache := TObjectDictionary<PTypeInfo, TTypeMetadata>.Create([doOwnsValues]);
 end;
 
@@ -169,6 +177,8 @@ var
   TargetType: PTypeInfo;
   Converted: TValue;
 begin
+  if (AInstance = nil) or (AMember = nil) then Exit;
+
   if AMember is TRttiProperty then
     TargetType := TRttiProperty(AMember).PropertyType.Handle
   else if AMember is TRttiField then

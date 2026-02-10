@@ -12,6 +12,7 @@ interface
 uses
   System.SysUtils,
   Dext.Entity,
+  Dext.Validation,      // Validation attributes (EmailAddress, etc.)
   Dext.Core.SmartTypes; // Use Smart Types for type-safe queries
 
 type

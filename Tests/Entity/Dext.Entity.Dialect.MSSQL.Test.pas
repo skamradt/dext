@@ -65,7 +65,7 @@ begin
   AssertEqual('0', FDialect.BooleanToSQL(False), 'BooleanToSQL(False) should be 0');
 
   // 3. Paging
-  AssertEqual('OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY', FDialect.GeneratePaging(0, 10), 'Paging (Skip 0, Take 10)');
+  AssertEqual('SELECT * FROM Users ORDER BY ID OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY', FDialect.GeneratePaging('SELECT * FROM Users ORDER BY ID', 0, 10), 'Paging (Skip 0, Take 10)');
   
   // 4. Column Types
   AssertEqual('INT', FDialect.GetColumnType(TypeInfo(Integer)), 'Integer mapping');

@@ -49,8 +49,8 @@ uses
   Dext.Entity.Tenancy,
   Dext.Entity.TypeConverters,
   Dext.Entity.TypeSystem,
-  Dext.Specifications.SQL.Generator,
-  Dext.Validation
+  Dext.Entity.Validator,
+  Dext.Specifications.SQL.Generator
   // {END_DEXT_USES}
   ;
 
@@ -65,26 +65,34 @@ type
   TInheritanceStrategy = Dext.Entity.Attributes.TInheritanceStrategy;
   TableAttribute = Dext.Entity.Attributes.TableAttribute;
   ColumnAttribute = Dext.Entity.Attributes.ColumnAttribute;
+  PrimaryKeyAttribute = Dext.Entity.Attributes.PrimaryKeyAttribute;
   PKAttribute = Dext.Entity.Attributes.PKAttribute;
   AutoIncAttribute = Dext.Entity.Attributes.AutoIncAttribute;
   RequiredAttribute = Dext.Entity.Attributes.RequiredAttribute;
   MaxLengthAttribute = Dext.Entity.Attributes.MaxLengthAttribute;
+  MinLengthAttribute = Dext.Entity.Attributes.MinLengthAttribute;
   PrecisionAttribute = Dext.Entity.Attributes.PrecisionAttribute;
   NotMappedAttribute = Dext.Entity.Attributes.NotMappedAttribute;
   FieldAttribute = Dext.Entity.Attributes.FieldAttribute;
   JsonColumnAttribute = Dext.Entity.Attributes.JsonColumnAttribute;
   VersionAttribute = Dext.Entity.Attributes.VersionAttribute;
+  CreatedAtAttribute = Dext.Entity.Attributes.CreatedAtAttribute;
+  UpdatedAtAttribute = Dext.Entity.Attributes.UpdatedAtAttribute;
   SoftDeleteAttribute = Dext.Entity.Attributes.SoftDeleteAttribute;
   TCascadeAction = Dext.Entity.Attributes.TCascadeAction;
   ForeignKeyAttribute = Dext.Entity.Attributes.ForeignKeyAttribute;
+  FKAttribute = Dext.Entity.Attributes.FKAttribute;
+  HasManyAttribute = Dext.Entity.Attributes.HasManyAttribute;
+  BelongsToAttribute = Dext.Entity.Attributes.BelongsToAttribute;
+  HasOneAttribute = Dext.Entity.Attributes.HasOneAttribute;
+  ManyToManyAttribute = Dext.Entity.Attributes.ManyToManyAttribute;
+  InversePropertyAttribute = Dext.Entity.Attributes.InversePropertyAttribute;
+  DeleteBehaviorAttribute = Dext.Entity.Attributes.DeleteBehaviorAttribute;
   InheritanceAttribute = Dext.Entity.Attributes.InheritanceAttribute;
   DiscriminatorColumnAttribute = Dext.Entity.Attributes.DiscriminatorColumnAttribute;
   DiscriminatorValueAttribute = Dext.Entity.Attributes.DiscriminatorValueAttribute;
   DbTypeAttribute = Dext.Entity.Attributes.DbTypeAttribute;
   TypeConverterAttribute = Dext.Entity.Attributes.TypeConverterAttribute;
-  CreatedAtAttribute = Dext.Entity.Attributes.CreatedAtAttribute;
-  UpdatedAtAttribute = Dext.Entity.Attributes.UpdatedAtAttribute;
-  EmailAddressAttribute = Dext.Validation.EmailAddressAttribute;
 
   // Dext.Entity.Cache
   TSQLCache = Dext.Entity.Cache.TSQLCache;
@@ -107,6 +115,10 @@ type
   IReferenceEntry = Dext.Entity.Core.IReferenceEntry;
   IEntityEntry = Dext.Entity.Core.IEntityEntry;
   IDbContext = Dext.Entity.Core.IDbContext;
+  // IDbSet<T> = Dext.Entity.Core.IDbSet<T>;
+
+  // Dext.Entity.DbSet
+  // TDbSet<T> = Dext.Entity.DbSet.TDbSet<T>;
 
   // Dext.Entity.Dialects
   TDatabaseDialect = Dext.Entity.Dialects.TDatabaseDialect;
@@ -235,7 +247,10 @@ type
   Build = Dext.Entity.Prototype.Build;
 
   // Dext.Entity.Query
+  // IPagedResult<T> = Dext.Entity.Query.IPagedResult<T>;
+  // TPagedResult<T> = Dext.Entity.Query.TPagedResult<T>;
   // TQueryIterator<T> = Dext.Entity.Query.TQueryIterator<T>;
+  // TFluentQuery<T> = Dext.Entity.Query.TFluentQuery<T>;
   // TSpecificationQueryIterator<T> = Dext.Entity.Query.TSpecificationQueryIterator<T>;
   // TProjectingIterator<T> = Dext.Entity.Query.TProjectingIterator<T>;
   // TFilteringIterator<T> = Dext.Entity.Query.TFilteringIterator<T>;
@@ -287,10 +302,14 @@ type
   // TEntityBuilder<T> = Dext.Entity.TypeSystem.TEntityBuilder<T>;
   // TEntityType<T> = Dext.Entity.TypeSystem.TEntityType<T>;
 
+  // Dext.Entity.Validator
+  TEntityValidator = Dext.Entity.Validator.TEntityValidator;
+
   // Dext.Specifications.SQL.Generator
   ISQLColumnMapper = Dext.Specifications.SQL.Generator.ISQLColumnMapper;
   TSQLWhereGenerator = Dext.Specifications.SQL.Generator.TSQLWhereGenerator;
   TSQLGeneratorHelper = Dext.Specifications.SQL.Generator.TSQLGeneratorHelper;
+  TJoinTableSQLHelper = Dext.Specifications.SQL.Generator.TJoinTableSQLHelper;
   TSQLParamCollector = Dext.Specifications.SQL.Generator.TSQLParamCollector;
   // TSQLColumnMapper<T> = Dext.Specifications.SQL.Generator.TSQLColumnMapper<T>;
   // TSQLGenerator<T> = Dext.Specifications.SQL.Generator.TSQLGenerator<T>;
@@ -381,9 +400,9 @@ type
     function AddDbContext<T: TDbContext>(Config: TProc<TDbContextOptions>): TDextServices; overload;
     
     /// <summary>
-    ///   Registers a DbContext with configuration binding.
+    ///   Registers a DbContext using configuration section.
     /// </summary>
-    function AddDbContext<T: TDbContext>(const AConfig: IConfigurationSection): TDextServices; overload;
+    function AddDbContext<T: TDbContext>(const Configuration: IConfigurationSection): TDextServices; overload;
   end;
 
   TPersistence = class
@@ -409,12 +428,12 @@ begin
   Result := Self;
 end;
 
-function TDextPersistenceServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
+function TDextPersistenceServicesHelper.AddDbContext<T>(const Configuration: IConfigurationSection): TDextServices;
 begin
   Result := AddDbContext<T>(
     procedure(Options: TDbContextOptions)
     begin
-      TConfigurationBinder.Bind(AConfig, Options);
+      TConfigurationBinder.Bind(Configuration, Options);
     end
   );
 end;
@@ -516,7 +535,7 @@ begin
           Dialect := TSQLiteDialect.Create;
 
         // 3. Create Context
-        var Ctx := TDbContextClass(T).Create(Connection, Dialect, Options.BuildNamingStrategy);
+        var Ctx := TDbContextClass(T).Create(Connection, Dialect, nil);
         Result := Ctx;
         
       except

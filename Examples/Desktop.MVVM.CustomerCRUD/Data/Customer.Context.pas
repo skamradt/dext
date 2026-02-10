@@ -7,9 +7,9 @@ uses
   FireDAC.Stan.Intf,
   FireDAC.UI.Intf,
   FireDAC.VCLUI.Wait,
+  Customer.Entity,
   Dext.Entity,
-  Dext.Entity.Core,
-  Customer.Entity;
+  Dext.Entity.Core;
 
 type
   TCustomerContext = class(TDbContext)

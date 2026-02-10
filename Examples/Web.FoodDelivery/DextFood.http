@@ -1,0 +1,19 @@
+### Tests for DextFood API
+@host = http://localhost:9000
+
+### 1. Health Check (Public)
+GET {{host}}/health
+
+### 2. Create Order (Minimal API)
+POST {{host}}/api/orders?total=99.90
+Content-Type: application/json
+
+### 3. Get High Value Orders (Database)
+GET {{host}}/api/orders/high-value
+
+### 4. Swagger Documentation (JSON)
+GET {{host}}/swagger.json
+
+### 5. Database as API (Super Orders CRUD)
+GET {{host}}/api/super-orders?page=1&limit=5
+

@@ -291,9 +291,23 @@ begin
 end;
 
 procedure TLoggerFactory.Dispose;
+var
+  LProvider: ILoggerProvider;
 begin
-  // Clean up providers?
-  // For now, allow Destroy to handle it, or explicit cleanup if needed.
+  TMonitor.Enter(FLock);
+  try
+    if FProviders <> nil then
+    begin
+      for LProvider in FProviders do
+      begin
+        if LProvider <> nil then
+          LProvider.Dispose;
+      end;
+      FProviders.Clear;
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TLoggerFactory.CreateLogger(const ACategoryName: string): ILogger;

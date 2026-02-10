@@ -303,7 +303,7 @@ function TModelBinder.BindBody(AType: PTypeInfo; Context: IHttpContext): TValue;
 var
   Stream: TStream;
   JsonString: string;
-  Settings: TDextSettings;
+  Settings: TJsonSettings;
   Bytes: TBytes;
   Span: TByteSpan;
 begin
@@ -361,9 +361,9 @@ begin
     
     // Fallback to legacy string based for now in the non-generic untyped method
     JsonString := TEncoding.UTF8.GetString(Bytes);
-    Settings := TDextSettings.Default.WithCaseInsensitive;
-    Result := TDextJson.Deserialize(AType, JsonString, Settings);
+    Settings := TJsonSettings.Default.CaseInsensitive.ServiceProvider(Context.Services);
     
+    Result := TDextJson.Deserialize(AType, JsonString, Settings);
   except
     on E: Exception do
       raise EBindingException.Create('Error binding body: ' + E.Message);
@@ -1118,6 +1118,7 @@ begin
         end;
         
         var BodyJsonStr := TEncoding.UTF8.GetString(BodyBytes);
+
         if BodyJsonStr <> '' then
         begin
           try
@@ -1125,8 +1126,8 @@ begin
             if (JsonNode <> nil) and (JsonNode.GetNodeType = jntObject) then
               BodyJsonObj := JsonNode as IDextJsonObject;
           except
-            // Body is not valid JSON - ignore and continue with other binding sources
-            BodyJsonObj := nil;
+            on E: Exception do
+              BodyJsonObj := nil;
           end;
         end;
       end;

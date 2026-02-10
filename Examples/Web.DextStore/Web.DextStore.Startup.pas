@@ -49,15 +49,9 @@ begin
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
-var
-  CorsOpts: TCorsOptions;
 begin
   // ✨ CORS with Fluent API
-  CorsOpts := TCorsOptions.Create;
-  CorsOpts.AllowedOrigins := ['*'];
-  CorsOpts.AllowedMethods := ['GET', 'POST', 'PUT', 'DELETE'];
-  CorsOpts.AllowedHeaders := ['*'];
-  App.Builder.UseCors(CorsOpts);
+  App.Builder.UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
 
   // ✨ JWT Authentication
   App.Builder.UseJwtAuthentication(JwtSecret,

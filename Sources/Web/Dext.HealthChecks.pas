@@ -107,13 +107,12 @@ type
   ///       .AddCheck<TRedisHealthCheck>
   ///       .Build;
   /// </summary>
-  THealthCheckBuilder = class
+  THealthCheckBuilder = record
   private
     FServices: IServiceCollection;
     FChecks: TList<TClass>;
   public
     constructor Create(AServices: IServiceCollection);
-    destructor Destroy; override;
     function AddCheck<T: class, constructor>: THealthCheckBuilder;
     procedure Build;
   end;
@@ -287,15 +286,8 @@ end;
 
 constructor THealthCheckBuilder.Create(AServices: IServiceCollection);
 begin
-  inherited Create;
   FServices := AServices;
   FChecks := TList<TClass>.Create;
-end;
-
-destructor THealthCheckBuilder.Destroy;
-begin
-  FChecks.Free;
-  inherited;
 end;
 
 function THealthCheckBuilder.AddCheck<T>: THealthCheckBuilder;
@@ -304,7 +296,8 @@ begin
   FServices.AddTransient(TServiceType.FromClass(T), T);
   
   // Store the class reference to be added to the service later
-  FChecks.Add(T);
+  if not FChecks.Contains(T) then
+    FChecks.Add(T);
   
   Result := Self;
 end;
@@ -312,13 +305,16 @@ end;
 procedure THealthCheckBuilder.Build;
 var
   CapturedChecks: TArray<TClass>;
-  Factory: TFunc<IServiceProvider, TObject>;
+  LChecks: TList<TClass>;
 begin
   // Capture the checks array for the factory closure
-  CapturedChecks := FChecks.ToArray;
+  LChecks := FChecks;
+  CapturedChecks := LChecks.ToArray;
   
   // Create factory that will configure the service with registered checks
-  Factory := function(Provider: IServiceProvider): TObject
+  // Note: We don't capture 'Self' (the record) here, only the local CapturedChecks
+  var Factory: TFunc<IServiceProvider, TObject> := 
+    function(Provider: IServiceProvider): TObject
     var
       Service: THealthCheckService;
       CheckClass: TClass;
@@ -335,9 +331,9 @@ begin
     THealthCheckService,
     Factory
   );
-  
-  // Self-destruct the builder
-  Self.Free;
+
+  // Clean up the list used for building
+  LChecks.Free;
 end;
 
 end.

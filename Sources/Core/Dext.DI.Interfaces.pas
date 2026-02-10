@@ -125,16 +125,19 @@ type
   ///       Use with caution! Consider using interface-based registration for Transient
   ///       services to leverage ARC, or ensure manual disposal in endpoint code.
   ///   </para>
+  ///   <para>
+  ///     <b>Class Helper Inheritance:</b> This is a class (not record) to enable
+  ///     class helper inheritance across packages (Core → Entity → Web).
+  ///   </para>
   /// </remarks>
   TDextServices = record
   private
     FServices: IServiceCollection;
   public
-    constructor Create(AServices: IServiceCollection); overload;
+    constructor Create(AServices: IServiceCollection);
     class function New: TDextServices; static;
     function Unwrap: IServiceCollection;
     procedure AddRange(const AOther: TDextServices);
-    class operator Implicit(const A: TDextServices): IServiceCollection;
 
     // Generic Overloads for Interface + Implementation pairs
     function AddSingleton<TService: IInterface; TImplementation: class>: TDextServices; overload;
@@ -169,6 +172,7 @@ type
 
   TDextDIFactory = class
   public
+    class var CreateServiceCollectionFunc: TFunc<IServiceCollection>;
     class function CreateServiceCollection: IServiceCollection;
   end;
 
@@ -301,7 +305,7 @@ end;
 
 class function TDextServices.New: TDextServices;
 begin
-  Result.FServices := TDextDIFactory.CreateServiceCollection;
+  Result := TDextServices.Create(TDextDIFactory.CreateServiceCollection);
 end;
 
 procedure TDextServices.AddRange(const AOther: TDextServices);
@@ -315,10 +319,6 @@ begin
   Result := FServices;
 end;
 
-class operator TDextServices.Implicit(const A: TDextServices): IServiceCollection;
-begin
-  Result := A.FServices;
-end;
 
 function TDextServices.AddSingleton<TService, TImplementation>: TDextServices;
 begin
@@ -431,9 +431,10 @@ end;
 
 class function TDextDIFactory.CreateServiceCollection: IServiceCollection;
 begin
-  // Create and return a new TDextServiceCollection instance
-  // This was returning nil, causing all the memory leak issues!
-  Result := TDextServiceCollection.Create;
+  if Assigned(CreateServiceCollectionFunc) then
+    Result := CreateServiceCollectionFunc()
+  else
+    raise EDextDIException.Create('DI Factory not initialized. Make sure Dext.DI.Core is in your uses.');
 end;
 
 end.

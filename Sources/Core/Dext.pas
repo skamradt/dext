@@ -245,15 +245,25 @@ type
   JsonStringAttribute = Dext.Json.JsonStringAttribute;
   JsonNumberAttribute = Dext.Json.JsonNumberAttribute;
   JsonBooleanAttribute = Dext.Json.JsonBooleanAttribute;
+  // New types (preferred)
+  TCaseStyle = Dext.Json.TCaseStyle;
+  TEnumStyle = Dext.Json.TEnumStyle;
+  TJsonFormatting = Dext.Json.TJsonFormatting;
+  TDateFormat = Dext.Json.TDateFormat;
+  TJsonSettings = Dext.Json.TJsonSettings;
+  // Deprecated aliases (for backward compatibility)
+{$WARNINGS OFF}
   TDextCaseStyle = Dext.Json.TDextCaseStyle;
   TDextEnumStyle = Dext.Json.TDextEnumStyle;
   TDextFormatting = Dext.Json.TDextFormatting;
   TDextDateFormat = Dext.Json.TDextDateFormat;
-  TJsonUtils = Dext.Json.TJsonUtils;
   TDextSettings = Dext.Json.TDextSettings;
+  // Core classes
+  TJsonUtils = Dext.Json.TJsonUtils;
   TDextJson = Dext.Json.TDextJson;
   TDextSerializer = Dext.Json.TDextSerializer;
   TJsonBuilder = Dext.Json.TJsonBuilder;
+{$WARNINGS ON}
 
   // Dext.Json.Driver.DextJsonDataObjects
   TJsonDataObjectWrapper = Dext.Json.Driver.DextJsonDataObjects.TJsonDataObjectWrapper;
@@ -538,13 +548,26 @@ const
 ///   Global helper to create a property expression.
 /// </summary>
 ///
-function Prop(const AName: string): TPropExpression;
+function Prop(const Name: string): TPropExpression;
+function JsonSettings: TJsonSettings;
+procedure JsonDefaultSettings(const Settings: TJsonSettings);
 
 implementation
 
-function Prop(const AName: string): TPropExpression;
+function Prop(const Name: string): TPropExpression;
 begin
-  Result := TPropExpression.Create(AName);
+  Result := TPropExpression.Create(Name);
 end;
+
+procedure JsonDefaultSettings(const Settings: TJsonSettings);
+begin
+  TDextJson.SetDefaultSettings(Settings);
+end;
+
+function JsonSettings: TJsonSettings;
+begin
+  Result := Dext.Json.JsonSettings;
+end;
+
 
 end.

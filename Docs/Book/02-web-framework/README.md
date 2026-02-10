@@ -28,10 +28,11 @@ App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
 
 ```pascal
 type
+  [ApiController]
   [Route('/users')]
-  TUsersController = class(TController)
+  TUsersController = class
   public
-    [HttpGet('/{id}')]
+    [HttpGet('{id}')]
     function GetById(Id: Integer): IActionResult;
   end;
 

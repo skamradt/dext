@@ -31,6 +31,7 @@ uses
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
+  System.Generics.Collections,
   Dext.DI.Interfaces,
   Dext.DI.Attributes;
 
@@ -50,12 +51,23 @@ type
     // Uses provided arguments for the first N parameters, then DI for the rest.
     class function CreateInstance(AProvider: IServiceProvider; AClass: TClass; const AArgs: array of TValue): TObject; overload;
 
+    // 4. Full Metadata Instantiation (Supports Class and Interface)
+    // If it's a class, works like Pure DI.
+    // If it's an interface, tries to resolve from DI, with fallback for IList/IEnumerable.
+    class function CreateInstance(AProvider: IServiceProvider; AType: PTypeInfo): TValue; overload;
+
     // Generic Helper
     class function CreateInstance<T: class>(const AArgs: array of TValue): T; overload;
     class function CreateInstance<T: class>: T; overload;
+  private
+    class function IsListType(AType: PTypeInfo): Boolean;
+    class function GetListElementType(AType: PTypeInfo): PTypeInfo;
   end;
 
 implementation
+
+uses
+  Dext.Collections;
 
 { TActivator }
 
@@ -408,6 +420,172 @@ begin
   end;
 end;
 
+class function TActivator.CreateInstance(AProvider: IServiceProvider; AType: PTypeInfo): TValue;
+var
+  Context: TRttiContext;
+  RttiType: TRttiType;
+  ServiceType: TServiceType;
+  ElementType: PTypeInfo;
+begin
+  if AType = nil then
+    Exit(TValue.Empty);
+
+  if AType.Kind = tkClass then
+    Exit(TValue.From(CreateInstance(AProvider, AType.TypeData.ClassType)));
+
+  if AType.Kind = tkInterface then
+  begin
+    Context := TRttiContext.Create;
+    try
+      RttiType := Context.GetType(AType);
+      
+      // 1. Try to resolve via DI
+      if AProvider <> nil then
+      begin
+        var Guid := TRttiInterfaceType(RttiType).GUID;
+        ServiceType := TServiceType.FromInterface(Guid);
+        var Intf := AProvider.GetServiceAsInterface(ServiceType);
+        if Intf <> nil then
+        begin
+          TValue.Make(@Intf, AType, Result);
+          Exit;
+        end;
+      end;
+
+      // 2. Fallback for Collections (IList/IEnumerable)
+      if IsListType(AType) then
+      begin
+        ElementType := GetListElementType(AType);
+        if ElementType = nil then
+          raise EArgumentException.CreateFmt('TActivator: Could not determine element type for %s', [AType.NameFld.ToString]);
+
+        // A. Try to find TSmartList<T> directly
+        var TypeName := RttiType.QualifiedName;
+        if TypeName = '' then TypeName := string(AType.Name);
+        
+        var ImplName := TypeName.Replace('IList<', 'TSmartList<').Replace('IEnumerable<', 'TSmartList<');
+        var ImplRtti: TRttiType := Context.FindType(ImplName);
+        
+        if (ImplRtti = nil) and not ImplName.Contains('.') then
+           ImplRtti := Context.FindType('Dext.Collections.' + ImplName);
+
+        // B. Deep Search fallback (scanning all types)
+        if ImplRtti = nil then
+        begin
+          var SearchSufix := '<' + string(ElementType.Name) + '>';
+          for var TmpType in Context.GetTypes do
+          begin
+            Writeln('[TYPE] ', TmpType.Name);
+            if TmpType.IsInstance and TmpType.Name.EndsWith(SearchSufix) then
+            begin
+               if TmpType.Name.StartsWith('TSmartList<') then
+               begin
+                  ImplRtti := TmpType;
+                  Break;
+               end;
+            end;
+          end;
+        end;
+
+        if (ImplRtti <> nil) and (ImplRtti is TRttiInstanceType) then
+        begin
+           var TargetClass := TRttiInstanceType(ImplRtti).MetaclassType;
+           
+           // Search for the best constructor (parameterless or Boolean)
+           var BestConstructor: TRttiMethod := nil;
+           for var Method in ImplRtti.GetMethods do
+           begin
+             if Method.IsConstructor and ((Method.Name = 'Create') or (Method.Name = 'CreateList')) then
+             begin
+                if Length(Method.GetParameters) = 0 then
+                begin
+                  BestConstructor := Method;
+                  Break; // Found perfect match
+                end
+                else if (Length(Method.GetParameters) = 1) and 
+                        (Method.GetParameters[0].ParamType.TypeKind = tkEnumeration) then
+                  BestConstructor := Method;
+             end;
+           end;
+
+           if BestConstructor <> nil then
+           begin
+             var Instance: TValue;
+             if Length(BestConstructor.GetParameters) = 0 then
+               Instance := BestConstructor.Invoke(TargetClass, [])
+             else
+               Instance := BestConstructor.Invoke(TargetClass, [False]);
+               
+             if AType.Kind = tkInterface then
+             begin
+               var Intf: IInterface;
+               if Instance.AsObject.GetInterface(TRttiInterfaceType(RttiType).GUID, Intf) then
+                 TValue.Make(@Intf, AType, Result)
+               else
+                 Result := Instance;
+             end
+             else
+               Result := Instance;
+             Exit;
+           end;
+        end;
+      end;
+      
+      raise EArgumentException.CreateFmt('TActivator: Cannot find a suitable implementation for interface %s. ' +
+        'Ensure the implementation is registered in DI or use TArray<T> for automatic RTTI support in DTOs.', [AType.NameFld.ToString]);
+    finally
+      Context.Free;
+    end;
+  end;
+
+  raise EArgumentException.CreateFmt('TActivator: Unsupported type for instantiation: %s', [AType.NameFld.ToString]);
+end;
+
+class function TActivator.IsListType(AType: PTypeInfo): Boolean;
+begin
+  Result := (AType <> nil) and 
+            ((AType.Kind = tkClass) or (AType.Kind = tkInterface)) and
+            ((Pos('System.Generics.Collections', string(AType.TypeData^.UnitName)) > 0) or
+             (Pos('Dext.Collections', string(AType.TypeData^.UnitName)) > 0));
+end;
+
+class function TActivator.GetListElementType(AType: PTypeInfo): PTypeInfo;
+var
+  Context: TRttiContext;
+  RttiType: TRttiType;
+  Method: TRttiMethod;
+  Prop: TRttiProperty;
+begin
+  Context := TRttiContext.Create;
+  try
+    RttiType := Context.GetType(AType);
+    if RttiType = nil then Exit(nil);
+    
+    // Try GetItem method (indexer getter)
+    Method := RttiType.GetMethod('GetItem');
+    if Assigned(Method) and (Method.MethodKind = mkFunction) and (Length(Method.GetParameters) = 1) then
+      Exit(Method.ReturnType.Handle);
+
+    // Try Add method (collection addition)
+    for Method in RttiType.GetMethods do
+    begin
+      if (Method.Name = 'Add') and (Length(Method.GetParameters) = 1) then
+      begin
+        Exit(Method.GetParameters[0].ParamType.Handle);
+      end;
+    end;
+    
+    // Try Items property
+    Prop := RttiType.GetProperty('Items');
+    if Assigned(Prop) then
+      Exit(Prop.PropertyType.Handle);
+
+    Result := nil;
+  finally
+    Context.Free;
+  end;
+end;
+
 class function TActivator.CreateInstance<T>: T;
 begin
   Result := T(CreateInstance<T>([]));
@@ -420,7 +598,11 @@ var
 begin
   Ctx := TRttiContext.Create;
   try
-    TypeObj := Ctx.GetType(TypeInfo(T));
+    var TI := TypeInfo(T);
+    if TI = nil then
+      raise EArgumentException.Create('Type information not found for T');
+
+    TypeObj := Ctx.GetType(TI);
     if (TypeObj <> nil) and (TypeObj.IsInstance) then
       Result := T(CreateInstance(TypeObj.AsInstance.MetaclassType, AArgs))
     else
@@ -431,4 +613,3 @@ begin
 end;
 
 end.
-

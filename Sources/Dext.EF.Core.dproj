@@ -119,6 +119,7 @@
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="FireDACSqliteDriver.dcp"/>
+        <DCCReference Include="FireDACPgDriver.dcp"/>
         <DCCReference Include="Data\Dext.Entity.Context.pas"/>
         <DCCReference Include="Data\Dext.Entity.Setup.pas"/>
         <DCCReference Include="Data\Dext.Entity.Mapping.pas"/>
@@ -154,6 +155,7 @@
         <DCCReference Include="Data\Dext.Entity.Prototype.pas"/>
         <DCCReference Include="Data\Dext.Entity.Cache.pas"/>
         <DCCReference Include="Data\Dext.Entity.Drivers.FireDAC.Links.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Validator.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

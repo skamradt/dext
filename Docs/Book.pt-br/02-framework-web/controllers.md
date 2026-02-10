@@ -8,22 +8,23 @@ Controllers fornecem uma abordagem baseada em classes, estilo MVC, para organiza
 
 ```pascal
 type
+  [ApiController]
   [Route('/api/users')]
-  TUsersController = class(TController)
+  TUsersController = class // Não precisa mais herdar de TController
   public
     [HttpGet]
     function GetAll: IActionResult;
     
-    [HttpGet('/{id}')]
+    [HttpGet('{id}')]
     function Get(Id: Int64): IActionResult;
     
     [HttpPost]
     function Create([Body] User: TUser): IActionResult;
     
-    [HttpPut('/{id}')]
+    [HttpPut('{id}')]
     function Update(Id: Int64; [Body] User: TUser): IActionResult;
     
-    [HttpDelete('/{id}')]
+    [HttpDelete('{id}')]
     function Delete(Id: Int64): IActionResult;
   end;
 ```
@@ -66,7 +67,9 @@ App.Configure(procedure(App: IApplicationBuilder)
 
 ```pascal
 type
-  TUsersController = class(TController)
+  [ApiController]
+  [Route('/api/users')]
+  TUsersController = class
   private
     FUserService: IUserService;
     FLogger: ILogger;
@@ -76,7 +79,6 @@ type
 
 constructor TUsersController.Create(UserService: IUserService; Logger: ILogger);
 begin
-  inherited Create;
   FUserService := UserService;
   FLogger := Logger;
 end;
@@ -87,6 +89,37 @@ Serviços são injetados automaticamente quando registrados:
 ```pascal
 Services.AddScoped<IUserService, TUserService>;
 Services.AddSingleton<ILogger, TConsoleLogger>;
+```
+
+## Atributos de Rota (Routing)
+
+O Dext suporta dois estilos para definir rotas. **Importante**: Rotas com parâmetros **DEVEM iniciar com barra** (`/`).
+
+### Opção 1: Consolidado (Recomendado)
+```pascal
+[ApiController('/api/v1/products')] // Rota base no ApiController
+type TProductsController = class
+  // ...
+  [HttpGet]                         // GET /api/v1/products
+  function GetAll: IActionResult;
+
+  [HttpGet('/{id}')]                // GET /api/v1/products/123 (Barra inicial é OBRIGATÓRIA)
+  function Get(Id: Integer): IActionResult;
+end;
+```
+
+### Opção 2: Separado (Estilo .NET)
+```pascal
+[ApiController]
+[Route('/api/v1/products')]         // Rota base no atributo Route
+type TProductsController = class
+  // ...
+  [HttpGet]
+  function GetAll: IActionResult;
+
+  [HttpGet, Route('/{id}')]         // GET /api/v1/products/123
+  function Get(Id: Integer): IActionResult;
+end;
 ```
 
 ## Action Results

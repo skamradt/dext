@@ -77,8 +77,8 @@ TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
   procedure(Cache: TResponseCacheBuilder)
   begin
     Cache
-      .WithDefaultDuration(60)
-      .WithMaxSize(1000)
+      .DefaultDuration(60)
+      .MaxSize(1000)
       .VaryByQueryString
       .ForMethods(['GET', 'HEAD']);
   end);
@@ -101,8 +101,8 @@ begin
     procedure(Cache: TResponseCacheBuilder)
     begin
       Cache
-        .WithDefaultDuration(300)
-        .WithStore(RedisStore);  // ← Cache distribuído!
+        .DefaultDuration(300)
+        .Store(RedisStore);  // ← Cache distribuído!
     end);
 end;
 ```
@@ -117,8 +117,8 @@ TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
   procedure(Cache: TResponseCacheBuilder)
   begin
     Cache
-      .WithDefaultDuration(3600)  // 1 hora
-      .WithMaxSize(500);
+      .DefaultDuration(3600)  // 1 hora
+      .MaxSize(500);
   end);
 ```
 
@@ -130,7 +130,7 @@ TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
   procedure(Cache: TResponseCacheBuilder)
   begin
     Cache
-      .WithDefaultDuration(300)   // 5 minutos
+      .DefaultDuration(300)   // 5 minutos
       .VaryByQueryString;          // Cada ?page=X tem seu cache
   end);
 ```
@@ -143,7 +143,7 @@ TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
   procedure(Cache: TResponseCacheBuilder)
   begin
     Cache
-      .WithDefaultDuration(600)
+      .DefaultDuration(600)
       .VaryByHeader(['Accept-Language', 'Accept-Encoding']);
   end);
 ```
@@ -156,7 +156,7 @@ TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
   procedure(Cache: TResponseCacheBuilder)
   begin
     Cache
-      .WithDefaultDuration(120)
+      .DefaultDuration(120)
       .ForMethods(['GET', 'HEAD']);  // Nunca cachear POST/PUT/DELETE
   end);
 ```
@@ -176,19 +176,19 @@ type
 
 // Usar
 var CustomStore := TMyCustomCacheStore.Create;
-Cache.WithStore(CustomStore);
+Cache.Store(CustomStore);
 ```
 
 ## 📋 Métodos do Builder
 
 | Método | Descrição | Exemplo |
 |--------|-----------|---------|
-| `WithDefaultDuration(seconds)` | Define duração padrão do cache | `.WithDefaultDuration(60)` |
-| `WithMaxSize(size)` | Máximo de entradas (memory store) | `.WithMaxSize(1000)` |
+| `DefaultDuration(seconds)` | Define duração padrão do cache | `.DefaultDuration(60)` |
+| `MaxSize(size)` | Máximo de entradas (memory store) | `.MaxSize(1000)` |
 | `VaryByQueryString` | Cachear por query string | `.VaryByQueryString` |
 | `VaryByHeader(headers)` | Cachear por headers específicos | `.VaryByHeader(['Accept-Language'])` |
 | `ForMethods(methods)` | Métodos HTTP cacheáveis | `.ForMethods(['GET', 'HEAD'])` |
-| `WithStore(store)` | Define backend customizado | `.WithStore(RedisStore)` |
+| `Store(store)` | Define backend customizado | `.Store(RedisStore)` |
 | `Build` | Retorna `TResponseCacheOptions` | `.Build` |
 
 ## 📊 Headers HTTP
@@ -373,10 +373,10 @@ curl -v http://localhost:8080/api/data 2>&1 | grep -i cache
 4. **TTL apropriado**
    ```pascal
    // Dados que mudam frequentemente
-   Cache.WithDefaultDuration(30);  // 30 segundos
+   Cache.DefaultDuration(30);  // 30 segundos
    
    // Dados estáticos
-   Cache.WithDefaultDuration(3600);  // 1 hora
+   Cache.DefaultDuration(3600);  // 1 hora
    ```
 
 ### Limitações Atuais

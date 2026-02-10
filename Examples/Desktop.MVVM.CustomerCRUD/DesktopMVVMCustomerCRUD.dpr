@@ -3,18 +3,18 @@ program DesktopMVVMCustomerCRUD;
 uses
   Dext.MM,
   Vcl.Forms,
-  Main.Form in 'Features\Layout\Main.Form.pas' {MainForm},
+  Vcl.Themes,
+  Vcl.Styles,
   Customer.Entity in 'Features\Customers\Customer.Entity.pas',
   Customer.Service in 'Features\Customers\Customer.Service.pas',
   Customer.ViewModel in 'Features\Customers\Customer.ViewModel.pas',
+  Customer.Controller in 'Features\Customers\Customer.Controller.pas',
+  Customer.Rules in 'Features\Customers\Customer.Rules.pas',
+  Customer.Context in 'Data\Customer.Context.pas',
+  Main.Form in 'Features\Layout\Main.Form.pas' {MainForm},
   Customer.List in 'Features\Customers\Customer.List.pas' {CustomerListFrame: TFrame},
   Customer.Edit in 'Features\Customers\Customer.Edit.pas' {CustomerEditFrame: TFrame},
-  App.Startup in 'App\App.Startup.pas',
-  Customer.Controller in 'Features\Customers\Customer.Controller.pas',
-  Vcl.Themes,
-  Vcl.Styles,
-  Customer.Context in 'Data\Customer.Context.pas',
-  Customer.Rules in 'Features\Customers\Customer.Rules.pas';
+  App.Startup in 'App\App.Startup.pas';
 
 {$R *.res}
 

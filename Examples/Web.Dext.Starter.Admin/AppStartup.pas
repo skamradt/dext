@@ -152,7 +152,7 @@ begin
   var WebApp := App.GetBuilder;
 
   // 0. Configure JSON settings globally (camelCase for JS compatibility, case-insensitive for parsing)
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
+  JsonDefaultSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
 
   // 1. Configure Views Path (using Admin.Utils to get correct path)
   Results.SetViewsPath(GetFilePath('wwwroot\views'));

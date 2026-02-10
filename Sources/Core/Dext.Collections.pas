@@ -46,11 +46,13 @@ type
   end;
 
   // Clean definition of IEnumerable<T>
+  {$M+}
   IEnumerable<T> = interface
     function GetEnumerator: IEnumerator<T>;
   end;
 
   {$IF RTLVersion < 36.0}
+  {$M+}
   THashSet<T> = class(TEnumerable<T>)
   private
     FDictionary: TDictionary<T, Byte>;
@@ -65,13 +67,14 @@ type
     procedure Clear;
     function Contains(const Item: T): Boolean;
     function Remove(const Item: T): Boolean;
-    
+
     function GetCount: Integer;
     property Count: Integer read GetCount;
   end;
   {$IFEND}
 
   // IList<T> inherits from our clean IEnumerable<T>
+  {$M+}
   IList<T> = interface(IEnumerable<T>)
     ['{8877539D-3522-488B-933B-8C4581177699}']
     function GetCount: Integer;
@@ -113,6 +116,7 @@ type
     procedure ForEach(const Action: TProc<T>);
   end;
 
+  {$M+}
   TSmartEnumerator<T> = class(TInterfacedObject, IEnumerator<T>)
   private
     FList: System.Generics.Collections.TList<T>;
@@ -125,6 +129,7 @@ type
     property Current: T read GetCurrent;
   end;
 
+  {$M+}
   TSmartList<T> = class(TInterfacedObject, IList<T>, IEnumerable<T>)
   private
     FList: System.Generics.Collections.TList<T>;
@@ -174,11 +179,14 @@ type
   /// <summary>
   ///   Factory for creating lists.
   /// </summary>
+  {$M+}
+  {$RTTI EXPLICIT METHODS([vcPublic])}
   TCollections = class
   public
-    class function CreateList<T>(OwnsObjects: Boolean = False): IList<T>;
-    class function CreateObjectList<T: class>(OwnsObjects: Boolean = False): IList<T>;
+    class function CreateList<T>(OwnsObjects: Boolean = False): IList<T>; static;
+    class function CreateObjectList<T: class>(OwnsObjects: Boolean = False): IList<T>; static;
   end;
+  {$M-}
 
 implementation
 

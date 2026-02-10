@@ -56,6 +56,30 @@ begin
 end;
 ```
 
+## Teste de Entidades (Aviso)
+
+Ao testar entidades que usam `OwnsObjects=False` para coleções filhas (necessário para compatibilidade com ORM), **você deve liberar manualmente os itens filhos** no bloco `finally` do seu teste. `Entity.Free` irá liberar apenas o container da lista, não os itens.
+
+```pascal
+var Order := TOrder.Create;
+var Item  := TOrderItem.Create;
+try
+  Order.Items.Add(Item);
+  // Testes...
+finally
+  Order.Free;
+  Item.Free; // DEVE ser liberado manualmente!
+end;
+```
+
+## Testes de Integração
+
+Recomendamos o uso de scripts PowerShell para testes de integração full-stack.
+
+- Use `http://127.0.0.1:9000` em vez de `localhost` para evitar problemas de resolução IPv6.
+- Defina o header `Accept: application/json` explicitamente.
+- Gere JWTs locais se necessário para rotas protegidas.
+
 ## Executar Testes
 
 ```bash

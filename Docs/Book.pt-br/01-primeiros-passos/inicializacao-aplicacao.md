@@ -133,6 +133,152 @@ end;
 
 > 📦 **Referência de Qualidade**: Veja o exemplo [Web.OrderAPI](../../../Examples/Web.OrderAPI/OrderAPI.Startup.pas) para uma implementação real completa deste padrão.
 
+## Avançado: Separação de Responsabilidades (Endpoints & Auth)
+
+Para projetos maiores, recomenda-se separar ainda mais o código em módulos dedicados:
+
+### Estrutura de Projeto Recomendada
+
+```
+MeuProjeto/
+├── Server/
+│   ├── MeuProjeto.Startup.pas      # Somente configuração
+│   ├── MeuProjeto.Auth.pas         # Serviços de autenticação & DTOs
+│   ├── MeuProjeto.Endpoints.pas    # Definição de todas as rotas
+│   └── Web.MeuProjeto.dpr          # Entry point
+├── Domain/
+│   ├── MeuProjeto.Domain.Entities.pas
+│   ├── MeuProjeto.Domain.Models.pas
+│   └── MeuProjeto.Domain.Enums.pas
+└── Data/
+    ├── MeuProjeto.Data.Context.pas
+    └── MeuProjeto.Data.Seeder.pas
+```
+
+### Criando um Módulo de Endpoints
+
+Mova todas as definições de rota para uma unit dedicada:
+
+```pascal
+unit App.Endpoints;
+
+interface
+
+uses Dext.Web;
+
+type
+  TAppEndpoints = class
+  public
+    class procedure MapEndpoints(const Builder: IApplicationBuilder); static;
+  end;
+
+implementation
+
+uses
+  Dext.Web.Results,
+  Dext.Web.DataApi,
+  App.Auth,
+  App.Data.Context,
+  App.Domain.Entities;
+
+class procedure TAppEndpoints.MapEndpoints(const Builder: IApplicationBuilder);
+begin
+  // Health Check
+  Builder.MapGet<IResult>('/health', 
+    function: IResult
+    begin
+      Result := Results.Ok(THealthStatus.Create('healthy'));
+    end); 
+
+  // Autenticação
+  Builder.MapPost<TLoginRequest, IAuthService, IResult>('/auth/login',
+    function(Req: TLoginRequest; Auth: IAuthService): IResult
+    begin
+      var Token := Auth.Login(Req.username, Req.password);
+      if Token = '' then
+        Exit(Results.StatusCode(401)); 
+      Result := Results.Ok(TLoginResponse.Create(Token));
+    end);
+
+  // DataApi - CRUD Automático
+  TDataApiHandler<TCustomer>.Map(Builder, '/api/customers',
+    TDataApiOptions<TCustomer>.Create.DbContext<TAppDbContext>);
+
+  // Endpoints Customizados
+  Builder.MapPost<TCreateOrderDto, IResult>('/api/orders', ...);
+end;
+
+end.
+```
+
+### Criando um Módulo de Autenticação
+
+Isole o código relacionado à autenticação:
+
+```pascal
+unit App.Auth;
+
+interface
+
+uses Dext.Web, Dext.Auth.JWT;
+
+type
+  TLoginRequest = record
+    username: string;
+    password: string;
+  end;
+
+  TLoginResponse = record
+    token: string;
+  end;
+
+  IAuthService = interface
+    ['{...}']
+    function Login(const User, Pass: string): string;
+  end;
+
+  TAuthConfig = class
+  public
+    const JWT_SECRET = 'sua-chave-secreta-minimo-32-chars';
+    class procedure AddServices(const Services: TDextServices); static;
+  end;
+
+implementation
+
+// ... Implementação do TAuthService
+```
+
+### Startup Simplificado
+
+Seu Startup fica focado apenas em configuração:
+
+```pascal
+procedure TStartup.Configure(const App: IWebApplication);
+begin
+  var Builder := App.Builder;
+
+  // Pipeline de Middlewares
+  Builder.UseExceptionHandler;
+  Builder.UseHttpLogging;
+  Builder.UseCors(...);
+  Builder.UseJwtAuthentication(TAuthConfig.JWT_SECRET, ...);
+
+  // Delega para o módulo de Endpoints
+  TAppEndpoints.MapEndpoints(Builder);
+
+  Builder.UseSwagger(...);
+end;
+```
+
+### Benefícios
+
+- **Responsabilidade Única**: Cada arquivo tem um propósito claro
+- **Testabilidade**: Endpoints podem ser testados independentemente
+- **Escalabilidade**: Fácil adicionar novos grupos de endpoints
+- **Manutenibilidade**: Mudanças de configuração não afetam lógica de negócio
+
+> 📦 **Referência**: Veja [Web.SalesSystem](../../../Examples/Web.SalesSystem/) para um exemplo completo usando este padrão.
+
 ---
 
 [← Estrutura do Projeto](estrutura-projeto.md) | [Próximo: Framework Web →](../02-framework-web/README.md)

@@ -62,7 +62,7 @@ type
     ['{20000000-0000-0000-0000-000000000001}']
     function QuoteIdentifier(const AName: string): string;
     function GetParamPrefix: string;
-    function GeneratePaging(ASkip, ATake: Integer): string;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
     function BooleanToSQL(AValue: Boolean): string;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string;
@@ -89,6 +89,9 @@ type
 
     // Explicit Dialect Identification
     function GetDialect: TDatabaseDialect;
+
+    // JSON Support
+    function GetJsonValueSQL(const AColumn, APath: string): string;
   end;
 
   /// <summary>
@@ -120,7 +123,7 @@ type
     function UseSchemaPrefix: Boolean; virtual;
     function QuoteIdentifier(const AName: string): string; virtual;
     function GetParamPrefix: string; virtual;
-    function GeneratePaging(ASkip, ATake: Integer): string; virtual; abstract;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; virtual; abstract;
     function BooleanToSQL(AValue: Boolean): string; virtual;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; virtual; abstract;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string; virtual;
@@ -138,6 +141,7 @@ type
     function GenerateColumnDefinition(AColumn: TColumnDefinition): string; virtual;
 
     function GetDialect: TDatabaseDialect; virtual;
+    function GetJsonValueSQL(const AColumn, APath: string): string; virtual;
   end;
 
   /// <summary>
@@ -146,12 +150,13 @@ type
   TSQLiteDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -160,7 +165,7 @@ type
   TPostgreSQLDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
@@ -171,6 +176,7 @@ type
     function GetSetSchemaSQL(const ASchemaName: string): string; override;
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -179,7 +185,7 @@ type
   TFirebirdDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
@@ -196,7 +202,7 @@ type
   TSQLServerDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
@@ -209,6 +215,7 @@ type
     function UseSchemaPrefix: Boolean; override;
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -217,7 +224,7 @@ type
   TMySQLDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
@@ -226,6 +233,7 @@ type
     
     function GenerateAlterColumn(AOp: TAlterColumnOperation): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GetJsonValueSQL(const AColumn, APath: string): string; override;
   end;
 
   /// <summary>
@@ -234,7 +242,7 @@ type
   TOracleDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
-    function GeneratePaging(ASkip, ATake: Integer): string; override;
+    function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; override;
     function BooleanToSQL(AValue: Boolean): string; override;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; override;
     function GetLastInsertIdSQL: string; override;
@@ -315,6 +323,11 @@ end;
 function TBaseDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddUnknown;
+end;
+
+function TBaseDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  raise Exception.Create('JSON queries not supported by this dialect');
 end;
 
 function TBaseDialect.GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean): string;
@@ -584,10 +597,10 @@ begin
   if AValue then Result := '1' else Result := '0';
 end;
 
-function TSQLiteDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TSQLiteDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
   // LIMIT <count> OFFSET <skip>
-  Result := Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
+  Result := ASQL + ' ' + Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
 end;
 
 function TSQLiteDialect.QuoteIdentifier(const AName: string): string;
@@ -659,6 +672,13 @@ begin
   Result := ddSQLite;
 end;
 
+function TSQLiteDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  // Using json_extract for maximum compatibility. 
+  // Redundant identifier quoting is avoided as AColumn is already quoted.
+  Result := Format('json_extract(%s, ''$.%s'')', [AColumn, APath]);
+end;
+
 { TPostgreSQLDialect }
 
 function TPostgreSQLDialect.BooleanToSQL(AValue: Boolean): string;
@@ -667,10 +687,10 @@ begin
   if AValue then Result := 'TRUE' else Result := 'FALSE';
 end;
 
-function TPostgreSQLDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TPostgreSQLDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
   // LIMIT <count> OFFSET <skip>
-  Result := Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
+  Result := ASQL + ' ' + Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
 end;
 
 function TPostgreSQLDialect.QuoteIdentifier(const AName: string): string;
@@ -735,12 +755,17 @@ end;
 function TPostgreSQLDialect.GetCreateTableSQL(const ATableName, ABody: string): string;
 begin
   // PostgreSQL supports IF NOT EXISTS
-  Result := Format('CREATE TABLE IF NOT EXISTS %s (%s)', [ATableName, ABody]);
+  Result := Format('CREATE TABLE IF NOT EXISTS %s (%s);', [ATableName, ABody]);
 end;
 
 function TPostgreSQLDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddPostgreSQL;
+end;
+
+function TPostgreSQLDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('%s #>> ''{%s}''', [AColumn, APath.Replace('.', ',')]);
 end;
 
 { TInterBaseDialect }
@@ -773,10 +798,10 @@ begin
   if AValue then Result := 'TRUE' else Result := 'FALSE';
 end;
 
-function TFirebirdDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TFirebirdDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
   // Firebird 3.0+: OFFSET x ROWS FETCH NEXT y ROWS ONLY
-  Result := Format('OFFSET %d ROWS FETCH NEXT %d ROWS ONLY', [ASkip, ATake]);
+  Result := ASQL + ' ' + Format('OFFSET %d ROWS FETCH NEXT %d ROWS ONLY', [ASkip, ATake]);
 end;
 
 function TFirebirdDialect.QuoteIdentifier(const AName: string): string;
@@ -859,11 +884,11 @@ begin
   if AValue then Result := '1' else Result := '0';
 end;
 
-function TSQLServerDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TSQLServerDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
   // SQL Server 2012+: OFFSET x ROWS FETCH NEXT y ROWS ONLY
   // Requires ORDER BY clause in the query!
-  Result := Format('OFFSET %d ROWS FETCH NEXT %d ROWS ONLY', [ASkip, ATake]);
+  Result := ASQL + ' ' + Format('OFFSET %d ROWS FETCH NEXT %d ROWS ONLY', [ASkip, ATake]);
 end;
 
 function TSQLServerDialect.QuoteIdentifier(const AName: string): string;
@@ -967,6 +992,11 @@ begin
   Result := ddSQLServer;
 end;
 
+function TSQLServerDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('JSON_VALUE(%s, ''$.%s'')', [AColumn, APath]);
+end;
+
 { TMySQLDialect }
 
 function TMySQLDialect.BooleanToSQL(AValue: Boolean): string;
@@ -974,9 +1004,9 @@ begin
   if AValue then Result := '1' else Result := '0';
 end;
 
-function TMySQLDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TMySQLDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
-  Result := Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
+  Result := ASQL + ' ' + Format('LIMIT %d OFFSET %d', [ATake, ASkip]);
 end;
 
 function TMySQLDialect.QuoteIdentifier(const AName: string): string;
@@ -1052,6 +1082,11 @@ begin
   Result := ddMySQL;
 end;
 
+function TMySQLDialect.GetJsonValueSQL(const AColumn, APath: string): string;
+begin
+  Result := Format('JSON_UNQUOTE(JSON_EXTRACT(%s, ''$.%s''))', [AColumn, APath]);
+end;
+
 { TOracleDialect }
 
 function TOracleDialect.BooleanToSQL(AValue: Boolean): string;
@@ -1062,10 +1097,13 @@ begin
   if AValue then Result := '1' else Result := '0';
 end;
 
-function TOracleDialect.GeneratePaging(ASkip, ATake: Integer): string;
+function TOracleDialect.GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
 begin
-  // Oracle 12c+: OFFSET x ROWS FETCH NEXT y ROWS ONLY
-  Result := Format('OFFSET %d ROWS FETCH NEXT %d ROWS ONLY', [ASkip, ATake]);
+  if ASkip = 0 then
+    Result := Format('SELECT * FROM (%s) WHERE ROWNUM <= %d', [ASQL, ATake])
+  else
+    Result := Format('SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (%s) a WHERE ROWNUM <= %d) WHERE rnum > %d',
+      [ASQL, ASkip + ATake, ASkip]);
 end;
 
 function TOracleDialect.QuoteIdentifier(const AName: string): string;

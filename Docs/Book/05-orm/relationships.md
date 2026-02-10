@@ -114,7 +114,59 @@ public
 end;
 ```
 
-## Include (Eager Loading)
+## Many-to-Many (N:N)
+
+Many-to-Many relationships require a join table. Use the `[ManyToMany]` attribute:
+
+```pascal
+type
+  [Table('roles')]
+  TRole = class
+  private
+    FId: Integer;
+    FName: string;
+    FUsers: ILazy<TList<TUser>>;
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
+    
+    [ManyToMany('user_roles', 'role_id', 'user_id')]
+    property Users: TList<TUser> read GetUsers;
+  end;
+
+  [Table('users')]
+  TUser = class
+  private
+    FId: Integer;
+    FRoles: ILazy<TList<TRole>>;
+  public
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    
+    [ManyToMany('user_roles', 'user_id', 'role_id')]
+    property Roles: TList<TRole> read GetRoles;
+  end;
+```
+
+### Linking Managed Entities
+
+To link or unlink entities in a Many-to-Many relationship:
+
+```pascal
+// Add a new link
+Context.Users.LinkManyToMany(User, 'Roles', AdminRole);
+
+// Remove a link
+Context.Users.UnlinkManyToMany(User, 'Roles', AdminRole);
+
+// Sync (replaces all links with the provided array)
+Context.Users.SyncManyToMany(User, 'Roles', [Role1, Role2, Role3]);
+
+Context.SaveChanges;
+```
+
+## Lazy Loading
 
 Load related entities upfront to avoid N+1 queries:
 

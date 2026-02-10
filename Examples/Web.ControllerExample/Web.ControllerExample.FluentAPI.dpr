@@ -43,14 +43,12 @@ begin
     var Builder := App.Builder;
 
     // ✨ CORS with Fluent API
-    Builder.UseCors(procedure(Cors: TCorsBuilder)
-    begin
-      Cors.WithOrigins(['http://localhost:5173'])
-          .WithMethods(['GET', 'POST', 'PUT', 'DELETE'])
+    Builder.UseCors(CorsOptions
+          .Origins(['http://localhost:5173'])
+          .Methods(['GET', 'POST', 'PUT', 'DELETE'])
           .AllowAnyHeader
           .AllowCredentials
-          .WithMaxAge(3600);
-    end);
+          .MaxAge(3600));
 
     // Static Files
     Builder.UseStaticFiles(Builder.CreateStaticFileOptions);

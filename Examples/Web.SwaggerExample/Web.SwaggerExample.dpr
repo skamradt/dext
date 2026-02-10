@@ -15,7 +15,7 @@ begin
     Writeln('🚀 Starting Dext Swagger Example...');
     Writeln('');
 
-    var App := TDextApplication.Create;
+    var App: IWebApplication := TDextApplication.Create;
     App.UseStartup(TStartup.Create);
     
     Writeln('');

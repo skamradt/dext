@@ -50,7 +50,22 @@ type
 | `[PK]` | Chave primária |
 | `[AutoInc]` | Auto-incremento |
 | `[NotMapped]` | Excluir do mapeamento |
-| `[Version]` | Concorrência otimista |
+| `[Version]` | Controle de concorrência otimista |
+| `[SoftDelete('col_deletado', 1, 0)]` | Exclusão lógica com valores para Deletado e Não Deletado |
+| `[CreatedAt]` | Timestamp automático na inserção |
+| `[UpdatedAt]` | Timestamp automático na atualização |
+
+### Dicas de Escopo de Tipo
+
+| Atributo | Descrição |
+|----------|-----------|
+| `[StringLength(100)]` | Comprimento máximo da string |
+| `[MaxLength(100)]` | Alias para StringLength |
+| `[Precision(18, 2)]` | Precisão e Escala para tipos numéricos/decimais |
+| `[Required]` | Restrição NOT NULL |
+| `[Default('valor')]` | Valor padrão no banco de dados |
+| `[JsonColumn]` | Trata a coluna como JSON (converte para objeto/lista) |
+| `[DbType(ftGuid)]` | Força um TFieldType específico para parâmetros |
 
 ### Relacionamentos
 
@@ -58,6 +73,16 @@ type
 |----------|-----------|
 | `[ForeignKey('col')]` | Coluna de chave estrangeira |
 | `[InverseProperty('prop')]` | Link de navegação |
+
+### Coleções & Ownership de Entidades
+
+Ao definir propriedades `IList<T>` que também são gerenciadas pelo `DbContext`:
+
+1. Use `FItems: IList<TFilho>` como field privado.
+2. Inicialize no construtor com `TCollections.CreateList<TFilho>(False)`.
+3. **Crucial**: Passe `False` para `OwnsObjects`.
+   - **Razão**: O `DbContext` já gerencia o ciclo de vida das entidades rastreadas. Se a lista também tentar liberá-las (`True`), ocorrerá **Invalid Pointer Operation** (Double Free) no shutdown.
+4. **Testes Unitários**: Como não há DbContext, você **deve liberar manualmente** os itens filhos no bloco `finally` do teste.
 
 ### Conversão de Tipos
 

@@ -15,7 +15,8 @@ uses
   Dext.Dashboard.TestScanner in '..\..\Sources\Dashboard\Dext.Dashboard.TestScanner.pas',
   Dext.Dashboard.TestRunner in '..\..\Sources\Dashboard\Dext.Dashboard.TestRunner.pas',
   Vcl.Themes,
-  Vcl.Styles;
+  Vcl.Styles,
+  Dext.Hosting.CLI.Hubs.Dashboard in '..\CLI\Hubs\Dext.Hosting.CLI.Hubs.Dashboard.pas';
 
 begin
   Application.Initialize;

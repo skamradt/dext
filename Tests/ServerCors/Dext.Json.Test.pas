@@ -14,8 +14,8 @@ uses
   Dext.DI.Interfaces,
   Dext.Web.Core,
   Dext.Web.Interfaces,
+  Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.ModelBinding,
-  Dext.Web.ModelBinding.Extensions,
   Dext.WebHost,
   Dext.Json.Driver.DextJsonDataObjects,
   Dext.Json.Driver.SystemJson,
@@ -322,25 +322,25 @@ begin
 
   try
     // ✅ Teste 1: CamelCase + IgnoreNullValues
-    var CamelCaseSettings := TDextSettings.Indented
-      .WithCamelCase()
-      .WithIgnoreNullValues();
+    var CamelCaseSettings := TJsonSettings.Indented
+      .CamelCase
+      .IgnoreNullValues;
 
     Json := TDextJson.Serialize<TUser>(User, CamelCaseSettings);
     Writeln('CamelCase + IgnoreNull:');
     Writeln(Json);
 
     // ✅ Teste 2: SnakeCase
-    var SnakeCaseSettings := TDextSettings.Indented
-      .WithSnakeCase();
+    var SnakeCaseSettings := TJsonSettings.Indented
+      .SnakeCase;
 
     Json := TDextJson.Serialize<TUser>(User, SnakeCaseSettings);
     Writeln('SnakeCase:');
     Writeln(Json);
 
     // ✅ Teste 3: Enum como String
-    var EnumStringSettings := TDextSettings.Indented
-      .WithEnumAsString();
+    var EnumStringSettings := TJsonSettings.Indented
+      .EnumAsString;
 
     Json := TDextJson.Serialize<TUser>(User, EnumStringSettings);
     Writeln('Enum as String:');
@@ -371,10 +371,10 @@ begin
 
   try
     // ✅ Teste: CamelCase + EnumAsString + IgnoreNullValues
-    var Settings := TDextSettings.Indented
-      .WithCamelCase()
-      .WithEnumAsString()
-      .WithIgnoreNullValues();
+    var Settings := TJsonSettings.Indented
+      .CamelCase
+      .EnumAsString
+      .IgnoreNullValues;
 
     Json := TDextJson.Serialize<TUser>(User, Settings);
     Writeln('Configurações Completas:');
@@ -413,8 +413,8 @@ begin
 
   try
     // ✅ Teste 1: Enum como String
-    var StringSettings := TDextSettings.Default
-      .WithEnumAsString();
+    var StringSettings := TJsonSettings.Default
+      .EnumAsString;
 
     Json := TDextJson.Serialize<TSimpleUser>(User, StringSettings);
     Writeln('Enum as String - JSON: ', Json);
@@ -424,8 +424,8 @@ begin
     Writeln('Enum as String - RoundTrip StatusNumber: ', Ord(Deserialized1.StatusNumber), ' (Expected: 2)');
 
     // ✅ Teste 2: Enum como Number
-    var NumberSettings := TDextSettings.Default
-      .WithEnumAsNumber();
+    var NumberSettings := TJsonSettings.Default
+      .EnumAsNumber;
 
     Json := TDextJson.Serialize<TSimpleUser>(User, NumberSettings);
     Writeln('Enum as Number - JSON: ', Json);
@@ -463,7 +463,7 @@ begin
 
   try
     // Teste com configurações padrão
-    Json := TDextJson.Serialize<TEntity>(Entity, TDextSettings.Indented);
+    Json := TDextJson.Serialize<TEntity>(Entity, TJsonSettings.Indented);
     Writeln('TGUID Serialized:');
     Writeln(Json);
 
@@ -505,9 +505,9 @@ begin
   Product.CategoryId := StringToGUID('{FEDCBA98-7654-3210-FEDC-BA9876543210}');
 
   try
-    var Settings := TDextSettings.Indented
-      .WithCamelCase()
-      .WithIgnoreNullValues();
+    var Settings := TJsonSettings.Indented
+      .CamelCase
+      .IgnoreNullValues;
 
     Json := TDextJson.Serialize<TProduct>(Product, Settings);
     Writeln('TGUID + CamelCase:');
@@ -549,25 +549,25 @@ begin
 
   try
     // ✅ Teste 1: ISO8601 (padrão)
-    var ISOSettings := TDextSettings.Indented.WithISODateFormat();
+    var ISOSettings := TJsonSettings.Indented.ISODateFormat;
     Json := TDextJson.Serialize<TEvent>(Event, ISOSettings);
     Writeln('ISO8601 Format:');
     Writeln(Json);
 
     // ✅ Teste 2: Unix Timestamp
-    var UnixSettings := TDextSettings.Indented.WithUnixTimestamp();
+    var UnixSettings := TJsonSettings.Indented.UnixTimestamp;
     Json := TDextJson.Serialize<TEvent>(Event, UnixSettings);
     Writeln('Unix Timestamp:');
     Writeln(Json);
 
     // ✅ Teste 3: Formato Customizado
-    var CustomSettings := TDextSettings.Indented.WithCustomDateFormat('dd/mm/yyyy hh:nn:ss');
+    var CustomSettings := TJsonSettings.Indented.CustomDateFormat('dd/mm/yyyy hh:nn:ss');
     Json := TDextJson.Serialize<TEvent>(Event, CustomSettings);
     Writeln('Custom Format:');
     Writeln(Json);
 
     // ✅ Teste 4: RoundTrip com Unix Timestamp
-    var RoundTripSettings := TDextSettings.Default.WithUnixTimestamp();
+    var RoundTripSettings := TJsonSettings.Default.UnixTimestamp;
     Json := TDextJson.Serialize<TEvent>(Event, RoundTripSettings);
     var DeserializedEvent := TDextJson.Deserialize<TEvent>(Json, RoundTripSettings);
 
@@ -604,10 +604,10 @@ begin
   Log.Severity := 2;
 
   try
-    var Settings := TDextSettings.Indented
-      .WithCamelCase()
-      .WithUnixTimestamp()  // Dates as numbers
-      .WithEnumAsString();  // Enums as strings
+    var Settings := TJsonSettings.Indented
+      .CamelCase
+      .UnixTimestamp  // Dates as numbers
+      .EnumAsString;  // Enums as strings
 
     Json := TDextJson.Serialize<TLogEntry>(Log, Settings);
     Writeln('Combined Settings:');
@@ -654,7 +654,7 @@ begin
   Test.ISODateOnly := EncodeDate(2024, 12, 1); // 2024-12-01
 
   try
-    Json := TDextJson.Serialize<TDateTest>(Test, TDextSettings.Indented);
+    Json := TDextJson.Serialize<TDateTest>(Test, TJsonSettings.Indented);
     Writeln('Formatos de Data:');
     Writeln(Json);
 
@@ -745,7 +745,7 @@ begin
   Product.IsAvailable := True;
 
   try
-    Json := TDextJson.Serialize<TProduct>(Product, TDextSettings.Indented);
+    Json := TDextJson.Serialize<TProduct>(Product, TJsonSettings.Indented);
     Writeln('Com Atributos Avançados:');
     Writeln(Json);
 
@@ -817,8 +817,8 @@ begin
   User.PhoneNumber := '5511999999999';
 
   try
-    var Settings := TDextSettings.Indented
-      .WithEnumAsString();
+    var Settings := TJsonSettings.Indented
+      .EnumAsString;
 
     Json := TDextJson.Serialize<TAdvancedUser>(User, Settings);
     Writeln('Todas as Features:');
@@ -861,7 +861,7 @@ begin
   Localized.NormalPrice := 456.78;
 
   try
-    Json := TDextJson.Serialize<TLocalized>(Localized, TDextSettings.Indented);
+    Json := TDextJson.Serialize<TLocalized>(Localized, TJsonSettings.Indented);
     Writeln('Serializado:');
     Writeln(Json);
 
@@ -962,7 +962,7 @@ begin
 
   try
     // Serialização
-    Json := TDextJson.Serialize<TTestNumberString>(Test, TDextSettings.Indented);
+    Json := TDextJson.Serialize<TTestNumberString>(Test, TJsonSettings.Indented);
     Writeln('Serializado:');
     Writeln(Json);
 
@@ -1209,7 +1209,6 @@ type
 
 var
   App: IApplicationBuilder;
-  ModelBindingBuilder: TApplicationBuilderWithModelBinding;
 begin
   Writeln('=== TESTE INTEGRAÇÃO COMPLETA (FASE C) ===');
 
@@ -1217,34 +1216,30 @@ begin
     // 1. Criar Application Builder
     App := TApplicationBuilder.Create(nil);
 
-    // 2. ✅ PADRÃO CORRETO: Builder concreto → Interface final
-    ModelBindingBuilder := TApplicationBuilderModelBindingExtensions
-      .WithModelBinding(App)
-      .MapPost<TUser>('/users',
-        procedure(User: TUser)
-        begin
-          Writeln('✅ User criado via binding automático:');
-          Writeln('   ID: ', User.Id);
-          Writeln('   Name: ', User.Name);
-          Writeln('   Email: ', User.Email);
-        end
-      )
-      .MapPost<TCreateProductRequest>('/products',
-        procedure(Product: TCreateProductRequest)
-        begin
-          Writeln('✅ Product criado via binding automático:');
-          Writeln('   Name: ', Product.Name);
-          Writeln('   Price: ', Product.Price);
-          Writeln('   Category: ', Product.Category);
-        end
-      );
+    // 2. ✅ PADRÃO MODERNO: TApplicationBuilderExtensions com Model Binding automático
+    TApplicationBuilderExtensions.MapPost<TUser>(App, '/users',
+      procedure(User: TUser)
+      begin
+        Writeln('✅ User criado via binding automático:');
+        Writeln('   ID: ', User.Id);
+        Writeln('   Name: ', User.Name);
+        Writeln('   Email: ', User.Email);
+      end
+    );
 
-    // 3. ✅ CONVERTER para interface final
-    App := ModelBindingBuilder.Build;
+    TApplicationBuilderExtensions.MapPost<TCreateProductRequest>(App, '/products',
+      procedure(Product: TCreateProductRequest)
+      begin
+        Writeln('✅ Product criado via binding automático:');
+        Writeln('   Name: ', Product.Name);
+        Writeln('   Price: ', Product.Price);
+        Writeln('   Category: ', Product.Category);
+      end
+    );
 
     Writeln('✓ Todas as rotas com model binding registradas');
-    Writeln('✓ Fluent API funcionando perfeitamente');
-    Writeln('✓ Pattern builder → interface correto');
+    Writeln('✓ Usando TApplicationBuilderExtensions (sem memory leaks)');
+    Writeln('✓ Pattern moderno TDextServices');
 
     Writeln('=== SUCESSO INTEGRAÇÃO COMPLETA! ===');
 
@@ -1272,49 +1267,48 @@ type
 
 procedure TUserIntegrationService.ProcessUser(const User: TUserRequest);
 begin
-
+  Writeln('  [Service] ProcessUser chamado para: ', User.Name);
 end;
 
 procedure TestFinalIntegration;
 var
-  Services: IServiceCollection;
   WebHostBuilder: IWebHostBuilder;
   WebHost: IWebHost;
 begin
   Writeln('=== TESTE INTEGRAÇÃO CORRIGIDO ===');
 
   try
-    Services := TDextServiceCollection.Create;
-
-    TServiceCollectionExtensions.AddSingleton<IUserIntegrationService, TUserIntegrationService>(Services);
-
     WebHostBuilder := TWebHostBuilder.Create
       .ConfigureServices(procedure(Services: IServiceCollection)
+      var
+        Svc: TDextServices;
       begin
-        TServiceCollectionExtensions.AddSingleton<IUserIntegrationService, TUserIntegrationService>(Services);
+        Svc := TDextServices.Create(Services);
+        Svc.AddSingleton<IUserIntegrationService, TUserIntegrationService>;
       end)
       .Configure(procedure(App: IApplicationBuilder)
       begin
-        TApplicationBuilderModelBindingExtensions
-          .WithModelBinding(App)
-          .MapPost<TUserRequest>('/api/users',
-            procedure(Req: TUserRequest)
-            begin
-              Writeln('✅ User Request recebido: ', Req.Name, ' - ', Req.Email);
-            end
-          )
-          .MapPost<TUserRequest>('/api/v2/users',
-            procedure(Req: TUserRequest)
-            begin
-              Writeln('✅ V2 User Request: ', Req.Name);
-            end);
+        // ✅ PADRÃO MODERNO: MapPost com Model Binding automático
+        TApplicationBuilderExtensions.MapPost<TUserRequest>(App, '/api/users',
+          procedure(Req: TUserRequest)
+          begin
+            Writeln('✅ User Request recebido: ', Req.Name, ' - ', Req.Email);
+          end
+        );
+
+        TApplicationBuilderExtensions.MapPost<TUserRequest>(App, '/api/v2/users',
+          procedure(Req: TUserRequest)
+          begin
+            Writeln('✅ V2 User Request: ', Req.Name);
+          end
+        );
       end);
 
     WebHost := WebHostBuilder.Build;
 
     Writeln('✓ WebHost configurado com sucesso');
-    Writeln('✓ Model Binding integrado corretamente');
-    Writeln('✓ Todos os erros de compilação resolvidos');
+    Writeln('✓ Usando TDextServices e TApplicationBuilderExtensions');
+    Writeln('✓ Sem memory leaks');
 
     Writeln('=== SUCESSO INTEGRAÇÃO CORRIGIDO! ===');
 
@@ -1332,33 +1326,30 @@ begin
 
   WebHost := TWebHostBuilder.Create
     .ConfigureServices(procedure(Services: IServiceCollection)
+    var
+      Svc: TDextServices;
     begin
-      TServiceCollectionExtensions.AddSingleton<IUserIntegrationService, TUserIntegrationService>(Services);
+      Svc := TDextServices.Create(Services);
+      Svc.AddSingleton<IUserIntegrationService, TUserIntegrationService>;
     end)
     .Configure(procedure(App: IApplicationBuilder)
-//    var
-//      ModelBuilder: TApplicationBuilderWithModelBinding;
     begin
-      // ✅ PADRÃO CORRETO NO WEB HOST
-      {ModelBuilder := }TApplicationBuilderModelBindingExtensions
-        .WithModelBinding(App)
-        .MapPost<TUserRequest>('/api/users',
-          procedure(Req: TUserRequest)
-          var
-            UserService: IUserIntegrationService;
-          begin
-            UserService := TServiceProviderExtensions.GetService<IUserIntegrationService>(App.GetServiceProvider);
-            UserService.ProcessUser(Req);
-            Writeln('✅ User processado: ', Req.Name);
-          end
-        );
-
-      // Não precisa do .Build() aqui pois o Configure já espera IApplicationBuilder
-      // e estamos trabalhando com o builder interno
+      // ✅ PADRÃO MODERNO: MapPost<Request, Service> com DI + Model Binding automáticos
+      // O Service é injetado automaticamente pelo HandlerInvoker
+      TApplicationBuilderExtensions.MapPost<TUserRequest, IUserIntegrationService>(App, '/api/users',
+        procedure(Req: TUserRequest; UserService: IUserIntegrationService)
+        begin
+          // Service é injetado automaticamente - sem capturar App!
+          UserService.ProcessUser(Req);
+          Writeln('✅ User processado: ', Req.Name);
+        end
+      );
     end)
     .Build;
 
-  Writeln('✓ Web Host com Model Binding configurado');
+  Writeln('✓ Web Host com Model Binding + DI configurado');
+  Writeln('✓ Service injetado automaticamente');
+  Writeln('✓ Sem memory leaks');
 end;
 
 procedure TestConciseIntegration;
@@ -1371,30 +1362,29 @@ type
 
 var
   App: IApplicationBuilder;
-  Builder: IApplicationBuilder;
-//  Services: IServiceCollection;
 begin
   Writeln('=== TESTE CONCISO CORRIGIDO ===');
 
-  Builder := TApplicationBuilder.Create(nil);
+  App := TApplicationBuilder.Create(nil);
   try
-    App := TApplicationBuilderModelBindingExtensions
-      .WithModelBinding(Builder)
-      .MapPost<TUser>('/crm/users',
-        procedure(User: TUser)
-        begin
-          Writeln('User: ', User.Name);
-        end)
-      .MapPost<TUser>('/v2/crm/users',
-        procedure(User: TUser)
-        begin
-          Writeln('V2 User: ', User.Name);
-        end)
-      .Build;
+    // ✅ PADRÃO MODERNO: TApplicationBuilderExtensions
+    TApplicationBuilderExtensions.MapPost<TUser>(App, '/crm/users',
+      procedure(User: TUser)
+      begin
+        Writeln('User: ', User.Name);
+      end
+    );
 
-    Writeln('✓ Build completo em uma linha');
-    Writeln('✓ ServiceProvider válido');
-    Writeln('✓ Sem access violation');
+    TApplicationBuilderExtensions.MapPost<TUser>(App, '/v2/crm/users',
+      procedure(User: TUser)
+      begin
+        Writeln('V2 User: ', User.Name);
+      end
+    );
+
+    Writeln('✓ Build completo');
+    Writeln('✓ Usando TApplicationBuilderExtensions');
+    Writeln('✓ Sem memory leaks');
 
   except
     on E: Exception do

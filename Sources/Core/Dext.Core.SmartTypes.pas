@@ -83,6 +83,7 @@ type
     class operator Implicit(const Value: Boolean): BooleanExpression;
     class operator Implicit(const Value: BooleanExpression): Boolean;
     class operator Implicit(const Value: BooleanExpression): TFluentExpression;
+    class operator Implicit(const Value: TFluentExpression): BooleanExpression;
 
     class operator LogicalAnd(const Left, Right: BooleanExpression): BooleanExpression;
     class operator BitwiseAnd(const Left, Right: BooleanExpression): BooleanExpression;
@@ -104,6 +105,7 @@ type
   ///   When FInfo is assigned (via TPrototype), operators generate Expression Trees.
   ///   When FInfo is nil (normal usage), operators perform runtime comparisons.
   /// </summary>
+  {$RTTI EXPLICIT FIELDS([vcPrivate..vcPublished])}
   Prop<T> = record
   private
     FValue: T;
@@ -183,6 +185,10 @@ type
     // Range
     function Between(const Lower, Upper: T): BooleanExpression;
 
+    // Order By Support
+    function Asc: IOrderBy;
+    function Desc: IOrderBy;
+
     property Name: string read GetPropertyName;
     property Value: T read FValue write FValue;
     property Expression: IExpression read GetExpression;
@@ -234,6 +240,9 @@ type
 function GetSmartValue(const AValue: TValue; const ATypeName: string): string;
 
 implementation
+
+uses
+  Dext.Specifications.OrderBy;
 
 { TPropInfo }
 
@@ -315,6 +324,11 @@ begin
     Result := TFluentExpression.From(Value.FExpression)
   else
     Result := TFluentExpression.From(TConstantExpression.Create(Value.FRuntimeValue));
+end;
+
+class operator BooleanExpression.Implicit(const Value: TFluentExpression): BooleanExpression;
+begin
+  Result := BooleanExpression.FromQuery(Value.Expression);
 end;
 
 class operator BooleanExpression.Implicit(const Value: Boolean): BooleanExpression;
@@ -876,6 +890,22 @@ begin
   var LowerCheck := (Self >= Lower);
   var UpperCheck := (Self <= Upper);
   Result := LowerCheck and UpperCheck;
+end;
+
+function Prop<T>.Asc: IOrderBy;
+begin
+  if IsQueryMode then
+    Result := TOrderBy.Create(GetColumnName, True)
+  else
+    Result := nil; // Runtime sorting not supported via this method yet
+end;
+
+function Prop<T>.Desc: IOrderBy;
+begin
+  if IsQueryMode then
+    Result := TOrderBy.Create(GetColumnName, False)
+  else
+    Result := nil;
 end;
 
 end.

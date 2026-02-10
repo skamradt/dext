@@ -517,7 +517,7 @@ begin
     WriteLn;
 
     // Register Telemetry Listener
-    TTestRunner.RegisterListener(TTelemetryTestListener.Create(Log.Logger));
+    // TTestRunner.RegisterListener(TTelemetryTestListener.Create(Log.Logger));
     
     // ✨ NEW FLUENT API - Clean and intuitive!
     if TTest.Configure

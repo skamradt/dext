@@ -151,6 +151,12 @@ type
     /// </summary>
     procedure OnModelCreating(Builder: TModelBuilder); virtual;
     
+    /// <summary>
+    ///   Override this method to configure the database context (e.g. Connection String, Naming Strategy).
+    ///   This is called during constructor execution.
+    /// </summary>
+    procedure OnConfiguring(Options: TDbContextOptions); virtual;
+    
   public
     class var FModelCache: TObjectDictionary<TClass, TModelBuilder>;
     class var FCriticalSection: TObject; // For thread safety
@@ -184,7 +190,7 @@ type
     ///  implementation.
     /// </summary>
     procedure PreloadDbSets;
-    procedure EnsureCreated;
+    function EnsureCreated: Boolean;
     procedure ExecuteSchemaSetup;
     
     function SaveChanges: Integer;
@@ -208,7 +214,8 @@ type
 implementation
 
 uses
-  Dext.Utils;
+  Dext.Utils,
+  Dext.Entity.Validator;
 
 { Helper Functions }
 
@@ -364,7 +371,15 @@ end;
 constructor TDbContext.Create(const AOptions: TDbContextOptions;
   const ATenantProvider: ITenantProvider);
 begin
+  // Allow derived classes to configure options (e.g. Naming Strategy)
+  OnConfiguring(AOptions);
+  
   Self.Create(AOptions.BuildConnection, AOptions.BuildDialect, AOptions.BuildNamingStrategy, ATenantProvider);
+end;
+
+procedure TDbContext.OnConfiguring(Options: TDbContextOptions);
+begin
+  // Virtual method implies do nothing by default
 end;
 
 destructor TDbContext.Destroy;
@@ -657,7 +672,7 @@ begin
   Result := IDbSet<T>(FCache[TypeInfo]);
 end;
 
-procedure TDbContext.EnsureCreated;
+function TDbContext.EnsureCreated: Boolean;
 var
   Nodes: TObjectList<TEntityNode>;
   Created: TList<PTypeInfo>;
@@ -674,6 +689,7 @@ var
   HasProgress, CanCreate: Boolean;
   i: Integer;
 begin
+  Result := False;
   ApplyTenantConfig(True);
   Nodes := TObjectList<TEntityNode>.Create;
   Created := TList<PTypeInfo>.Create;
@@ -792,6 +808,7 @@ begin
                 CmdIntf := FConnection.CreateCommand(SQL);
                 Cmd := IDbCommand(CmdIntf);
                 Cmd.ExecuteNonQuery;
+                Result := True;
               except
                  on E: Exception do
                  begin
@@ -837,6 +854,7 @@ begin
   finally
     Created.Free;
     Nodes.Free;
+    Ctx.Free;
   end;
 end;
 
@@ -899,6 +917,14 @@ begin
                end;
              end;
                
+
+             // Validate Entity
+             var Map: TEntityMap := nil;
+             if FModelBuilder <> nil then
+               Map := FModelBuilder.GetMap(Entity.ClassInfo);
+               
+             TEntityValidator.Validate(Entity, Map);
+
              AddedGroups[Entity.ClassInfo].Add(Entity);
           end;
         end;
@@ -926,6 +952,14 @@ begin
         if Pair.Value = esModified then
         begin
           Entity := Pair.Key;
+          
+          // Validate Entity
+          var Map: TEntityMap := nil;
+          if FModelBuilder <> nil then
+            Map := FModelBuilder.GetMap(Entity.ClassInfo);
+            
+          TEntityValidator.Validate(Entity, Map);
+
           DbSet := DataSet(Entity.ClassInfo);
           DbSet.PersistUpdate(Entity);
           Inc(Result);
@@ -1121,7 +1155,8 @@ var
   ListType: TRttiType;
 begin
   Ctx := TRttiContext.Create;
-  Typ := Ctx.GetType(FParent.ClassType);
+  try
+    Typ := Ctx.GetType(FParent.ClassType);
   Prop := Typ.GetProperty(FPropName);
   if Prop = nil then
     raise Exception.CreateFmt('Property %s not found on %s', [FPropName, Typ.Name]);
@@ -1233,13 +1268,16 @@ begin
   );
   
   var Results := DbSet.ListObjects(Expr);
-  // Add results to collection
-  for var ChildObj in Results do
-  begin
-    if IsInterface then
-      AddMethod.Invoke(Val, [ChildObj])
-    else
-      AddMethod.Invoke(ListObj, [ChildObj]);
+    // Add results to collection
+    for var ChildObj in Results do
+    begin
+      if IsInterface then
+        AddMethod.Invoke(Val, [ChildObj])
+      else
+        AddMethod.Invoke(ListObj, [ChildObj]);
+    end;
+  finally
+    Ctx.Free;
   end;
 end;
 

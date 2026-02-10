@@ -7,12 +7,12 @@ Minimal APIs fornecem uma abordagem leve, baseada em lambdas, para construir end
 ## Endpoints Básicos
 
 ```pascal
-App.MapGet('/hello', procedure(Ctx: IHttpContext)
+Builder.MapGet('/hello', procedure(Ctx: IHttpContext)
   begin
     Ctx.Response.Write('Olá, Mundo!');
   end);
 
-App.MapPost('/data', procedure(Ctx: IHttpContext)
+Builder.MapPost('/data', procedure(Ctx: IHttpContext)
   var
     SR: TStreamReader;
     Body: string;
@@ -41,7 +41,7 @@ type
     Id: Integer;
   end;
 
-App.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
+Builder.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
   function(Service: IUserService; Request: TUserIdRequest): IResult
   begin
     var User := Service.FindById(Request.Id);
@@ -55,7 +55,7 @@ App.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
 ### Usando Context Diretamente
 
 ```pascal
-App.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
+Builder.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
   begin
     var Id := Ctx.Request.RouteParams['id'];
     Ctx.Response.Write('ID do Usuário: ' + Id);
@@ -75,7 +75,7 @@ type
     Limit: Integer;
   end;
 
-App.MapGet<TSearchFilter, IResult>('/search',
+Builder.MapGet<TSearchFilter, IResult>('/search',
   function(Filter: TSearchFilter): IResult
   begin
     Result := Results.Ok(Format('Busca: %s, Limite: %d', [Filter.Query, Filter.Limit]));
@@ -93,7 +93,7 @@ type
     TenantId: string;
   end;
 
-App.MapGet<ITenantService, TTenantRequest, IResult>('/api/data',
+Builder.MapGet<ITenantService, TTenantRequest, IResult>('/api/data',
   function(Service: ITenantService; Request: TTenantRequest): IResult
   begin
     if Request.TenantId = '' then
@@ -120,7 +120,7 @@ type
     Stock: Integer;
   end;
 
-App.MapPost<IProductService, TProductCreateRequest, IResult>('/api/products',
+Builder.MapPost<IProductService, TProductCreateRequest, IResult>('/api/products',
   function(Service: IProductService; Request: TProductCreateRequest): IResult
   begin
     // TenantId vem do header, resto do body
@@ -140,7 +140,7 @@ Os overloads genéricos injetam serviços e fazem bind dos dados automaticamente
 
 ```pascal
 // Injeção de serviço + model binding do body
-App.MapPost<IUserService, TCreateUserDto, IResult>('/users',
+Builder.MapPost<IUserService, TCreateUserDto, IResult>('/users',
   function(Service: IUserService; Dto: TCreateUserDto): IResult
   var
     User: TUser;
@@ -185,7 +185,7 @@ var Service := Ctx.Services.GetService<IUserService>;
 
 ### Via Injeção Genérica (Recomendado)
 ```pascal
-App.MapGet<IUserService, IResult>('/users',
+Builder.MapGet<IUserService, IResult>('/users',
   function(Service: IUserService): IResult
   begin
     Result := Results.Ok(Service.GetAll);
@@ -206,7 +206,7 @@ type
   end;
 
 // DTO é automaticamente populado do body
-App.MapPost<IUserService, TCreateUserRequest, IResult>('/users',
+Builder.MapPost<IUserService, TCreateUserRequest, IResult>('/users',
   function(Service: IUserService; Request: TCreateUserRequest): IResult
   ...
 ```

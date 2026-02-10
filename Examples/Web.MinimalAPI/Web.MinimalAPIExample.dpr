@@ -22,7 +22,6 @@ uses
   System.SysUtils,
   Dext.WebHost,
   Dext.DI.Interfaces,
-  Dext.DI.Extensions,
   Dext.Web.Interfaces,
   Dext.Web.Results;
 
@@ -62,7 +61,8 @@ begin
     Builder.ConfigureServices(
       procedure(Services: IServiceCollection)
       begin
-        TServiceCollectionExtensions.AddSingleton<IGreetingService, TGreetingService>(Services);
+        TDextServices.Create(Services)
+          .AddSingleton<IGreetingService, TGreetingService>;
         WriteLn('✅ Services registered');
       end);
 

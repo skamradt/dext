@@ -212,6 +212,20 @@ begin
   // TUUID support
   RegisterConverter(TypeInfo(string), TypeInfo(TUUID), TStringToUUIDConverter.Create);
   RegisterConverter(TypeInfo(Variant), TypeInfo(TUUID), TVariantToUUIDConverter.Create);
+
+  // Numerical Kinds catch-all (ensures Double -> Currency, Integer -> Double, etc)
+  var NumericToFloat := TVariantToFloatConverter.Create;
+  RegisterConverter(tkInteger, tkFloat, NumericToFloat);
+  RegisterConverter(tkInt64, tkFloat, NumericToFloat);
+  RegisterConverter(tkFloat, tkFloat, NumericToFloat);
+  
+  var NumericToInt := TVariantToIntegerConverter.Create;
+  RegisterConverter(tkFloat, tkInteger, NumericToInt);
+  RegisterConverter(tkInt64, tkInteger, NumericToInt);
+  RegisterConverter(tkInteger, tkInteger, NumericToInt);
+  
+  RegisterConverter(tkFloat, tkInt64, NumericToInt);
+  RegisterConverter(tkInteger, tkInt64, NumericToInt);
 end;
 
 class destructor TValueConverterRegistry.Destroy;
@@ -285,9 +299,11 @@ begin
       // Convert the source value to the inner type
       InnerValue := Convert(AValue, Meta.InnerType);
       
-      // Create a new Nullable<T> instance
+      // Create a new Nullable<T> instance and ensure it's clean
       TValue.Make(nil, ATargetType, Result);
       PropInstance := Result.GetReferenceToRawData;
+      // Zero-init memory to avoid garbage in managed interface fields
+      FillChar(PropInstance^, Meta.RttiType.TypeSize, 0);
       
       // Set the inner value
       Meta.ValueField.SetValue(PropInstance, InnerValue);
@@ -308,9 +324,11 @@ begin
       // Convert raw DB value to inner type T
       InnerValue := Convert(AValue, Meta.InnerType);
       
-      // Create new Prop<T> instance
+      // Create new Prop<T> instance and ensure it's clean
       TValue.Make(nil, ATargetType, Result);
       PropInstance := Result.GetReferenceToRawData;
+      // Zero-init memory to avoid garbage in managed interface fields
+      FillChar(PropInstance^, Meta.RttiType.TypeSize, 0);
       
       // Set FValue
       Meta.ValueField.SetValue(PropInstance, InnerValue);
@@ -366,12 +384,20 @@ end;
 function TVariantToIntegerConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 var
   V: Variant;
+  Val64: Int64;
 begin
   V := AValue.AsVariant;
   if VarIsNull(V) or VarIsEmpty(V) then
-    Result := 0
+    Val64 := 0
+  else if VarIsNumeric(V) then
+    Val64 := V
   else
-    Result := StrToIntDef(VarToStr(V), 0);
+    Val64 := StrToInt64Def(VarToStr(V), 0);
+
+  if ATargetType = TypeInfo(Int64) then
+    Result := TValue.From<Int64>(Val64)
+  else
+    Result := TValue.From<Integer>(Integer(Val64));
 end;
 
 { TVariantToStringConverter }
@@ -408,6 +434,8 @@ begin
   V := AValue.AsVariant;
   if VarIsNull(V) or VarIsEmpty(V) then
     Val := 0.0
+  else if VarIsNumeric(V) then
+    Val := V
   else
   begin
     var S := VarToStr(V);
@@ -415,13 +443,24 @@ begin
     if (S.Contains('-') or S.Contains(':') or S.Contains('/')) and (not S.StartsWith('{')) then
     begin
        var Dt: TDateTime;
-       if TryParseCommonDate(S, Dt) then
+     if TryParseCommonDate(S, Dt) then
          Val := Dt
        else
-         Val := StrToFloatDef(S, 0.0);
+       begin
+         try
+           // SQLite format: 2026-01-31 11:38:13.975
+           // Try to normalize to ISO8601
+           if TryISO8601ToDate(StringReplace(S, ' ', 'T', [rfReplaceAll]), Dt) then
+             Val := Dt
+           else
+             Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
+         except
+           Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
+         end;
+       end;
     end
     else
-      Val := StrToFloatDef(S, 0.0);
+      Val := StrToFloatDef(S, 0.0, TFormatSettings.Invariant);
   end;
 
   if ATargetType = TypeInfo(Currency) then
@@ -440,16 +479,30 @@ function TVariantToDateTimeConverter.Convert(const AValue: TValue; ATargetType: 
 var
   V: Variant;
   Dt: TDateTime;
+  S: string;
 begin
   V := AValue.AsVariant;
   if VarIsNull(V) then Exit(0.0);
   
   if VarIsNumeric(V) then
     Result := VarToDateTime(V)
-  else if TryParseCommonDate(VarToStr(V), Dt) then
-    Result := Dt
-  else
-    Result := 0.0;
+  else 
+  begin
+    S := VarToStr(V);
+    if TryParseCommonDate(S, Dt) then
+      Result := Dt
+    else
+    begin
+      try
+         if TryISO8601ToDate(StringReplace(S, ' ', 'T', [rfReplaceAll]), Dt) then
+           Result := Dt
+         else
+           Result := 0.0;
+      except
+         Result := 0.0;
+      end;
+    end;
+  end;
 end;
 
 { TVariantToDateConverter }

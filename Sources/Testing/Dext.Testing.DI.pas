@@ -118,9 +118,16 @@ begin
 end;
 
 constructor TTestServiceProvider.Create(const BaseServices: TDextServices);
+var
+  BaseCollection: IServiceCollection;
 begin
   inherited Create;
-  FServices := BaseServices;
+  // TDextServices is a record - we create a new one and copy services
+  FServices := TDextServices.New;
+  // Copy services from BaseServices if it has an underlying collection
+  BaseCollection := BaseServices.Unwrap;
+  if Assigned(BaseCollection) then
+    FServices.Unwrap.AddRange(BaseCollection);
   FMocks := TDictionary<TGUID, IInterface>.Create;
   FBuilt := False;
 end;
@@ -128,8 +135,11 @@ end;
 destructor TTestServiceProvider.Destroy;
 begin
   FMocks.Free;
+  // TDextServices is a record, no need to free - the underlying IServiceCollection
+  // is managed by reference counting
   inherited;
 end;
+
 
 procedure TTestServiceProvider.EnsureNotBuilt;
 begin

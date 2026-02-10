@@ -361,6 +361,30 @@ JSON:
 5. **Use `[FromQuery]`** for filters, pagination, sorting
 6. **Use `[FromRoute]`** for resource identifiers
 
+## Automatic Memory Management for Classes
+
+When using **class-based DTOs** instead of records, the framework automatically frees the object after handler execution:
+
+```pascal
+type
+  TCreateOrderDto = class
+  public
+    Items: IList<TOrderItemDto>;
+  end;
+
+// The framework automatically frees Dto after the handler returns
+Builder.MapPost<TCreateOrderDto, IResult>('/api/orders',
+  function(Dto: TCreateOrderDto): IResult
+  begin
+    // Use Dto normally
+    // DO NOT call Dto.Free - the framework handles it!
+    Result := Results.Created('/api/orders/1', Dto);
+  end);
+```
+
+> [!NOTE]
+> This follows the "creator destroys" principle: Model Binding creates the object, so it's responsible for cleaning it up.
+
 ---
 
 [← Controllers](controllers.md) | [Next: Routing →](routing.md)

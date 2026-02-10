@@ -5,8 +5,8 @@ interface
 uses
   System.SysUtils,
   Dext,     // Base interfaces and DI
-  Dext.Web, // Web features, BasicAuth, Swagger
   Dext.Entity, // Persistence features
+  Dext.Web, // Web features, BasicAuth, Swagger
   OrderAPI.Entities,
   OrderAPI.Database,
   OrderAPI.Services;
@@ -42,7 +42,7 @@ begin
           .AddTransient<TReportService>; // Class-only service
 
   // Controllers
-  TDextServiceCollectionExtensions.AddControllers(Services);
+  Services.AddControllers;
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
@@ -51,7 +51,7 @@ var
   SwaggerOpts: TOpenAPIOptions;
 begin
   // JSON global settings
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
+  JsonDefaultSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
 
   // Middleware Pipeline
   CorsOpts := TCorsOptions.Create;

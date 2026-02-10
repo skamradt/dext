@@ -7,6 +7,8 @@
 >
 > 📌 **Confira o [Roadmap & Plano V1.0 Beta](Docs/Releases/v1-beta-roadmap.pt-br.md)** para a lista detalhada de funcionalidades, tarefas pendentes e planos futuros.
 
+> 📢 **[Novidades / Changelog](CHANGELOG.md)** — Últimas atualizações, breaking changes e novas features
+
 **Dext** é um ecossistema completo para desenvolvimento moderno em Delphi. Ele traz a produtividade e os padrões arquiteturais de frameworks como **ASP.NET Core** e **Spring Boot** para a performance nativa do Object Pascal.
 
 O objetivo não é apenas criar APIs, mas fornecer uma fundação sólida (DI, Configuration, Logging, ORM) para que você construa aplicações enterprise robustas e testáveis.
@@ -60,6 +62,8 @@ Um ORM moderno focado em produtividade e performance.
 - **Smart Properties**: Expressões de query type-safe sem magic strings. Escreva `u.Age > 18` e ganhe checagem em tempo de compilação, IntelliSense e geração automática de SQL. [Saiba mais](Docs/smart-properties.pt-br.md)
 - **Change Tracking**: Controle automático de mudanças e persistência otimizada.
 - **Tipos Avançados**: Suporte nativo para **UUID v7** (Ordenado por Tempo), JSON/JSONB e Arrays.
+- **Propagação de DbType**: Controle explícito de tipos de banco via atributo `[DbType]`, garantindo integridade além dos tipos Delphi.
+- **Suporte a Paginação Legada**: Envelopamento automático de queries (ex: `ROWNUM`) para versões antigas de Oracle e SQL Server.
 - **Multi-Tenancy**:
   - **Banco Compartilhado**: Filtros automáticos por `TenantId`.
   - **Isolamento por Schema**: Performance extrema via schemas (PostgreSQL `search_path`, SQL Server prefixing).
@@ -239,7 +243,8 @@ uses
   Dext.Web;
 
 begin
-  var App := TDextApplication.Create;
+  // A função global WebApplication retorna IWebApplication (ARC safe)
+  var App := WebApplication;
   var Builder := App.Builder;
 
   // Rota simples

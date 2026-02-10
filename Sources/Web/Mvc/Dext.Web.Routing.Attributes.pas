@@ -1,4 +1,4 @@
-{***************************************************************************}
+ï»¿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -32,60 +32,76 @@ uses
 
 type
   // ===========================================================================
-  // ATRIBUTO BASE PARA ROTAS
+  // BASE ROUTE ATTRIBUTE
   // ===========================================================================
-  DextRouteAttribute = class(TCustomAttribute)
+  
+  /// <summary>
+  ///   Base attribute for HTTP route definitions.
+  /// </summary>
+  RouteAttribute = class(TCustomAttribute)
   private
     FPath: string;
     FMethod: string;
   public
-    constructor Create(const APath: string; const AMethod: string);
+    constructor Create(const APath: string; const AMethod: string = '');
     property Path: string read FPath;
     property Method: string read FMethod;
   end;
 
   // ===========================================================================
-  // ATRIBUTOS ESPECÍFICOS POR VERBO HTTP
+  // HTTP VERB ATTRIBUTES
   // ===========================================================================
-  DextGetAttribute = class(DextRouteAttribute)
+  
+  /// <summary>Marks a method as handling HTTP GET requests.</summary>
+  HttpGetAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextPostAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP POST requests.</summary>
+  HttpPostAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextPutAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP PUT requests.</summary>
+  HttpPutAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextDeleteAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP DELETE requests.</summary>
+  HttpDeleteAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextPatchAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP PATCH requests.</summary>
+  HttpPatchAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextHeadAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP HEAD requests.</summary>
+  HttpHeadAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
-  DextOptionsAttribute = class(DextRouteAttribute)
+  /// <summary>Marks a method as handling HTTP OPTIONS requests.</summary>
+  HttpOptionsAttribute = class(RouteAttribute)
   public
-    constructor Create(const APath: string);
+    constructor Create(const APath: string = '');
   end;
 
   // ===========================================================================
-  // ATRIBUTO PARA CONTROLLERS (opcional)
+  // CONTROLLER ATTRIBUTE
   // ===========================================================================
-  DextControllerAttribute = class(TCustomAttribute)
+  
+  /// <summary>
+  ///   Marks a class as an API controller with an optional route prefix.
+  /// </summary>
+  ApiControllerAttribute = class(TCustomAttribute)
   private
     FPrefix: string;
   public
@@ -94,9 +110,13 @@ type
   end;
 
   // ===========================================================================
-  // EXCEÇÃO HTTP PERSONALIZADA
+  // HTTP EXCEPTION
   // ===========================================================================
-  EDextHttpException = class(Exception)
+  
+  /// <summary>
+  ///   Exception that carries an HTTP status code.
+  /// </summary>
+  HttpException = class(Exception)
   private
     FStatusCode: Integer;
   public
@@ -104,82 +124,114 @@ type
     property StatusCode: Integer read FStatusCode;
   end;
 
+  // ===========================================================================
+  // DEPRECATED ALIASES (for backward compatibility)
+  // ===========================================================================
+  
+  /// <summary>Deprecated. Use RouteAttribute instead.</summary>
+  DextRouteAttribute = RouteAttribute deprecated 'Use RouteAttribute instead';
+  
+  /// <summary>Deprecated. Use HttpGetAttribute instead.</summary>
+  DextGetAttribute = HttpGetAttribute deprecated 'Use HttpGetAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPostAttribute instead.</summary>
+  DextPostAttribute = HttpPostAttribute deprecated 'Use HttpPostAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPutAttribute instead.</summary>
+  DextPutAttribute = HttpPutAttribute deprecated 'Use HttpPutAttribute instead';
+
+  /// <summary>Deprecated. Use HttpDeleteAttribute instead.</summary>
+  DextDeleteAttribute = HttpDeleteAttribute deprecated 'Use HttpDeleteAttribute instead';
+
+  /// <summary>Deprecated. Use HttpPatchAttribute instead.</summary>
+  DextPatchAttribute = HttpPatchAttribute deprecated 'Use HttpPatchAttribute instead';
+
+  /// <summary>Deprecated. Use HttpHeadAttribute instead.</summary>
+  DextHeadAttribute = HttpHeadAttribute deprecated 'Use HttpHeadAttribute instead';
+
+  /// <summary>Deprecated. Use HttpOptionsAttribute instead.</summary>
+  DextOptionsAttribute = HttpOptionsAttribute deprecated 'Use HttpOptionsAttribute instead';
+
+  /// <summary>Deprecated. Use ApiControllerAttribute instead.</summary>
+  DextControllerAttribute = ApiControllerAttribute deprecated 'Use ApiControllerAttribute instead';
+  
+  /// <summary>Deprecated. Use HttpException instead.</summary>
+  EDextHttpException = HttpException deprecated 'Use HttpException instead';
+
 implementation
 
-{ DextRouteAttribute }
+{ RouteAttribute }
 
-constructor DextRouteAttribute.Create(const APath: string; const AMethod: string);
+constructor RouteAttribute.Create(const APath: string; const AMethod: string);
 begin
   inherited Create;
   FPath := APath;
   FMethod := AMethod;
 end;
 
-{ DextGetAttribute }
+{ HttpGetAttribute }
 
-constructor DextGetAttribute.Create(const APath: string);
+constructor HttpGetAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'GET');
 end;
 
-{ DextPostAttribute }
+{ HttpPostAttribute }
 
-constructor DextPostAttribute.Create(const APath: string);
+constructor HttpPostAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'POST');
 end;
 
-{ DextPutAttribute }
+{ HttpPutAttribute }
 
-constructor DextPutAttribute.Create(const APath: string);
+constructor HttpPutAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'PUT');
 end;
 
-{ DextDeleteAttribute }
+{ HttpDeleteAttribute }
 
-constructor DextDeleteAttribute.Create(const APath: string);
+constructor HttpDeleteAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'DELETE');
 end;
 
-{ DextPatchAttribute }
+{ HttpPatchAttribute }
 
-constructor DextPatchAttribute.Create(const APath: string);
+constructor HttpPatchAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'PATCH');
 end;
 
-{ DextHeadAttribute }
+{ HttpHeadAttribute }
 
-constructor DextHeadAttribute.Create(const APath: string);
+constructor HttpHeadAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'HEAD');
 end;
 
-{ DextOptionsAttribute }
+{ HttpOptionsAttribute }
 
-constructor DextOptionsAttribute.Create(const APath: string);
+constructor HttpOptionsAttribute.Create(const APath: string);
 begin
   inherited Create(APath, 'OPTIONS');
 end;
 
-{ DextControllerAttribute }
+{ ApiControllerAttribute }
 
-constructor DextControllerAttribute.Create(const APrefix: string);
+constructor ApiControllerAttribute.Create(const APrefix: string);
 begin
   inherited Create;
   FPrefix := APrefix;
 end;
 
-{ EDextHttpException }
+{ HttpException }
 
-constructor EDextHttpException.Create(AStatusCode: Integer; const AMessage: string);
+constructor HttpException.Create(AStatusCode: Integer; const AMessage: string);
 begin
   inherited Create(AMessage);
   FStatusCode := AStatusCode;
 end;
 
 end.
-
-

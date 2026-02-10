@@ -35,30 +35,43 @@
 {.$DEFINE DEXT_ENABLE_TAURUS_TLS}
 
 //---------------------------------------------------------------------------
+// Modules & Components
+//---------------------------------------------------------------------------
+
+// Enable/Disable Dext.Entity (ORM & Database support)
+{$DEFINE DEXT_ENABLE_ENTITY}
+
+//---------------------------------------------------------------------------
 // Database Drivers
 //---------------------------------------------------------------------------
 
-// Enable/Disable specific database drivers to avoid unnecessary dependencies.
-// Useful for Delphi Professional/Community editions.
-// ---------------------------------------------------------------------------
-// Standard Drivers
-{$DEFINE DEXT_ENABLE_DB_SQLITE}
-{.$DEFINE DEXT_ENABLE_DB_POSTGRES}
-{.$DEFINE DEXT_ENABLE_DB_MYSQL}
-{.$DEFINE DEXT_ENABLE_DB_MSSQL}
-{.$DEFINE DEXT_ENABLE_DB_ORACLE}
-{.$DEFINE DEXT_ENABLE_DB_FIREBIRD}
-{.$DEFINE DEXT_ENABLE_DB_IB}          // InterBase
-{.$DEFINE DEXT_ENABLE_DB_ODBC}
+{$IFDEF DEXT_ENABLE_ENTITY}
+  // Enable/Disable specific database drivers to avoid unnecessary dependencies.
+  // Useful for Delphi Professional/Community editions.
+  // ---------------------------------------------------------------------------
+  // Standard Drivers
+  {$DEFINE DEXT_ENABLE_DB_SQLITE}
+  // Enable SQLite JSON functions (requires sqlite3.dll compiled with SQLITE_ENABLE_JSON1)
+  {$IFDEF DEXT_ENABLE_DB_SQLITE}
+    {$DEFINE DEXT_ENABLE_SQLITE_JSON}
+  {$ENDIF}
+  {$DEFINE DEXT_ENABLE_DB_POSTGRES}
+  {.$DEFINE DEXT_ENABLE_DB_MYSQL}
+  {.$DEFINE DEXT_ENABLE_DB_MSSQL}
+  {.$DEFINE DEXT_ENABLE_DB_ORACLE}
+  {.$DEFINE DEXT_ENABLE_DB_FIREBIRD}
+  {.$DEFINE DEXT_ENABLE_DB_IB}          // InterBase
+  {.$DEFINE DEXT_ENABLE_DB_ODBC}
 
-// Enterprise / Additional Drivers (need testing)
-{.$DEFINE DEXT_ENABLE_DB_ADS}         // Advantage Database Server
-{.$DEFINE DEXT_ENABLE_DB_ASA}         // SQL Anywhere
-{.$DEFINE DEXT_ENABLE_DB_DB2}         // IBM DB2
-{.$DEFINE DEXT_ENABLE_DB_DS}          // DataSnap
-{.$DEFINE DEXT_ENABLE_DB_INFX}        // Informix
-{.$DEFINE DEXT_ENABLE_DB_MONGODB}     // MongoDB
-{.$DEFINE DEXT_ENABLE_DB_MSACC}       // MS Access
-{.$DEFINE DEXT_ENABLE_DB_TERADATA}    // Teradata
+  // Enterprise / Additional Drivers (need testing)
+  {.$DEFINE DEXT_ENABLE_DB_ADS}         // Advantage Database Server
+  {.$DEFINE DEXT_ENABLE_DB_ASA}         // SQL Anywhere
+  {.$DEFINE DEXT_ENABLE_DB_DB2}         // IBM DB2
+  {.$DEFINE DEXT_ENABLE_DB_DS}          // DataSnap
+  {.$DEFINE DEXT_ENABLE_DB_INFX}        // Informix
+  {.$DEFINE DEXT_ENABLE_DB_MONGODB}     // MongoDB
+  {.$DEFINE DEXT_ENABLE_DB_MSACC}       // MS Access
+  {.$DEFINE DEXT_ENABLE_DB_TERADATA}    // Teradata
+{$ENDIF}
 
 {$ENDIF}

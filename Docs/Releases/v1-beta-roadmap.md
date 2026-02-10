@@ -18,7 +18,7 @@ For technical details and granular status of each module, check:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **Minimal APIs** (`MapGet`, `MapPost`) | ✅ Ready | Tested in `Web.Dext.Starter.Admin` |
-| **Controllers** (`TController`) | ✅ Ready | Tested in `Web.ControllerExample` |
+| **Controllers** ([ApiController] / POCO) | ✅ Ready | Functional parity with ASP.NET Core. No base class required. |
 | **Model Binding** (JSON Body -> Record/Class) | ✅ Ready | Support for nesting, lists, and **Mixed Binding** (Header/Query/Route/Body) |
 | **Dependency Injection** (Scoped/Singleton/Transient) | ✅ Ready | Full integration with HttpContext |
 | **Middleware Pipeline** | ✅ Ready | Custom Middlewares supported |
@@ -87,6 +87,7 @@ For technical details and granular status of each module, check:
 | **Configuration** (`IConfiguration`) | ✅ Ready | JSON file provider |
 | **Binary JSON Parser** | ✅ Ready | High-performance binary JSON parser |
 | **AutoMapper** (`TMapper`) | ✅ Ready | DTO ↔ Entity mapping with RTTI, custom member mapping and collections |
+| **Zero-Leak Record Facades** | ✅ Ready | Use of Records for `TDextServices` and Builders to eliminate heap-captured memory leaks |
 | **Custom Constructors (DI)** | ✅ Ready | `[ServiceConstructor]` attribute to specify which constructor to use in DI |
 | **TypeInfo Cache** | ✅ Ready | Cache RTTI metadata for performance optimization |
 

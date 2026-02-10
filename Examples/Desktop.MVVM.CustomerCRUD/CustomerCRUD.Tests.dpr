@@ -13,20 +13,20 @@ uses
   Dext.MM,
   System.SysUtils,
   System.Rtti,
+  Dext.Utils,
+  Dext.Collections,
+  Customer.Entity in 'Features\Customers\Customer.Entity.pas',
+  Customer.Service in 'Features\Customers\Customer.Service.pas',
+  Customer.Controller in 'Features\Customers\Customer.Controller.pas',
+  Customer.ViewModel in 'Features\Customers\Customer.ViewModel.pas',
+  Customer.Rules in 'Features\Customers\Customer.Rules.pas',
   Dext,
   Dext.Assertions,
   Dext.Mocks,
   Dext.Mocks.Matching,
   Dext.Testing.Attributes,
   Dext.Testing.Runner,
-  Dext.Testing.Fluent,
-  Dext.Utils,
-  Dext.Collections,
-  Customer.Entity,
-  Customer.Service,
-  Customer.Controller,
-  Customer.ViewModel,
-  Customer.Rules;
+  Dext.Testing.Fluent;
 
 type
   /// <summary>
@@ -357,6 +357,13 @@ begin
   
   FController := TCustomerController.Create(FServiceMock.Instance, FLoggerMock.Instance);
   FController.View := FViewMock.Instance;
+
+  // Setup ViewMock to free the ViewModel to prevent memory leaks in tests
+  FViewMock.Setup.Callback(procedure(Args: TArray<TValue>)
+    begin
+      if Length(Args) > 0 then
+        Args[0].AsType<TCustomerViewModel>.Free;
+    end).When.ShowEditView(Arg.Any<TCustomerViewModel>);
 end;
 
 procedure TCustomerControllerTests.TearDown;

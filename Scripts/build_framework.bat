@@ -17,6 +17,10 @@ set PLATFORM=Win32
 REM Extract ProductVersion from BDS (e.g., 37.0)
 for %%i in ("%BDS%") do set PRODUCT_VERSION=%%~nxi
 
+REM Force BDSCOMMONDIR to Public Documents to match IDE default behavior
+REM (rsvars.bat often incorrectly points to current user's documents)
+set "BDSCOMMONDIR=%PUBLIC%\Documents\Embarcadero\Studio\%PRODUCT_VERSION%"
+
 REM Output paths matching .dproj configuration: $(dext)\Output\$(ProductVersion)_$(Platform)_$(Config)
 set DEXT=%~dp0..
 set OUTPUT_PATH=%DEXT%\Output\%PRODUCT_VERSION%_%PLATFORM%_%BUILD_CONFIG%
@@ -72,6 +76,18 @@ if %ERRORLEVEL% NEQ 0 goto Error
 echo.
 echo Building Dext.Net...
 msbuild "Dext.Net.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
+
+echo.
+echo Building DextTool...
+cd "%~dp0..\Apps\CLI"
+msbuild "DextTool.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
+
+echo.
+echo Building DextSidecar...
+cd "%~dp0..\Apps\Sidecar"
+msbuild "DextSidecar.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.

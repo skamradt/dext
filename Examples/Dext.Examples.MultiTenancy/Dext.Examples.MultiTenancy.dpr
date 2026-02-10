@@ -9,6 +9,8 @@ uses
   Dext.Utils,
   System.SysUtils,
   System.Classes,
+  Dext.DI.Interfaces,
+  Dext.Web.Interfaces,
   Dext,
   Dext.Web,
   Dext.Entity,
@@ -17,9 +19,7 @@ uses
   MultiTenancy.DbContext in 'Domain\MultiTenancy.DbContext.pas',
   MultiTenancy.Middleware in 'Middleware\MultiTenancy.Middleware.pas',
   MultiTenancy.Endpoints in 'Features\MultiTenancy.Endpoints.pas',
-  MultiTenancy.Service in 'Features\MultiTenancy.Service.pas',
-  Dext.DI.Interfaces,
-  Dext.Web.Interfaces;
+  MultiTenancy.Service in 'Features\MultiTenancy.Service.pas';
 
 type
   TMultiTenancyStartup = class(TInterfacedObject, IStartup)
@@ -55,7 +55,7 @@ begin
   var WebApp := App.GetBuilder;
 
   // Global JSON settings
-  TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
+  JsonDefaultSettings(JsonSettings.Default.CamelCase.CaseInsensitive);
 
   // Exception Handler
   WebApp.UseExceptionHandler;
