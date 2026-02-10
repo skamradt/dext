@@ -150,7 +150,7 @@ begin
         on E: EUserNotFound do
           Result := Results.BadRequest(E.Message);
         on E: Exception do
-          Result := Results.InternalServerError(E.Message);
+          Result := Results.InternalServerError(E);
       end;
     end);
 

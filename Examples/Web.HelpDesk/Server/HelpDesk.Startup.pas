@@ -47,11 +47,11 @@ end;
 procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
   // 1. Data Access
-  Services.AddDbContext<THelpDeskContext>(ConfigureDatabase);
-
+  Services
+    .AddDbContext<THelpDeskContext>(ConfigureDatabase)
   // 2. Domain Services (Scoped - one per request)
-  Services.AddScoped<IUserService, TUserService>;
-  Services.AddScoped<ITicketService, TTicketService>;
+    .AddScoped<IUserService, TUserService>
+    .AddScoped<ITicketService, TTicketService>;
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
@@ -62,11 +62,20 @@ begin
   JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.ISODateFormat);
 
   // Middleware Pipeline
+  {
   Builder.UseExceptionHandler;
   Builder.UseHttpLogging;
   Builder.UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
   Builder.UseRateLimiting(TRateLimitPolicy.FixedWindow(100, 60));
+  }
 
+  Builder
+    .UseExceptionHandler
+    .UseHttpLogging
+    .UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader)
+    .UseRateLimiting(RateLimitPolicy.FixedWindow(100, 60));
+
+  // TODO: Por que não tem no Builder.MapEndpPoints?
   // Map Endpoints (Minimal API)
   TEndpoints.MapEndpoints(Builder);
 

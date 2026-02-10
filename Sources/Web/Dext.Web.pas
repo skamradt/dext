@@ -249,6 +249,7 @@ type
 
   // Dext.RateLimiting.Policy
   TRateLimitPolicy = Dext.RateLimiting.Policy.TRateLimitPolicy;
+  RateLimitPolicy = Dext.RateLimiting.Policy.TRateLimitPolicy;
 
   // Dext.Swagger.Middleware
   TSwaggerMiddleware = Dext.Swagger.Middleware.TSwaggerMiddleware;
@@ -853,7 +854,6 @@ implementation
 uses
   Dext.Options.Extensions,
   Dext.Configuration.Binder;
-
 
 function WebApplication: IWebApplication;
 begin
