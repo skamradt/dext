@@ -91,6 +91,37 @@ Services.AddScoped<IUserService, TUserService>;
 Services.AddSingleton<ILogger, TConsoleLogger>;
 ```
 
+## Atributos de Rota (Routing)
+
+O Dext suporta dois estilos para definir rotas. **Importante**: Rotas com parâmetros **DEVEM iniciar com barra** (`/`).
+
+### Opção 1: Consolidado (Recomendado)
+```pascal
+[ApiController('/api/v1/products')] // Rota base no ApiController
+type TProductsController = class
+  // ...
+  [HttpGet]                         // GET /api/v1/products
+  function GetAll: IActionResult;
+
+  [HttpGet('/{id}')]                // GET /api/v1/products/123 (Barra inicial é OBRIGATÓRIA)
+  function Get(Id: Integer): IActionResult;
+end;
+```
+
+### Opção 2: Separado (Estilo .NET)
+```pascal
+[ApiController]
+[Route('/api/v1/products')]         // Rota base no atributo Route
+type TProductsController = class
+  // ...
+  [HttpGet]
+  function GetAll: IActionResult;
+
+  [HttpGet, Route('/{id}')]         // GET /api/v1/products/123
+  function Get(Id: Integer): IActionResult;
+end;
+```
+
 ## Action Results
 
 ```pascal

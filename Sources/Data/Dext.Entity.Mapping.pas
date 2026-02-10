@@ -93,6 +93,7 @@ type
     function IsRequired(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsAutoInc(AValue: Boolean = True): IPropertyBuilder<T>;
     function HasMaxLength(ALength: Integer): IPropertyBuilder<T>;
+    function HasMinLength(ALength: Integer): IPropertyBuilder<T>;
     function HasPrecision(APrecision, AScale: Integer): IPropertyBuilder<T>;
     function HasDbType(ADataType: TFieldType): IPropertyBuilder<T>;
     function HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
@@ -120,6 +121,7 @@ type
     IsAutoInc: Boolean;
     IsRequired: Boolean;
     MaxLength: Integer;
+    MinLength: Integer;
     Precision: Integer;
     Scale: Integer;
     IsIgnored: Boolean;
@@ -215,6 +217,7 @@ type
     function IsRequired(AValue: Boolean = True): TEntityBuilder<T>;
     function IsAutoInc(AValue: Boolean = True): TEntityBuilder<T>;
     function MaxLength(ALength: Integer): TEntityBuilder<T>;
+    function MinLength(ALength: Integer): TEntityBuilder<T>;
     function Precision(APrecision, AScale: Integer): TEntityBuilder<T>;
     function HasDbType(ADataType: TFieldType): TEntityBuilder<T>;
     function HasConverter(AConverterClass: TClass): TEntityBuilder<T>;
@@ -268,6 +271,7 @@ type
     function IsRequired(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsAutoInc(AValue: Boolean = True): IPropertyBuilder<T>;
     function HasMaxLength(ALength: Integer): IPropertyBuilder<T>;
+    function HasMinLength(ALength: Integer): IPropertyBuilder<T>;
     function HasPrecision(APrecision, AScale: Integer): IPropertyBuilder<T>;
     function HasDbType(ADataType: TFieldType): IPropertyBuilder<T>;
     function HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
@@ -398,7 +402,7 @@ begin
       begin
         if (Attr is ColumnAttribute) or (Attr is PrimaryKeyAttribute) or (Attr is AutoIncAttribute) or 
             (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) or
-            (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) or
+            (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is MinLengthAttribute) or (Attr is PrecisionAttribute) or
             (Attr is TypeConverterAttribute) or (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or
             (Attr is HasOneAttribute) or (Attr is InversePropertyAttribute) or (Attr is DeleteBehaviorAttribute) or
             (Attr is ManyToManyAttribute) or (Attr is VersionAttribute) or (Attr is CreatedAtAttribute) or
@@ -427,6 +431,7 @@ begin
 
           if Attr is RequiredAttribute then PropMap.IsRequired := True;
           if Attr is MaxLengthAttribute then PropMap.MaxLength := MaxLengthAttribute(Attr).Length;
+          if Attr is MinLengthAttribute then PropMap.MinLength := MinLengthAttribute(Attr).Length;
           if Attr is PrecisionAttribute then
           begin
             PropMap.Precision := PrecisionAttribute(Attr).Precision;
@@ -553,6 +558,7 @@ begin
   IsAutoInc := False;
   IsRequired := False;
   MaxLength := 0;
+  MinLength := 0;
   Precision := 0;
   Scale := 0;
   IsIgnored := False;
@@ -717,6 +723,12 @@ end;
 function TEntityBuilder<T>.MaxLength(ALength: Integer): TEntityBuilder<T>;
 begin
   GetCurrentProp.MaxLength := ALength;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.MinLength(ALength: Integer): TEntityBuilder<T>;
+begin
+  GetCurrentProp.MinLength := ALength;
   Result := Self;
 end;
 
@@ -967,6 +979,12 @@ end;
 function TPropertyBuilder<T>.HasMaxLength(ALength: Integer): IPropertyBuilder<T>;
 begin
   FPropMap.MaxLength := ALength;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasMinLength(ALength: Integer): IPropertyBuilder<T>;
+begin
+  FPropMap.MinLength := ALength;
   Result := Self;
 end;
 

@@ -214,7 +214,8 @@ type
 implementation
 
 uses
-  Dext.Utils;
+  Dext.Utils,
+  Dext.Entity.Validator;
 
 { Helper Functions }
 
@@ -916,6 +917,14 @@ begin
                end;
              end;
                
+
+             // Validate Entity
+             var Map: TEntityMap := nil;
+             if FModelBuilder <> nil then
+               Map := FModelBuilder.GetMap(Entity.ClassInfo);
+               
+             TEntityValidator.Validate(Entity, Map);
+
              AddedGroups[Entity.ClassInfo].Add(Entity);
           end;
         end;
@@ -943,6 +952,14 @@ begin
         if Pair.Value = esModified then
         begin
           Entity := Pair.Key;
+          
+          // Validate Entity
+          var Map: TEntityMap := nil;
+          if FModelBuilder <> nil then
+            Map := FModelBuilder.GetMap(Entity.ClassInfo);
+            
+          TEntityValidator.Validate(Entity, Map);
+
           DbSet := DataSet(Entity.ClassInfo);
           DbSet.PersistUpdate(Entity);
           Inc(Result);

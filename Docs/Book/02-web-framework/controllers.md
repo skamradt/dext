@@ -93,14 +93,41 @@ Services.AddSingleton<ILogger, TConsoleLogger>;
 
 ## Route Attributes
 
+Dext supports two styles for defining routes. **Important**: Parameter routes **MUST start with a slash** (`/`).
+
+### Option 1: Consolidated (Recommended)
 ```pascal
-[Route('/api/v1/products')]     // Base route
-[HttpGet]                        // GET /api/v1/products
-[HttpGet('/search')]            // GET /api/v1/products/search
-[HttpGet('/{id}')]               // GET /api/v1/products/123
-[HttpPost]                       // POST /api/v1/products
-[HttpPut('/{id}')]               // PUT /api/v1/products/123
-[HttpDelete('/{id}')]            // DELETE /api/v1/products/123
+[ApiController('/api/v1/products')] // Base route defined in ApiController
+type TProductsController = class
+  // ...
+  [HttpGet]                         // GET /api/v1/products
+  function GetAll: IActionResult;
+
+  [HttpGet('/{id}')]                // GET /api/v1/products/123 (Leading slash is MANDATORY)
+  function Get(Id: Integer): IActionResult;
+end;
+```
+
+### Option 2: Separated (.NET Style)
+```pascal
+[ApiController]
+[Route('/api/v1/products')]         // Base route defined in Route attribute
+type TProductsController = class
+  // ...
+  [HttpGet]
+  function GetAll: IActionResult;
+
+  [HttpGet, Route('/{id}')]         // GET /api/v1/products/123
+  function Get(Id: Integer): IActionResult;
+end;
+```
+
+### Route Parameters
+```pascal
+[HttpGet('/search')]                // GET /api/v1/products/search
+[HttpPost]                          // POST /api/v1/products
+[HttpPut('/{id}')]                  // PUT /api/v1/products/123
+[HttpDelete('/{id}')]               // DELETE /api/v1/products/123
 ```
 
 ## Parameter Binding

@@ -74,6 +74,16 @@ type
 | `[ForeignKey('col')]` | Coluna de chave estrangeira |
 | `[InverseProperty('prop')]` | Link de navegação |
 
+### Coleções & Ownership de Entidades
+
+Ao definir propriedades `IList<T>` que também são gerenciadas pelo `DbContext`:
+
+1. Use `FItems: IList<TFilho>` como field privado.
+2. Inicialize no construtor com `TCollections.CreateList<TFilho>(False)`.
+3. **Crucial**: Passe `False` para `OwnsObjects`.
+   - **Razão**: O `DbContext` já gerencia o ciclo de vida das entidades rastreadas. Se a lista também tentar liberá-las (`True`), ocorrerá **Invalid Pointer Operation** (Double Free) no shutdown.
+4. **Testes Unitários**: Como não há DbContext, você **deve liberar manualmente** os itens filhos no bloco `finally` do teste.
+
 ### Conversão de Tipos
 
 | Atributo | Descrição |

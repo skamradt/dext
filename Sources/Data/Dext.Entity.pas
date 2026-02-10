@@ -49,6 +49,7 @@ uses
   Dext.Entity.Tenancy,
   Dext.Entity.TypeConverters,
   Dext.Entity.TypeSystem,
+  Dext.Entity.Validator,
   Dext.Specifications.SQL.Generator
   // {END_DEXT_USES}
   ;
@@ -69,6 +70,7 @@ type
   AutoIncAttribute = Dext.Entity.Attributes.AutoIncAttribute;
   RequiredAttribute = Dext.Entity.Attributes.RequiredAttribute;
   MaxLengthAttribute = Dext.Entity.Attributes.MaxLengthAttribute;
+  MinLengthAttribute = Dext.Entity.Attributes.MinLengthAttribute;
   PrecisionAttribute = Dext.Entity.Attributes.PrecisionAttribute;
   NotMappedAttribute = Dext.Entity.Attributes.NotMappedAttribute;
   FieldAttribute = Dext.Entity.Attributes.FieldAttribute;
@@ -299,6 +301,9 @@ type
   // IEntityBuilder<T> = Dext.Entity.TypeSystem.IEntityBuilder<T>;
   // TEntityBuilder<T> = Dext.Entity.TypeSystem.TEntityBuilder<T>;
   // TEntityType<T> = Dext.Entity.TypeSystem.TEntityType<T>;
+
+  // Dext.Entity.Validator
+  TEntityValidator = Dext.Entity.Validator.TEntityValidator;
 
   // Dext.Specifications.SQL.Generator
   ISQLColumnMapper = Dext.Specifications.SQL.Generator.ISQLColumnMapper;

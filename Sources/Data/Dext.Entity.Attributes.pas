@@ -85,6 +85,17 @@ type
   end;
 
   /// <summary>
+  ///   Specifies the minimum length of array/string data allowed in a property.
+  /// </summary>
+  MinLengthAttribute = class(TCustomAttribute)
+  private
+    FLength: Integer;
+  public
+    constructor Create(ALength: Integer);
+    property Length: Integer read FLength;
+  end;
+
+  /// <summary>
   ///   Specifies the precision and scale for numeric columns.
   /// </summary>
   PrecisionAttribute = class(TCustomAttribute)
@@ -491,6 +502,13 @@ end;
 { MaxLengthAttribute }
 
 constructor MaxLengthAttribute.Create(ALength: Integer);
+begin
+  FLength := ALength;
+end;
+
+{ MinLengthAttribute }
+
+constructor MinLengthAttribute.Create(ALength: Integer);
 begin
   FLength := ALength;
 end;

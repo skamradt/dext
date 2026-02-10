@@ -139,20 +139,36 @@ begin
 
             var Attributes := Method.GetAttributes;
 
-            // ✅ PROCURAR ATRIBUTOS [HttpGet], [HttpPost], etc.
+            // ✅ FIX: ITERATE ALL ATTRIBUTES TO COMBINE INFO
+            // e.g. [HttpGet, Route('/path')] should combine Method='GET' and Path='/path'
+            var FoundRoute := False;
+            MethodInfo.Method := Method;
+            MethodInfo.Path := '';
+            MethodInfo.HttpMethod := '';
+            MethodInfo.RouteAttribute := nil; // Keep reference to at least one
+
             for Attr in Attributes do
             begin
               if Attr is RouteAttribute then
               begin
-                MethodInfo.Method := Method;
-                MethodInfo.RouteAttribute := RouteAttribute(Attr);
-                MethodInfo.Path := MethodInfo.RouteAttribute.Path;
-                MethodInfo.HttpMethod := MethodInfo.RouteAttribute.Method;
+                var R := RouteAttribute(Attr);
+                FoundRoute := True;
+                MethodInfo.RouteAttribute := R;
+                
+                // Prioritize non-empty values
+                if R.Path <> '' then
+                  MethodInfo.Path := R.Path;
+                  
+                if R.Method <> '' then
+                  MethodInfo.HttpMethod := R.Method;
+              end;
+            end;
 
+            // ✅ ADD METHOD IF ANY ROUTE ATTRIBUTE FOUND
+            if FoundRoute then
+            begin
                 MethodsList.Add(MethodInfo);
                 HasRouteMethods := True;
-                Break;
-              end;
             end;
           end;
 
@@ -231,6 +247,20 @@ begin
     var Prefix := '';
     if Assigned(Controller.ControllerAttribute) then
       Prefix := Controller.ControllerAttribute.Prefix;
+
+    // ✅ FIX: CHECK FOR [Route] ATTRIBUTE ON CLASS TO OVERRIDE/SET PREFIX
+    // This allows support for [ApiController, Route('/api/events')] syntax
+    for var Attr in Controller.RttiType.GetAttributes do
+    begin
+      if Attr is RouteAttribute then
+      begin
+        var R := RouteAttribute(Attr);
+        if R.Path <> '' then
+          Prefix := R.Path;
+        // Break? Usually one route attribute per class.
+        Break; 
+      end;
+    end;
 
     SafeWriteLn('  📦 ' + Format('  %s (Prefix: "%s")', [Controller.RttiType.Name, Prefix]));
 

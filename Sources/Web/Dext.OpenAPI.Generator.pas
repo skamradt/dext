@@ -1146,11 +1146,31 @@ begin
       // Add operation to existing path item
       Operation := CreateOperation(Metadata);
       case IndexStr(Metadata.Method.ToUpper, ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) of
-        0: ExistingPathItem.Get := Operation;
-        1: ExistingPathItem.Post := Operation;
-        2: ExistingPathItem.Put := Operation;
-        3: ExistingPathItem.Delete := Operation;
-        4: ExistingPathItem.Patch := Operation;
+        0: 
+        begin
+          if Assigned(ExistingPathItem.Get) then ExistingPathItem.Get.Free; 
+          ExistingPathItem.Get := Operation;
+        end;
+        1: 
+        begin
+          if Assigned(ExistingPathItem.Post) then ExistingPathItem.Post.Free;
+          ExistingPathItem.Post := Operation;
+        end;
+        2: 
+        begin
+          if Assigned(ExistingPathItem.Put) then ExistingPathItem.Put.Free;
+          ExistingPathItem.Put := Operation;
+        end;
+        3: 
+        begin
+          if Assigned(ExistingPathItem.Delete) then ExistingPathItem.Delete.Free;
+          ExistingPathItem.Delete := Operation;
+        end;
+        4: 
+        begin
+          if Assigned(ExistingPathItem.Patch) then ExistingPathItem.Patch.Free;
+          ExistingPathItem.Patch := Operation;
+        end;
       else
         Operation.Free;
       end;

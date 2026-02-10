@@ -132,6 +132,7 @@ type
 
     class function BadRequest: IResult; overload;
     class function BadRequest(const AError: string): IResult; overload;
+    class function BadRequest<T>(const AError: T): IResult; overload;
     
     class function NotFound: IResult; overload;
     class function NotFound(const AMessage: string): IResult; overload;
@@ -148,7 +149,8 @@ type
     class function InternalError(const E: Exception): IResult; overload;
     class function InternalError(const AMessage: string): IResult; overload;
 
-    class function Json(const AJson: string; AStatusCode: Integer = 200): IResult;
+    class function Json(const AJson: string; AStatusCode: Integer = 200): IResult; overload;
+    class function Json<T>(const AValue: T; AStatusCode: Integer = 200): IResult; overload;
     class function Text(const AContent: string; AStatusCode: Integer = 200): IResult;
     class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult; // Added
     class function Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
@@ -370,6 +372,11 @@ begin
   Result := TJsonResult.Create(Format('{"error": "%s"}', [AError]), 400);
 end;
 
+class function Results.BadRequest<T>(const AError: T): IResult;
+begin
+  Result := TObjectResult<T>.Create(AError, 400);
+end;
+
 class function Results.NotFound: IResult;
 begin
   Result := TStatusCodeResult.Create(404);
@@ -409,6 +416,11 @@ end;
 class function Results.Json(const AJson: string; AStatusCode: Integer): IResult;
 begin
   Result := TJsonResult.Create(AJson, AStatusCode);
+end;
+
+class function Results.Json<T>(const AValue: T; AStatusCode: Integer): IResult;
+begin
+  Result := TObjectResult<T>.Create(AValue, AStatusCode);
 end;
 
 class function Results.Text(const AContent: string; AStatusCode: Integer): IResult;

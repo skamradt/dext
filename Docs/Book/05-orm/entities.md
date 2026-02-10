@@ -62,6 +62,16 @@ type
 | `[ForeignKey('col')]` | Foreign key column |
 | `[InverseProperty('prop')]` | Navigation link |
 
+### Entity Collections & Ownership
+
+When defining `IList<T>` properties that are also managed by the `DbContext` (e.g., in a parent-child relationship):
+
+1. Use `FItems: IList<TChild>` as a private field.
+2. Initialize it in the constructor using `TCollections.CreateList<TChild>(False)`.
+3. **Crucial**: Pass `False` for `OwnsObjects`.
+   - **Reason**: The `DbContext` already manages the lifecycle of tracked entities. If the list also owns them (`True`), you will encounter an **Invalid Pointer Operation** (Double Free) during shutdown.
+4. **Unit Tests**: Since no DbContext exists in unit tests, you **must manually free** the child items in your test's `finally` block.
+
 ### Type Hints
 
 | Attribute | Description |
