@@ -2,7 +2,7 @@
 
 Fluent query API for retrieving data.
 
-## Return Types: IList<T>
+## Return Types: IList\<T\>
 
 > [!IMPORTANT]
 > Dext uses `IList<T>` from `Dext.Collections`, not `TObjectList<T>` from `System.Generics.Collections`.
@@ -65,6 +65,41 @@ var User := Context.Users.FirstOrDefault;
 
 ## Filtering (Where)
 
+### Smart Properties (Recommended)
+
+Use `var` inline for Props (simulating C# lambda variables):
+
+```pascal
+// ✅ CORRECT: var inline camelCase, close to usage scope
+var u := TUser.Props;
+var ActiveUsers := Context.Users
+  .Where(u.IsActive = True)
+  .ToList;
+
+// Multiple conditions
+var Results := Context.Users
+  .Where((u.Age >= 18) and (u.Status = 'active'))
+  .ToList;
+```
+
+> [!IMPORTANT]
+> **Why camelCase?** To differentiate from PascalCase method variables.  
+> In multi-table queries with Include/Join, each table has its own inline var (`var u`, `var o`, `var p`).
+
+```pascal
+// ❌ WRONG: Verbose, repeats TUser.Props for every field
+ExistingUser := Context.Users
+  .Where((TUser.Props.Email = Email) and
+         (TUser.Props.Status <> usDeleted))
+  .FirstOrDefault;
+
+// ✅ CORRECT: var inline, concise
+var u := TUser.Props;
+ExistingUser := Context.Users
+  .Where((u.Email = Email) and (u.Status <> usDeleted))
+  .FirstOrDefault;
+```
+
 ### Lambda Expression
 
 ```pascal
@@ -76,47 +111,51 @@ var ActiveUsers := Context.Users
   .ToList;
 ```
 
-### Smart Properties (Recommended)
-
-```pascal
-var ActiveUsers := Context.Users
-  .Where(TUser.Props.IsActive = True)
-  .ToList;
-
-// Multiple conditions
-var Results := Context.Users
-  .Where(
-    (TUser.Props.Age >= 18) and 
-    (TUser.Props.Status = 'active')
-  )
-  .ToList;
-```
-
 ## Ordering
 
+> [!WARNING]
+> `OrderBy` requires `.Asc` or `.Desc` — passing a Prop directly causes `E2010 Incompatible types`.
+
 ```pascal
+var u := TUser.Props;
+
 // Ascending
 var Users := Context.Users
-  .OrderBy(TUser.Props.Name)
+  .QueryAll
+  .OrderBy(u.Name.Asc)
   .ToList;
 
 // Descending
 var Users := Context.Users
-  .OrderByDescending(TUser.Props.CreatedAt)
+  .QueryAll
+  .OrderBy(u.CreatedAt.Desc)
   .ToList;
 
 // Multiple columns
 var Users := Context.Users
-  .OrderBy(TUser.Props.LastName)
-  .ThenBy(TUser.Props.FirstName)
+  .QueryAll
+  .OrderBy(u.LastName.Asc)
+  .OrderBy(u.FirstName.Asc)
   .ToList;
+```
+
+```pascal
+// ❌ WRONG: Causes E2010
+.OrderBy(TUser.Props.CreatedAt)
+
+// ✅ CORRECT: Use .Asc or .Desc
+var u := TUser.Props;
+.OrderBy(u.CreatedAt.Asc)
+.OrderBy(u.CreatedAt.Desc)
 ```
 
 ## Pagination
 
 ```pascal
+var u := TUser.Props;
 var Page := Context.Users
-  .OrderBy(TUser.Props.Id)
+  .QueryAll
+  .OrderBy(u.Id.Asc)
   .Skip(20)   // Skip first 20
   .Take(10)   // Take next 10
   .ToList;
@@ -143,32 +182,52 @@ var Dtos := Context.Users
 ## Aggregates
 
 ```pascal
+var u := TUser.Props;
+
 // Count
 var Total := Context.Users.Count;
 var ActiveCount := Context.Users
-  .Where(TUser.Props.IsActive = True)
+  .Where(u.IsActive = True)
   .Count;
 
-// Any / Exists
+// Any / Exists (preferred for seeder checks)
 var HasAdmin := Context.Users
-  .Where(TUser.Props.Role = 'admin')
+  .Where(u.Role = 'admin')
   .Any;
 ```
 
-## Raw SQL
+## Custom Types (Enums)
 
-For complex queries:
+If a specific type (like an Enum) doesn't have a pre-defined alias, create one using `Prop<T>`:
 
 ```pascal
-var Users := Context.FromSql<TUser>(
-  'SELECT * FROM users WHERE created_at > $1',
-  [DateToISO(Yesterday)]
-).ToList;
+type
+  StatusType = Prop<TOrderStatus>;  // Custom smart type
+```
+
+Use in queries:
+```pascal
+var o := TOrder.Props;
+var PaidOrders := Context.Orders
+  .Where(o.Status = osPaid)
+  .OrderBy(o.Total.Desc)
+  .ToList;
+```
+
+## Ghost Entities (Prototype)
+
+Use `Prototype.Entity<T>` from `Dext.Entity.Prototype` for type-safe metadata in queries:
+
+```pascal
+var p := Prototype.Entity<TProduct>;
+var Expensive := Context.Products
+  .Where(p.Price > 100)
+  .ToList;
 ```
 
 ## Query Execution
 
-Queries are lazy - executed only when you:
+Queries are lazy — executed only when you:
 
 | Method | Effect |
 |--------|--------|

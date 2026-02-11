@@ -1,107 +1,129 @@
 # Mocking
 
-Create test doubles with `Mock<T>` for interfaces and classes.
+Create test doubles with `Mock<T>` for interfaces.
+
+> [!IMPORTANT]
+> `Mock<T>` is a **generic Record** that lives in `Dext.Mocks` — it is **NOT** part of the `Dext.Testing` facade. It does **NOT** need `.Free`.
 
 ## Interface Mocking
 
+Interfaces must have RTTI enabled (`{$M+}`) to be mockable:
+
 ```pascal
 uses
-  Dext.Testing.Mock;
+  Dext.Mocks; // Mock<T>, Arg, Times
 
-var
-  MockRepo: Mock<IUserRepository>;
-  Service: TUserService;
+type
+  {$M+} // REQUIRED for mockable interfaces
+  IService = interface
+    ['{...}']
+    function Calculate(A: Integer): Integer;
+  end;
+  {$M-}
+
+procedure TestMock;
 begin
-  // Create mock
-  MockRepo := Mock<IUserRepository>.Create;
-  
-  // Setup behavior
-  MockRepo.Setup.WhenCalling('FindById').WithArgs([1]).Returns(SomeUser);
-  MockRepo.Setup.WhenCalling('GetAll').Returns(UserList);
-  
-  // Use in production code
-  Service := TUserService.Create(MockRepo.Instance);
-  
-  // Verify calls
-  MockRepo.Received(Times.Once).FindById(1);
-  MockRepo.DidNotReceive.Delete(Arg.Any<Integer>);
+  // 1. Create Mock
+  var MyMock := Mock<IService>.Create;
+
+  // 2. Setup (fluent definition)
+  MyMock.Setup.Returns(42).When.Calculate(Arg.Any<Integer>);
+
+  // 3. Act
+  var Result := MyMock.Instance.Calculate(10); // Returns 42
+
+  // 4. Verify
+  MyMock.Received(Times.Once).Calculate(10);
 end;
 ```
 
 ## Setup Methods
 
 ```pascal
-// Return value
-MockRepo.Setup.WhenCalling('GetById').Returns(User);
+// Return a specific value
+MyMock.Setup.Returns(42).When.Calculate(Arg.Any<Integer>);
 
 // Return different values in sequence
-MockRepo.Setup.WhenCalling('GetNext')
-  .Returns(User1)
-  .Then.Returns(User2)
-  .Then.Returns(User3);
+MyMock.Setup.Returns(User1).When.GetNext;
+// On second call, returns User2, etc.
 
 // Throw exception
-MockRepo.Setup.WhenCalling('GetById').Throws(ENotFound);
-
-// Execute callback
-MockRepo.Setup.WhenCalling('Save').Executes(procedure(Args: TArray<TValue>)
-  begin
-    WriteLn('Save called with: ', Args[0].AsObject.ClassName);
-  end);
+MyMock.Setup.Throws(ENotFound).When.GetById(Arg.Any<Integer>);
 ```
 
 ## Argument Matching
 
 ```pascal
+// Any value of a type
+MyMock.Setup.Returns(User).When.FindById(Arg.Any<Integer>);
+
 // Exact value
-MockRepo.Setup.WhenCalling('FindById').WithArgs([42]).Returns(User);
-
-// Any value
-MockRepo.Setup.WhenCalling('FindById').WithArgs([Arg.Any<Integer>]).Returns(User);
-
-// Predicate
-MockRepo.Setup.WhenCalling('FindById')
-  .WithArgs([Arg.Is<Integer>(function(I: Integer): Boolean
-    begin
-      Result := I > 0;
-    end)])
-  .Returns(User);
+MyMock.Received(Times.Once).FindById(42);
 ```
 
 ## Verification
 
 ```pascal
 // Verify called exactly once
-MockRepo.Received(Times.Once).FindById(1);
+MyMock.Received(Times.Once).FindById(1);
 
 // Verify called N times
-MockRepo.Received(Times.Exactly(3)).Save(Arg.Any<TUser>);
+MyMock.Received(Times.Exactly(3)).Save(Arg.Any<TUser>);
 
 // Verify never called
-MockRepo.DidNotReceive.Delete(Arg.Any<Integer>);
+MyMock.DidNotReceive.Delete(Arg.Any<Integer>);
 
 // Verify at least/at most
-MockRepo.Received(Times.AtLeast(1)).GetAll;
-MockRepo.Received(Times.AtMost(5)).GetAll;
+MyMock.Received(Times.AtLeast(1)).GetAll;
+MyMock.Received(Times.AtMost(5)).GetAll;
 
 // Verify no other calls were made
-MockRepo.VerifyNoOtherCalls;
+MyMock.VerifyNoOtherCalls;
 ```
 
-## Class Mocking
-
-For classes with virtual methods:
+## Test Fixture Example
 
 ```pascal
-var
-  MockService: Mock<TUserService>;
+uses
+  Dext.Testing,  // Facade: Should, [TestFixture], [Test]
+  Dext.Mocks;    // Mock<T>
+
+type
+  [TestFixture]
+  TUserServiceTests = class
+  private
+    FMockRepo: Mock<IUserRepository>;
+    FService: TUserService;
+  public
+    [Setup]
+    procedure Setup;
+
+    [Test]
+    procedure Should_Find_User;
+  end;
+
+procedure TUserServiceTests.Setup;
 begin
-  MockService := Mock<TUserService>.Create;
-  
-  MockService.Setup.WhenCalling('Calculate').Returns(42);
-  
-  var Result := MockService.Instance.Calculate;
-  Assert(Result = 42);
+  FMockRepo := Mock<IUserRepository>.Create;
+  FService := TUserService.Create(FMockRepo.Instance);
+end;
+
+procedure TUserServiceTests.Should_Find_User;
+begin
+  // Arrange
+  var User := TUser.Create;
+  User.Name := 'Alice';
+  FMockRepo.Setup.Returns(User).When.FindById(1);
+
+  // Act
+  var Found := FService.GetById(1);
+
+  // Assert
+  Should(Found).NotBeNil;
+  Should(Found.Name).Be('Alice');
+
+  // Verify
+  FMockRepo.Received(Times.Once).FindById(1);
 end;
 ```
 

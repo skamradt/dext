@@ -1,74 +1,120 @@
 # Controllers
 
-Controllers fornecem uma abordagem baseada em classes, estilo MVC, para organizar endpoints.
+Controllers fornecem uma abordagem baseada em classes (estilo MVC) para organizar endpoints.
 
-> 📦 **Exemplo**: [Web.ControllerExample](../../../Examples/Web.ControllerExample/)
+> 📦 **Exemplo**: [Web.TicketSales](../../../Examples/Web.TicketSales/)
 
 ## Controller Básico
+
+O Dext suporta dois estilos para definir controllers. **Importante**: Rotas com parâmetros **DEVEM iniciar com barra** (`/`).
+
+### Opção 1: Consolidado (Recomendado)
+
+```pascal
+type
+  [ApiController('/api/users')]       // Rota base definida no ApiController
+  TUsersController = class
+  private
+    FUserService: IUserService;
+  public
+    constructor Create(UserService: IUserService);
+    
+    [HttpGet]                          // GET /api/users
+    function GetAll: IResult;
+
+    [HttpGet('/{id}')]                 // GET /api/users/123 (barra inicial OBRIGATÓRIA)
+    function GetById(Id: Integer): IResult;
+    
+    [HttpPost]                         // POST /api/users
+    function CreateUser([Body] Dto: TCreateUserDto): IResult;
+    
+    [HttpPut('/{id}')]                 // PUT /api/users/123
+    function UpdateUser(Id: Integer; [Body] Dto: TUpdateUserDto): IResult;
+    
+    [HttpDelete('/{id}')]              // DELETE /api/users/123
+    function DeleteUser(Id: Integer): IResult;
+  end;
+```
+
+### Opção 2: Separado (Estilo .NET)
 
 ```pascal
 type
   [ApiController]
-  [Route('/api/users')]
-  TUsersController = class // Não precisa mais herdar de TController
+  [Route('/api/users')]                // Rota base via atributo Route
+  TUsersController = class
   public
-    [HttpGet]
-    function GetAll: IActionResult;
-    
-    [HttpGet('{id}')]
-    function Get(Id: Int64): IActionResult;
-    
-    [HttpPost]
-    function Create([Body] User: TUser): IActionResult;
-    
-    [HttpPut('{id}')]
-    function Update(Id: Int64; [Body] User: TUser): IActionResult;
-    
-    [HttpDelete('{id}')]
-    function Delete(Id: Int64): IActionResult;
+    [HttpGet]                          // GET /api/users
+    function GetAll: IResult;
+
+    [HttpGet, Route('/{id}')]          // GET /api/users/123
+    function GetById(Id: Integer): IResult;
   end;
 ```
 
+> [!WARNING]
+> - ❌ `[HttpGet('{id}')]` → **Falta a barra inicial**. Pode gerar rotas incorretas.
+> - ❌ `[Route]` sem `[ApiController]` → O Controller não será registrado pelo scanner.
+
 ## Implementação
 
+Actions de Controller retornam `IResult` diretamente usando o helper `Results`:
+
 ```pascal
-function TUsersController.GetAll: IActionResult;
+function TUsersController.GetAll: IResult;
 begin
-  var Users := FUserService.GetAll;
-  Result := Ok(Users);
+  Result := Results.Ok(FUserService.GetAll);
 end;
 
-function TUsersController.GetById(Id: Integer): IActionResult;
+function TUsersController.GetById(Id: Integer): IResult;
 begin
   var User := FUserService.FindById(Id);
   if User = nil then
-    Result := NotFound
+    Result := Results.NotFound('Usuário não encontrado')
   else
-    Result := Ok(User);
+    Result := Results.Ok(User);
 end;
 
-function TUsersController.Create(User: TUser): IActionResult;
+function TUsersController.CreateUser(Dto: TCreateUserDto): IResult;
 begin
-  FUserService.Add(User);
-  Result := Created('/api/users/' + User.Id.ToString, User);
+  var User := FUserService.Add(Dto);
+  Result := Results.Created('/api/users/' + IntToStr(User.Id), User);
 end;
 ```
 
-## Registrar Controller
+> [!IMPORTANT]
+> **Nomeação de Métodos**: NUNCA nomeie um método apenas como `Create` — ele conflita com construtores Delphi (E2254). Use nomes explícitos como `CreateUser`, `CreateOrder`, etc.
+
+## Registrar Controllers
+
+Controllers são registrados em `ConfigureServices` e mapeados no pipeline:
 
 ```pascal
-App.Configure(procedure(App: IApplicationBuilder)
-  begin
-    App.MapController<TUsersController>;
-  end);
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
+begin
+  Services
+    .AddDbContext<TAppDbContext>(ConfigureDatabase)
+    .AddScoped<IUserService, TUserService>
+    .AddControllers;  // Registra controllers para DI
+end;
+
+procedure TStartup.Configure(const App: IWebApplication);
+begin
+  App.Builder
+    .UseExceptionHandler
+    .UseHttpLogging
+    .MapControllers      // Mapeia rotas de controllers (ANTES do Swagger)
+    .UseSwagger(Swagger.Title('Minha API').Version('v1'));
+end;
 ```
 
 ## Injeção via Construtor
 
+Serviços são injetados automaticamente via construtor quando registrados:
+
 ```pascal
 type
-  [ApiController]
-  [Route('/api/users')]
+  [ApiController('/api/users')]
   TUsersController = class
   private
     FUserService: IUserService;
@@ -84,55 +130,78 @@ begin
 end;
 ```
 
-Serviços são injetados automaticamente quando registrados:
-
 ```pascal
-Services.AddScoped<IUserService, TUserService>;
-Services.AddSingleton<ILogger, TConsoleLogger>;
-```
-
-## Atributos de Rota (Routing)
-
-O Dext suporta dois estilos para definir rotas. **Importante**: Rotas com parâmetros **DEVEM iniciar com barra** (`/`).
-
-### Opção 1: Consolidado (Recomendado)
-```pascal
-[ApiController('/api/v1/products')] // Rota base no ApiController
-type TProductsController = class
-  // ...
-  [HttpGet]                         // GET /api/v1/products
-  function GetAll: IActionResult;
-
-  [HttpGet('/{id}')]                // GET /api/v1/products/123 (Barra inicial é OBRIGATÓRIA)
-  function Get(Id: Integer): IActionResult;
-end;
-```
-
-### Opção 2: Separado (Estilo .NET)
-```pascal
-[ApiController]
-[Route('/api/v1/products')]         // Rota base no atributo Route
-type TProductsController = class
-  // ...
-  [HttpGet]
-  function GetAll: IActionResult;
-
-  [HttpGet, Route('/{id}')]         // GET /api/v1/products/123
-  function Get(Id: Integer): IActionResult;
-end;
+// Em ConfigureServices:
+Services
+  .AddScoped<IUserService, TUserService>
+  .AddSingleton<ILogger, TConsoleLogger>
+  .AddControllers;
 ```
 
 ## Action Results
 
 ```pascal
-Result := Ok(Data);                        // 200 + JSON
-Result := Created('/path', Data);          // 201 + Header Location
-Result := NoContent;                        // 204
-Result := BadRequest('Dados inválidos');    // 400
-Result := Unauthorized;                     // 401
-Result := Forbidden;                        // 403
-Result := NotFound;                         // 404
-Result := StatusCode(418, 'Eu sou um bule'); // Customizado
+Result := Results.Ok(Data);                        // 200 + JSON
+Result := Results.Ok<TMyDto>(Dto);                 // 200 + serialização tipada
+Result := Results.Created('/path', Data);          // 201 + Header Location
+Result := Results.NoContent;                        // 204
+Result := Results.BadRequest('Dados inválidos');    // 400
+Result := Results.NotFound('Não encontrado');       // 404
+Result := Results.StatusCode(401);                  // Status customizado
+Result := Results.Json<TMyDto>(Dto);               // JSON explícito
+```
+
+> [!NOTE]
+> `Results.Unauthorized` **pode não existir** — use `Results.StatusCode(401)` como alternativa segura.
+
+## Model Binding de Parâmetros
+
+```pascal
+// Rota paramétrica (barra inicial OBRIGATÓRIA)
+[HttpGet('/{id}')]
+function GetById(Id: Integer): IResult;
+
+// Query parameter
+[HttpGet('/search')]
+function Search([FromQuery] Q: string; [FromQuery] Page: Integer): IResult;
+
+// Body
+[HttpPost]
+function CreateUser([FromBody] Request: TCreateUserDto): IResult;
+
+// Header
+[HttpGet]
+function Auth([FromHeader('Authorization')] Token: string): IResult;
+```
+
+## Protegendo Controllers
+
+```pascal
+type
+  [ApiController('/api/secure')]
+  [Authorize]                   // Exige autenticação para todos os métodos
+  TSecureController = class
+  public
+    [HttpGet]
+    [AllowAnonymous]            // Exceção: permite acesso público
+    function PublicInfo: IResult;
+
+    [HttpPost]
+    [Authorize('Admin')]        // Exige role 'Admin'
+    function RestrictedAction: IResult;
+  end;
+```
+
+## Metadados OpenAPI
+
+Enriqueça a documentação Swagger com tags:
+
+```pascal
+// Agrupa endpoints via WithTags
+[ApiController('/api/users')]
+TUsersController = class
+  // Todos os endpoints aparecem sob a tag "Users" no Swagger
+end;
 ```
 
 ---

@@ -2,17 +2,17 @@
 
 Aprenda a criar sua primeira entidade e contexto de banco de dados.
 
-> 📦 **Exemplo**: [Orm.EntityDemo](../../../Examples/Orm.EntityDemo/)
+> 📦 **Exemplo**: [Web.EventHub](../../../Examples/Web.EventHub/)
 
 ## 1. Criar uma Entidade
 
 ```pascal
-unit User;
+unit MeuProjeto.Domain.Entities;
 
 interface
 
 uses
-  Dext.Entity.Attributes;
+  Dext.Entity; // Facade: Table, Column, PK, AutoInc, Required, MaxLength
 
 type
   [Table('users')]
@@ -25,14 +25,14 @@ type
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
-    
-    [Column('name')]
+
+    [Required, MaxLength(100)]
     property Name: string read FName write FName;
-    
-    [Column('email')]
+
+    [Required, MaxLength(200)]
     property Email: string read FEmail write FEmail;
-    
-    [Column('created_at')]
+
+    [CreatedAt]
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
   end;
 
@@ -41,17 +41,20 @@ implementation
 end.
 ```
 
+> [!IMPORTANT]
+> Use a facade `Dext.Entity` para atributos — **NÃO** `Dext.Entity.Attributes` diretamente.  
+> Evite atributos `[Column]` redundantes; o Dext mapeia propriedades automaticamente via Naming Strategy.
+
 ## 2. Criar um DbContext
 
 ```pascal
-unit AppDbContext;
+unit MeuProjeto.Data.Context;
 
 interface
 
 uses
-  Dext.Entity.Context,
-  Dext.Entity.Core,
-  User;
+  Dext.Entity.Core,    // IDbSet<T>, TDbContext - OBRIGATÓRIO para genéricos
+  Dext.Entity;         // Facade
 
 type
   TAppDbContext = class(TDbContext)
@@ -63,6 +66,9 @@ type
 
 implementation
 
+uses
+  MeuProjeto.Domain.Entities;
+
 function TAppDbContext.GetUsers: IDbSet<TUser>;
 begin
   Result := Entities<TUser>;
@@ -71,118 +77,127 @@ end;
 end.
 ```
 
-## 3. Configurar Conexão
+> [!IMPORTANT]
+> Como `IDbSet<T>` é genérico, você **DEVE** adicionar `Dext.Entity.Core` ao uses.  
+> A facade `Dext.Entity` **NÃO** exporta tipos genéricos.  
+> Use **Properties** para expor `IDbSet<T>` (recomendado) — isso evita ambiguidades sintáticas.
+
+## 3. Configurar Conexão (via DI)
+
+A abordagem recomendada é registrar o DbContext via DI no seu Startup:
 
 ```pascal
-uses
-  FireDAC.Comp.Client,
-  Dext.Entity.Drivers.FireDAC,
-  Dext.Entity.Drivers.Interfaces,
-  Dext.Entity.Dialects;
-
-var
-  FDConn: TFDConnection;
-  Connection: IDbConnection;
-  Dialect: ISQLDialect;
-  Ctx: TAppDbContext;
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  // Configurar conexão FireDAC
-  FDConn := TFDConnection.Create(nil);
-  FDConn.DriverName := 'SQLite';
-  FDConn.Params.Add('Database=meuapp.db');
-  FDConn.Connected := True;
-  
-  // Encapsular para Dext
-  Connection := TFireDACConnection.Create(FDConn, True);
-  
-  // Criar contexto (Dialeto é detectado automaticamente da Conexão)
-  Ctx := TAppDbContext.Create(Connection); 
-  
-  // Opcional: Especificando o dialeto explicitamente
-  // Dialect := TSQLiteDialect.Create;
-  // Ctx := TAppDbContext.Create(Connection, Dialect);
+  Services
+    .AddDbContext<TAppDbContext>(ConfigureDatabase)
+    .AddScoped<IUserService, TUserService>;
+end;
+
+procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
+begin
+  Options
+    .UseSQLite('App.db')
+    .WithPooling(True); // OBRIGATÓRIO para APIs Web
 end;
 ```
 
-### 3.1. Otimizações de Conexão
+Drivers suportados:
+- `.UseSQLite('arquivo.db')`
+- `.UsePostgreSQL('connection-string')`
+- `.UseMySQL('connection-string')`
+- `.UseSQLServer('connection-string')`
 
-O Dext aplica otimizações de performance automaticamente por padrão (ex: desabilitar Macros e Escapes para velocidade).
-Se você precisar de comportamento legado (ex: se você depende de SQL Macros), você pode **desabilitar** essas otimizações configurando o conjunto explicitamente.
-
-```pascal
-var
-  Options: TDbContextOptions;
-begin
-  Options := TDbContextOptions.Create
-    .UseDriver('PostgreSQL')
-    // Exemplo: Re-abilitar Macros excluindo 'optDisableMacros' do conjunto
-    // O padrão inclui: [optDisableMacros, optDisableEscapes, optDirectExecute]
-    .ConfigureOptimizations([optDirectExecute, optDisableEscapes]); 
-
-  Ctx := TAppDbContext.Create(Options);
-end;
-```
+> [!WARNING]
+> **Connection Pooling**: APIs Web são multithreaded. **SEMPRE** habilite pooling via `.WithPooling(True)` para evitar exaustão de conexões.
 
 ## 4. Criar Tabelas
 
 ```pascal
-Ctx.EnsureCreated;   // Cria tabelas se elas não existirem
+Db.EnsureCreated;   // Retorna True se o schema foi criado (função: Boolean)
 ```
 
 ## 5. Operações CRUD
 
-### Create
+### Create (Inserir)
 
 ```pascal
-var
-  User: TUser;
-begin
-  User := TUser.Create;
-  User.Name := 'João Silva';
-  User.Email := 'joao@exemplo.com';
-  User.CreatedAt := Now;
-  
-  Ctx.Users.Add(User);
-  Ctx.SaveChanges;
-  
-  WriteLn('Usuário criado com ID: ', User.Id);
-end;
+var User := TUser.Create;
+User.Name := 'João Silva';
+User.Email := 'joao@exemplo.com';
+
+Db.Users.Add(User);
+Db.SaveChanges;
+
+// ✅ User.Id é autopopulado (AutoInc) — sem necessidade de nova query!
+WriteLn('Usuário criado com ID: ', User.Id);
 ```
 
-### Read
+### Read (Ler)
 
 ```pascal
 // Buscar por ID
-var User := Ctx.Users.Find(1);
+var User := Db.Users.Find(1);
 
 // Obter todos
-var TodosUsuarios := Ctx.Users.ToList;
+var Todos := Db.Users.ToList;
 
-// Query com filtro
-var Joaos := Ctx.Users
-  .Where(function(U: TUser): Boolean
-    begin
-      Result := U.Name.StartsWith('João');
-    end)
+// Query com Smart Properties (recomendado)
+var u := TUser.Props;
+var Joaos := Db.Users
+  .Where(u.Name.StartsWith('João'))
   .ToList;
 ```
 
-### Update
+### Update (Atualizar)
 
 ```pascal
-var User := Ctx.Users.Find(1);
-User.Name := 'João Santos';
-Ctx.SaveChanges;
+var User := Db.Users.Find(1);
+User.Name := 'Jane Doe';
+Db.Users.Update(User);  // ✅ Força State = Modified
+Db.SaveChanges;
 ```
 
-### Delete
+> [!WARNING]
+> Sempre chame `Db.Users.Update(Entity)` **antes** de `SaveChanges` para atualizações. Rastreamento automático pode falhar silenciosamente para entidades desconectadas.
+
+### Delete (Remover)
 
 ```pascal
-var User := Ctx.Users.Find(1);
-Ctx.Users.Remove(User);
-Ctx.SaveChanges;
+var User := Db.Users.Find(1);
+Db.Users.Remove(User);
+Db.SaveChanges;
+```
+
+## 6. Seed de Dados
+
+Faça o seed dos dados no `.dpr` **antes** de `App.Run`:
+
+```pascal
+class procedure TDbSeeder.Seed(const Provider: IServiceProvider);
+begin
+  var Scope := Provider.CreateScope;
+  try
+    var Db := Scope.ServiceProvider.GetService(TAppDbContext) as TAppDbContext;
+
+    if Db.EnsureCreated then
+    begin
+      // Use .Any para verificar existência (evita carregar tudo)
+      if not Db.Users.QueryAll.Any then
+      begin
+        var Admin := TUser.Create;
+        Admin.Name := 'Admin';
+        Admin.Email := 'admin@exemplo.com';
+        Db.Users.Add(Admin);
+        Db.SaveChanges;
+      end;
+    end;
+  finally
+    Scope := nil;
+  end;
+end;
 ```
 
 ---
 
-[← Visão Geral do ORM](README.md) | [Próximo: Entidades & Mapeamento →](entidades.md)
+[← Visão Geral ORM](README.md) | [Próximo: Entidades e Mapeamento →](entidades.md)

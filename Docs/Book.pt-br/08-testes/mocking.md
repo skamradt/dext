@@ -1,70 +1,139 @@
 # Mocking
 
-Crie objetos simulados para testes unitários com `Mock<T>`.
+Crie dublês de teste com `Mock<T>` para interfaces.
 
-> 📦 **Exemplo**: [Testes do Core](../../../Sources/Testing/)
+> [!IMPORTANT]
+> `Mock<T>` é um **Record Genérico** que vive em `Dext.Mocks` — ele **NÃO** faz parte da facade `Dext.Testing`. Ele **NÃO** precisa de `.Free`.
 
-## Por que usar Mocks?
+## Habilitando Mock
 
-Mocks permitem isolar a classe que você está testando (SUT - System Under Test) de suas dependências (banco de dados, APIs externas, serviços complexos).
-
-## Criando um Mock
+Interfaces DEVEM ter RTTI habilitado (`{$M+}`) para serem mockáveis:
 
 ```pascal
-var
-  MockRepo: Mock<IUserRepository>;
+uses
+  Dext.Mocks; // Mock<T>, Arg, Times
+
+type
+  {$M+} // OBRIGATÓRIO para interfaces mockáveis
+  IServico = interface
+    ['{...}']
+    function Calcular(A: Integer): Integer;
+  end;
+  {$M-}
+
+procedure TestMock;
 begin
-  MockRepo := Mock<IUserRepository>.Create;
-  
-  // Instance retorna o objeto que implementa a interface
-  Service := TUserService.Create(MockRepo.Instance);
+  // 1. Criar Mock
+  var MeuMock := Mock<IServico>.Create;
+
+  // 2. Setup (definição fluente)
+  MeuMock.Setup.Returns(42).When.Calcular(Arg.Any<Integer>);
+
+  // 3. Act
+  var Resultado := MeuMock.Instance.Calcular(10); // Retorna 42
+
+  // 4. Verify
+  MeuMock.Received(Times.Once).Calcular(10);
 end;
 ```
 
-## Configurando Comportamento (Setup)
-
-Configure o que o mock deve retornar quando um método for chamado:
+## Métodos de Setup
 
 ```pascal
-// Retornar um valor fixo
-MockRepo.Setup
-  .WhenCalling('GetById')
-  .WithArgs([1])
-  .Returns(UsuarioEsperado);
+// Retorna um valor específico
+MeuMock.Setup.Returns(42).When.Calcular(Arg.Any<Integer>);
 
-// Lançar uma exceção
-MockRepo.Setup
-  .WhenCalling('Delete')
-  .Throws(EInvalidOperation.Create('Não permitido'));
+// Retorna valores diferentes em sequência
+MeuMock.Setup.Returns(User1).When.GetNext;
+// Na segunda chamada, retorna User2, etc.
+
+// Lança exceção
+MeuMock.Setup.Throws(ENotFound).When.GetById(Arg.Any<Integer>);
 ```
 
-## Verificação (Verify)
-
-Verifique se um método foi chamado com os argumentos corretos:
+## Matching de Argumentos
 
 ```pascal
-// Verficar se foi chamado uma vez
-MockRepo.Received(Times.Once).Save(IdValido);
+// Qualquer valor de um tipo
+MeuMock.Setup.Returns(User).When.FindById(Arg.Any<Integer>);
 
-// Verificar se NUNCA foi chamado
-MockRepo.DidNotReceive.Delete(Arg.Any<Integer>);
+// Valor exato
+MeuMock.Received(Times.Once).FindById(42);
 
-// Verificar número exato de vezes
-MockRepo.Received(3).Update(Arg.Is<TUser>(function(U: TUser): Boolean
+// Argumento condicional
+MeuMock.Setup.Returns(True).When.IsValid(Arg.Is<string>(
+  function(S: string): Boolean
   begin
-    Result := U.Status = 'Ativo';
+    Result := S.Length > 5;
   end));
 ```
 
-## Argument Matchers
-
-Use matchers se você não souber o valor exato:
+## Verificação
 
 ```pascal
-MockRepo.Received.Find(Arg.Any<Integer>);      // Qualquer inteiro
-MockRepo.Received.Search(Arg.Contains('txt')); // String que contém
+// Verificar chamado exatamente uma vez
+MeuMock.Received(Times.Once).FindById(1);
+
+// Verificar chamado N vezes
+MeuMock.Received(Times.Exactly(3)).Salvar(Arg.Any<TUser>);
+
+// Verificar nunca chamado
+MeuMock.DidNotReceive.Deletar(Arg.Any<Integer>);
+
+// Verificar pelo menos/no máximo
+MeuMock.Received(Times.AtLeast(1)).ListarTodos;
+MeuMock.Received(Times.AtMost(5)).ListarTodos;
+
+// Verificar que nenhuma outra chamada foi feita
+MeuMock.VerifyNoOtherCalls;
+```
+
+## Exemplo de Test Fixture
+
+```pascal
+uses
+  Dext.Testing,  // Facade: Should, [TestFixture], [Test]
+  Dext.Mocks;    // Mock<T>
+
+type
+  [TestFixture]
+  TUsuarioServiceTests = class
+  private
+    FMockRepo: Mock<IUsuarioRepository>;
+    FService: TUsuarioService;
+  public
+    [Setup]
+    procedure Setup;
+
+    [Test]
+    procedure Deve_Encontrar_Usuario;
+  end;
+
+procedure TUsuarioServiceTests.Setup;
+begin
+  FMockRepo := Mock<IUsuarioRepository>.Create;
+  FService := TUsuarioService.Create(FMockRepo.Instance);
+end;
+
+procedure TUsuarioServiceTests.Deve_Encontrar_Usuario;
+begin
+  // Arrange
+  var User := TUsuario.Create;
+  User.Name := 'Alice';
+  FMockRepo.Setup.Returns(User).When.FindById(1);
+
+  // Act
+  var Encontrado := FService.GetById(1);
+
+  // Assert
+  Should(Encontrado).NotBeNil;
+  Should(Encontrado.Name).Be('Alice');
+
+  // Verify
+  FMockRepo.Received(Times.Once).FindById(1);
+end;
 ```
 
 ---
 
-[← Testes](README.md) | [Próximo: Assertions →](assertions.md)
+[← Testes](README.md) | [Próximo: Asserções →](assertions.md)

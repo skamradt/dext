@@ -6,85 +6,112 @@ A typical Dext project follows this structure:
 
 ```
 MyProject/
-├── MyProject.dpr              # Main program
-├── MyProject.dproj            # Delphi project file
-├── src/
-│   ├── Controllers/           # Controller classes
-│   │   └── UsersController.pas
-│   ├── Entities/              # ORM entity classes
-│   │   └── User.pas
-│   ├── Services/              # Business logic
-│   │   └── UserService.pas
-│   └── Middleware/            # Custom middleware
-│       └── LoggingMiddleware.pas
-├── config/
-│   └── appsettings.json       # Configuration
-├── migrations/                # Database migrations
-│   └── 001_CreateUsers.pas
-└── tests/
-    └── UserServiceTests.pas
+├── Server/
+│   ├── MyProject.Startup.pas      # Configuration only (IStartup)
+│   ├── MyProject.Endpoints.pas    # All API route definitions
+│   ├── MyProject.Auth.pas         # Authentication services & DTOs
+│   └── Web.MyProject.dpr          # Entry point
+├── Domain/
+│   ├── MyProject.Domain.Entities.pas
+│   ├── MyProject.Domain.Models.pas
+│   └── MyProject.Domain.Enums.pas
+├── Data/
+│   ├── MyProject.Data.Context.pas
+│   └── MyProject.Data.Seeder.pas
+└── Tests/
+    ├── MyProject.Tests.dpr         # Test runner
+    └── MyProject.Tests.pas         # Test fixtures
 ```
 
-## Main Program Template
+## Main Program Template (.dpr)
+
+> [!IMPORTANT]
+> Every console project (Web APIs, Test Runners) **MUST** follow these rules:
+> 1. Add `Dext.Utils` to uses
+> 2. Call `SetConsoleCharSet;` as the **first** instruction
+> 3. Call `ConsolePause;` as the **last** instruction
+> 4. Declare interface variables (`IWebApplication`, `IServiceProvider`) with **explicit types** in the `var` block
 
 ```pascal
-program MyProject;
+program Web.MyProject;
 
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,            // Optional: FastMM5 wrapper for leak detection
+  Dext.Utils,         // SetConsoleCharSet, ConsolePause
   System.SysUtils,
-  Dext.Web,
-  Dext.DependencyInjection,
-  Dext.Entity,
-  // Your units
-  UsersController in 'src\Controllers\UsersController.pas',
-  UserService in 'src\Services\UserService.pas',
-  User in 'src\Entities\User.pas';
+  // Dext Facades (ALWAYS LAST in Dext group)
+  Dext,               // IServiceProvider, IConfiguration
+  Dext.Web,           // IWebApplication, WebApplication
+  // Project units
+  MyProject.Startup in 'MyProject.Startup.pas';
 
+var
+  App: IWebApplication;
+  Provider: IServiceProvider;
 begin
-  TWebHostBuilder.CreateDefault(nil)
-    .UseUrls('http://localhost:5000')
-    .ConfigureServices(procedure(Services: IServiceCollection)
-      begin
-        // Register services
-        Services.AddScoped<IUserService, TUserService>;
-        
-        // Register DbContext
-        Services.AddDbContext<TAppDbContext>;
-      end)
-    .Configure(procedure(App: IApplicationBuilder)
-      begin
-        // Middleware
-        App.UseExceptionHandler;
-        App.UseCors;
-        
-        // Controllers
-        App.MapController<TUsersController>;
-        
-        // Or Minimal APIs
-        App.MapGet('/health', procedure(Ctx: IHttpContext)
-          begin
-            Ctx.Response.Json('{"status": "healthy"}');
-          end);
-      end)
-    .Build
-    .Run;
+  SetConsoleCharSet;   // 1. Configure UTF-8 for emojis and accents
+  try
+    App := WebApplication;
+    App.UseStartup(TStartup.Create);
+
+    // Build services and seed BEFORE running
+    Provider := App.BuildServices;
+    TDbSeeder.Seed(Provider);
+
+    App.Run(9000);
+  except
+    on E: Exception do
+      WriteLn('Fatal: ' + E.Message);
+  end;
+  ConsolePause;        // 2. Pause (only when running in IDE)
 end.
 ```
 
+> [!WARNING]
+> **Memory Safety**: Always declare `App` and `Provider` as **explicitly typed** interface variables in the `var` block (not inline `var`). This ensures ARC releases interfaces in the correct order during shutdown, avoiding Access Violations.
+
+## Uses Clause Ordering
+
+Dext uses **Facade Units** with Record Helpers. Since Delphi only applies the last declared helper, facades **must** come last:
+
+```pascal
+uses
+  // 1. Delphi System Units
+  System.SysUtils,
+  System.Classes,
+  // 2. Third-Party Units
+  // ...
+  // 3. Dext Specialized Units (alphabetical)
+  Dext.Auth.JWT,
+  Dext.Entity.Core,      // Required for IDbSet<T>
+  Dext.Types.Nullable,   // Required for Nullable<T>
+  // 4. Dext Facades (ALWAYS LAST in Dext group)
+  Dext,                  // Core facade
+  Dext.Entity,           // ORM facade
+  Dext.Web,              // Web facade
+  // 5. Current Project Units (alphabetical)
+  MyProject.Data.Context,
+  MyProject.Domain.Entities;
+```
+
+> [!IMPORTANT]
+> **Generic types** (`IDbSet<T>`, `Nullable<T>`, `Lazy<T>`, `Prop<T>`) are **NOT** re-exported by facades.  
+> You **MUST** add the original unit (`Dext.Entity.Core`, `Dext.Types.Nullable`, etc.) to uses.
+
 ## Configuration File
 
-`config/appsettings.json`:
+`appsettings.json`:
 
 ```json
 {
   "Database": {
-    "Provider": "PostgreSQL",
-    "ConnectionString": "Server=localhost;Database=myapp;User=postgres;Password=secret"
+    "Provider": "SQLite",
+    "ConnectionString": "App.db"
   },
   "Jwt": {
-    "SecretKey": "your-secret-key-here",
+    "SecretKey": "your-secret-key-minimum-32-chars",
     "ExpirationMinutes": 60
   }
 }
@@ -93,15 +120,23 @@ end.
 Load it with:
 
 ```pascal
-var
-  Config: IConfiguration;
+// In ConfigureServices, use the IConfiguration parameter
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  Config := TConfigurationBuilder.Create
-    .AddJsonFile('config/appsettings.json')
-    .Build;
-    
-  var DbConnection := Config.GetValue('Database:ConnectionString');
+  var DbConn := Configuration.GetValue('Database:ConnectionString');
+  // ...
 end;
+```
+
+## Search Paths (.dproj)
+
+> [!WARNING]
+> **NEVER** point search paths to the framework `Sources` directory. Always use compiled DCUs from the `Output` directory. Mixing sources causes the fatal error "Unit was compiled with a different version".
+
+```xml
+<DCC_ExeOutput>..\..\Output\</DCC_ExeOutput>
+<DCC_DcuOutput>..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
+<DCC_UnitSearchPath>..\..\..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 ```
 
 ---

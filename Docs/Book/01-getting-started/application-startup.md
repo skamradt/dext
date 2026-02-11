@@ -11,85 +11,151 @@ For professional projects, Dext recommends separating configuration from the mai
 
 ## The Startup Class Pattern
 
-Create a new unit (e.g., `App.Startup.pas`) implementing the `IStartup` interface:
+Create a new unit (e.g., `MyProject.Startup.pas`) implementing the `IStartup` interface:
 
 ```pascal
-unit App.Startup;
+unit MyProject.Startup;
 
 interface
 
 uses
-  Dext.Web, Dext.DependencyInjection;
+  Dext.Entity.Core,     // TDbContextOptions
+  // Facades LAST
+  Dext,                 // IConfiguration, TDextServices
+  Dext.Web;             // IWebApplication, IStartup
 
 type
   TStartup = class(TInterfacedObject, IStartup)
   public
-    procedure ConfigureServices(const Services: IServiceCollection; const Configuration: IConfiguration);
-    procedure Configure(const App: IApplicationBuilder);
+    procedure ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
+    procedure Configure(const App: IWebApplication);
+  private
+    procedure ConfigureDatabase(Options: TDbContextOptions);
   end;
 
 implementation
 
-procedure TStartup.ConfigureServices(const Services: IServiceCollection; const Configuration: IConfiguration);
+uses
+  MyProject.Data.Context,
+  MyProject.Endpoints;
+
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  // 1. Register your business services
-  Services.AddScoped<IUserService, TUserService>;
-  
-  // 2. Configure Database
-  Services.AddDbContext<TAppDbContext>(procedure(Options: TDbContextOptions)
-    begin
-      Options.UsePostgreSQL(Configuration.GetValue('ConnectionStrings:Default'));
-    end);
+  Services
+    .AddDbContext<TAppDbContext>(ConfigureDatabase)
+    .AddScoped<IUserService, TUserService>
+    .AddControllers;
 end;
 
-procedure TStartup.Configure(const App: IApplicationBuilder);
+procedure TStartup.Configure(const App: IWebApplication);
 begin
-  // 3. Configure Middleware Pipeline
-  App.UseExceptionHandler;
-  App.UseCors;
-  App.UseAuthentication;
-  
-  // 4. Map Routes/Controllers
-  App.MapControllers;
-  
-  App.MapGet('/', procedure(Ctx: IHttpContext)
-    begin
-      Ctx.Response.Write('Welcome to Dext API');
-    end);
+  // Global JSON settings
+  JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.ISODateFormat);
+
+  App.Builder
+    // 1. Exception Handler (always first)
+    .UseExceptionHandler
+    // 2. HTTP Logging
+    .UseHttpLogging
+    // 3. CORS
+    .UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader)
+    // 4. Map Endpoints (Minimal APIs)
+    .MapEndpoints(TMyEndpoints.MapEndpoints)
+    // 5. Map Controllers (if using)
+    .MapControllers
+    // 6. Swagger (AFTER routes are mapped)
+    .UseSwagger(Swagger.Title('My API').Version('v1'));
+end;
+
+procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
+begin
+  Options
+    .UseSQLite('App.db')
+    .WithPooling(True); // REQUIRED for production Web APIs
 end;
 
 end.
 ```
+
+> [!IMPORTANT]
+> **Key Points**:
+> - `TDextServices` is a **Record** — never call `.Free` on it.
+> - `ConfigureServices` signature: `(const Services: TDextServices; const Configuration: IConfiguration)`.
+> - `Configure` receives `IWebApplication` not `IApplicationBuilder`.
+> - Use `App.Builder` for the **fluent** middleware pipeline.
+> - Always separate database configuration into a private method (`ConfigureDatabase`).
 
 ## Main Program (.dpr)
 
 With the Startup class, your main file becomes extremely clean:
 
 ```pascal
-program MyProject;
+program Web.MyProject;
 
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,
+  Dext.Utils,
+  System.SysUtils,
+  Dext,
   Dext.Web,
-  App.Startup in 'src\App.Startup.pas';
+  MyProject.Startup in 'MyProject.Startup.pas';
 
+var
+  App: IWebApplication;
+  Provider: IServiceProvider;
 begin
-  TWebHostBuilder.CreateDefault
-    .UseStartup<TStartup>
-    .Build
-    .Run; // Blocks execution (Console App)
+  SetConsoleCharSet;
+  try
+    App := WebApplication;
+    App.UseStartup(TStartup.Create);
+    Provider := App.BuildServices;
+    App.Run(9000);
+  except
+    on E: Exception do
+      WriteLn('Fatal: ' + E.Message);
+  end;
+  ConsolePause;
 end.
+```
+
+> [!WARNING]
+> **Common Mistakes**:
+> - ❌ `var App := WebApplication;` — The compiler may infer the concrete class instead of the interface, causing ARC issues on shutdown.
+> - ❌ Declaring `Provider: IServiceProvider` without `Dext` in uses → `E2003 Undeclared identifier`.
+> - ❌ Forgetting `SetConsoleCharSet` → broken UTF-8 output.
+
+## Fluent Configuration (Mandatory Pattern)
+
+Both service registration and middleware pipeline **MUST** use fluent (chained) calls:
+
+```pascal
+// ✅ CORRECT: Fluent chaining
+Services
+  .AddDbContext<TMyContext>(ConfigureDatabase)
+  .AddScoped<IUserService, TUserService>
+  .AddSingleton<ICache, TMemoryCache>;
+
+App.Builder
+  .UseExceptionHandler
+  .UseHttpLogging
+  .UseCors(CorsOptions.AllowAnyOrigin)
+  .MapEndpoints(TMyEndpoints.MapEndpoints)
+  .UseSwagger(Swagger.Title('My API').Version('v1'));
+
+// ❌ WRONG: Intermediate variables
+var Builder := App.Builder;        // Don't do this
+Builder.UseExceptionHandler;       // Breaks fluent pattern
+Builder.UseHttpLogging;
 ```
 
 ## Execution Models: Run vs Start
 
-Dext provides two ways to run the host, designed for different application types:
-
 | Method | Behavior | Use Case |
 | :--- | :--- | :--- |
 | **`Run`** | Blocks the calling thread until stopped (Ctrl+C). | **Console Apps**, Services, Daemons. |
-| **`Start`** | Non-blocking. Starts the server and returns immediately. | **GUI Apps (VCL/FMX)** like System Tray tools or Desktop Shells. |
+| **`Start`** | Non-blocking. Starts the server and returns immediately. | **GUI Apps (VCL/FMX)** like System Tray tools. |
 
 ### Example: GUI Application (Sidecar)
 
@@ -98,129 +164,133 @@ In a VCL application, you must use `Start` to avoid freezing the main form:
 ```pascal
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  // Create and Start the host without blocking the UI
-  FHost := TWebHostBuilder.CreateDefault
-    .UseStartup<TStartup>
-    .Build;
-    
-  FHost.Start; 
+  FApp := WebApplication;
+  FApp.UseStartup(TStartup.Create);
+  FProvider := FApp.BuildServices;
+  FApp.Start;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
-  FHost.Stop; // Graceful shutdown
+  FApp.Stop; // Graceful shutdown
 end;
 ```
 
-## Advanced: Database Seeding
+## Database Seeding
 
-You can also include a seeding method in your Startup class to populate the database on first run, as seen in the **OrderAPI** example:
+Seed data in the main `.dpr` **before** `App.Run`:
 
 ```pascal
-class procedure TStartup.Seed(const App: IWebApplication);
+var
+  App: IWebApplication;
+  Provider: IServiceProvider;
 begin
-  using var Scope := App.Services.CreateScope;
-  var Context := Scope.ServiceProvider.GetService<TAppDbContext>;
-  
-  Context.EnsureCreated;
-  if Context.Users.Count = 0 then
-  begin
-    Context.Users.Add(TUser.Create('Admin'));
-    Context.SaveChanges;
+  SetConsoleCharSet;
+  try
+    App := WebApplication;
+    App.UseStartup(TStartup.Create);
+    Provider := App.BuildServices;
+
+    // Seed BEFORE running
+    TDbSeeder.Seed(Provider);
+
+    App.Run(9000);
+  except
+    on E: Exception do
+      WriteLn('Fatal: ' + E.Message);
+  end;
+  ConsolePause;
+end.
+```
+
+### Seeder Pattern
+
+```pascal
+class procedure TDbSeeder.Seed(const Provider: IServiceProvider);
+begin
+  var Scope := Provider.CreateScope;
+  try
+    var Db := Scope.ServiceProvider.GetService(TAppDbContext) as TAppDbContext;
+
+    if Db.EnsureCreated then // Returns True if schema was created
+    begin
+      // Use .Any to check existence without loading all records
+      if not Db.Users.QueryAll.Any then
+      begin
+        var Admin := TUser.Create;
+        Admin.Name := 'Admin';
+        Db.Users.Add(Admin);
+        Db.SaveChanges;
+        // SaveChanges auto-populates Admin.Id (AutoInc)
+      end;
+    end;
+  finally
+    Scope := nil; // Disposes all scoped services
   end;
 end;
 ```
 
-> 📦 **High-Quality Reference**: Check the [Web.OrderAPI](../../../Examples/Web.OrderAPI/OrderAPI.Startup.pas) example for a complete real-world implementation of this pattern.
+> [!WARNING]
+> **SQLite :memory: Warning**: NEVER call `BuildServiceProvider` manually inside the Seeder. This creates a *new* container and a *new* empty in-memory database.
 
 ## Advanced: Separating Concerns (Endpoints & Auth)
 
-For larger projects, it's recommended to further separate your code into dedicated modules:
-
-### Recommended Project Structure
-
-```
-MyProject/
-├── Server/
-│   ├── MyProject.Startup.pas      # Configuration only
-│   ├── MyProject.Auth.pas         # Authentication services & DTOs
-│   ├── MyProject.Endpoints.pas    # All API route definitions
-│   └── Web.MyProject.dpr          # Entry point
-├── Domain/
-│   ├── MyProject.Domain.Entities.pas
-│   ├── MyProject.Domain.Models.pas
-│   └── MyProject.Domain.Enums.pas
-└── Data/
-    ├── MyProject.Data.Context.pas
-    └── MyProject.Data.Seeder.pas
-```
+For larger projects, separate your code into dedicated modules:
 
 ### Creating an Endpoints Module
 
-Move all route definitions to a dedicated unit:
-
 ```pascal
-unit App.Endpoints;
+unit MyProject.Endpoints;
 
 interface
 
-uses Dext.Web;
+uses
+  Dext.Web; // TAppBuilder, IResult, Results
 
 type
-  TAppEndpoints = class
+  TMyEndpoints = class
   public
-    class procedure MapEndpoints(const Builder: IApplicationBuilder); static;
+    class procedure MapEndpoints(const Builder: TAppBuilder); static;
   end;
 
 implementation
 
 uses
-  Dext.Web.Results,
-  Dext.Web.DataApi,
-  App.Auth,
-  App.Data.Context,
-  App.Domain.Entities;
+  MyProject.Auth,
+  MyProject.Data.Context;
 
-class procedure TAppEndpoints.MapEndpoints(const Builder: IApplicationBuilder);
+class procedure TMyEndpoints.MapEndpoints(const Builder: TAppBuilder);
 begin
   // Health Check
-  Builder.MapGet<IResult>('/health', 
+  Builder.MapGet<IResult>('/health',
     function: IResult
     begin
-      Result := Results.Ok(THealthStatus.Create('healthy'));
-    end); 
-
-  // Authentication
-  Builder.MapPost<TLoginRequest, IAuthService, IResult>('/auth/login',
-    function(Req: TLoginRequest; Auth: IAuthService): IResult
-    begin
-      var Token := Auth.Login(Req.username, Req.password);
-      if Token = '' then
-        Exit(Results.StatusCode(401)); 
-      Result := Results.Ok(TLoginResponse.Create(Token));
+      Result := Results.Ok('healthy');
     end);
 
-  // DataApi - Auto CRUD
-  TDataApiHandler<TCustomer>.Map(Builder, '/api/customers',
-    TDataApiOptions<TCustomer>.Create.DbContext<TAppDbContext>);
-
-  // Custom Endpoints
-  Builder.MapPost<TCreateOrderDto, IResult>('/api/orders', ...);
+  // Auth - Login with DI + Model Binding
+  Builder.MapPost<TLoginRequest, IAuthService, IResult>('/api/auth/login',
+    function(Req: TLoginRequest; Auth: IAuthService): IResult
+    begin
+      Result := Results.Ok(Auth.Login(Req));
+    end);
 end;
 
 end.
 ```
 
+> [!IMPORTANT]
+> The `MapEndpoints` parameter type is `TAppBuilder` (from `Dext.Web`), **not** `IApplicationBuilder`.
+
 ### Creating an Auth Module
 
-Isolate authentication-related code:
-
 ```pascal
-unit App.Auth;
+unit MyProject.Auth;
 
 interface
 
-uses Dext.Web, Dext.Auth.JWT;
+uses
+  Dext.Web, Dext.Auth.JWT;
 
 type
   TLoginRequest = record
@@ -234,40 +304,14 @@ type
 
   IAuthService = interface
     ['{...}']
-    function Login(const User, Pass: string): string;
+    function Login(const Req: TLoginRequest): TLoginResponse;
   end;
 
   TAuthConfig = class
   public
-    const JWT_SECRET = 'your-secret-key-minimum-32-chars';
-    class procedure AddServices(const Services: TDextServices); static;
+    const JWT_SECRET = 'your-secret-key-here-minimum-32-chars';
+    const JWT_ISSUER = 'MyApp';
   end;
-
-implementation
-
-// ... TAuthService implementation
-```
-
-### Simplified Startup
-
-Your Startup becomes focused only on configuration:
-
-```pascal
-procedure TStartup.Configure(const App: IWebApplication);
-begin
-  var Builder := App.Builder;
-
-  // Middleware Pipeline
-  Builder.UseExceptionHandler;
-  Builder.UseHttpLogging;
-  Builder.UseCors(...);
-  Builder.UseJwtAuthentication(TAuthConfig.JWT_SECRET, ...);
-
-  // Delegate to Endpoints module
-  TAppEndpoints.MapEndpoints(Builder);
-
-  Builder.UseSwagger(...);
-end;
 ```
 
 ### Benefits
@@ -277,7 +321,10 @@ end;
 - **Scalability**: Easy to add new endpoint groups
 - **Maintainability**: Configuration changes don't touch business logic
 
-> 📦 **Reference**: See [Web.SalesSystem](../../../Examples/Web.SalesSystem/) for a complete example using this pattern.
+> 📦 **References**: 
+> - [Web.EventHub](../../../Examples/Web.EventHub/) - Modern 2026 patterns
+> - [Web.TicketSales](../../../Examples/Web.TicketSales/) - Gold Standard (Controllers + JWT + ORM)
+> - [Web.SalesSystem](../../../Examples/Web.SalesSystem/) - Minimal APIs + CQRS
 
 ---
 

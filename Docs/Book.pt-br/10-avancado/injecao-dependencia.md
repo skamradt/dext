@@ -1,79 +1,187 @@
 # Injeção de Dependência
 
-Um container de Injeção de Dependência (DI) completo e de alta performance.
+O Dext fornece um container de DI completo com injeção via construtor, escopos e gerenciamento de tempo de vida.
 
-## Conceitos Básicos
+## Registro de Serviços
 
-Injeção de Dependência permite que você escreva código desacoplado, injetando as dependências de uma classe através do seu construtor em vez de instanciá-las internamente.
-
-### 1. Definir uma Interface e Classe
+Registre serviços no `ConfigureServices` usando o record fluente `TDextServices`:
 
 ```pascal
-type
-  IEmailService = interface
-    ['{GUID}']
-    procedure Enviar(Email, Assunto, Mensagem: string);
-  end;
-
-  TEmailService = class(TInterfacedObject, IEmailService)
-  public
-    procedure Enviar(Email, Assunto, Mensagem: string);
-  end;
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
+begin
+  Services
+    // Interface para Implementação
+    .AddScoped<IUserService, TUserService>
+    .AddSingleton<ILogger, TConsoleLogger>
+    .AddTransient<IValidator, TValidator>
+    // DbContext
+    .AddDbContext<TAppDbContext>(ConfigureDatabase)
+    // Controllers
+    .AddControllers;
+end;
 ```
 
-### 2. Registrar no Container
+> [!IMPORTANT]
+> `TDextServices` é um **Record** — nunca chame `.Free` nele. Ele é gerenciado pela stack.
 
-```pascal
-TWebHostBuilder.CreateDefault(nil)
-  .ConfigureServices(procedure(Services: IServiceCollection)
-    begin
-      // Registrar como Singleton (uma única instância global)
-      Services.AddSingleton<IEmailService, TEmailService>;
-      
-      // Registrar como Scoped (uma instância por requisição HTTP)
-      Services.AddScoped<IUserService, TUserService>;
-      
-      // Registrar como Transient (nova instância a cada solicitação)
-      Services.AddTransient<IValidator, TValidator>;
-    end)
-```
+## Tempos de Vida (Lifetimes)
 
-## Vida Útil dos Serviços (Lifetimes)
-
-| Lifetime | Descrição |
-|----------|-----------|
-| **Singleton** | Criado uma única vez e compartilhado por toda a aplicação. |
-| **Scoped** | Criado uma vez por escopo (geralmente uma requisição HTTP). |
-| **Transient** | Criado toda vez que for solicitado. |
+| Lifetime | Comportamento | Caso de Uso |
+|----------|---------------|-------------|
+| **Singleton** | Instância única por toda a vida da aplicação | Loggers, Configuração, Caches |
+| **Scoped** | Uma instância por requisição HTTP | DbContext, Sessão de Usuário |
+| **Transient** | Nova instância a cada solicitação | Validadores, Factories |
 
 ## Injeção via Construtor
 
-O Dext resolve dependências automaticamente através de construtores:
+Serviços são injetados automaticamente via construtor:
 
 ```pascal
 type
-  TUserController = class(TController)
+  TUserService = class(TInterfacedObject, IUserService)
+  private
+    FRepository: IUserRepository;
+    FLogger: ILogger;
+  public
+    constructor Create(Repository: IUserRepository; Logger: ILogger);
+  end;
+
+constructor TUserService.Create(Repository: IUserRepository; Logger: ILogger);
+begin
+  FRepository := Repository;
+  FLogger := Logger;
+end;
+```
+
+Basta registrar todos os serviços:
+
+```pascal
+Services
+  .AddScoped<IUserRepository, TUsuarioRepository>
+  .AddSingleton<ILogger, TConsoleLogger>
+  .AddScoped<IUserService, TUserService>;  // Dependências auto-injetadas!
+```
+
+## Registro com Factory
+
+Para serviços que precisam de inicialização customizada:
+
+```pascal
+Services.AddSingleton<IJwtTokenHandler, TJwtTokenHandler>(
+  function(Provider: IServiceProvider): TObject
+  begin
+    Result := TJwtTokenHandler.Create(JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, JWT_EXPIRATION);
+  end);
+```
+
+> [!WARNING]
+> Use a forma explícita com dois parâmetros genéricos para evitar ambiguidade:  
+> ✅ `Services.AddSingleton<IAuthService, TAuthService>(FactoryFunc)`  
+> ❌ `Services.AddSingleton<IAuthService>(FactoryFunc)` — Pode falhar com E2250/E2003
+
+## Resolução de Serviços
+
+### Em Minimal APIs (Recomendado: Injeção Genérica)
+
+```pascal
+// ✅ Serviços são auto-injetados via overloads genéricos
+Builder.MapGet<IUserService, IResult>('/api/users',
+  function(Svc: IUserService): IResult
+  begin
+    Result := Results.Ok(Svc.GetAll);
+  end);
+```
+
+> [!WARNING]
+> ⛔ **NUNCA** resolva serviços manualmente em Minimal APIs:  
+> ❌ `var Service := Ctx.RequestServices.GetService<IUserService>;`
+
+### Em Controllers (Injeção via Construtor)
+
+```pascal
+type
+  [ApiController('/api/users')]
+  TUsersController = class
   private
     FUserService: IUserService;
   public
-    constructor Create(UserService: IUserService); // Injetado automaticamente
+    constructor Create(UserService: IUserService);  // Auto-injetado
   end;
 ```
 
-## Atributo [ServiceConstructor]
+### Resolução Manual (Seeders, Background Tasks)
 
-Se uma classe tiver múltiplos construtores, use o atributo para indicar qual deve ser usado pela DI:
+```pascal
+var Scope := Provider.CreateScope;
+try
+  var Db := Scope.ServiceProvider.GetService(TAppDbContext) as TAppDbContext;
+  // Use o serviço...
+finally
+  Scope := nil;  // Libera todos os serviços scoped
+end;
+```
+
+## Construtor Customizado
+
+Use `[ServiceConstructor]` quando uma classe tiver múltiplos construtores:
 
 ```pascal
 type
-  TMyService = class
+  TUserService = class(TInterfacedObject, IUserService)
   public
     constructor Create; overload;
     
-    [ServiceConstructor]
-    constructor Create(Logger: ILogger); overload;
+    [ServiceConstructor]  // DI usará este
+    constructor Create(Repo: IUserRepository; Logger: ILogger); overload;
   end;
 ```
+
+## Registrando DbContext
+
+Separe a configuração do banco em um método privado no Startup:
+
+```pascal
+procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
+begin
+  Services
+    .AddDbContext<TAppDbContext>(ConfigureDatabase)
+    .AddScoped<IUserService, TUserService>;
+end;
+
+procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
+begin
+  Options
+    .UseSQLite('App.db')
+    .WithPooling(True);  // OBRIGATÓRIO para APIs Web
+end;
+```
+
+> [!WARNING]
+> **Connection Pooling**: APIs Web são multithreaded por natureza. **SEMPRE** habilite pooling em produção para evitar exaustão de conexões.
+
+## Escopo de Serviço
+
+Crie escopos filhos para processamento em background ou seed de banco:
+
+```pascal
+var Scope := Provider.CreateScope;
+try
+  var Service := Scope.ServiceProvider.GetService(TAppDbContext) as TAppDbContext;
+  // Use serviço...
+finally
+  Scope := nil;  // Escopo libera todos os serviços scoped
+end;
+```
+
+## Melhores Práticas
+
+1. **Prefira injeção via construtor** ao invés de Service Locator
+2. **Use interfaces** para testabilidade
+3. **Scoped para DbContext** — um por requisição
+4. **Singleton para serviços sem estado** (loggers, config)
+5. **Habilite Connection Pooling** para todas as APIs Web
+6. **Use encadeamento fluente** para registro
+7. **Evite Dependências Cativas** — não injete `Scoped` dentro de `Singleton`
 
 ---
 

@@ -1,38 +1,83 @@
 # Minimal APIs
 
-Minimal APIs fornecem uma abordagem leve, baseada em lambdas, para construir endpoints HTTP.
+Minimal APIs fornecem uma abordagem leve, baseada em lambdas, para criar endpoints HTTP com DI e Model Binding automáticos.
 
-> 📦 **Exemplo**: [Web.MinimalAPI](../../../Examples/Web.MinimalAPI/)
+> 📦 **Exemplos**: 
+> - [Web.EventHub](../../../Examples/Web.EventHub/) - Padrões modernos (2026)
+> - [Web.SalesSystem](../../../Examples/Web.SalesSystem/) - Arquitetura Limpa + CQRS
 
 ## Endpoints Básicos
 
 ```pascal
-Builder.MapGet('/hello', procedure(Ctx: IHttpContext)
+// GET simples (sem parâmetros)
+Builder.MapGet<IResult>('/health',
+  function: IResult
   begin
-    Ctx.Response.Write('Olá, Mundo!');
-  end);
-
-Builder.MapPost('/data', procedure(Ctx: IHttpContext)
-  var
-    SR: TStreamReader;
-    Body: string;
-  begin
-    SR := TStreamReader.Create(Ctx.Request.Body);
-    try
-      Body := SR.ReadToEnd;
-      Ctx.Response.Json(Body);
-    finally
-      SR.Free;
-    end;
+    Result := Results.Ok('healthy');
   end);
 ```
+
+> [!IMPORTANT]
+> O último parâmetro genérico é sempre `IResult` (o tipo de retorno).
+
+## DI + Model Binding (Padrão Recomendado)
+
+O Dext possui **Injeção de Dependência** e **Model Binding** integrados. Serviços, DTOs e parâmetros de rota são injetados **automaticamente** via parâmetros genéricos.
+
+```pascal
+// GET com serviço injetado
+Builder.MapGet<IUserService, IResult>('/api/users',
+  function(Svc: IUserService): IResult
+  begin
+    Result := Results.Ok(Svc.GetAll);
+  end);
+
+// GET com serviço + parâmetro de rota (Integer auto-bound de {id})
+Builder.MapGet<IUserService, Integer, IResult>('/api/users/{id}',
+  function(Svc: IUserService; Id: Integer): IResult
+  begin
+    Result := Results.Ok(Svc.GetById(Id));
+  end);
+
+// POST com DTO (body) + serviço
+Builder.MapPost<TLoginRequest, IAuthService, IResult>('/api/auth/login',
+  function(Req: TLoginRequest; Auth: IAuthService): IResult
+  begin
+    Result := Results.Ok(Auth.Login(Req));
+  end);
+```
+
+> [!WARNING]
+> ⛔ **NUNCA** resolva serviços manualmente: `Ctx.RequestServices.GetService<T>`  
+> ⛔ **NUNCA** parse o body manualmente: `Ctx.Request.BodyAsJson<T>`  
+> Use os parâmetros genéricos — o framework gerencia tudo.
+
+### Como o Framework Resolve Parâmetros
+
+| Tipo | Resolução |
+|------|-----------|
+| Interfaces/Classes registradas no DI | Injetadas automaticamente |
+| Records com `[FromRoute]`/`[FromHeader]`/`[FromQuery]` | Binding misto (Mixed) |
+| Records sem atributos | Model Binding do body da requisição |
+| `Integer`, `string` correspondendo ao template | Parâmetro de rota direto |
+| `IHttpContext` | Injetado automaticamente (use apenas se realmente necessário) |
 
 ## Parâmetros de Rota
 
 > [!IMPORTANT]
-> O Dext usa a sintaxe **`{param}`** para parâmetros de rota (como ASP.NET Core), não `:param` (estilo Express).
+> Dext usa a sintaxe **`{param}`** para parâmetros de rota (como ASP.NET Core), não `:param` (estilo Express).
 
-### Usando Record para Model Binding (Recomendado)
+### Binding Direto (Tipos Simples)
+
+```pascal
+Builder.MapGet<IUserService, Integer, IResult>('/api/users/{id}',
+  function(Svc: IUserService; Id: Integer): IResult
+  begin
+    Result := Results.Ok(Svc.GetById(Id));
+  end);
+```
+
+### Usando Model Binding Baseado em Record
 
 ```pascal
 type
@@ -41,114 +86,52 @@ type
     Id: Integer;
   end;
 
-Builder.MapGet<IUserService, TUserIdRequest, IResult>('/users/{id}',
-  function(Service: IUserService; Request: TUserIdRequest): IResult
+Builder.MapGet<IUserService, TUserIdRequest, IResult>('/api/users/{id}',
+  function(Svc: IUserService; Req: TUserIdRequest): IResult
   begin
-    var User := Service.FindById(Request.Id);
-    if User = nil then
-      Result := Results.NotFound('Usuário não encontrado')
-    else
-      Result := Results.Ok(User);
-  end);
-```
-
-### Usando Context Diretamente
-
-```pascal
-Builder.MapGet('/users/{id}', procedure(Ctx: IHttpContext)
-  begin
-    var Id := Ctx.Request.RouteParams['id'];
-    Ctx.Response.Write('ID do Usuário: ' + Id);
-  end);
-```
-
-## Parâmetros de Query
-
-### Usando Record com Model Binding
-
-```pascal
-type
-  TSearchFilter = record
-    [FromQuery('q')]
-    Query: string;
-    [FromQuery('limit')]
-    Limit: Integer;
-  end;
-
-Builder.MapGet<TSearchFilter, IResult>('/search',
-  function(Filter: TSearchFilter): IResult
-  begin
-    Result := Results.Ok(Format('Busca: %s, Limite: %d', [Filter.Query, Filter.Limit]));
-  end);
-```
-
-## Binding de Headers
-
-Para cenários multi-tenant ou chaves de API:
-
-```pascal
-type
-  TTenantRequest = record
-    [FromHeader('X-Tenant-Id')]
-    TenantId: string;
-  end;
-
-Builder.MapGet<ITenantService, TTenantRequest, IResult>('/api/data',
-  function(Service: ITenantService; Request: TTenantRequest): IResult
-  begin
-    if Request.TenantId = '' then
-      Exit(Results.BadRequest('Header X-Tenant-Id obrigatório'));
-      
-    Result := Results.Ok(Service.GetDataForTenant(Request.TenantId));
+    Result := Results.Ok(Svc.GetById(Req.Id));
   end);
 ```
 
 ## Binding Misto (Múltiplas Fontes)
 
-Combine dados de diferentes fontes em um único record:
+O recurso mais poderoso: combine dados de rota, cabeçalho, query e body em um único record.
 
 ```pascal
 type
-  TProductCreateRequest = record
-    [FromHeader('X-Tenant-Id')]
-    TenantId: string;         // Do header
-    
-    // Do corpo JSON (padrão para POST)
-    Name: string;
-    Description: string;
-    Price: Currency;
-    Stock: Integer;
+  TUpdateStatusRequest = record
+    [FromRoute('id')]
+    TicketId: Integer;           // Capturado da URL /api/tickets/{id}
+
+    [FromHeader('X-User-Id')]
+    UserId: Integer;             // Capturado do Header HTTP
+
+    // Campos sem atributos → Model Binding do body JSON
+    NewStatus: TTicketStatus;
+    Reason: string;
   end;
 
-Builder.MapPost<IProductService, TProductCreateRequest, IResult>('/api/products',
-  function(Service: IProductService; Request: TProductCreateRequest): IResult
+Builder.MapPost<TUpdateStatusRequest, ITicketService, IResult>('/api/tickets/{id}/status',
+  function(Req: TUpdateStatusRequest; Svc: ITicketService): IResult
   begin
-    // TenantId vem do header, resto do body
-    if Request.TenantId = '' then
-      Exit(Results.BadRequest('Header X-Tenant-Id obrigatório'));
-      
-    var Product := Service.Create(Request);
-    Result := Results.Created('/api/products/' + IntToStr(Product.Id), Product);
+    Result := Results.Ok(Svc.UpdateStatus(Req.TicketId, Req.NewStatus, Req.Reason, Req.UserId));
   end);
 ```
 
-> 📚 **Veja Também**: [Model Binding](model-binding.md) para detalhes completos sobre binding de Header, Query, Route e Body.
+### Atributos de Binding Disponíveis
 
-## Endpoints Tipados com Injeção de Dependência
+| Atributo | Fonte |
+|----------|-------|
+| `[FromRoute('paramName')]` | Capturado de `{paramName}` na URL |
+| `[FromHeader('Header-Name')]` | Capturado do Header HTTP |
+| `[FromQuery('queryParam')]` | Capturado de `?queryParam=value` |
+| Sem atributo | Capturado do body JSON (padrão) |
 
-Os overloads genéricos injetam serviços e fazem bind dos dados automaticamente:
+> [!WARNING]
+> ⛔ **NUNCA** use `Ctx.Request.Route['id']` → use `[FromRoute('id')]` no DTO  
+> ⛔ **NUNCA** use `Ctx.Request.Headers['X-User-Id']` → use `[FromHeader('X-User-Id')]` no DTO
 
-```pascal
-// Injeção de serviço + model binding do body
-Builder.MapPost<IUserService, TCreateUserDto, IResult>('/users',
-  function(Service: IUserService; Dto: TCreateUserDto): IResult
-  var
-    User: TUser;
-  begin
-    User := Service.Create(Dto);
-    Result := Results.Created('/users/' + IntToStr(User.Id), User);
-  end);
-```
+> 📚 **Veja Também**: [Model Binding](model-binding.md) para detalhes completos.
 
 ## Padrão Results
 
@@ -157,18 +140,16 @@ Use o helper `Results` para respostas consistentes:
 ```pascal
 Results.Ok(Data)             // 200 com corpo JSON
 Results.Ok<T>(Data)          // 200 com serialização tipada
-Results.Created('/path', E)  // 201 com header Location
+Results.Created('/path', E)  // 201 com Header Location
 Results.NoContent            // 204
 Results.BadRequest('msg')    // 400
 Results.NotFound('msg')      // 404
+Results.StatusCode(401)      // Unauthorized (alternativa segura)
+Results.StatusCode(418, '..') // Status Customizado
+Results.Ok                   // 200 sem corpo (overload parameterless)
 ```
 
-Execute com context:
-```pascal
-Results.Ok(User).Execute(Ctx);
-```
-
-Ou retorne diretamente de handlers tipados:
+Retorne diretamente dos handlers tipados:
 ```pascal
 function(...): IResult
 begin
@@ -176,39 +157,79 @@ begin
 end;
 ```
 
-## Resolução de Serviços
+## Metadados de Endpoint (OpenAPI)
 
-### Via Context
+Enriqueça a documentação Swagger com metadados fluentes:
+
 ```pascal
-var Service := Ctx.Services.GetService<IUserService>;
+Builder.MapGet<IResult>('/api/health',
+  function: IResult
+  begin
+    Result := Results.Ok('API saudável');
+  end)
+  .WithTags('Health')
+  .WithSummary('Verificar status da API')
+  .WithDescription('Retorna uma mensagem simples confirmando que o serviço está rodando.');
 ```
 
-### Via Injeção Genérica (Recomendado)
+### Métodos Disponíveis
+
+- `.WithTags(...)` — Agrupa endpoints no Swagger
+- `.WithSummary(...)` — Título curto para o endpoint
+- `.WithDescription(...)` — Descrição detalhada
+- `.WithMetadata(Summary, Description, Tags)` — Define múltiplos metadados de uma vez
+- `.RequireAuthorization` — Exige autenticação (opcionalmente aceita Schemes ou Roles)
+
+## Cleanup de Model Binding
+
+O framework libera automaticamente objetos de classe criados pelo Model Binding após a execução do handler:
+
 ```pascal
-Builder.MapGet<IUserService, IResult>('/users',
-  function(Service: IUserService): IResult
+// ✅ CORRETO: Framework libera o Dto automaticamente
+Builder.MapPost<TCreateOrderDto, IResult>('/api/orders',
+  function(Dto: TCreateOrderDto): IResult
   begin
-    Result := Results.Ok(Service.GetAll);
+    // Use o Dto normalmente
+    // NÃO chame Dto.Free - o framework cuida disso!
+    Result := Results.Ok(Dto.Items.Count);
   end);
 ```
 
-## Binding do Body
+## Padrão de Módulo de Endpoints
 
-### Via Record DTO (Recomendado)
+Mova todas as definições de rota para uma unit dedicada:
 
 ```pascal
+unit MeuProjeto.Endpoints;
+
+interface
+
+uses
+  Dext.Web; // TAppBuilder, IResult, Results
+
 type
-  TCreateUserRequest = record
-    [Required]
-    Name: string;
-    [StringLength(5, 100)]
-    Email: string;
+  TMeusEndpoints = class
+  public
+    class procedure MapEndpoints(const Builder: TAppBuilder); static;
   end;
 
-// DTO é automaticamente populado do body
-Builder.MapPost<IUserService, TCreateUserRequest, IResult>('/users',
-  function(Service: IUserService; Request: TCreateUserRequest): IResult
-  ...
+implementation
+
+class procedure TMeusEndpoints.MapEndpoints(const Builder: TAppBuilder);
+begin
+  Builder.MapGet<IResult>('/health', ...);
+  Builder.MapPost<TLoginRequest, IAuthService, IResult>('/api/auth/login', ...);
+end;
+```
+
+> [!IMPORTANT]
+> O tipo do parâmetro para `MapEndpoints` é `TAppBuilder` (de `Dext.Web`), **não** `IApplicationBuilder`.
+
+Conecte no Startup:
+```pascal
+App.Builder
+  .MapEndpoints(TMeusEndpoints.MapEndpoints)  // Recebe method pointer
+  .UseSwagger(...);
 ```
 
 ---

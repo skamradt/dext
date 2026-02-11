@@ -1,19 +1,22 @@
 # Entidades & Mapeamento
 
-Configure como classes mapeiam para tabelas de banco de dados.
+Configure como as classes equivalem a tabelas no banco.
 
 ## Estilos de Mapeamento
 
-O Dext suporta dois estilos de mapeamento:
+O Dext suporta dois modelos de mapeamento:
 
-1. **Baseado em Atributos** (recomendado para a maioria dos casos)
-2. **Mapeamento Fluente** (para classes POCO)
+1. **Mapeamento Explícito** (strings em atributos) — Use quando o banco já existe ou nomes não seguem um padrão.
+2. **Estratégias de Nomeação** (Naming Strategies) — Recomendado para novos projetos (mapeamento automático).
 
 ## Mapeamento por Atributos
 
 ### Entidade Básica
 
 ```pascal
+uses
+  Dext.Entity; // Facade: Table, Column, PK, AutoInc, Required, MaxLength
+
 type
   [Table('users')]
   TUser = class
@@ -21,17 +24,26 @@ type
     FId: Integer;
     FName: string;
     FEmail: string;
+    FCreatedAt: TDateTime;
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
-    
-    [Column('full_name')]
+
+    [Required, MaxLength(100)]
     property Name: string read FName write FName;
-    
-    [Column('email')]
+
+    [Required, MaxLength(200)]
     property Email: string read FEmail write FEmail;
+
+    [CreatedAt]
+    property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
   end;
 ```
+
+> [!IMPORTANT]
+> **Estilo de Declaração**: Coloque atributos na mesma linha, separados por vírgula.  
+> - ✅ `[Required, MaxLength(50), JSONName('code')]`  
+> - ❌ `[Required]` em uma linha, `[MaxLength(50)]` na próxima.
 
 ## Atributos Disponíveis
 
@@ -39,131 +51,187 @@ type
 
 | Atributo | Descrição |
 |----------|-----------|
-| `[Table('nome')]` | Mapear classe para tabela |
-| `[Schema('schema')]` | Especificar schema |
+| `[Table('nome')]` | Mapeia classe para tabela |
+| `[Table]` | Mapeia usando Naming Strategy |
+| `[Schema('schema')]` | Especifica o schema |
 
 ### Mapeamento de Coluna
 
 | Atributo | Descrição |
 |----------|-----------|
-| `[Column('nome')]` | Mapear para coluna específica |
-| `[PK]` | Chave primária |
+| `[Column('nome')]` | Mapeia para coluna específica |
+| `[Column]` | Mapeia usando Naming Strategy |
+| `[PK]` | Chave Primária |
 | `[AutoInc]` | Auto-incremento |
-| `[NotMapped]` | Excluir do mapeamento |
+| `[NotMapped]` | Exclui do mapeamento E do JSON |
 | `[Version]` | Controle de concorrência otimista |
-| `[SoftDelete('col_deletado', 1, 0)]` | Exclusão lógica com valores para Deletado e Não Deletado |
+| `[SoftDelete('deleted', 1, 0)]` | Exclusão lógica |
 | `[CreatedAt]` | Timestamp automático na inserção |
 | `[UpdatedAt]` | Timestamp automático na atualização |
 
-### Dicas de Escopo de Tipo
+### Atributos de Validação
 
 | Atributo | Descrição |
 |----------|-----------|
-| `[StringLength(100)]` | Comprimento máximo da string |
-| `[MaxLength(100)]` | Alias para StringLength |
-| `[Precision(18, 2)]` | Precisão e Escala para tipos numéricos/decimais |
-| `[Required]` | Restrição NOT NULL |
-| `[Default('valor')]` | Valor padrão no banco de dados |
-| `[JsonColumn]` | Trata a coluna como JSON (converte para objeto/lista) |
-| `[DbType(ftGuid)]` | Força um TFieldType específico para parâmetros |
+| `[Required]` | Constraint NOT NULL (validado no SaveChanges) |
+| `[MaxLength(N)]` | Tamanho máximo de string |
+| `[MinLength(N)]` | Tamanho mínimo de string |
 
-### Relacionamentos
+> [!WARNING]
+> **`[StringLength]` NÃO existe no Dext!** Use `[MaxLength(N)]`.
+
+Esses atributos requerem `Dext.Entity` no uses A validação roda automaticamente no `SaveChanges`.
+
+### Chaves Estrangeiras
 
 | Atributo | Descrição |
 |----------|-----------|
-| `[ForeignKey('col')]` | Coluna de chave estrangeira |
-| `[InverseProperty('prop')]` | Link de navegação |
+| `[ForeignKey('col')]` | Coluna Chave Estrangeira |
+| `[InverseProperty('prop')]` | Link de navegação reverso |
 
-### Coleções & Ownership de Entidades
+### Coleções (IList) & Gerenciamento de Memória
 
-Ao definir propriedades `IList<T>` que também são gerenciadas pelo `DbContext`:
+Ao definir `IList<T>` gerenciadas pelo `DbContext`:
 
-1. Use `FItems: IList<TFilho>` como field privado.
-2. Inicialize no construtor com `TCollections.CreateList<TFilho>(False)`.
+1. Use `FItems: IList<TChild>` como field privado.
+2. Inicialize no construtor com `TCollections.CreateList<TChild>(False)`.
 3. **Crucial**: Passe `False` para `OwnsObjects`.
-   - **Razão**: O `DbContext` já gerencia o ciclo de vida das entidades rastreadas. Se a lista também tentar liberá-las (`True`), ocorrerá **Invalid Pointer Operation** (Double Free) no shutdown.
-4. **Testes Unitários**: Como não há DbContext, você **deve liberar manualmente** os itens filhos no bloco `finally` do teste.
+   - **Razão**: O DbContext já gerencia o ciclo de vida. Se a lista também for dona (`True`), ocorrerá **Invalid Pointer Operation** (Double Free) no shutdown.
+4. **Testes Unitários**: Como não há DbContext, você **DEVE liberar manualmente** os itens filhos no `finally` do teste.
+
+### Dicas de Tipo
+
+| Atributo | Descrição |
+|----------|-----------|
+| `[Precision(18, 2)]` | Precisão e Escala para numéricos |
+| `[Default('val')]` | Valor padrão no banco |
+| `[JsonColumn]` | Trata coluna como JSON |
+| `[DbType(ftGuid)]` | Força um TFieldType específico |
 
 ### Conversão de Tipos
 
 | Atributo | Descrição |
 |----------|-----------|
-| `[TypeConverter(TMeuConverter)]` | Converter customizado para esta propriedade |
-
-Use `[TypeConverter]` para sobrescrever como uma propriedade específica é convertida para/do banco:
+| `[TypeConverter(TMyConverter)]` | Converter customizado para esta propriedade |
 
 ```pascal
 type
-  // Converter customizado: armazena TDateTime como Unix timestamp
   TUnixTimestampConverter = class(TTypeConverterBase)
   public
     function CanConvert(ATypeInfo: PTypeInfo): Boolean; override;
     function ToDatabase(const AValue: TValue; ADialect: TDatabaseDialect): TValue; override;
     function FromDatabase(const AValue: TValue; ATypeInfo: PTypeInfo): TValue; override;
   end;
-
-  [Table('events')]
-  TEvent = class
-  private
-    FId: Integer;
-    FName: string;
-    FCreatedAt: TDateTime;
-    FScheduledAt: TDateTime;
-  public
-    [PK, AutoInc]
-    property Id: Integer read FId write FId;
-    property Name: string read FName write FName;
-    
-    // Usa converter customizado - armazenado como Unix timestamp (Integer)
-    [TypeConverter(TUnixTimestampConverter)]
-    property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
-    
-    // Usa converter TDateTime padrão (formato ISO)
-    property ScheduledAt: TDateTime read FScheduledAt write FScheduledAt;
-  end;
 ```
 
-> 💡 O converter de propriedade tem prioridade sobre converters globais de tipo.
+## Colunas Anuláveis (Nullable)
 
-## Colunas Anuláveis
-
-Use `Nullable<T>` para colunas que podem ser NULL:
+Use `Nullable<T>` para colunas que aceitam NULL:
 
 ```pascal
 uses
-  Dext.Types.Nullable;
+  Dext.Types.Nullable;  // Obrigatório para Nullable<T>
 
 type
-  [Table('products')]
-  TProduct = class
+  [Table('tickets')]
+  TTicket = class
   private
     FId: Integer;
-    FDescription: Nullable<string>;  // Pode ser NULL
-    FDiscount: Nullable<Double>;      // Pode ser NULL
+    FAssigneeId: Nullable<Integer>;
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
-    
-    property Description: Nullable<string> read FDescription write FDescription;
-    property Discount: Nullable<Double> read FDiscount write FDiscount;
+
+    [ForeignKey('Assignee')]
+    property AssigneeId: Nullable<Integer> read FAssigneeId write FAssigneeId;
   end;
 ```
 
-Usando valores anuláveis:
-
+**Conversão implícita** funciona automaticamente:
 ```pascal
-// Verificar se tem valor
-if Product.Discount.HasValue then
-  WriteLn('Desconto: ', Product.Discount.Value);
+// Integer → Nullable<Integer>
+Ticket.AssigneeId := AgentId;   // Funciona sem cast
 
-// Obter valor com padrão
-var Desc := Product.Discount.GetValueOrDefault(0);
+// Verificar valor
+if Ticket.AssigneeId.HasValue then
+  WriteLn('Atribuído para: ', Ticket.AssigneeId.Value);
 
-// Definir como null
-Product.Discount := Nullable<Double>.Null;
+// Obter com default
+var AssignId := Ticket.AssigneeId.GetValueOrDefault(0);
+
+// Setar null
+Ticket.AssigneeId := Nullable<Integer>.Null;
 ```
 
-> 💡 **Referência**: Veja o exemplo [Orm.EntityStyles](../../../Examples/Orm.EntityStyles/) para uma comparação lado a lado entre entidades Clássicas e Smart.
+> [!WARNING]
+> **`NavType<T>` NÃO existe no Dext!** Use sempre `Nullable<T>`.
+
+## Rastreamento de Mudanças (Change Tracking)
+
+O `ChangeTracker` pode não detectar mudanças se a entidade estiver detached. **Sempre** chame `Update` explicitamente antes de salvar:
+
+```pascal
+// ❌ INCORRETO: Pode falhar silenciosamente
+Event.Status := esPublicado;
+FDb.SaveChanges;
+
+// ✅ CORRETO: Força State = Modified
+Event.Status := esPublicado;
+FDb.Events.Update(Event);  // Garante o update
+FDb.SaveChanges;
+```
+
+## IDs Gerados Automaticamente
+
+`SaveChanges` popula automaticamente os IDs de entidades inseridas (`[AutoInc]`).
+
+```pascal
+var User := TUser.Create;
+User.Name := 'Alice';
+FDb.Users.Add(User);
+FDb.SaveChanges;
+
+// ✅ User.Id já está populado — não consulte o banco novamente!
+WriteLn('Novo ID: ', User.Id);
+```
+
+> [!WARNING]
+> ⛔ **NUNCA** consulte o banco novamente para recuperar o ID após salvar. O objeto já está atualizado.
+
+## Detach (Gerenciamento de Memória)
+
+`FDb.Detach(Entity)` apenas remove a entidade do IdentityMap. Ele **NÃO** libera a memória.
+
+```pascal
+// ❌ INCORRETO: Memory Leak (entidade vira órfã)
+FDb.Detach(Entity);
+Entity := FDb.Find(ID);
+
+// ✅ CORRETO: Libere a memória explicitamente
+FDb.Detach(Entity);
+Entity.Free;
+Entity := FDb.Find(ID);
+```
+
+## Convenções de Nomenclatura
+
+Por padrão, o Dext usa o nome da propriedade como nome da coluna. Para novos projetos, configure uma Naming Strategy:
+
+```pascal
+// No DbContext
+procedure TAppDbContext.OnModelCreating(Builder: TModelBuilder);
+begin
+  Builder.UseNamingStrategy(TSnakeCaseNamingStrategy);
+end;
+```
+
+Com `TSnakeCaseNamingStrategy`:
+- Tabela `TUser` → `user`
+- Coluna `CreatedAt` → `created_at`
+
+Sobrescreva com `[Table('nome')]` e `[Column('nome')]` quando necessário.
+
+> 💡 **Referência**: Veja o exemplo [Orm.EntityStyles](../../../Examples/Orm.EntityStyles/) para uma comparação lado a lado.
 
 ---
 
