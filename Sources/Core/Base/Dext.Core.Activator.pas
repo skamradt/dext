@@ -56,10 +56,10 @@ type
     // If it's an interface, tries to resolve from DI, with fallback for IList/IEnumerable.
     class function CreateInstance(AProvider: IServiceProvider; AType: PTypeInfo): TValue; overload;
 
-    // Generic Helper
     class function CreateInstance<T: class>(const AArgs: array of TValue): T; overload;
     class function CreateInstance<T: class>: T; overload;
   private
+    class function TryResolveService(AProvider: IServiceProvider; AParamType: TRttiType; out AResolvedService: TValue): Boolean;
     class function IsListType(AType: PTypeInfo): Boolean;
     class function GetListElementType(AType: PTypeInfo): PTypeInfo;
   end;
@@ -70,6 +70,43 @@ uses
   Dext.Collections;
 
 { TActivator }
+
+class function TActivator.TryResolveService(AProvider: IServiceProvider; AParamType: TRttiType; out AResolvedService: TValue): Boolean;
+var
+  ServiceType: TServiceType;
+begin
+  AResolvedService := TValue.Empty;
+  Result := False;
+
+  if AProvider = nil then
+    Exit;
+
+  if AParamType.TypeKind = tkInterface then
+  begin
+    var Guid := TRttiInterfaceType(AParamType).GUID;
+    if not Guid.IsEmpty then
+    begin
+      ServiceType := TServiceType.FromInterface(Guid);
+      var Intf := AProvider.GetServiceAsInterface(ServiceType);
+      if Intf <> nil then
+      begin
+        TValue.Make(@Intf, AParamType.Handle, AResolvedService);
+        Result := True;
+      end;
+    end;
+  end
+  else if AParamType.TypeKind = tkClass then
+  begin
+    var Cls := TRttiInstanceType(AParamType).MetaclassType;
+    ServiceType := TServiceType.FromClass(Cls);
+    var Obj := AProvider.GetService(ServiceType);
+    if Obj <> nil then
+    begin
+      AResolvedService := TValue.From(Obj);
+      Result := True;
+    end;
+  end;
+end;
 
 // 1. Manual Instantiation with Hybrid DI Support
 class function TActivator.CreateInstance(AClass: TClass; const AArgs: array of TValue): TObject;
@@ -174,8 +211,6 @@ var
   Args: TArray<TValue>;
   I: Integer;
   Matched: Boolean;
-  ParamType: TRttiType;
-  ServiceType: TServiceType;
   ResolvedService: TValue;
   
   // Best match tracking
@@ -192,6 +227,7 @@ begin
 
     BestMethod := nil;
     MaxParams := -1;
+    Matched := False;
 
     // First pass: Look for [ServiceConstructor] attribute
     for Method in TypeObj.GetMethods do
@@ -217,38 +253,12 @@ begin
 
           for I := 0 to High(Params) do
           begin
-            // Resolve from DI
-            ParamType := Params[I].ParamType;
-            ResolvedService := TValue.Empty;
-
-            if ParamType.TypeKind = tkInterface then
+            if not TryResolveService(AProvider, Params[I].ParamType, ResolvedService) then
             begin
-               var Guid := TRttiInterfaceType(ParamType).GUID;
-               ServiceType := TServiceType.FromInterface(Guid);
-               if AProvider <> nil then
-               begin
-                 var Intf := AProvider.GetServiceAsInterface(ServiceType);
-                 if Intf <> nil then
-                   TValue.Make(@Intf, ParamType.Handle, ResolvedService);
-               end;
-            end
-            else if ParamType.TypeKind = tkClass then
-            begin
-               var Cls := TRttiInstanceType(ParamType).MetaclassType;
-               ServiceType := TServiceType.FromClass(Cls);
-               var Obj := AProvider.GetService(ServiceType);
-               if Obj <> nil then
-                 ResolvedService := TValue.From(Obj);
-            end;
-
-            if not ResolvedService.IsEmpty then
-              Args[I] := ResolvedService
-            else
-            begin
-              // Dependency not found -> Match failed
               Matched := False;
               Break;
             end;
+            Args[I] := ResolvedService;
           end;
 
           if Matched then
@@ -267,40 +277,14 @@ begin
       if Method.IsConstructor then
       begin
         Params := Method.GetParameters;
-        SetLength(Args, Length(Params));
-        Matched := True;
-
         for I := 0 to High(Params) do
         begin
-          // Resolve from DI
-          ParamType := Params[I].ParamType;
-          ResolvedService := TValue.Empty;
-
-          if ParamType.TypeKind = tkInterface then
+          if not TryResolveService(AProvider, Params[I].ParamType, ResolvedService) then
           begin
-             var Guid := TRttiInterfaceType(ParamType).GUID;
-             ServiceType := TServiceType.FromInterface(Guid);
-             var Intf := AProvider.GetServiceAsInterface(ServiceType);
-             if Intf <> nil then
-               TValue.Make(@Intf, ParamType.Handle, ResolvedService);
-          end
-          else if ParamType.TypeKind = tkClass then
-          begin
-             var Cls := TRttiInstanceType(ParamType).MetaclassType;
-             ServiceType := TServiceType.FromClass(Cls);
-             var Obj := AProvider.GetService(ServiceType);
-             if Obj <> nil then
-               ResolvedService := TValue.From(Obj);
-          end;
-
-          if not ResolvedService.IsEmpty then
-            Args[I] := ResolvedService
-          else
-          begin
-            // Dependency not found -> Match failed
             Matched := False;
             Break;
           end;
+          Args[I] := ResolvedService;
         end;
 
         if Matched then
@@ -339,8 +323,6 @@ var
   Args: TArray<TValue>;
   I: Integer;
   Matched: Boolean;
-  ParamType: TRttiType;
-  ServiceType: TServiceType;
   ResolvedService: TValue;
 begin
   // If no args provided, delegate to Pure DI overload
@@ -376,34 +358,12 @@ begin
           end;
 
           // 2. Resolve remaining from DI
-          ParamType := Params[I].ParamType;
-          ResolvedService := TValue.Empty;
-
-          if ParamType.TypeKind = tkInterface then
+          if not TryResolveService(AProvider, Params[I].ParamType, ResolvedService) then
           begin
-             var Guid := TRttiInterfaceType(ParamType).GUID;
-             ServiceType := TServiceType.FromInterface(Guid);
-             var Intf := AProvider.GetServiceAsInterface(ServiceType);
-             if Intf <> nil then
-               TValue.Make(@Intf, ParamType.Handle, ResolvedService);
-          end
-          else if ParamType.TypeKind = tkClass then
-          begin
-             var Cls := TRttiInstanceType(ParamType).MetaclassType;
-             ServiceType := TServiceType.FromClass(Cls);
-             var Obj := AProvider.GetService(ServiceType);
-             if Obj <> nil then
-               ResolvedService := TValue.From(Obj);
-          end;
-
-          if not ResolvedService.IsEmpty then
-            Args[I] := ResolvedService
-          else
-          begin
-            // Not found and not in AArgs -> Match failed
             Matched := False;
             Break;
           end;
+          Args[I] := ResolvedService;
         end;
 
         if Matched then
@@ -443,12 +403,15 @@ begin
       if AProvider <> nil then
       begin
         var Guid := TRttiInterfaceType(RttiType).GUID;
-        ServiceType := TServiceType.FromInterface(Guid);
-        var Intf := AProvider.GetServiceAsInterface(ServiceType);
-        if Intf <> nil then
+        if Guid <> TGUID.Empty then
         begin
-          TValue.Make(@Intf, AType, Result);
-          Exit;
+          ServiceType := TServiceType.FromInterface(Guid);
+          var Intf := AProvider.GetServiceAsInterface(ServiceType);
+          if Intf <> nil then
+          begin
+            TValue.Make(@Intf, AType, Result);
+            Exit;
+          end;
         end;
       end;
 

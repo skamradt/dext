@@ -1,8 +1,8 @@
-unit TicketSales.Startup;
+unit EventHub.Startup;
 
 {***************************************************************************}
 {                                                                           }
-{           Web.TicketSales - Application Startup                           }
+{           Web.EventHub - Application Startup                              }
 {                                                                           }
 {           Configuration of services, middleware, and routing              }
 {                                                                           }
@@ -13,17 +13,16 @@ interface
 uses
   // 1. Delphi Units
   System.SysUtils,
-  // 3. Dext Specialized Units
+  // 2. Dext Specialized Units
   Dext.Auth.Middleware,
   Dext.Caching,
   Dext.Entity.Core,
   Dext.Logging,
   Dext.RateLimiting,
   Dext.RateLimiting.Policy,
-  Dext.Web.DataApi,
   Dext.Core.SmartTypes,
   Dext.Collections,
-  // 4. Dext Facades Last to ensure precedence and valid helpers
+  // 3. Dext Facades (ALWAYS LAST in Dext Group)
   Dext,
   Dext.Entity,
   Dext.Web;
@@ -31,11 +30,11 @@ uses
 type
   TStartup = class(TInterfacedObject, IStartup)
   private
-    const JWT_SECRET = 'ticket-sales-super-secret-key-minimum-32-characters';
-    const JWT_ISSUER = 'ticket-sales-api';
-    const JWT_AUDIENCE = 'ticket-sales-clients';
+    const JWT_SECRET = 'eventhub-super-secret-key-minimum-32-characters!';
+    const JWT_ISSUER = 'eventhub-api';
+    const JWT_AUDIENCE = 'eventhub-clients';
     const JWT_EXPIRATION_MINUTES = 120;
-    
+
     procedure ConfigureDatabase(Options: TDbContextOptions);
   public
     procedure ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
@@ -45,45 +44,45 @@ type
 implementation
 
 uses
-  TicketSales.Data.Context,
-  TicketSales.Services,
-  TicketSales.Controllers;
+  EventHub.Data.Context,
+  EventHub.Services,
+  EventHub.Endpoints;
 
 { TStartup }
 
 procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
 begin
-  Options.UseSQLite('TicketSales.db');
-  Options.UseSnakeCaseNamingConvention;
+  Options
+    .UseSQLite('EventHub.db')
+    .UseSnakeCaseNamingConvention
+    .WithPooling;
 end;
 
 procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
   Services
     // Database Context
-    .AddDbContext<TTicketSalesDbContext>(ConfigureDatabase)
-    // JWT Token Handler
+    .AddDbContext<TEventHubDbContext>(ConfigureDatabase)
+
+    // JWT Token Handler (Singleton - stateless)
     .AddSingleton<IJwtTokenHandler, TJwtTokenHandler>(
       function(Provider: IServiceProvider): TObject
       begin
         Result := TJwtTokenHandler.Create(JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, JWT_EXPIRATION_MINUTES);
       end)
     .AddTransient<IClaimsBuilder, TClaimsBuilder>
+
     // Business Services (Scoped - one per request)
     .AddScoped<IEventService, TEventService>
-    .AddScoped<ITicketTypeService, TTicketTypeService>
-    .AddScoped<ICustomerService, TCustomerService>
-    .AddScoped<IOrderService, TOrderService>
-    .AddScoped<ITicketService, TTicketService>
-    // Register Controllers
-    .AddControllers;
+    .AddScoped<ISpeakerService, TSpeakerService>
+    .AddScoped<IAttendeeService, TAttendeeService>
+    .AddScoped<IRegistrationService, TRegistrationService>;
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
 begin
-  // Global JSON settings: camelCase, case-insensitive
-  JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
-
+  // Global JSON settings: camelCase, case-insensitive, ISO dates
+  JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.ISODateFormat);
 
   App.Builder
     // 1. Exception Handler (first middleware)
@@ -97,28 +96,28 @@ begin
       JwtOptions(JWT_SECRET)
         .Issuer(JWT_ISSUER)
         .Audience(JWT_AUDIENCE)
-        .ExpirationMinutes(JWT_EXPIRATION_MINUTES))
-    // 5. Rate Limiting (100 requests per minute)
+        .ExpirationMinutes(JWT_EXPIRATION_MINUTES)
+    )
+    // 5. Rate Limiting (200 requests per minute)
     .UseRateLimiting(
-      RateLimitPolicy.FixedWindow(100, 60)
-        .RejectionMessage('Too many requests. Please try again later.')
+      RateLimitPolicy
+        .FixedWindow(200, 60)
+        .RejectionMessage('Too many requests. Please slow down.')
         .RejectionStatusCode(429))
     // 6. Response Cache
     .UseResponseCache(
       ResponseCacheOptions
-        .DefaultDuration(30)
-        .VaryByQueryString);
-
-    // 7. Map Controllers
-    App.MapControllers;
-
-    // 8. Swagger (last, after routes are mapped)
-    App.Builder.UseSwagger(
-      SwaggerOptions
-        .Title('Ticket Sales API')
-        .Description('API for managing event ticket sales')
-        .Version('v1')
-        .BearerAuth);
+        .DefaultDuration(15)
+        .VaryByQueryString
+    )
+    // 7. Map Minimal API Endpoints
+    .MapEndpoints(TEventHubEndpoints.MapEndpoints)
+    // 8. Swagger (AFTER routes are mapped)
+    .UseSwagger(SwaggerOptions
+      .Title('EventHub API')
+      .Description('Event Management & Registration Platform - Built with Dext Framework')
+      .Version('v1')
+      .BearerAuth);
 end;
 
 end.

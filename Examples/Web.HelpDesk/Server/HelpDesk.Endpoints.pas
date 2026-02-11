@@ -77,7 +77,7 @@ type
 
   TEndpoints = class
   public
-    class procedure MapEndpoints(const Builder: TAppBuilder); static;
+    class procedure MapEndpoints(Builder: TAppBuilder); static;
   end;
 
 implementation
@@ -89,7 +89,7 @@ uses
 
 { TEndpoints }
 
-class procedure TEndpoints.MapEndpoints(const Builder: TAppBuilder);
+class procedure TEndpoints.MapEndpoints(Builder: TAppBuilder);
 begin
   // ==========================================================================
   // AUTH ENDPOINTS

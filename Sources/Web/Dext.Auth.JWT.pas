@@ -120,32 +120,51 @@ type
   /// <summary>
   ///   Fluent builder for creating JWT options.
   /// </summary>
-  TJwtOptionsBuilder = class
+  /// <summary>
+  ///   Fluent builder for creating JWT options.
+  /// </summary>
+  TJwtOptionsBuilder = record
   private
     FOptions: TJwtOptions;
+    FInitialized: Boolean;
+    procedure EnsureInitialized(const ASecretKey: string = '');
   public
-    constructor Create(const ASecretKey: string);
-    
     /// <summary>
-    ///   Sets the token issuer (iss claim).
+    ///   Creates a new JWT options builder.
     /// </summary>
-    function WithIssuer(const AIssuer: string): TJwtOptionsBuilder;
+    class function Create(const ASecretKey: string): TJwtOptionsBuilder; static;
     
-    /// <summary>
-    ///   Sets the token audience (aud claim).
-    /// </summary>
-    function WithAudience(const AAudience: string): TJwtOptionsBuilder;
+    // =====================================================================
+    // New API (without 'With' prefix)
+    // =====================================================================
     
-    /// <summary>
-    ///   Sets the token expiration time in minutes.
-    /// </summary>
-    function WithExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder;
+    function Issuer(const AIssuer: string): TJwtOptionsBuilder;
+    function Audience(const AAudience: string): TJwtOptionsBuilder;
+    function ExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder;
+
+    // =====================================================================
+    // Deprecated API (with 'With' prefix)
+    // =====================================================================
+    
+    function WithIssuer(const AIssuer: string): TJwtOptionsBuilder; deprecated 'Use Issuer instead';
+    function WithAudience(const AAudience: string): TJwtOptionsBuilder; deprecated 'Use Audience instead';
+    function WithExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder; deprecated 'Use ExpirationMinutes instead';
 
     /// <summary>
     ///   Builds and returns the JWT options.
     /// </summary>
     function Build: TJwtOptions;
+    
+    /// <summary>
+    ///   Implicit conversion to TJwtOptions.
+    /// </summary>
+    class operator Implicit(const ABuilder: TJwtOptionsBuilder): TJwtOptions;
   end;
+
+  /// <summary>
+  ///   Delegate for configuring JWT options via builder (passed by reference).
+  /// </summary>
+  TJwtBuilderProc = reference to procedure(var Builder: TJwtOptionsBuilder);
 
   /// <summary>
   ///   Helper for implicit conversion of TJwtOptions to TValue.
@@ -360,34 +379,68 @@ begin
 end;
 
 { TJwtOptionsBuilder }
-
-constructor TJwtOptionsBuilder.Create(const ASecretKey: string);
+ 
+procedure TJwtOptionsBuilder.EnsureInitialized(const ASecretKey: string);
 begin
-  inherited Create;
-  FOptions := TJwtOptions.Create(ASecretKey);
+  if not FInitialized then
+  begin
+    FOptions := TJwtOptions.Create(ASecretKey);
+    FInitialized := True;
+  end;
 end;
 
-function TJwtOptionsBuilder.WithIssuer(const AIssuer: string): TJwtOptionsBuilder;
+class function TJwtOptionsBuilder.Create(const ASecretKey: string): TJwtOptionsBuilder;
 begin
+  Result.FOptions := TJwtOptions.Create(ASecretKey);
+  Result.FInitialized := True;
+end;
+
+function TJwtOptionsBuilder.Issuer(const AIssuer: string): TJwtOptionsBuilder;
+begin
+  EnsureInitialized;
   FOptions.Issuer := AIssuer;
   Result := Self;
 end;
 
-function TJwtOptionsBuilder.WithAudience(const AAudience: string): TJwtOptionsBuilder;
+function TJwtOptionsBuilder.Audience(const AAudience: string): TJwtOptionsBuilder;
 begin
+  EnsureInitialized;
   FOptions.Audience := AAudience;
   Result := Self;
 end;
 
-function TJwtOptionsBuilder.WithExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder;
+function TJwtOptionsBuilder.ExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder;
 begin
+  EnsureInitialized;
   FOptions.ExpirationMinutes := AMinutes;
   Result := Self;
 end;
 
+// Deprecated Implementation
+function TJwtOptionsBuilder.WithIssuer(const AIssuer: string): TJwtOptionsBuilder;
+begin
+  Result := Issuer(AIssuer);
+end;
+
+function TJwtOptionsBuilder.WithAudience(const AAudience: string): TJwtOptionsBuilder;
+begin
+  Result := Audience(AAudience);
+end;
+
+function TJwtOptionsBuilder.WithExpirationMinutes(AMinutes: Integer): TJwtOptionsBuilder;
+begin
+  Result := ExpirationMinutes(AMinutes);
+end;
+
 function TJwtOptionsBuilder.Build: TJwtOptions;
 begin
+  EnsureInitialized;
   Result := FOptions;
+end;
+
+class operator TJwtOptionsBuilder.Implicit(const ABuilder: TJwtOptionsBuilder): TJwtOptions;
+begin
+  Result := ABuilder.FOptions;
 end;
 
 { TJwtOptionsHelper }

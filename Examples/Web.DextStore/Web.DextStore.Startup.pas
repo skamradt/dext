@@ -50,24 +50,30 @@ end;
 
 procedure TStartup.Configure(const App: IWebApplication);
 begin
-  // ✨ CORS with Fluent API
-  App.Builder.UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
-
-  // ✨ JWT Authentication
-  App.Builder.UseJwtAuthentication(JwtSecret,
-    procedure(Auth: TJwtOptionsBuilder)
-    begin
-      Auth.WithIssuer(JwtIssuer)
-          .WithAudience(JwtAudience)
-          .WithExpirationMinutes(JwtExpiration);
-    end);
-
-  // Minimal API Health Check
-  App.Builder.MapGet('/health',
-    procedure(Ctx: IHttpContext)
-    begin
-      Ctx.Response.Json('{"status": "healthy", "timestamp": "' + DateTimeToStr(Now) + '"}');
-    end);
+(*
+    // 4. JWT Authentication
+    .UseJwtAuthentication(
+      JwtOptions(JWT_SECRET)
+        .Issuer(JWT_ISSUER)
+        .Audience(JWT_AUDIENCE)
+        .ExpirationMinutes(JWT_EXPIRATION_MINUTES)
+    )
+*)
+  App.Builder
+    // ✨ CORS with Fluent API
+    .UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader)
+    // ✨ JWT Authentication
+    .UseJwtAuthentication(
+      JwtOptions(JwtSecret)
+        .Issuer(JwtIssuer)
+        .Audience(JwtAudience)
+        .ExpirationMinutes(JwtExpiration))
+    // Minimal API Health Check
+    .MapGet('/health',
+      procedure(Ctx: IHttpContext)
+      begin
+        Ctx.Response.Json('{"status": "healthy", "timestamp": "' + DateTimeToStr(Now) + '"}');
+      end);
 
   // Routing & Controllers
   App.MapControllers;

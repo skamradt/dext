@@ -20,19 +20,14 @@ begin
     var App: IWebApplication := TDextApplication.Create;
 
     // 1. Register Configuration (IOptions)
-    App.Services.Configure<TMySettings>(
-      App.Configuration.GetSection('AppSettings')
-    );
-
-    // 2. Register Services
     App.Services
+      .Configure<TMySettings>(App.Configuration.GetSection('AppSettings'))
       .AddSingleton<IGreetingService, TGreetingService>
-      .AddControllers;
-    
-    // 3. Register Health Checks
-    App.Services.AddHealthChecks
-      .AddCheck<TDatabaseHealthCheck>
-      .Build;
+      .AddControllers
+      // 3. Register Health Checks
+      .AddHealthChecks
+        .AddCheck<TDatabaseHealthCheck>
+        .Build;
 
     // 4. Register Background Services
     App.Services.AddBackgroundServices
@@ -43,28 +38,26 @@ begin
     var Builder := App.Builder;
 
     // ✨ CORS with Fluent API
-    Builder.UseCors(CorsOptions
+    Builder
+      .UseCors(
+        CorsOptions
           .Origins(['http://localhost:5173'])
           .Methods(['GET', 'POST', 'PUT', 'DELETE'])
           .AllowAnyHeader
           .AllowCredentials
-          .MaxAge(3600));
+          .MaxAge(3600))
+      // Static Files
+      .UseStaticFiles(Builder.CreateStaticFileOptions);
 
-    // Static Files
-    Builder.UseStaticFiles(Builder.CreateStaticFileOptions);
-    
     // Health Checks
     App.UseMiddleware(THealthCheckMiddleware);
 
     // ✨ JWT Authentication with Fluent API
-    Builder.UseJwtAuthentication('dext-secret-key-must-be-very-long-and-secure-at-least-32-chars',
-      procedure(Auth: TJwtOptionsBuilder)
-      begin
-        Auth.WithIssuer('dext-issuer')
-            .WithAudience('dext-audience')
-            .WithExpirationMinutes(60);
-      end
-    );
+    Builder.UseJwtAuthentication(
+      JwtOptions('dext-secret-key-must-be-very-long-and-secure-at-least-32-chars')
+        .Issuer('dext-issuer')
+        .Audience('dext-audience')
+        .ExpirationMinutes(60));
        
     // 6. Map Controllers
     App.MapControllers;

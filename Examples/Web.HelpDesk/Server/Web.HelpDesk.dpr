@@ -38,7 +38,6 @@ begin
     // Build + Seed
     Provider := App.BuildServices;
 
-    // TODO : (TDbSeeder.Seed(Provider);) Isso deveria ser automático, por que está aqui
     TDbSeeder.Seed(Provider);
 
     WriteLn('Server listening on http://localhost:' + IntToStr(PORT));

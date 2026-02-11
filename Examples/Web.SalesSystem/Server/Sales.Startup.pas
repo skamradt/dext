@@ -30,6 +30,7 @@ uses
 type
   TStartup = class(TInterfacedObject, IStartup)
   public
+    const AuthSecret: string = 'my-super-secret-key-for-sales-system-minimum-32-chars';
     procedure ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
     procedure Configure(const App: IWebApplication);
   private
@@ -49,57 +50,43 @@ uses
 
 procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
 begin
-  Options.UseSQLite('SalesSystem.db');
-  Options.UseSnakeCaseNamingConvention;
+  Options.UseSQLite('SalesSystem.db').UseSnakeCaseNamingConvention;
 end;
 
 procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  Services.AddDbContext<TSalesDbContext>(ConfigureDatabase);
-  {$IFNDEF MODEL_BINDING_ARRAY}
-  Services.AddTransient<IList<TOrderItemDto>, TSmartList<TOrderItemDto>>;
-  {$ENDIF}
-
-  var Secret := 'my-super-secret-key-for-sales-system-minimum-32-chars';
-  Services.AddSingleton<IAuthService, TAuthService>(
+  Services
+    .AddDbContext<TSalesDbContext>(ConfigureDatabase)
+    {$IFNDEF MODEL_BINDING_ARRAY}
+    .AddTransient<IList<TOrderItemDto>, TSmartList<TOrderItemDto>>
+    {$ENDIF}
+    .AddSingleton<IAuthService, TAuthService>(
     function(P: IServiceProvider): TObject
     begin
-      Result := TAuthService.Create(Secret);
+      Result := TAuthService.Create(AuthSecret);
     end);
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
 begin
-  var Builder := App.Builder;
-
   // ✨ Configurações globais de JSON
   JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
 
-  Builder.UseExceptionHandler;
-  Builder.UseHttpLogging;
-
-  Builder.UseCors(
-    procedure(C: TCorsBuilder)
-    begin
-        C.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader;
-    end);
-
-  var Secret := 'my-super-secret-key-for-sales-system-minimum-32-chars';
-  Builder.UseJwtAuthentication(Secret, procedure(Options: TJwtOptionsBuilder) begin end);
-
-  Builder.UseRateLimiting(TRateLimitPolicy.FixedWindow(100, 60));
-
-  Builder.UseResponseCache(
-    procedure(Cache: TResponseCacheBuilder)
-    begin
-      Cache.DefaultDuration(30).VaryByQueryString;
-    end);
-
-  TSalesEndpoints.MapEndpoints(Builder);
-
-  Builder.UseSwagger(Swagger
-    .Title('Sales System CQRS API')
-    .Version('v1'));
+  App.Builder
+    .UseExceptionHandler
+    .UseHttpLogging
+    .UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader)
+    .UseJwtAuthentication(JwtOptions(AuthSecret))
+    .UseRateLimiting(RateLimitPolicy.FixedWindow(100, 60))
+    .UseResponseCache(
+      ResponseCacheOptions
+        .DefaultDuration(30)
+        .VaryByQueryString)
+    .MapEndpoints(TSalesEndpoints.MapEndpoints)
+    .UseSwagger(
+      SwaggerOptions
+        .Title('Sales System CQRS API')
+        .Version('v1'));
 end;
 
 end.

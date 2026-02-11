@@ -6,8 +6,7 @@ uses
   Dext.MM,
   System.SysUtils,
   Dext,
-  Dext.Web,
-  Dext.Caching;
+  Dext.Web;
 
 var
   App: IWebApplication;
@@ -23,14 +22,12 @@ begin
 
     // 1. Configure Response Caching
     WriteLn('📦 Configuring Response Caching...');
-    TApplicationBuilderCacheExtensions.UseResponseCache(Builder,
-      procedure(Cache: TResponseCacheBuilder)
-      begin
-        Cache
+    Builder
+      .UseResponseCache(
+        ResponseCacheOptions
           .DefaultDuration(30)
           .MaxSize(100)
-          .VaryByQueryString;
-      end);
+          .VaryByQueryString);
       
     // 2. Map Endpoints
     

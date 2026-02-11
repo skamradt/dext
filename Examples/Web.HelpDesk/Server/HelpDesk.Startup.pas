@@ -46,46 +46,31 @@ end;
 
 procedure TStartup.ConfigureServices(const Services: TDextServices; const Configuration: IConfiguration);
 begin
-  // 1. Data Access
   Services
+    // 1. Data Access
     .AddDbContext<THelpDeskContext>(ConfigureDatabase)
-  // 2. Domain Services (Scoped - one per request)
+    // 2. Domain Services (Scoped - one per request)
     .AddScoped<IUserService, TUserService>
     .AddScoped<ITicketService, TTicketService>;
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
 begin
-  var Builder := App.Builder;
-
   // Global Settings
   JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.ISODateFormat);
 
-  // Middleware Pipeline
-  {
-  Builder.UseExceptionHandler;
-  Builder.UseHttpLogging;
-  Builder.UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
-  Builder.UseRateLimiting(TRateLimitPolicy.FixedWindow(100, 60));
-  }
-
-  Builder
+  App.Builder
     .UseExceptionHandler
     .UseHttpLogging
     .UseCors(CorsOptions.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader)
-    .UseRateLimiting(RateLimitPolicy.FixedWindow(100, 60));
-
-  // TODO: Por que não tem no Builder.MapEndpPoints?
-  // Map Endpoints (Minimal API)
-  TEndpoints.MapEndpoints(Builder);
-
-  // Swagger (AFTER endpoints)
-  Builder.UseSwagger(
-    Swagger
+    .UseRateLimiting(RateLimitPolicy.FixedWindow(100, 60))
+    // Map Endpoints (Minimal API)
+    .MapEndpoints(TEndpoints.MapEndpoints)
+    // Swagger (AFTER endpoints)
+    .UseSwagger(SwaggerOptions
       .Title('HelpDesk API')
       .Version('v1')
-      .Description('Issue Tracking System - Minimal API')
-  );
+      .Description('Issue Tracking System - Minimal API'));
 end;
 
 end.

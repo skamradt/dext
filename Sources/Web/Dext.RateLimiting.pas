@@ -50,7 +50,7 @@ type
     function GetPartitionKey(AContext: IHttpContext): string;
     function CreateLimiter(AConfig: TRateLimitConfig): IRateLimiter;
   public
-    constructor Create(APolicy: TRateLimitPolicy); overload;
+    constructor Create(const APolicy: TRateLimitPolicy); overload;
     constructor Create(AConfig: TRateLimitConfig); overload;
     destructor Destroy; override;
     
@@ -65,17 +65,17 @@ type
     /// <summary>
     ///   Adds rate limiting middleware to the pipeline.
     /// </summary>
-    class procedure UseRateLimiting(ABuilder: IApplicationBuilder; APolicy: TRateLimitPolicy); static;
+    class function UseRateLimiting(ABuilder: IApplicationBuilder; const APolicy: TRateLimitPolicy): IApplicationBuilder; static;
   end;
 
 implementation
 
 { TRateLimitMiddleware }
 
-constructor TRateLimitMiddleware.Create(APolicy: TRateLimitPolicy);
+constructor TRateLimitMiddleware.Create(const APolicy: TRateLimitPolicy);
 begin
   Create(APolicy.Build);
-  APolicy.Free; // Free the builder/policy wrapper
+  // Policy is a record, no need to free. Initialization ownership transfered.
 end;
 
 constructor TRateLimitMiddleware.Create(AConfig: TRateLimitConfig);
@@ -214,13 +214,13 @@ end;
 
 { TApplicationBuilderRateLimitExtensions }
 
-class procedure TApplicationBuilderRateLimitExtensions.UseRateLimiting(
-  ABuilder: IApplicationBuilder; APolicy: TRateLimitPolicy);
+class function TApplicationBuilderRateLimitExtensions.UseRateLimiting(
+  ABuilder: IApplicationBuilder; const APolicy: TRateLimitPolicy): IApplicationBuilder;
 var
   Middleware: TRateLimitMiddleware;
 begin
   Middleware := TRateLimitMiddleware.Create(APolicy);
-  ABuilder.UseMiddleware(Middleware);
+  Result := ABuilder.UseMiddleware(Middleware);
 end;
 
 end.

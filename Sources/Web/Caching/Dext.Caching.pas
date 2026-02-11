@@ -193,11 +193,19 @@ type
   /// <summary>
   ///   Fluent builder for creating cache options.
   /// </summary>
-  TResponseCacheBuilder = class
+  /// <summary>
+  ///   Fluent builder for creating cache options.
+  /// </summary>
+  TResponseCacheBuilder = record
   private
     FOptions: TResponseCacheOptions;
+    FInitialized: Boolean;
+    procedure EnsureInitialized;
   public
-    constructor Create;
+    /// <summary>
+    ///   Creates a new builder.
+    /// </summary>
+    class function Create: TResponseCacheBuilder; static;
     
     /// <summary>
     ///   Sets the default cache duration in seconds.
@@ -233,7 +241,17 @@ type
     ///   Builds and returns the cache options.
     /// </summary>
     function Build: TResponseCacheOptions;
+    
+    /// <summary>
+    ///   Implicit conversion to TResponseCacheOptions.
+    /// </summary>
+    class operator Implicit(const ABuilder: TResponseCacheBuilder): TResponseCacheOptions;
   end;
+
+  /// <summary>
+  ///   Delegate for configuring TResponseCacheBuilder via anonymous methods (passed by reference).
+  /// </summary>
+  TResponseCacheBuilderProc = reference to procedure(var Builder: TResponseCacheBuilder);
 
   /// <summary>
   ///   Extension methods for adding response caching to the application pipeline.
@@ -258,7 +276,12 @@ type
     /// <summary>
     ///   Adds response caching configured with a builder.
     /// </summary>
-    class function UseResponseCache(const ABuilder: IApplicationBuilder; AConfigurator: TProc<TResponseCacheBuilder>): IApplicationBuilder; overload; static;
+    class function UseResponseCache(const ABuilder: IApplicationBuilder; AConfigurator: TResponseCacheBuilderProc): IApplicationBuilder; overload; static;
+
+    /// <summary>
+    ///   Adds response caching using a fluent builder directly.
+    /// </summary>
+    class function UseResponseCache(const ABuilder: IApplicationBuilder; const ACacheBuilder: TResponseCacheBuilder): IApplicationBuilder; overload; static;
   end;
 
   /// <summary>
@@ -687,26 +710,40 @@ end;
 
 { TResponseCacheBuilder }
 
-constructor TResponseCacheBuilder.Create;
+{ TResponseCacheBuilder }
+
+procedure TResponseCacheBuilder.EnsureInitialized;
 begin
-  inherited Create;
-  FOptions := TResponseCacheOptions.Create;
+  if not FInitialized then
+  begin
+    FOptions := TResponseCacheOptions.Create;
+    FInitialized := True;
+  end;
+end;
+
+class function TResponseCacheBuilder.Create: TResponseCacheBuilder;
+begin
+  Result.FOptions := TResponseCacheOptions.Create;
+  Result.FInitialized := True;
 end;
 
 function TResponseCacheBuilder.DefaultDuration(ASeconds: Integer): TResponseCacheBuilder;
 begin
+  EnsureInitialized;
   FOptions.DefaultDuration := ASeconds;
   Result := Self;
 end;
 
 function TResponseCacheBuilder.MaxSize(ASize: Integer): TResponseCacheBuilder;
 begin
+  EnsureInitialized;
   FOptions.MaxSize := ASize;
   Result := Self;
 end;
 
 function TResponseCacheBuilder.VaryByQueryString: TResponseCacheBuilder;
 begin
+  EnsureInitialized;
   FOptions.VaryByQuery := True;
   Result := Self;
 end;
@@ -715,6 +752,7 @@ function TResponseCacheBuilder.VaryByHeader(const AHeaders: array of string): TR
 var
   I: Integer;
 begin
+  EnsureInitialized;
   SetLength(FOptions.VaryByHeaders, Length(AHeaders));
   for I := 0 to High(AHeaders) do
     FOptions.VaryByHeaders[I] := AHeaders[I];
@@ -725,6 +763,7 @@ function TResponseCacheBuilder.ForMethods(const AMethods: array of string): TRes
 var
   I: Integer;
 begin
+  EnsureInitialized;
   SetLength(FOptions.CacheableMethods, Length(AMethods));
   for I := 0 to High(AMethods) do
     FOptions.CacheableMethods[I] := AMethods[I];
@@ -733,13 +772,20 @@ end;
 
 function TResponseCacheBuilder.Store(const AStore: ICacheStore): TResponseCacheBuilder;
 begin
+  EnsureInitialized;
   FOptions.CacheStore := AStore;
   Result := Self;
 end;
 
 function TResponseCacheBuilder.Build: TResponseCacheOptions;
 begin
+  EnsureInitialized;
   Result := FOptions;
+end;
+
+class operator TResponseCacheBuilder.Implicit(const ABuilder: TResponseCacheBuilder): TResponseCacheOptions;
+begin
+  Result := ABuilder.FOptions;
 end;
 
 { TApplicationBuilderCacheExtensions }
@@ -766,22 +812,23 @@ begin
 end;
 
 class function TApplicationBuilderCacheExtensions.UseResponseCache(
-  const ABuilder: IApplicationBuilder; AConfigurator: TProc<TResponseCacheBuilder>): IApplicationBuilder;
+  const ABuilder: IApplicationBuilder; AConfigurator: TResponseCacheBuilderProc): IApplicationBuilder;
 var
   Builder: TResponseCacheBuilder;
-  Options: TResponseCacheOptions;
 begin
   Builder := TResponseCacheBuilder.Create;
-  try
-    if Assigned(AConfigurator) then
-      AConfigurator(Builder);
-    Options := Builder.Build;
-  finally
-    Builder.Free;
-  end;
+  if Assigned(AConfigurator) then
+    AConfigurator(Builder);
 
   // Register as Singleton
-  Result := ABuilder.UseMiddleware(TResponseCacheMiddleware.Create(Options));
+  Result := ABuilder.UseMiddleware(TResponseCacheMiddleware.Create(Builder.Build));
+end;
+
+class function TApplicationBuilderCacheExtensions.UseResponseCache(
+  const ABuilder: IApplicationBuilder; const ACacheBuilder: TResponseCacheBuilder): IApplicationBuilder;
+begin
+  // Register as Singleton
+  Result := ABuilder.UseMiddleware(TResponseCacheMiddleware.Create(ACacheBuilder.Build));
 end;
 
 { TResponseCacheOptionsHelper }

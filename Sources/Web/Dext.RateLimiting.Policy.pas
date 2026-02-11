@@ -36,13 +36,20 @@ type
   /// <summary>
   ///   Fluent builder for rate limiting policies.
   /// </summary>
-  TRateLimitPolicy = class
+  /// <summary>
+  ///   Fluent builder for rate limiting policies.
+  /// </summary>
+  TRateLimitPolicy = record
   private
     FConfig: TRateLimitConfig;
+    FInitialized: Boolean;
+    procedure EnsureInitialized;
   public
-    constructor Create;
-    destructor Destroy; override;
-    
+    /// <summary>
+    ///   Implicit initialization check.
+    /// </summary>
+    procedure CheckInit; 
+
     /// <summary>
     ///   Creates a Fixed Window rate limiter.
     /// </summary>
@@ -63,47 +70,35 @@ type
     /// </summary>
     class function Concurrency(ALimit: Integer): TRateLimitPolicy; static;
     
+    // =====================================================================
+    // New API (without 'With' prefix)
+    // =====================================================================
+    
     // Partition strategies
-    
-    /// <summary>
-    ///   Partition by client IP address (default).
-    /// </summary>
-    function WithPartitionByIp: TRateLimitPolicy;
-    
-    /// <summary>
-    ///   Partition by specific HTTP header.
-    /// </summary>
-    function WithPartitionByHeader(const AHeaderName: string): TRateLimitPolicy;
-    
-    /// <summary>
-    ///   Partition by route path.
-    /// </summary>
-    function WithPartitionByRoute: TRateLimitPolicy;
-    
-    /// <summary>
-    ///   Partition using custom function.
-    /// </summary>
-    function WithPartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy;
+    function PartitionByIp: TRateLimitPolicy;
+    function PartitionByHeader(const AHeaderName: string): TRateLimitPolicy;
+    function PartitionByRoute: TRateLimitPolicy;
+    function PartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy;
     
     // Global limits
-    
-    /// <summary>
-    ///   Sets a global concurrency limit (across all partitions).
-    /// </summary>
-    function WithGlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy;
+    function GlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy;
     
     // Response configuration
+    function RejectionMessage(const AMessage: string): TRateLimitPolicy;
+    function RejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy;
+
+    // =====================================================================
+    // Deprecated API (with 'With' prefix)
+    // =====================================================================
     
-    /// <summary>
-    ///   Sets custom rejection message.
-    /// </summary>
-    function WithRejectionMessage(const AMessage: string): TRateLimitPolicy;
-    
-    /// <summary>
-    ///   Sets custom rejection status code (default: 429).
-    /// </summary>
-    function WithRejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy;
-    
+    function WithPartitionByIp: TRateLimitPolicy; deprecated 'Use PartitionByIp instead';
+    function WithPartitionByHeader(const AHeaderName: string): TRateLimitPolicy; deprecated 'Use PartitionByHeader instead';
+    function WithPartitionByRoute: TRateLimitPolicy; deprecated 'Use PartitionByRoute instead';
+    function WithPartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy; deprecated 'Use PartitionKey instead';
+    function WithGlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy; deprecated 'Use GlobalLimit instead';
+    function WithRejectionMessage(const AMessage: string): TRateLimitPolicy; deprecated 'Use RejectionMessage instead';
+    function WithRejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy; deprecated 'Use RejectionStatusCode instead';
+
     /// <summary>
     ///   Gets the configuration.
     /// </summary>
@@ -112,25 +107,32 @@ type
     property Config: TRateLimitConfig read FConfig;
   end;
 
+  /// <summary>
+  ///   Alias for TRateLimitPolicy (preferred).
+  /// </summary>
+  RateLimitPolicy = TRateLimitPolicy;
+
 implementation
 
 { TRateLimitPolicy }
 
-constructor TRateLimitPolicy.Create;
+procedure TRateLimitPolicy.EnsureInitialized;
 begin
-  inherited Create;
-  FConfig := TRateLimitConfig.Create;
+  if not FInitialized then
+  begin
+    FConfig := TRateLimitConfig.Create;
+    FInitialized := True;
+  end;
 end;
 
-destructor TRateLimitPolicy.Destroy;
+procedure TRateLimitPolicy.CheckInit;
 begin
-  // Don't free FConfig here - it's transferred to middleware
-  inherited;
+  EnsureInitialized;
 end;
 
 class function TRateLimitPolicy.FixedWindow(APermitLimit, AWindowSeconds: Integer): TRateLimitPolicy;
 begin
-  Result := TRateLimitPolicy.Create;
+  Result.EnsureInitialized;
   Result.FConfig.LimiterType := rltFixedWindow;
   Result.FConfig.PermitLimit := APermitLimit;
   Result.FConfig.WindowSeconds := AWindowSeconds;
@@ -138,7 +140,7 @@ end;
 
 class function TRateLimitPolicy.SlidingWindow(APermitLimit, AWindowSeconds: Integer): TRateLimitPolicy;
 begin
-  Result := TRateLimitPolicy.Create;
+  Result.EnsureInitialized;
   Result.FConfig.LimiterType := rltSlidingWindow;
   Result.FConfig.PermitLimit := APermitLimit;
   Result.FConfig.WindowSeconds := AWindowSeconds;
@@ -146,7 +148,7 @@ end;
 
 class function TRateLimitPolicy.TokenBucket(ATokenLimit, ARefillRate: Integer): TRateLimitPolicy;
 begin
-  Result := TRateLimitPolicy.Create;
+ Result.EnsureInitialized;
   Result.FConfig.LimiterType := rltTokenBucket;
   Result.FConfig.TokenLimit := ATokenLimit;
   Result.FConfig.RefillRate := ARefillRate;
@@ -154,58 +156,103 @@ end;
 
 class function TRateLimitPolicy.Concurrency(ALimit: Integer): TRateLimitPolicy;
 begin
-  Result := TRateLimitPolicy.Create;
+  Result.EnsureInitialized;
   Result.FConfig.LimiterType := rltConcurrency;
   Result.FConfig.ConcurrencyLimit := ALimit;
 end;
 
-function TRateLimitPolicy.WithPartitionByIp: TRateLimitPolicy;
+function TRateLimitPolicy.PartitionByIp: TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.PartitionStrategy := psIpAddress;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithPartitionByHeader(const AHeaderName: string): TRateLimitPolicy;
+function TRateLimitPolicy.PartitionByHeader(const AHeaderName: string): TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.PartitionStrategy := psHeader;
   FConfig.PartitionHeader := AHeaderName;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithPartitionByRoute: TRateLimitPolicy;
+function TRateLimitPolicy.PartitionByRoute: TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.PartitionStrategy := psRoute;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithPartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy;
+function TRateLimitPolicy.PartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.PartitionStrategy := psCustom;
   FConfig.PartitionResolver := AResolver;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithGlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy;
+function TRateLimitPolicy.GlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.EnableGlobalLimit := True;
   FConfig.GlobalConcurrencyLimit := AConcurrencyLimit;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithRejectionMessage(const AMessage: string): TRateLimitPolicy;
+function TRateLimitPolicy.RejectionMessage(const AMessage: string): TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.RejectionMessage := AMessage;
   Result := Self;
 end;
 
-function TRateLimitPolicy.WithRejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy;
+function TRateLimitPolicy.RejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy;
 begin
+  EnsureInitialized;
   FConfig.RejectionStatusCode := AStatusCode;
   Result := Self;
 end;
 
+// Deprecated
+
+function TRateLimitPolicy.WithPartitionByIp: TRateLimitPolicy;
+begin
+  Result := PartitionByIp;
+end;
+
+function TRateLimitPolicy.WithPartitionByHeader(const AHeaderName: string): TRateLimitPolicy;
+begin
+  Result := PartitionByHeader(AHeaderName);
+end;
+
+function TRateLimitPolicy.WithPartitionByRoute: TRateLimitPolicy;
+begin
+  Result := PartitionByRoute;
+end;
+
+function TRateLimitPolicy.WithPartitionKey(AResolver: TPartitionKeyResolver): TRateLimitPolicy;
+begin
+  Result := PartitionKey(AResolver);
+end;
+
+function TRateLimitPolicy.WithGlobalLimit(AConcurrencyLimit: Integer): TRateLimitPolicy;
+begin
+  Result := GlobalLimit(AConcurrencyLimit);
+end;
+
+function TRateLimitPolicy.WithRejectionMessage(const AMessage: string): TRateLimitPolicy;
+begin
+  Result := RejectionMessage(AMessage);
+end;
+
+function TRateLimitPolicy.WithRejectionStatusCode(AStatusCode: Integer): TRateLimitPolicy;
+begin
+  Result := RejectionStatusCode(AStatusCode);
+end;
+
 function TRateLimitPolicy.Build: TRateLimitConfig;
 begin
+  EnsureInitialized;
   Result := FConfig;
 end;
 

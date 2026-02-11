@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B3C4D5E6-F7A8-9012-CDEF-123456789012}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Server\Web.EventHub.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Tests\Web.EventHub.Tests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Web_EventHub">
+        <MSBuild Projects="Server\Web.EventHub.dproj"/>
+    </Target>
+    <Target Name="Web_EventHub:Clean">
+        <MSBuild Projects="Server\Web.EventHub.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_EventHub:Make">
+        <MSBuild Projects="Server\Web.EventHub.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Web_EventHub_Tests">
+        <MSBuild Projects="Tests\Web.EventHub.Tests.dproj"/>
+    </Target>
+    <Target Name="Web_EventHub_Tests:Clean">
+        <MSBuild Projects="Tests\Web.EventHub.Tests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Web_EventHub_Tests:Make">
+        <MSBuild Projects="Tests\Web.EventHub.Tests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Web_EventHub;Web_EventHub_Tests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Web_EventHub:Clean;Web_EventHub_Tests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Web_EventHub:Make;Web_EventHub_Tests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

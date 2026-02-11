@@ -16,7 +16,7 @@ uses
   Dext.Web.DataApi,
   Dext,
   Dext.Entity,
-  Dext.Web;
+  Dext.Web, Dext.Web.Interfaces;
 
 type
   /// <summary>
@@ -28,7 +28,7 @@ type
     /// <summary>
     ///   Maps all API endpoints to the application builder.
     /// </summary>
-    class procedure MapEndpoints(const Builder: TAppBuilder); static;
+    class procedure MapEndpoints(Builder: TAppBuilder); static;
   end;
 
 type
@@ -75,12 +75,12 @@ uses
 
 { TSalesEndpoints }
 
-class procedure TSalesEndpoints.MapEndpoints(const Builder: TAppBuilder);
+class procedure TSalesEndpoints.MapEndpoints(Builder: TAppBuilder);
 begin
   // ==========================================================================
   // PUBLIC ENDPOINTS
   // ==========================================================================
-  
+
   // Health Check
   Builder.MapGet<IResult>('/health', 
     function: IResult

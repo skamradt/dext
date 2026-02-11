@@ -68,6 +68,7 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
+        <DCC_DebugDCUs>false</DCC_DebugDCUs>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

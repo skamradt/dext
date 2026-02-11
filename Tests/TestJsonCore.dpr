@@ -21,7 +21,7 @@ type
     property Content: string read FContent write FContent;
   end;
 
-  TThread = class
+  TThreadContent = class
   private
     FId: Integer;
     FName: string;
@@ -45,26 +45,26 @@ type
   end;
 
   TEntityWithUuid = class
-    private
-      FId: TUUID;
-      FName: string;
-    public
-      property Id: TUUID read FId write FId;
-      property Name: string read FName write FName;
+  private
+    FId: TUUID;
+    FName: string;
+  public
+    property Id: TUUID read FId write FId;
+    property Name: string read FName write FName;
   end;
 
-constructor TThread.Create;
+constructor TThreadContent.Create;
 begin
   FInternalPosts := TObjectList<TPost>.Create;
 end;
 
-destructor TThread.Destroy;
+destructor TThreadContent.Destroy;
 begin
   FInternalPosts.Free;
   inherited;
 end;
 
-procedure TThread.SetPosts(const Value: TObjectList<TPost>);
+procedure TThreadContent.SetPosts(const Value: TObjectList<TPost>);
 begin
   if FInternalPosts <> Value then
   begin
@@ -76,7 +76,7 @@ end;
 procedure TestDeserialization;
 var
   Json: string;
-  Thread: TThread;
+  Thread: TThreadContent;
   Post: TPost;
 begin
   Writeln('Testing JSON Deserialization...');
@@ -92,7 +92,7 @@ begin
 
   try
     // Use CaseInsensitive because JSON keys are lowercase (id, name) and properties are PascalCase (Id, Name)
-    Thread := TDextJson.Deserialize<TThread>(Json, TJsonSettings.Default.CaseInsensitive);
+    Thread := TDextJson.Deserialize<TThreadContent>(Json, TJsonSettings.Default.CaseInsensitive);
     try
       Writeln('Thread ID: ' + Thread.Id.ToString);
       Writeln('Thread Name: ' + Thread.Name);

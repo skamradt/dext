@@ -67,7 +67,12 @@ type
     /// <summary>
     ///   Adds JWT authentication middleware configured with a builder.
     /// </summary>
-    class function UseJwtAuthentication(const ABuilder: IApplicationBuilder; const ASecretKey: string; AConfigurator: TProc<TJwtOptionsBuilder>): IApplicationBuilder; overload; static;
+    class function UseJwtAuthentication(const ABuilder: IApplicationBuilder; const ASecretKey: string; AConfigurator: TJwtBuilderProc): IApplicationBuilder; overload; static;
+
+    /// <summary>
+    ///   Adds JWT authentication middleware using a fluent builder directly.
+    /// </summary>
+    class function UseJwtAuthentication(const ABuilder: IApplicationBuilder; const AJwtBuilder: TJwtOptionsBuilder): IApplicationBuilder; overload; static;
   end;
 
 implementation
@@ -182,21 +187,20 @@ end;
 
 class function TApplicationBuilderJwtExtensions.UseJwtAuthentication(
   const ABuilder: IApplicationBuilder; const ASecretKey: string; 
-  AConfigurator: TProc<TJwtOptionsBuilder>): IApplicationBuilder;
+  AConfigurator: TJwtBuilderProc): IApplicationBuilder;
 var
   Builder: TJwtOptionsBuilder;
-  Options: TJwtOptions;
 begin
   Builder := TJwtOptionsBuilder.Create(ASecretKey);
-  try
-    if Assigned(AConfigurator) then
-      AConfigurator(Builder);
-    Options := Builder.Build;
-  finally
-    Builder.Free;
-  end;
+  if Assigned(AConfigurator) then
+    AConfigurator(Builder);
+  
+  Result := ABuilder.UseMiddleware(TJwtAuthenticationMiddleware, Builder.Build);
+end;
 
-  Result := ABuilder.UseMiddleware(TJwtAuthenticationMiddleware, Options);
+class function TApplicationBuilderJwtExtensions.UseJwtAuthentication(const ABuilder: IApplicationBuilder; const AJwtBuilder: TJwtOptionsBuilder): IApplicationBuilder;
+begin
+  Result := ABuilder.UseMiddleware(TJwtAuthenticationMiddleware, AJwtBuilder.Build);
 end;
 
 end.

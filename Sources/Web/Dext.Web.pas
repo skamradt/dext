@@ -137,6 +137,7 @@ type
   TJwtOptionsBuilder = Dext.Auth.JWT.TJwtOptionsBuilder;
   TJwtOptionsHelper = Dext.Auth.JWT.TJwtOptionsHelper;
   TJwtTokenHandler = Dext.Auth.JWT.TJwtTokenHandler;
+  TJwtBuilderProc = Dext.Auth.JWT.TJwtBuilderProc;
 
   // Dext.Auth.Middleware
   TJwtAuthenticationMiddleware = Dext.Auth.Middleware.TJwtAuthenticationMiddleware;
@@ -152,6 +153,7 @@ type
   TResponseCacheBuilder = Dext.Caching.TResponseCacheBuilder;
   TApplicationBuilderCacheExtensions = Dext.Caching.TApplicationBuilderCacheExtensions;
   TResponseCacheOptionsHelper = Dext.Caching.TResponseCacheOptionsHelper;
+  TResponseCacheBuilderProc = Dext.Caching.TResponseCacheBuilderProc;
 
   // Dext.Caching.Redis
   TRedisCacheStore = Dext.Caching.Redis.TRedisCacheStore;
@@ -653,7 +655,8 @@ type
     /// <summary>
     ///   Adds JWT Authentication middleware to the pipeline using the provided options (Legacy overload).
     /// </summary>
-    function UseJwtAuthentication(const ASecretKey: string; AConfigurator: TProc<TJwtOptionsBuilder>): AppBuilder; overload;
+    function UseJwtAuthentication(const ASecretKey: string; AConfigurator: TJwtBuilderProc): AppBuilder; overload;
+    function UseJwtAuthentication(const AJwtBuilder: TJwtOptionsBuilder): AppBuilder; overload;
     
     /// <summary>
     ///   Adds Basic Authentication middleware with a simple validation function.
@@ -679,7 +682,7 @@ type
     ///   Adds Swagger middleware to the application pipeline with default options.
     /// </summary>
     function UseSwagger: AppBuilder; overload;
-    
+
     /// <summary>
     ///   Adds Static Files middleware to the pipeline using the provided options.
     /// </summary>
@@ -743,8 +746,10 @@ type
     // -------------------------------------------------------------------------
     // ?? Response Caching
     // -------------------------------------------------------------------------
-    function UseResponseCache(AConfigurator: TProc<TResponseCacheBuilder>): AppBuilder; overload;
+    function UseResponseCache(AConfigurator: TResponseCacheBuilderProc): AppBuilder; overload;
+    function UseResponseCache(const ACacheBuilder: TResponseCacheBuilder): AppBuilder; overload;
 
+    function MapEndpoints(AMapper: TProc<TAppBuilder>): AppBuilder;
     // -------------------------------------------------------------------------
     // ??? Routing - POST
     // -------------------------------------------------------------------------
@@ -832,6 +837,18 @@ type
     function MapDelete<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): AppBuilder; overload;
     function MapDelete<T1, T2, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, TResult>): AppBuilder; overload;
     function MapDelete<T1, T2, T3, TResult>(const Path: string; Handler: THandlerResultFunc<T1, T2, T3, TResult>): AppBuilder; overload;
+
+    // -------------------------------------------------------------------------
+    // ??? OpenAPI Metadata
+    // -------------------------------------------------------------------------
+    function WithSummary(const ASummary: string): AppBuilder;
+    function WithDescription(const ADescription: string): AppBuilder;
+    function WithTag(const ATag: string): AppBuilder;
+    function WithTags(const ATags: array of string): AppBuilder;
+    function WithMetadata(const ASummary, ADescription: string; const ATags: array of string): AppBuilder;
+    function RequireAuthorization: AppBuilder; overload;
+    function RequireAuthorization(const AScheme: string): AppBuilder; overload;
+    function RequireAuthorization(const ASchemes: array of string): AppBuilder; overload;
   end;
 
 // ===========================================================================
@@ -840,7 +857,9 @@ type
 
 function WebApplication: IWebApplication;
 function CorsOptions: TCorsBuilder;
-function Swagger: TOpenAPIBuilder;
+function JwtOptions(const ASecretKey: string): TJwtOptionsBuilder;
+function ResponseCacheOptions: TResponseCacheBuilder;
+function SwaggerOptions: TOpenAPIBuilder;
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const); overload;
@@ -865,7 +884,17 @@ begin
   Result := TCorsBuilder.Create;
 end;
 
-function Swagger: TOpenAPIBuilder;
+function JwtOptions(const ASecretKey: string): TJwtOptionsBuilder;
+begin
+  Result := TJwtOptionsBuilder.Create(ASecretKey);
+end;
+
+function ResponseCacheOptions: TResponseCacheBuilder;
+begin
+  Result := TResponseCacheBuilder.Create;
+end;
+
+function SwaggerOptions: TOpenAPIBuilder;
 begin
   Result := TOpenAPIBuilder.Create;
 end;
@@ -1005,9 +1034,15 @@ begin
   Result := Self;
 end;
 
-function THttpAppBuilderHelper.UseJwtAuthentication(const ASecretKey: string; AConfigurator: TProc<TJwtOptionsBuilder>): AppBuilder;
+function THttpAppBuilderHelper.UseJwtAuthentication(const ASecretKey: string; AConfigurator: TJwtBuilderProc): AppBuilder;
 begin
   TApplicationBuilderJwtExtensions.UseJwtAuthentication(Self.Unwrap, ASecretKey, AConfigurator);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.UseJwtAuthentication(const AJwtBuilder: TJwtOptionsBuilder): AppBuilder;
+begin
+  TApplicationBuilderJwtExtensions.UseJwtAuthentication(Self.Unwrap, AJwtBuilder);
   Result := Self;
 end;
 
@@ -1111,9 +1146,15 @@ end;
 // THttpAppBuilderHelper (Response Caching Extensions)
 // -------------------------------------------------------------------------
 
-function THttpAppBuilderHelper.UseResponseCache(AConfigurator: TProc<TResponseCacheBuilder>): AppBuilder;
+function THttpAppBuilderHelper.UseResponseCache(AConfigurator: TResponseCacheBuilderProc): AppBuilder;
 begin
   TApplicationBuilderCacheExtensions.UseResponseCache(Self.Unwrap, AConfigurator);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.UseResponseCache(const ACacheBuilder: TResponseCacheBuilder): AppBuilder;
+begin
+  TApplicationBuilderCacheExtensions.UseResponseCache(Self.Unwrap, ACacheBuilder);
   Result := Self;
 end;
 
@@ -1180,6 +1221,13 @@ end;
 function THttpAppBuilderHelper.MapGet<TResult>(const Path: string; Handler: THandlerResultFunc<TResult>): AppBuilder;
 begin
   TApplicationBuilderExtensions.MapGet<TResult>(Self.Unwrap, Path, Handler);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.MapEndpoints(AMapper: TProc<TAppBuilder>):
+  AppBuilder;
+begin
+  AMapper(Self);
   Result := Self;
 end;
 
@@ -1273,6 +1321,54 @@ begin
   Result := Self;
 end;
 
+function THttpAppBuilderHelper.WithSummary(const ASummary: string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.WithSummary(Self.Unwrap, ASummary);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.WithDescription(const ADescription: string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.WithDescription(Self.Unwrap, ADescription);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.WithTag(const ATag: string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.WithTag(Self.Unwrap, ATag);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.WithTags(const ATags: array of string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.WithTags(Self.Unwrap, ATags);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.WithMetadata(const ASummary, ADescription: string; const ATags: array of string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.WithMetadata(Self.Unwrap, ASummary, ADescription, ATags);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.RequireAuthorization: AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, []);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.RequireAuthorization(const AScheme: string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, AScheme);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.RequireAuthorization(const ASchemes: array of string): AppBuilder;
+begin
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, ASchemes);
+  Result := Self;
+end;
+
 { TWebServicesHelper }
 
 {$IFDEF DEXT_ENABLE_ENTITY}
@@ -1284,12 +1380,13 @@ end;
 
 function TWebServicesHelper.AddDbContext<T>(const AConfig: IConfigurationSection): TDextServices;
 begin
-  Result := AddDbContext<T>(
+  Dext.Entity.TPersistence.AddDbContext<T>(Self.Unwrap,
     procedure(Options: TDbContextOptions)
     begin
       Dext.Configuration.Binder.TConfigurationBinder.Bind(AConfig, Options);
     end
   );
+  Result := Self;
 end;
 {$ENDIF}
 
