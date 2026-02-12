@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -318,7 +318,6 @@ function TDextServices.Unwrap: IServiceCollection;
 begin
   Result := FServices;
 end;
-
 
 function TDextServices.AddSingleton<TService, TImplementation>: TDextServices;
 begin

@@ -277,6 +277,8 @@ begin
       if Method.IsConstructor then
       begin
         Params := Method.GetParameters;
+        SetLength(Args, Length(Params));
+        Matched := True;
         for I := 0 to High(Params) do
         begin
           if not TryResolveService(AProvider, Params[I].ParamType, ResolvedService) then

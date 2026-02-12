@@ -85,6 +85,7 @@ type
     class operator Implicit(const Value: BooleanExpression): Boolean;
     class operator Implicit(const Value: BooleanExpression): TFluentExpression;
     class operator Implicit(const Value: TFluentExpression): BooleanExpression;
+    class operator Implicit(const Value: BooleanExpression): IExpression;
 
     class operator LogicalAnd(const Left, Right: BooleanExpression): BooleanExpression;
     class operator BitwiseAnd(const Left, Right: BooleanExpression): BooleanExpression;
@@ -120,6 +121,7 @@ type
     class operator Implicit(const Value: T): Prop<T>;
     class operator Implicit(const Value: Prop<T>): T;
     class operator Implicit(const Value: Prop<T>): BooleanExpression;
+    class operator Implicit(const Value: Prop<T>): IExpression;
 
     // Nullable<T> interop
     class operator Implicit(const Value: Prop<T>): Nullable<T>;
@@ -323,6 +325,14 @@ begin
   Result := Value.FRuntimeValue;
 end;
 
+class operator BooleanExpression.Implicit(const Value: BooleanExpression): IExpression;
+begin
+  if Value.FExpression <> nil then
+    Result := Value.FExpression
+  else
+    Result := TConstantExpression.Create(Value.FRuntimeValue);
+end;
+
 class operator BooleanExpression.Implicit(const Value: BooleanExpression): TFluentExpression;
 begin
   if Value.FExpression <> nil then
@@ -487,6 +497,12 @@ begin
       Result := BooleanExpression.FromRuntime(False);
   end;
 end;
+
+class operator Prop<T>.Implicit(const Value: Prop<T>): IExpression;
+begin
+  Result := Value.GetExpression;
+end;
+
 
 class operator Prop<T>.Implicit(const Value: Prop<T>): Nullable<T>;
 begin

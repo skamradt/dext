@@ -203,6 +203,18 @@ begin
     Result := Controllers.ToArray;
     SafeWriteLn('🎯 ' + Format('Total controllers found: %d', [Length(Result)]));
 
+    {$IFDEF MSWINDOWS}
+    if (Length(Result) = 0) and (DebugHook <> 0) then
+    begin
+      SafeWriteLn('');
+      SafeWriteLn('⚠️  NO CONTROLLERS FOUND!');
+      SafeWriteLn('💡  TIP: If your controllers are not being detected, they might have been optimized away by the linker.');
+      SafeWriteLn('    To fix this, add a reference to the controller class in the initialization section of its unit:');
+      SafeWriteLn('    initialization');
+      SafeWriteLn('      TMyController.ClassName;');
+      SafeWriteLn('');
+    end;
+    {$ENDIF}
   finally
     Controllers.Free;
   end;

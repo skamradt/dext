@@ -152,8 +152,6 @@ begin
     FExpression := TLogicalExpression.Create(FExpression, AExpression, loAnd);
 end;
 
-
-
 procedure TSpecification<T>.Include(const APath: string);
 begin
   FIncludes.Add(APath);
