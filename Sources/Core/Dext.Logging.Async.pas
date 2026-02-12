@@ -135,10 +135,7 @@ begin
     end;
     
     // Simplification for V1: Format immediately
-    if Length(AArgs) > 0 then
-      Entry.FormattedMessage := Format(AMessage, AArgs)
-    else
-      Entry.FormattedMessage := AMessage;
+    Entry.FormattedMessage := TLogFormatter.FormatMessage(AMessage, AArgs);
       
     Entry.ScopeSnapshot := nil; // We don't need to keep node alive if we copied IDs? 
                                 // Actually, if we want full properies we might need to clone.
@@ -162,7 +159,7 @@ end;
 function TAsyncLogger.BeginScope(const AMessage: string; const AArgs: array of const): IDisposable;
 begin
   // Start new scope with generated IDs (auto-handled by TraceContext)
-  var Node := TraceContext.Push(Format(AMessage, AArgs), TUUID.Empty, TUUID.Empty);
+  var Node := TraceContext.Push(TLogFormatter.FormatMessage(AMessage, AArgs), TUUID.Empty, TUUID.Empty);
   Result := TScopeGuard.Create(Node);
 end;
 

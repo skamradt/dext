@@ -129,6 +129,14 @@ type
     procedure AddProvider(const AProvider: ILoggerProvider);
     procedure Dispose;
   end;
+
+  /// <summary>
+  ///   Helper for formatting log messages with structured templates.
+  /// </summary>
+  TLogFormatter = class
+  public
+    class function FormatMessage(const ATemplate: string; const AArgs: array of const): string; static;
+  end;
 {$M-}
 
   /// <summary>
@@ -246,6 +254,99 @@ type
   end;
 
 implementation
+
+{ TLogFormatter }
+
+class function TLogFormatter.FormatMessage(const ATemplate: string; const AArgs: array of const): string;
+var
+  i: Integer;
+  ArgIndex: Integer;
+  InBrace: Boolean;
+  LTransformed: string;
+  LPlaceholder: string;
+  
+  function VarRecToString(const V: TVarRec): string;
+  begin
+    case V.VType of
+      vtInteger:    Result := IntToStr(V.VInteger);
+      vtBoolean:    Result := BoolToStr(V.VBoolean, True);
+      vtChar:       Result := string(V.VChar);
+      vtExtended:   Result := FloatToStr(V.VExtended^);
+      vtString:     Result := string(V.VString^);
+      vtPointer:    Result := IntToHex(IntPtr(V.VPointer), 8);
+      vtPChar:      Result := string(V.VPChar);
+      vtObject:     Result := V.VObject.ClassName;
+      vtClass:      Result := V.VClass.ClassName;
+      vtWideChar:   Result := string(V.VWideChar);
+      vtPWideChar:  Result := string(V.VPWideChar);
+      vtAnsiString: Result := string(V.VAnsiString);
+      vtCurrency:   Result := CurrToStr(V.VCurrency^);
+      vtVariant:    Result := string(V.VVariant^);
+      vtInterface:  Result := '[Interface]';
+      vtWideString: Result := string(V.VWideString);
+      vtInt64:      Result := IntToStr(V.VInt64^);
+      vtUnicodeString: Result := string(V.VUnicodeString);
+    else
+      Result := '[Unknown]';
+    end;
+  end;
+
+begin
+  if Length(AArgs) = 0 then
+    Exit(ATemplate);
+
+  Result := '';
+  ArgIndex := 0;
+  InBrace := False;
+  LPlaceholder := '';
+  i := 1;
+  while i <= Length(ATemplate) do
+  begin
+    // Double {{ or }} are escaped braces
+    if (i < Length(ATemplate)) and (ATemplate[i] = '{') and (ATemplate[i+1] = '{') then
+    begin
+       Result := Result + '{';
+       Inc(i, 2);
+       Continue;
+    end;
+    if (i < Length(ATemplate)) and (ATemplate[i] = '}') and (ATemplate[i+1] = '}') then
+    begin
+       Result := Result + '}';
+       Inc(i, 2);
+       Continue;
+    end;
+    
+    if ATemplate[i] = '{' then
+    begin
+      InBrace := True;
+      LPlaceholder := '';
+    end
+    else if ATemplate[i] = '}' then
+    begin
+      if InBrace then
+      begin
+        if ArgIndex <= High(AArgs) then
+        begin
+          Result := Result + VarRecToString(AArgs[ArgIndex]);
+          Inc(ArgIndex);
+        end
+        else
+          Result := Result + '{' + LPlaceholder + '}';
+        InBrace := False;
+      end
+      else
+        Result := Result + '}';
+    end
+    else
+    begin
+      if InBrace then
+        LPlaceholder := LPlaceholder + ATemplate[i]
+      else
+        Result := Result + ATemplate[i];
+    end;
+    Inc(i);
+  end;
+end;
 
 { TLoggerFactory }
 

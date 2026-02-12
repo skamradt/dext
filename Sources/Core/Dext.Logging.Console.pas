@@ -85,12 +85,7 @@ begin
     LLevelStr := '    ';
   end;
 
-  try
-    LMsg := Format(AMessage, AArgs);
-  except
-    on E: Exception do
-      LMsg := AMessage + ' (Format Error: ' + E.Message + ')';
-  end;
+  LMsg := TLogFormatter.FormatMessage(AMessage, AArgs);
 
   SafeWriteLn(Format('%s: %s' + sLineBreak + '      %s', [LLevelStr, FCategoryName, LMsg]));
 end;
