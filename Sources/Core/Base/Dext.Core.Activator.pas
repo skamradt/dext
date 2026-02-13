@@ -227,7 +227,6 @@ begin
 
     BestMethod := nil;
     MaxParams := -1;
-    Matched := False;
 
     // First pass: Look for [ServiceConstructor] attribute
     for Method in TypeObj.GetMethods do
@@ -440,7 +439,6 @@ begin
           var SearchSufix := '<' + string(ElementType.Name) + '>';
           for var TmpType in Context.GetTypes do
           begin
-            Writeln('[TYPE] ', TmpType.Name);
             if TmpType.IsInstance and TmpType.Name.EndsWith(SearchSufix) then
             begin
                if TmpType.Name.StartsWith('TSmartList<') then

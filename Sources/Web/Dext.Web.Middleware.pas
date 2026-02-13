@@ -35,7 +35,8 @@ uses
   System.SysUtils,
   Dext.Web.Core,
   Dext.Web.Interfaces,
-  Dext.Logging;
+  Dext.Logging,
+  Dext.Utils;
 
 type
   // Common HTTP Exceptions
@@ -94,6 +95,12 @@ type
   public
     constructor Create(AOptions: TExceptionHandlerOptions; ALogger: ILogger);
     procedure Invoke(AContext: IHttpContext; ANext: TRequestDelegate); override;
+  end;
+  
+  // Minimal implementation reuse TExceptionHandlerMiddleware logic with Development options
+  TDeveloperExceptionPageMiddleware = class(TExceptionHandlerMiddleware)
+  public
+    constructor Create(ALogger: ILogger);
   end;
 
   // --- HTTP Logging ---
@@ -186,6 +193,13 @@ begin
     [&Type, Title, Status, Detail, Instance, TraceId]);
 end;
 
+{ TDeveloperExceptionPageMiddleware }
+
+constructor TDeveloperExceptionPageMiddleware.Create(ALogger: ILogger);
+begin
+  inherited Create(TExceptionHandlerOptions.Development, ALogger);
+end;
+
 { TExceptionHandlerMiddleware }
 
 constructor TExceptionHandlerMiddleware.Create(AOptions: TExceptionHandlerOptions; ALogger: ILogger);
@@ -206,6 +220,7 @@ begin
     begin
       if FOptions.LogExceptions then
       begin
+        SafeWriteLn(Format('[Exception] Unhandled: %s: %s', [E.ClassName, E.Message]));
         FLogger.LogError(E, 'An unhandled exception has occurred while executing the request.', []);
       end;
 

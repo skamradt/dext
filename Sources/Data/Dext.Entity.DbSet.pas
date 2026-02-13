@@ -86,6 +86,7 @@ type
       out IDs: TList<TValue>; out FKMap: TDictionary<T, TValue>);
     procedure LoadAndAssign(const AEntities: IList<T>; const NavPropName: string);
     procedure LoadManyToMany(const AEntities: IList<T>; const NavPropName: string; const PropMap: TPropertyMap);
+    procedure LoadOneToMany(const AEntities: IList<T>; const NavPropName: string; const PropMap: TPropertyMap);
     function CreateGenerator: TSqlGenerator<T>;
     procedure ResetQueryFlags;
     procedure HandleTimestamps(const AEntity: TObject; AIsInsert: Boolean);
@@ -104,7 +105,8 @@ type
 
     function GetTableName: string;
     function GetEntityType: PTypeInfo;
-    function FindObject(const AId: Variant): TObject;
+    function FindObject(const AId: Variant): TObject; overload;
+    function FindObject(const AId: Integer): TObject; overload;
     function Add(const AEntity: TObject): IDbSet; overload;
     procedure Update(const AEntity: TObject); overload;
     procedure Remove(const AEntity: TObject); overload;
@@ -125,6 +127,7 @@ type
     function Remove(const AEntity: T): IDbSet<T>; overload;
     function Detach(const AEntity: T): IDbSet<T>; overload;
     function Find(const AId: Variant): T; overload;
+    function Find(const AId: Integer): T; overload;
     function Find(const AId: array of Integer): T; overload;
     function Find(const AId: array of Variant): T; overload;
 
@@ -197,6 +200,8 @@ type
     procedure SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
   end;
 
+function TValueToVariant(const AValue: TValue): Variant;
+
 implementation
 
 uses
@@ -206,28 +211,69 @@ uses
 
 function TValueToKeyString(const AValue: TValue): string;
 var
-  G: TGUID;
-  U: TUUID;
-  Bytes: array[0..15] of Byte;
+  V: Variant;
 begin
   if AValue.IsEmpty then
-    Result := ''
-  else if AValue.TypeInfo = TypeInfo(TGUID) then
+    Exit('');
+
+  // Use the robust Variant conversion which handles Prop<T> and TGUID
+  V := TValueToVariant(AValue);
+  if VarIsNull(V) or VarIsEmpty(V) then
+    Exit('');
+    
+  Result := VarToStr(V);
+  
+  // Normalize GUIDs to lowercase matches for consistency
+  if Result.StartsWith('{') and (Length(Result) = 38) then
+    Result := LowerCase(Result);
+end;
+
+function TValueToVariant(const AValue: TValue): Variant;
+var
+  Unwrapped: TValue;
+  VTypeName: string;
+begin
+  if AValue.TypeInfo <> nil then VTypeName := string(AValue.TypeInfo.Name) else VTypeName := 'nil';
+  
+  if AValue.IsEmpty or ((AValue.Kind = tkUnknown) and (AValue.TypeInfo = nil)) then
+    Exit(Null);
+
+  // Use the central reflection utility to unwrap Prop<T>, Nullable<T> and variants
+  if TReflection.TryUnwrapProp(AValue, Unwrapped) then
   begin
-    // Extract raw bytes from TGUID and format as UUID string
-    G := AValue.AsType<TGUID>;
-    Move(G, Bytes[0], 16);
-    Result := LowerCase(Format('%2.2x%2.2x%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x%2.2x%2.2x%2.2x%2.2x',
-      [Bytes[0], Bytes[1], Bytes[2], Bytes[3], Bytes[4], Bytes[5], Bytes[6], Bytes[7],
-       Bytes[8], Bytes[9], Bytes[10], Bytes[11], Bytes[12], Bytes[13], Bytes[14], Bytes[15]]));
-  end
-  else if AValue.TypeInfo = TypeInfo(TUUID) then
+     // ONLY recurse if the TypeInfo pointer changed 
+     if (Unwrapped.TypeInfo <> AValue.TypeInfo) then
+        Exit(TValueToVariant(Unwrapped))
+     else
+        Exit(Unwrapped.AsVariant);
+  end;
+
+  if (AValue.Kind = tkVariant) then
+    Exit(AValue.AsVariant);
+
+  // Handle explicit types that don't convert to Variant automatically
+  if (AValue.Kind = tkRecord) and (AValue.TypeInfo <> nil) then
   begin
-    U := AValue.AsType<TUUID>;
-    Result := U.ToString;
-  end
-  else
-    Result := AValue.ToString;
+    var TypeName := string(AValue.TypeInfo.Name);
+
+    if TypeName = 'TGUID' then 
+    begin
+      var G: TGUID;
+      AValue.ExtractRawData(@G);
+      Exit(GUIDToString(G));
+    end;
+
+    if TypeName = 'TUUID' then
+      Exit(AValue.AsType<TUUID>.ToString);
+  end;
+  
+  // Fallback to variant conversion
+  try
+    Result := AValue.AsVariant;
+  except
+    on E: Exception do
+      Result := AValue.ToString;
+  end;
 end;
 
 { TDbSet<T> }
@@ -605,7 +651,6 @@ begin
     except
       on E: Exception do
       begin
-        // SafeWriteLn(Format('ERROR getting value for col %s: %s', [ColName, E.Message])); // Cleaned up debug log
         raise;
     end;
     end;
@@ -614,15 +659,6 @@ begin
       try
         // Determine Converter: Check Property Map first (Attributes/Fluent), then Registry default
         var Converter: ITypeConverter := nil;
-        
-        // Safety check for Property Map
-        if (FMap <> nil) and (FMap.Properties <> nil) then
-        begin
-          var PropMap: TPropertyMap;
-          if FMap.Properties.TryGetValue(Prop.Name, PropMap) then
-            Converter := PropMap.Converter;
-        end;
-
         if Converter = nil then
            Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
            
@@ -644,9 +680,12 @@ begin
       except
         on E: Exception do
         begin
+          var VTypeName := 'Unknown';
+          if Val.TypeInfo <> nil then VTypeName := string(Val.TypeInfo.Name);
+          
           // Re-raise with context to help debugging
           raise Exception.CreateFmt('Error hydrating property %s.%s from column %s (Value Type: %s): %s', 
-            [PTypeInfo(TypeInfo(T))^.Name, Prop.Name, ColName, Val.TypeInfo.Name, E.Message]);
+            [string(PTypeInfo(TypeInfo(T))^.Name), Prop.Name, ColName, VTypeName, E.Message]);
         end;
       end;
     end;
@@ -673,6 +712,11 @@ begin
 end;
 
 function TDbSet<T>.FindObject(const AId: Variant): TObject;
+begin
+  Result := Find(AId);
+end;
+
+function TDbSet<T>.FindObject(const AId: Integer): TObject;
 begin
   Result := Find(AId);
 end;
@@ -1406,7 +1450,7 @@ var
   FKMap: TDictionary<T, TValue>;
   TargetType: TRttiType;
   TargetDbSet: IDbSet;
-  LoadedMap: TDictionary<TValue, TObject>;
+  LoadedMap: TDictionary<string, TObject>;
   NavProp: TRttiProperty;
   TargetList: IList<TObject>;
   Obj: TObject;
@@ -1428,32 +1472,39 @@ begin
     var IdValues: TArray<Variant>;
     SetLength(IdValues, IDs.Count);
     for var k := 0 to IDs.Count - 1 do
-    begin
-      if IDs[k].IsEmpty then
-        IdValues[k] := Null
-      else
-        IdValues[k] := IDs[k].AsVariant;
-    end;
+      IdValues[k] := TValueToVariant(IDs[k]);
 
     // Use Variant array to preserve types (Integer, String, GUID) for correct parameter binding
     var Expr: IExpression := TPropExpression.Create('Id').&In(IdValues);
 
     TargetList := TargetDbSet.ListObjects(Expr);
-    LoadedMap := TDictionary<TValue, TObject>.Create;
+
+    LoadedMap := TDictionary<string, TObject>.Create;
     for Obj in TargetList do
     begin
       var TargetRefId := TargetDbSet.GetEntityId(Obj);
-      LoadedMap.AddOrSetValue(TargetRefId, Obj);
+      var KeyStr := TValueToKeyString(TargetRefId);
+      LoadedMap.AddOrSetValue(KeyStr, Obj);
+      // Dext.Utils.SafeWriteLn(Format('[LoadAndAssign][%s] Map Key: "%s"', [NavPropName, KeyStr]));
     end;
+    
     for var Pair in FKMap do
     begin
       var Parent := Pair.Key;
-      var FkVal := Pair.Value.ToString;
-      if LoadedMap.ContainsKey(FkVal) then
-      begin
-        TReflection.SetValue(Pointer(Parent), NavProp, LoadedMap[FkVal]);
+      var FkVal := TValueToKeyString(Pair.Value);
+      try
+        if LoadedMap.ContainsKey(FkVal) then
+        begin
+          TReflection.SetValue(Pointer(Parent), NavProp, LoadedMap[FkVal]);
+        end;
+      except
+        on E: Exception do
+        begin
+          raise;
+        end;
       end;
     end;
+
   finally
     IDs.Free;
     FKMap.Free;
@@ -1477,9 +1528,189 @@ begin
         LoadManyToMany(AEntities, IncludePath, PropMap);
         Continue;
       end;
+      if PropMap.Relationship = rtOneToMany then
+      begin
+        LoadOneToMany(AEntities, IncludePath, PropMap);
+        Continue;
+      end;
     end;
     // Standard One-to-Many / Many-to-One loading
     LoadAndAssign(AEntities, IncludePath);
+  end;
+end;
+
+procedure TDbSet<T>.LoadOneToMany(const AEntities: IList<T>; const NavPropName: string; const PropMap: TPropertyMap);
+var
+  ParentIds: TList<TValue>;
+  ParentMap: TDictionary<string, T>;
+  Ent: T;
+  EntId: TValue;
+  TargetDbSet: IDbSet;
+  TargetType: TRttiType;
+  TargetList: IList<TObject>;
+  Obj: TObject;
+  NavProp: TRttiProperty;
+  TargetFKPropName: string;
+  Ctx: TRttiContext;
+  TargetFKValue: TValue;
+  TargetFKStr: string;
+  ListIntf: IInterface;
+  TargetPropName: string;
+  ObjProp: TRttiProperty;
+  Val: TValue;
+  TargetMap: TEntityMap;
+  InversePropMap: TPropertyMap;
+begin
+  NavProp := FRttiContext.GetType(T).GetProperty(NavPropName);
+  if NavProp = nil then Exit;
+
+  // 1. Collect Parent IDs and build map
+  ParentIds := TList<TValue>.Create;
+  ParentMap := TDictionary<string, T>.Create;
+  try
+    for Ent in AEntities do
+    begin
+      EntId := GetRelatedId(Ent);
+      if not EntId.IsEmpty then
+      begin
+        // Ensure ID is unwrapped if it is a Smart Type (Prop<T>)
+
+        
+
+
+        var KeyStr := TValueToKeyString(EntId);
+        if not ParentIds.Contains(EntId) then
+          ParentIds.Add(EntId);
+        ParentMap.AddOrSetValue(KeyStr, Ent);
+      end;
+    end;
+    if ParentIds.Count = 0 then Exit;
+
+    // 2. Identify Target Type (from IList<TTarget>)
+    TargetType := nil;
+    Ctx := TRttiContext.Create;
+    try
+      var PropType := NavProp.PropertyType;
+      if PropType.TypeKind = tkInterface then
+      begin
+        var TypeName := PropType.Name;
+        var StartPos := Pos('<', TypeName);
+        var EndPos := Pos('>', TypeName);
+        if (StartPos > 0) and (EndPos > StartPos) then
+        begin
+          var GenericTypeName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+          TargetType := Ctx.FindType(GenericTypeName);
+        end;
+      end;
+    finally
+      Ctx.Free;
+    end;
+    
+    if TargetType = nil then Exit;
+    TargetDbSet := FContext.DataSet(TargetType.Handle);
+    TargetMap := TModelBuilder.Instance.GetMap(TargetType.Handle);
+
+    // 3. Identification of FK
+    TargetFKPropName := PropMap.ForeignKeyColumn;
+    
+    // If we have an InverseProperty, look it up in the target map to find the FK
+    if (TargetFKPropName = '') and (PropMap.InverseProperty <> '') and (TargetMap <> nil) then
+    begin
+       if TargetMap.Properties.TryGetValue(PropMap.InverseProperty, InversePropMap) then
+         TargetFKPropName := InversePropMap.ForeignKeyColumn;
+    end;
+    
+    // If still empty, scan target properties for any ForeignKey attribute pointing to our class name
+    if (TargetFKPropName = '') and (TargetMap <> nil) then
+    begin
+       var ParentClassName := T.ClassName;
+       if ParentClassName.StartsWith('T') then ParentClassName := Copy(ParentClassName, 2, MaxInt);
+       
+       for var P in TargetMap.Properties do
+       begin
+          if SameText(P.Key, ParentClassName) or SameText(P.Key, ParentClassName + 'Id') then
+          begin
+             if P.Value.ForeignKeyColumn <> '' then
+             begin
+                TargetFKPropName := P.Value.ForeignKeyColumn;
+                Break;
+             end;
+          end;
+       end;
+    end;
+
+    // Fallback guess
+    if TargetFKPropName = '' then
+    begin
+       var ClassName := T.ClassName;
+       if ClassName.StartsWith('T') then ClassName := Copy(ClassName, 2, MaxInt);
+       TargetFKPropName := ClassName + 'Id';
+    end;
+
+    TargetPropName := TargetFKPropName;
+    if TargetMap <> nil then
+    begin
+       for var P in TargetMap.Properties do
+       begin
+          if SameText(P.Key, TargetFKPropName) or SameText(P.Value.ColumnName, TargetFKPropName) then
+          begin
+             TargetPropName := P.Key;
+             Break;
+          end;
+       end;
+    end;
+
+    var IdValues: TArray<Variant>;
+    SetLength(IdValues, ParentIds.Count);
+    for var i := 0 to ParentIds.Count - 1 do
+      IdValues[i] := TValueToVariant(ParentIds[i]);
+
+    // Query targets using Property Name
+    var Expr := TPropExpression.Create(TargetPropName).&In(IdValues);
+    
+    // Log the expression/query intent for debugging
+    // Dext.Utils.SafeWriteLn(Format('[LoadOneToMany][%s] Querying targets where %s IN (%d values)', 
+    //   [NavPropName, TargetPropName, ParentIds.Count]));
+       
+    TargetList := TargetDbSet.ListObjects(Expr);
+
+    // 4. Assign children to parents
+    for Obj in TargetList do
+    begin
+       ObjProp := FRttiContext.GetType(Obj.ClassType).GetProperty(TargetPropName);
+       if ObjProp <> nil then
+       begin
+          TargetFKValue := ObjProp.GetValue(Obj);
+          
+          // CRITICAL: Must unwrap if it is Prop<T> or Nullable
+
+
+          TargetFKStr := TValueToKeyString(TargetFKValue);
+          
+          if ParentMap.ContainsKey(TargetFKStr) then
+          begin
+             var Parent := ParentMap[TargetFKStr];
+             Val := NavProp.GetValue(Pointer(Parent));
+             if Val.Kind = tkInterface then
+             begin
+                ListIntf := Val.AsInterface;
+                if ListIntf <> nil then
+                begin
+                   var IntfTyp := FRttiContext.GetType(Val.TypeInfo);
+                   var AddMethod := IntfTyp.GetMethod('Add');
+                   if AddMethod <> nil then
+                   begin
+                      AddMethod.Invoke(Val, [Obj]);
+                   end;
+                end;
+             end;
+          end;
+       end;
+    end;
+
+  finally
+    ParentIds.Free;
+    ParentMap.Free;
   end;
 end;
 
@@ -1592,7 +1823,7 @@ begin
         var IdValues: TArray<Variant>;
         SetLength(IdValues, AllRelatedIds.Count);
         for var i := 0 to AllRelatedIds.Count - 1 do
-          IdValues[i] := AllRelatedIds[i].AsVariant;
+          IdValues[i] := TValueToVariant(AllRelatedIds[i]);
         
         var RelatedExpr: IExpression := TPropExpression.Create('Id').&In(IdValues);
         var LoadedList := RelatedDbSet.ListObjects(RelatedExpr);
@@ -1735,6 +1966,11 @@ begin
     CmdLoop.AddParam('p2', RelatedId);
     CmdLoop.Execute;
   end;
+end;
+
+function TDbSet<T>.Find(const AId: Integer): T;
+begin
+  Result := Find(Variant(AId));
 end;
 
 function TDbSet<T>.Find(const AId: Variant): T;

@@ -735,6 +735,7 @@ type
     function UseStartupLock: AppBuilder;
     function UseExceptionHandler: AppBuilder; overload;
     function UseExceptionHandler(const AOptions: TExceptionHandlerOptions): AppBuilder; overload;
+    function UseDeveloperExceptionPage: AppBuilder;
     function UseHttpLogging: AppBuilder; overload;
     function UseHttpLogging(const AOptions: THttpLoggingOptions): AppBuilder; overload;
 
@@ -1131,6 +1132,12 @@ begin
   Result := Self;
 end;
 
+function THttpAppBuilderHelper.UseDeveloperExceptionPage: AppBuilder;
+begin
+  TApplicationBuilderMiddlewareExtensions.UseDeveloperExceptionPage(Self.Unwrap);
+  Result := Self;
+end;
+
 
 // -------------------------------------------------------------------------
 // THttpAppBuilderHelper (Rate Limiting Extensions)
@@ -1146,11 +1153,13 @@ end;
 // THttpAppBuilderHelper (Response Caching Extensions)
 // -------------------------------------------------------------------------
 
+
 function THttpAppBuilderHelper.UseResponseCache(AConfigurator: TResponseCacheBuilderProc): AppBuilder;
 begin
   TApplicationBuilderCacheExtensions.UseResponseCache(Self.Unwrap, AConfigurator);
   Result := Self;
 end;
+
 
 function THttpAppBuilderHelper.UseResponseCache(const ACacheBuilder: TResponseCacheBuilder): AppBuilder;
 begin

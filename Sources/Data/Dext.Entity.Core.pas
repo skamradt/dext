@@ -70,7 +70,8 @@ type
   /// </summary>
   IDbSet = interface
     ['{30000000-0000-0000-0000-000000000000}']
-    function FindObject(const AId: Variant): TObject;
+    function FindObject(const AId: Variant): TObject; overload;
+    function FindObject(const AId: Integer): TObject; overload;
     function Add(const AEntity: TObject): IDbSet;
     function GetTableName: string;
     function GetEntityType: PTypeInfo;
@@ -123,6 +124,7 @@ type
 
     // Queries via Specifications
     function Find(const AId: Variant): T; overload;
+    function Find(const AId: Integer): T; overload;
     function Find(const AId: array of Integer): T; overload;
     function Find(const AId: array of Variant): T; overload;
 

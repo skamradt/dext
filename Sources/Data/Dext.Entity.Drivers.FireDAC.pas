@@ -716,7 +716,9 @@ begin
   try
     Q.Connection := FConnection;
     Q.SQL.Text := FQuery.SQL.Text;
-    
+    if Assigned(FOnLog) then
+        FOnLog(Format('SQL: %s', [Q.SQL.Text]));
+
     // Copy params
     for i := 0 to FQuery.Params.Count - 1 do
     begin
@@ -726,14 +728,23 @@ begin
       begin
         Dest.DataType := Src.DataType;
         Dest.Value := Src.Value;
+        
+        if Assigned(FOnLog) then
+           FOnLog(Format('Param[%s]: Type=%s, Value=%s',
+             [Src.Name, GetEnumName(TypeInfo(TFieldType), Integer(Src.DataType)), VarToStr(Src.Value)]));
       end;
     end;
     
     Q.Open;
     Result := TFireDACReader.Create(Q, True); // Reader now owns this new query
   except
-    Q.Free;
-    raise;
+    on E: Exception do
+    begin
+       if Assigned(FOnLog) then
+         FOnLog(Format('ERROR executing SQL: %s', [E.Message]));
+       Q.Free;
+       raise;
+    end;
   end;
 end;
 

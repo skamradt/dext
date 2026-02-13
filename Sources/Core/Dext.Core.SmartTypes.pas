@@ -40,6 +40,8 @@
 {***************************************************************************}
 unit Dext.Core.SmartTypes;
 
+{$RTTI EXPLICIT FIELDS([vcPrivate..vcPublic]) PROPERTIES([vcPrivate..vcPublic]) METHODS([vcPrivate..vcPublic])}
+
 interface
 
 uses
@@ -126,6 +128,10 @@ type
     // Nullable<T> interop
     class operator Implicit(const Value: Prop<T>): Nullable<T>;
     class operator Implicit(const Value: Nullable<T>): Prop<T>;
+
+    // Variant interop
+    class operator Implicit(const Value: Variant): Prop<T>;
+    class operator Implicit(const Value: Prop<T>): Variant;
 
     // Factory for calculated properties
     class function FromExpression(const AExpr: IExpression): Prop<T>; static;
@@ -516,6 +522,17 @@ begin
   else
     Result.FValue := Default(T);
   Result.FInfo := nil;
+end;
+
+class operator Prop<T>.Implicit(const Value: Variant): Prop<T>;
+begin
+  Result.FValue := TValue.FromVariant(Value).AsType<T>;
+  Result.FInfo := nil;
+end;
+
+class operator Prop<T>.Implicit(const Value: Prop<T>): Variant;
+begin
+  Result := TValue.From<T>(Value.FValue).AsVariant;
 end;
 
 class operator Prop<T>.Equal(const LHS: Prop<T>; const RHS: T): BooleanExpression;

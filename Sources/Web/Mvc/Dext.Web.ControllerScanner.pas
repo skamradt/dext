@@ -203,7 +203,7 @@ begin
     Result := Controllers.ToArray;
     SafeWriteLn('🎯 ' + Format('Total controllers found: %d', [Length(Result)]));
 
-    {$IFDEF MSWINDOWS}
+    {$IFDEF MSWINDOWS}{$WARN SYMBOL_PLATFORM OFF}
     if (Length(Result) = 0) and (DebugHook <> 0) then
     begin
       SafeWriteLn('');
@@ -214,7 +214,7 @@ begin
       SafeWriteLn('      TMyController.ClassName;');
       SafeWriteLn('');
     end;
-    {$ENDIF}
+    {$WARN SYMBOL_PLATFORM ON}{$ENDIF}
   finally
     Controllers.Free;
   end;

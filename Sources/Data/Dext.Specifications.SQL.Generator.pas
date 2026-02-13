@@ -36,6 +36,7 @@ uses
   System.TypInfo,
   System.Variants,
   Data.DB,
+  Dext.Utils,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Entity.Dialects,
@@ -519,7 +520,31 @@ begin
         for I := 0 to ArrayValue.GetArrayLength - 1 do
         begin
           ParamName := GetNextParamName;
-          FParams.Add(ParamName, ArrayValue.GetArrayElement(I));
+          var PVal := ArrayValue.GetArrayElement(I);
+          // Inline unwrap for Smart Types (same logic as TSQLGenerator.TryUnwrapSmartValue)
+          if PVal.Kind = tkRecord then
+          begin
+            var URttiCtx := TRttiContext.Create;
+            try
+              var URType := URttiCtx.GetType(PVal.TypeInfo);
+              if URType <> nil then
+              begin
+                var UFValue := URType.GetField('FValue');
+                if (UFValue <> nil) and
+                   (URType.Name.Contains('Prop<') or URType.Name.Contains('TProp') or
+                    (URType.Name.EndsWith('Type') and (URType.TypeKind = tkRecord))) then
+                  PVal := UFValue.GetValue(PVal.GetReferenceToRawData);
+              end;
+            finally
+              URttiCtx.Free;
+            end;
+          end;
+
+          if PVal.IsEmpty then
+             FParams.Add(ParamName, TValue.Empty)
+          else
+             FParams.Add(ParamName, PVal);
+             
           if I > 0 then ParamNames.Append(', ');
           ParamNames.Append(':').Append(ParamName);
         end;
@@ -1212,39 +1237,18 @@ begin
       
       SBCols.Append(FDialect.QuoteIdentifier(ColName));
       
-      
       Val := Prop.GetValue(Pointer(AEntity));
-      
-      // Check for Nullable<T> using TReflection (Cached & Reliable)
-      var Meta := TReflection.GetMetadata(Val.TypeInfo);
-      if Meta.IsNullable and (Meta.HasValueField <> nil) then
-      begin
-        // Check HasValue directly via Field
-        // Note: Field.GetValue returns TValue, we check boolean state
-        var HasValueVal := Meta.HasValueField.GetValue(Val.GetReferenceToRawData);
-        var HasValue: Boolean := False;
-        
-        if HasValueVal.Kind = tkUString then
-           HasValue := HasValueVal.AsString <> ''
-        else if HasValueVal.Kind = tkEnumeration then
-           HasValue := HasValueVal.AsBoolean;
 
-        if not HasValue then
-        begin
-          // It is NULL.
-          SBVals.Append('NULL');
-          Continue; // Skip adding parameter
-        end
-        else
-        begin
-          // It has value. Extract it using ValueField
-          if Meta.ValueField <> nil then
-             Val := Meta.ValueField.GetValue(Val.GetReferenceToRawData);
-        end;
-      end;
-
-      // Check for Prop<T> (Smart Type)
+      // Unwrap Nullable<T> and Prop<T> (Smart Type)
       TryUnwrapSmartValue(Val);
+
+
+      // After unwrapping, check if the value is Null or Empty
+      if Val.IsEmpty then
+      begin
+        SBVals.Append('NULL');
+        Continue; 
+      end;
 
       ParamName := GetNextParamName;
       
@@ -1279,8 +1283,6 @@ begin
     begin
        // Check if already added? (Optimization: explicit loop check or just trust map setup usually implies shadow)
        // For now, simpler: assume shadow property if configured via HasDiscriminator
-       // We should ideally check if ColName/Prop above handled it.
-       // But HasDiscriminator implies it's metadata driven.
        // If a property maps to it, IsMapped would be true.
        // We can check if SBCols contains the column name... but string search is flaky.
        // Let's rely on standard practice: If users map it properly, they shouldn't use HasDiscriminator with const value?
@@ -1551,7 +1553,7 @@ begin
             Val := NullableHelper.GetValue(Val.GetReferenceToRawData);
         end;
 
-        // Check for Prop<T> (Smart Type)
+        // Unwrap Prop<T> (Smart Type) / Nullable<T>
         TryUnwrapSmartValue(Val);
 
         ParamName := GetNextParamName;

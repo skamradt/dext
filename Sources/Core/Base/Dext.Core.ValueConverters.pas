@@ -36,7 +36,8 @@ uses
   System.DateUtils,
   System.Classes,
   Dext.Types.UUID,
-  Dext.Core.DateUtils;
+  Dext.Core.DateUtils,
+  Dext.Utils;
 
 type
   IValueConverter = interface
@@ -674,8 +675,8 @@ begin
   // Check if source object is compatible with target class
   if SourceObj is TargetClass then
   begin
-    // Compatible - return the object as-is wrapped in TValue
-    Result := TValue.From<TObject>(SourceObj);
+    // Compatible - return the object as-is wrapped in TValue with the correct TargetType
+    TValue.Make(@SourceObj, ATargetType, Result);
   end
   else
   begin

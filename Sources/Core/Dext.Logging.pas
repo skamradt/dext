@@ -262,7 +262,6 @@ var
   i: Integer;
   ArgIndex: Integer;
   InBrace: Boolean;
-  LTransformed: string;
   LPlaceholder: string;
   
   function VarRecToString(const V: TVarRec): string;

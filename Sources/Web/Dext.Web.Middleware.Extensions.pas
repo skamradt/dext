@@ -42,6 +42,8 @@ type
     
     class function UseExceptionHandler(const ABuilder: IApplicationBuilder): IApplicationBuilder; overload;
     class function UseExceptionHandler(const ABuilder: IApplicationBuilder; const AOptions: TExceptionHandlerOptions): IApplicationBuilder; overload;
+
+    class function UseDeveloperExceptionPage(const ABuilder: IApplicationBuilder): IApplicationBuilder;
     
     class function UseStartupLock(const ABuilder: IApplicationBuilder): IApplicationBuilder;
   end;
@@ -100,6 +102,11 @@ begin
   
   Middleware := TExceptionHandlerMiddleware.Create(AOptions, Logger);
   Result := ABuilder.UseMiddleware(Middleware);
+end;
+
+class function TApplicationBuilderMiddlewareExtensions.UseDeveloperExceptionPage(const ABuilder: IApplicationBuilder): IApplicationBuilder;
+begin
+  Result := UseExceptionHandler(ABuilder, TExceptionHandlerOptions.Development);
 end;
 
 class function TApplicationBuilderMiddlewareExtensions.UseStartupLock(const ABuilder: IApplicationBuilder): IApplicationBuilder;

@@ -1543,14 +1543,19 @@ begin
           end;
         end;
 
-      tkClass:
+      tkClass, tkInterface:
         begin
-          if PropValue.AsObject = nil then
-            Result.SetNull(PropName)
-          else if IsListType(PropValue.TypeInfo) then
+          if IsListType(PropValue.TypeInfo) then
             Result.SetArray(PropName, SerializeList(PropValue))
+          else if PropValue.Kind = tkClass then
+          begin
+            if PropValue.AsObject = nil then
+              Result.SetNull(PropName)
+            else
+              Result.SetObject(PropName, SerializeObject(PropValue));
+          end
           else
-            Result.SetObject(PropName, SerializeObject(PropValue));
+            Result.SetNull(PropName);
         end;
 
       tkDynArray:

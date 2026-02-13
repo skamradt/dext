@@ -366,6 +366,8 @@ begin
   finally
     System.TMonitor.Exit(FCriticalSection);
   end;
+
+  PreloadDbSets;
 end;
 
 constructor TDbContext.Create(const AOptions: TDbContextOptions;
