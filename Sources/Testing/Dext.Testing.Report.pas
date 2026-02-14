@@ -629,43 +629,76 @@ function TSonarQubeReporter.GenerateXml: string;
 var
   SB: TStringBuilder;
   TC: TTestCaseReport;
-  ResultStr: string;
+  ResultStr, CurrentFile, TestFile: string;
+  FileTests: TList<TTestCaseReport>;
+  FileGroups: TDictionary<string, TList<TTestCaseReport>>;
+  FilePath: string;
 begin
   SB := TStringBuilder.Create;
+  FileGroups := TDictionary<string, TList<TTestCaseReport>>.Create;
   try
+    // Group tests by class name (which represents the file)
+    for TC in FTestCases do
+    begin
+      TestFile := TC.ClassName;
+      if TestFile = '' then
+        TestFile := 'UnknownFile';
+        
+      if not FileGroups.ContainsKey(TestFile) then
+        FileGroups.Add(TestFile, TList<TTestCaseReport>.Create);
+        
+      FileGroups[TestFile].Add(TC);
+    end;
+    
     SB.AppendLine('<?xml version="1.0" encoding="UTF-8"?>');
     SB.AppendLine('<testExecutions version="1">');
 
-    for TC in FTestCases do
+    // Generate XML for each file group
+    for FilePath in FileGroups.Keys do
     begin
-      case TC.Status of
-        trPassed:  ResultStr := 'ok';
-        trFailed:  ResultStr := 'failure';
-        trSkipped: ResultStr := 'skipped';
-        trError:   ResultStr := 'error';
-      else
-        ResultStr := 'ok';
-      end;
-
-      SB.AppendFormat('  <testCase name="%s" duration="%d"',
-        [EscapeXml(TC.TestName), Round(TC.Duration)]);
-
-      if TC.Status = trPassed then
-        SB.AppendLine('/>')
-      else
+      FileTests := FileGroups[FilePath];
+      
+      // SonarQube expects <file path="..."> wrapper
+      SB.AppendFormat('  <file path="%s">', [EscapeXml(FilePath)]);
+      SB.AppendLine;
+      
+      for TC in FileTests do
       begin
-        SB.AppendLine('>');
-        SB.AppendFormat('    <%s message="%s">%s</%s>',
-          [ResultStr, EscapeXml(TC.ErrorMessage), EscapeXml(TC.StackTrace), ResultStr]);
-        SB.AppendLine;
-        SB.AppendLine('  </testCase>');
+        case TC.Status of
+          trPassed:  ResultStr := 'ok';
+          trFailed:  ResultStr := 'failure';
+          trSkipped: ResultStr := 'skipped';
+          trError:   ResultStr := 'error';
+        else
+          ResultStr := 'ok';
+        end;
+
+        SB.AppendFormat('    <testCase name="%s" duration="%d"',
+          [EscapeXml(TC.TestName), Round(TC.Duration)]);
+
+        if TC.Status = trPassed then
+          SB.AppendLine('/>')
+        else
+        begin
+          SB.AppendLine('>');
+          SB.AppendFormat('      <%s message="%s"></%s>',
+            [ResultStr, EscapeXml(TC.ErrorMessage), ResultStr]);
+          SB.AppendLine;
+          SB.AppendLine('    </testCase>');
+        end;
       end;
+      
+      SB.AppendLine('  </file>');
     end;
 
     SB.AppendLine('</testExecutions>');
 
     Result := SB.ToString;
   finally
+    // Free all the lists in the dictionary
+    for FileTests in FileGroups.Values do
+      FileTests.Free;
+    FileGroups.Free;
     SB.Free;
   end;
 end;

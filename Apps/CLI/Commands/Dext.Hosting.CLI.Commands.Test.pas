@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.JSON,
   System.Classes,
   System.IOUtils,
   System.Diagnostics,
@@ -36,6 +37,8 @@ type
     function FindRSVars(GlobalConfig: TDextGlobalConfig; const DesiredVersion: string): string;
     procedure EnsureCodeCoverage(GlobalConfig: TDextGlobalConfig; out ExePath: string);
 
+    function CheckTestResults(const JsonPath: string): Boolean;
+    
     procedure RunTests(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig; GlobalConfig: TDextGlobalConfig; const DesiredDelphi: string);
     procedure RunWithCoverage(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig; GlobalConfig: TDextGlobalConfig; const DesiredDelphi: string);
   public
@@ -218,6 +221,37 @@ begin
     Result := RunProcess('msbuild', Args);
   end;
   if not Result then SafeWriteLn('Error: Build failed.');
+end;
+
+function TTestCommand.CheckTestResults(const JsonPath: string): Boolean;
+var
+  JsonText: string;
+  JsonObj: TJSONObject;
+  FailedCount: Integer;
+begin
+  Result := True; // Default to success if file doesn't exist or can't be parsed
+  
+  if not FileExists(JsonPath) then Exit;
+  
+  try
+    JsonText := TFile.ReadAllText(JsonPath);
+    JsonObj := TJSONObject.ParseJSONValue(JsonText) as TJSONObject;
+    if JsonObj <> nil then
+    begin
+      try
+        if JsonObj.TryGetValue<Integer>('failed', FailedCount) then
+        begin
+          Result := FailedCount = 0;
+          if not Result then
+            SafeWriteLn(Format('Tests failed: %d test(s) did not pass', [FailedCount]));
+        end;
+      finally
+        JsonObj.Free;
+      end;
+    end;
+  except
+    // If we can't parse the results, assume success to avoid false negatives
+  end;
 end;
 
 procedure TTestCommand.RunTests(const ProjectFile: string; const Args: TCommandLineArgs; Config: TDextConfig; GlobalConfig: TDextGlobalConfig; const DesiredDelphi: string);
@@ -446,13 +480,23 @@ begin
   SetEnvironmentVariable('DEXT_HEADLESS', '1');
   try
     if not RunProcess(DCCExe, CoverageCmd) then
-      SafeWriteLn('Coverage analysis failed (or tests failed).')
+    begin
+      SafeWriteLn('Coverage analysis failed (or tests failed).');
+      Halt(1); // Exit with error code
+    end
     else
     begin
       SafeWriteLn('Coverage analysis complete. Check output in ' + ReportDir);
       var DccXml := TPath.Combine(ReportDir, 'CodeCoverage_Summary.xml');
       var SonarXml := TPath.Combine(ReportDir, 'dext_coverage.xml');
       TSonarConverter.Convert(DccXml, SonarXml, SourceDir, Config.Test.CoverageThreshold);
+      
+      // Check if tests actually passed
+      if not CheckTestResults(JsonPath) then
+      begin
+        SafeWriteLn('Error: One or more tests failed. Check the test report for details.');
+        Halt(1); // Exit with error code
+      end;
       
       if Args.HasOption('open') then
       begin
