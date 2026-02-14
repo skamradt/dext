@@ -124,12 +124,12 @@ end;
 
 function TTestCommand.GetExeFile(const ProjectName: string): string;
 begin
-  Result := TPath.Combine(BUILD_DIR, ProjectName + '.exe');
+  Result := TPath.GetFullPath(TPath.Combine(BUILD_DIR, ProjectName + '.exe'));
 end;
 
 function TTestCommand.GetMapFile(const ProjectName: string): string;
 begin
-  Result := TPath.Combine(BUILD_DIR, ProjectName + '.map');
+  Result := TPath.GetFullPath(TPath.Combine(BUILD_DIR, ProjectName + '.map'));
 end;
 
 function TTestCommand.RunProcess(const Exe, Params: string): Boolean;
@@ -276,16 +276,44 @@ begin
   Result := TPath.GetFullPath(TPath.Combine(BaseDir, 'Sources'));
   if not TDirectory.Exists(Result) then
   begin
-    Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../../Sources'));
-    if not TDirectory.Exists(Result) then
-    begin
-       Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../Sources'));
-       if not TDirectory.Exists(Result) then Result := BaseDir;
-    end;
+     Result := TPath.GetFullPath(TPath.Combine(BaseDir, 'src'));
+     if not TDirectory.Exists(Result) then
+     begin
+       Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../../Sources'));
+       if not TDirectory.Exists(Result) then
+       begin
+          Result := TPath.GetFullPath(TPath.Combine(BaseDir, '../Sources'));
+          if not TDirectory.Exists(Result) then Result := BaseDir;
+       end;
+     end;
   end;
 end;
 
 procedure TTestCommand.GenerateCoverageLists(const BaseDir, SourceDir: string; const Excludes: TArray<string>; out UnitFile, SourcePathFile: string);
+  
+  function GetUnitNameFromFile(const FileName: string): string;
+  begin
+    Result := TPath.GetFileNameWithoutExtension(FileName); 
+    try
+      var Lines := TFile.ReadAllLines(FileName);
+      for var Line in Lines do
+      begin
+        var Trimmed := Line.Trim;
+        if Trimmed.ToLower.StartsWith('unit ') then
+        begin
+          var Parts := Trimmed.Split([' ', ';']);
+          if Length(Parts) >= 2 then
+          begin
+            Result := Parts[1];
+            Exit;
+          end;
+        end;
+      end;
+    except
+      // Fallback to filename on error
+    end;
+  end;
+
 var
   Units, Paths: TStringList;
   Files: TArray<string>;
@@ -300,18 +328,35 @@ begin
     for FileName in Files do
     begin
       if FileName.ToLower.Contains('\tests\') then Continue;
-      UnitName := TPath.GetFileNameWithoutExtension(FileName);
+      
+      // Get the real unit name from the file content to ensure correct casing
+      UnitName := GetUnitNameFromFile(FileName);
+      
       Excluded := False;
       for Mask in Excludes do
       begin
-        if MatchesMask(FileName, Mask) or MatchesMask(UnitName, Mask) then
+        // If the mask is simple (no wildcards), treat it as a folder name to exclude
+        if (Mask.IndexOf('*') = -1) and (Mask.IndexOf('?') = -1) and (Mask.IndexOf('\') = -1) then
         begin
-          Excluded := True;
-          Break;
+           // For simple patterns like "modules", check if the path contains "\modules\"
+           if FileName.ToLower.Contains('\' + Mask.ToLower + '\') then
+           begin
+             Excluded := True;
+             Break;
+           end;
+        end
+        else
+        begin
+           // For patterns with wildcards, use MatchesMask
+           if MatchesMask(FileName, Mask) or MatchesMask(UnitName, Mask) then
+           begin
+             Excluded := True;
+             Break;
+           end;
         end;
       end;
       if Excluded then Continue;
-      Units.Add(UnitName);
+      Units.Add(UnitName + ExtractFileExt(FileName));
       var Dir := ExtractFilePath(FileName);
       if Paths.IndexOf(Dir) = -1 then Paths.Add(Dir);
     end;
@@ -383,13 +428,18 @@ begin
 
   ForceDirectories(ReportDir);
   
-  var TestArgs := Format('-junit:""%s"" -html:""%s"" -json:""%s""', [
-      TPath.Combine(ReportDir, 'test-results.xml'),
-      TPath.Combine(ReportDir, 'test-results.html'),
-      TPath.Combine(ReportDir, 'test-results.json')
-  ]);
+  var XmlPath := TPath.Combine(ReportDir, 'test-results.xml');
+  var HtmlPath := TPath.Combine(ReportDir, 'test-results.html');
+  var JsonPath := TPath.Combine(ReportDir, 'test-results.json');
   
-  CoverageCmd := Format('-e "%s" -m "%s" -uf "%s" -spf "%s" -od "%s" -lt -html -xml -xmllines -a "%s"', 
+  // Create placeholders to satisfy potential existence checks
+  TFile.WriteAllText(XmlPath, '');
+  TFile.WriteAllText(HtmlPath, '');
+  TFile.WriteAllText(JsonPath, '');
+
+  var TestArgs := Format('^-junit:"%s" ^-html:"%s" ^-json:"%s"', [XmlPath, HtmlPath, JsonPath]);
+  
+  CoverageCmd := Format('-e "%s" -m "%s" -uf "%s" -spf "%s" -od "%s" -lt -html -xml -xmllines -a %s', 
     [ExePath, MapPath, UnitLst, SourceLst, ReportDir, TestArgs]);
     
   // Disable Dext Test Dashboard in target process
