@@ -420,6 +420,8 @@ begin
     TTestRunner.SaveXUnitReport(FXUnitFile);
   if FTRXFile <> '' then
     TTestRunner.SaveTRXReport(FTRXFile);
+  if FSonarQubeFile <> '' then
+    TTestRunner.SaveSonarQubeReport(FSonarQubeFile);
   if FHTMLFile <> '' then
     TTestRunner.SaveHTMLReport(FHTMLFile);
 

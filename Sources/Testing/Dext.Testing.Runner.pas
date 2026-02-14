@@ -375,6 +375,11 @@ type
     class procedure SaveTRXReport(const FileName: string);
 
     /// <summary>
+    ///   Saves test results to a SonarQube Generic Test Data XML file.
+    /// </summary>
+    class procedure SaveSonarQubeReport(const FileName: string);
+
+    /// <summary>
     ///   Saves test results to a beautiful standalone HTML file.
     /// </summary>
     class procedure SaveHTMLReport(const FileName: string);
@@ -1835,6 +1840,39 @@ begin
     
     if FVerbose then
       SafeWriteLn('📄 TRX report saved: ' + FileName);
+  finally
+    Reporter.Free;
+  end;
+end;
+
+class procedure TTestRunner.SaveSonarQubeReport(const FileName: string);
+var
+  Reporter: TSonarQubeReporter;
+  Fixture: TTestFixtureInfo;
+  TestInfo: TTestInfo;
+begin
+  if FTestResults = nil then
+  begin
+    SafeWriteLn('Warning: No test results available. Run tests first.');
+    Exit;
+  end;
+
+  Reporter := TSonarQubeReporter.Create;
+  try
+    for Fixture in FFixtures do
+    begin
+      Reporter.SetCurrentClassName(Fixture.Name);
+      for TestInfo in FTestResults do
+      begin
+        if TestInfo.FixtureName = Fixture.Name then
+          Reporter.AddTestCase(TestInfo);
+      end;
+    end;
+    
+    Reporter.SaveToFile(FileName);
+    
+    if FVerbose then
+      SafeWriteLn('📄 SonarQube report saved: ' + FileName);
   finally
     Reporter.Free;
   end;
