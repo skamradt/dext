@@ -131,11 +131,10 @@ type
 
   {$M+}
   TSmartList<T> = class(TInterfacedObject, IList<T>, IEnumerable<T>)
-  private
+  protected
     FList: System.Generics.Collections.TList<T>;
     FOwnsObjects: Boolean;
-    procedure Notify(Sender: TObject; const Item: T; Action: TCollectionNotification);
-  protected
+    procedure Notify(Sender: TObject; const Item: T; Action: TCollectionNotification); virtual;
     function GetCount: Integer;
     function GetItem(Index: Integer): T;
     procedure SetItem(Index: Integer; const Value: T);

@@ -42,6 +42,7 @@ uses
   Dext.Types.Nullable,
   Dext.Specifications.Types,
   Dext.Specifications.Interfaces,
+  Dext.Entity.Collections,
   Dext.Core.Activator;
 
 type
@@ -131,16 +132,33 @@ var
   Ctx: TRttiContext;
   Typ: TRttiType;
   Field: TRttiField;
+  Map: TEntityMap;
+  PropMap: TPropertyMap;
 begin
+  Map := TEntityMap(AContext.GetMapping(AEntity.ClassInfo));
+  if Map = nil then Exit;
+
   Ctx := TRttiContext.Create;
   try
     Typ := Ctx.GetType(AEntity.ClassType);
     
+    // 1. Handle Explicit Lazy<T> (Attributes or Implicit)
     for Field in Typ.GetFields do
     begin
       if Field.FieldType.Name.StartsWith('Lazy<') then
       begin
         InjectField(AContext, AEntity, Field);
+      end;
+    end;
+    
+    // 2. Handle Fluent Mapping IsLazy (For future Auto-Proxies)
+    for PropMap in Map.Properties.Values do
+    begin
+      if PropMap.IsLazy and not PropMap.PropertyName.StartsWith('Lazy<') then
+      begin
+        // If it's a class but not Lazy<T>, it's a candidate for Auto-Proxying
+        // For now, we only support Lazy<T> because Auto-Proxies require TClassProxy at instantiation time.
+        // But we can check if it's already a Proxy.
       end;
     end;
   finally
@@ -380,26 +398,14 @@ begin
                         end;
                       end;
                       
-                      // If no existing list, create a new one
-                      if not UseExistingInterface and (ListObj = nil) then
-                      begin
-                        // Check if it's TObjectList to pass OwnsObjects=True
-                        if TypeName.Contains('TObjectList<') then
-                          ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, [True])
-                        else if TypeName.Contains('IList<') then
-                        begin
-                          // If IList<T> and not initialized, we try to create an ObjectList<T> that implements it?
-                          // But RTTI for interface type won't give us a metaclass to instantiate.
-                          // Usually users must initialize IList.
-                          // If they didn't, we can try TCollections class if we know T
-                          Exit; // Can't instantiate interface without factory
-                        end
-                        else
-                          ListObj := TActivator.CreateInstance(Prop.PropertyType.AsInstance.MetaclassType, []);
+                // Create TTrackingList via Factory
+                if ListObj = nil then
+                begin
+                   ListObj := TTrackingListFactory.CreateList(ItemType.Handle, GetDbContext, FEntity, FPropName);
+                end;
 
-                        if ListObj = nil then
-                          Exit;
-                      end;
+                if ListObj = nil then
+                  Exit;
                       
                       // Get Add method
                       if UseExistingInterface then
@@ -633,42 +639,12 @@ begin
     
     if not UseExistingInterface and (ListObj = nil) then
     begin
-      // Create new collection
-      if TypeName.Contains('IList<') then
-      begin
-          if ItemType <> nil then
-          begin
-             var ListTypeName := 'Dext.Collections.TSmartList<' + ItemType.QualifiedName + '>';
-             var SmartListType := Ctx.FindType(ListTypeName);
-             if SmartListType <> nil then
-               ListObj := TActivator.CreateInstance(SmartListType.AsInstance.MetaclassType, [False]);
-          end;
-          
-          if ListObj = nil then
-             ListObj := TSmartList<TObject>.Create(False);
-             
-          FValue := TValue.From(ListObj);
-      end
-      else 
-      begin
-        // For TObjectList<T> or others
-        ListType := Ctx.FindType(TypeName);
-        if ListType <> nil then
-        begin
-           if TypeName.Contains('TObjectList<') then
-           begin
-             ListObj := TActivator.CreateInstance(ListType.AsInstance.MetaclassType, [False]); // OwnsObjects=False
-             FOwnsValue := True;
-           end
-           else
-           begin
-             ListObj := TActivator.CreateInstance(ListType.AsInstance.MetaclassType, [False]); // OwnsObjects=False
-             FOwnsValue := True;
-           end;
-        end;
-      end;
+      // Create TTrackingList via Factory
+      ListObj := TTrackingListFactory.CreateList(ItemType.Handle, GetDbContext, FEntity, FPropName);
       
       if ListObj = nil then Exit;
+      if not UseExistingInterface then
+        FValue := TValue.From(ListObj);
     end;
     
     // Get Add method

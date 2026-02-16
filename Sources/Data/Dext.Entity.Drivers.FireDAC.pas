@@ -1019,6 +1019,19 @@ begin
   Result := FConnection.Connected;
 end;
 
+function TFireDACConnection.IsPooled: Boolean;
+begin
+  // First check if the connection is assigned to a manager/pool
+  if FConnection.ConnectionDefName <> '' then
+  begin
+     // We assume if it has a DefName AND it was registered through our manager, it is pooled.
+     // FireDAC pooling is usually defined at the definition level.
+     Result := FConnection.Params.Pooled;
+  end
+  else
+    Result := False;
+end;
+
 procedure TFireDACConnection.SetOnLog(AValue: TProc<string>);
 begin
   FOnLog := AValue;

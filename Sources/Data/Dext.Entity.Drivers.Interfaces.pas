@@ -65,6 +65,9 @@ type
 
     function TableExists(const ATableName: string): Boolean;
     
+    function IsPooled: Boolean;
+    property Pooled: Boolean read IsPooled;
+
     procedure SetOnLog(AValue: TProc<string>);
     function GetOnLog: TProc<string>;
     property OnLog: TProc<string> read GetOnLog write SetOnLog;

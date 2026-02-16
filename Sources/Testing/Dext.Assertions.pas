@@ -460,6 +460,25 @@ function Should(const Value: Variant): ShouldVariant; overload;
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
 function Should: ShouldHelper; overload;
 
+// Smart Types / Prop<T> Overloads
+function Should(const Value: StringType): ShouldString; overload;
+function Should(const Value: IntType): ShouldInteger; overload;
+function Should(const Value: Int64Type): ShouldInt64; overload;
+function Should(const Value: BoolType): ShouldBoolean; overload;
+function Should(const Value: FloatType): ShouldDouble; overload;
+function Should(const Value: CurrencyType): ShouldDouble; overload;
+
+// Nullable<T> Overloads
+function Should(const Value: Nullable<string>): ShouldString; overload;
+function Should(const Value: Nullable<Integer>): ShouldInteger; overload;
+function Should(const Value: Nullable<Int64>): ShouldInt64; overload;
+function Should(const Value: Nullable<Boolean>): ShouldBoolean; overload;
+function Should(const Value: Nullable<Double>): ShouldDouble; overload;
+function Should(const Value: Nullable<Currency>): ShouldDouble; overload;
+function Should(const Value: Nullable<TDateTime>): ShouldDateTime; overload;
+function ShouldDate(const Value: Nullable<TDateTime>): ShouldDateTime; overload;
+function ShouldDate(const Value: Prop<TDateTime>): ShouldDateTime; overload;
+
 implementation
 
 uses
@@ -1980,6 +1999,99 @@ end;
 function ShouldDate(Value: TDateTime): ShouldDateTime;
 begin
   Result := ShouldDateTime.Create(Value);
+end;
+
+{ Smart Types / Prop<T> Implementations }
+
+function Should(const Value: StringType): ShouldString;
+begin
+  Result := ShouldString.Create(Value.Value);
+end;
+
+function Should(const Value: IntType): ShouldInteger;
+begin
+  Result := ShouldInteger.Create(Value.Value);
+end;
+
+function Should(const Value: Int64Type): ShouldInt64;
+begin
+  Result := ShouldInt64.Create(Value.Value);
+end;
+
+function Should(const Value: BoolType): ShouldBoolean;
+begin
+  Result := ShouldBoolean.Create(Value.Value);
+end;
+
+function Should(const Value: FloatType): ShouldDouble;
+begin
+  Result := ShouldDouble.Create(Value.Value);
+end;
+
+function Should(const Value: CurrencyType): ShouldDouble;
+begin
+  Result := ShouldDouble.Create(Value.Value);
+end;
+
+{ Nullable<T> Implementations }
+
+function Should(const Value: Nullable<string>): ShouldString;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<string> to have a value, but it was Null');
+  Result := ShouldString.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<Integer>): ShouldInteger;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<Integer> to have a value, but it was Null');
+  Result := ShouldInteger.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<Int64>): ShouldInt64;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<Int64> to have a value, but it was Null');
+  Result := ShouldInt64.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<Boolean>): ShouldBoolean;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<Boolean> to have a value, but it was Null');
+  Result := ShouldBoolean.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<Double>): ShouldDouble;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<Double> to have a value, but it was Null');
+  Result := ShouldDouble.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<Currency>): ShouldDouble;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<Currency> to have a value, but it was Null');
+  Result := ShouldDouble.Create(Value.Value);
+end;
+
+function Should(const Value: Nullable<TDateTime>): ShouldDateTime;
+begin
+  if not Value.HasValue then
+    Assert.Fail('Expected Nullable<TDateTime> to have a value, but it was Null');
+  Result := ShouldDateTime.Create(Value.Value);
+end;
+
+function ShouldDate(const Value: Nullable<TDateTime>): ShouldDateTime;
+begin
+  Result := Should(Value);
+end;
+
+function ShouldDate(const Value: Prop<TDateTime>): ShouldDateTime;
+begin
+  Result := ShouldDateTime.Create(Value.Value);
 end;
 
 { ShouldInt64 }

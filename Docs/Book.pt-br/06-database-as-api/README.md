@@ -40,10 +40,39 @@ App.Configure(procedure(App: IApplicationBuilder)
 
 ## Recursos
 
-- **Paginação Automática**: `?page=1&pageSize=20`
-- **Filtragem**: `?name=Widget&price_gt=100`
-- **Ordenação**: `?orderBy=price&desc=true`
-- **Políticas de Segurança**: Restringir acesso por operação
+- **Paginação Automática**: `?_limit=20&_offset=40`
+- **Ordenação**: `?_orderby=price desc,name asc`
+- **Filtros Dinâmicos (Dynamic Specification)**: Mapeamento inteligente via QueryString:
+
+### Operadores de Filtro
+
+| Sufixo | Operador SQL | Exemplo | Descrição |
+|--------|--------------|---------|-----------|
+| `_eq`  | `=`          | `?status_eq=1` | Igual a (padrão) |
+| `_neq` | `<>`         | `?type_neq=2` | Diferente de |
+| `_gt`  | `>`          | `?price_gt=50` | Maior que |
+| `_gte` | `>=`         | `?age_gte=18` | Maior ou igual |
+| `_lt`  | `<`          | `?stock_lt=5` | Menor que |
+| `_lte` | `<=`         | `?date_lte=2025-01-01` | Menor ou igual |
+| `_cont`| `LIKE %x%`   | `?name_cont=Dext` | Contém |
+| `_sw`  | `LIKE x%`    | `?code_sw=ABC` | Começa com |
+| `_ew`  | `LIKE %x`    | `?mail_ew=gmail.com` | Termina com |
+| `_in`  | `IN (...)`   | `?cat_in=1,2,5` | Lista de valores |
+
+---
+
+## Políticas de Segurança
+
+Você pode restringir acesso por operação ou por cargo (role):
+
+```pascal
+App.Builder.MapDataApi<TProduct>('/api/products', DataApiOptions
+  .RequireAuth
+  .RequireRole('Admin')
+  .Allow([amGet, amGetList]) // Apenas leitura
+);
+```
+
 
 ---
 

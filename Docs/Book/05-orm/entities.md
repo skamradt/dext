@@ -8,6 +8,7 @@ Dext supports two mapping models:
 
 1. **Explicit Mapping** (strings in attributes) — Use when the database already exists or names don't follow a pattern.
 2. **Naming Strategies** (automatic mapping) — Recommended for new projects.
+3. **Automatic Inference** — Dext guesses names and relationships based on Delphi naming conventions.
 
 ## Attribute Mapping
 

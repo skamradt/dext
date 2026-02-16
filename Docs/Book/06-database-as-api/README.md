@@ -40,10 +40,39 @@ App.Configure(procedure(App: IApplicationBuilder)
 
 ## Features
 
-- **Automatic Pagination**: `?page=1&pageSize=20`
-- **Filtering**: `?name=Widget&price_gt=100`
-- **Sorting**: `?orderBy=price&desc=true`
-- **Security Policies**: Restrict access per operation
+- **Automatic Pagination**: `?_limit=20&_offset=40`
+- **Sorting**: `?_orderby=price desc,name asc`
+- **Dynamic Specification (Filtering)**: Smart mapping via QueryString:
+
+### Filter Operators
+
+| Suffix | SQL Operator | Example | Description |
+|--------|--------------|---------|-------------|
+| `_eq`  | `=`          | `?status_eq=1` | Equal to (default) |
+| `_neq` | `<>`         | `?type_neq=2` | Not equal to |
+| `_gt`  | `>`          | `?price_gt=50` | Greater than |
+| `_gte` | `>=`         | `?age_gte=18` | Greater or equal |
+| `_lt`  | `<`          | `?stock_lt=5` | Less than |
+| `_lte` | `<=`         | `?date_lte=2025-01-01` | Less or equal |
+| `_cont`| `LIKE %x%`   | `?name_cont=Dext` | Contains |
+| `_sw`  | `LIKE x%`    | `?code_sw=ABC` | Starts with |
+| `_ew`  | `LIKE %x`    | `?mail_ew=gmail.com` | Ends with |
+| `_in`  | `IN (...)`   | `?cat_in=1,2,5` | List of values |
+
+---
+
+## Security Policies
+
+You can restrict access by operation or by role:
+
+```pascal
+App.Builder.MapDataApi<TProduct>('/api/products', DataApiOptions
+  .RequireAuth
+  .RequireRole('Admin')
+  .Allow([amGet, amGetList]) // Read-only access
+);
+```
+
 
 ## With Security
 

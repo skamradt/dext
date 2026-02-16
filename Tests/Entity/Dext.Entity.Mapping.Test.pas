@@ -52,12 +52,16 @@ implementation
 { TMappedUserConfig }
 
 procedure TMappedUserConfig.Configure(Builder: IEntityTypeBuilder<TMappedUser>);
+var
+  u: TMappedUser;
 begin
+  u := Prototype.Entity<TMappedUser>;
+  
   // Override Table Name
   Builder.ToTable('fluent_users');
   
-  // Override Column Name
-  Builder.Prop('Name').HasColumnName('fluent_name');
+  // Override Column Name using Typed Selector!
+  Builder.Prop(u.Name).HasColumnName('fluent_name');
 end;
 
 { TTestContext }

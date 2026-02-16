@@ -142,6 +142,7 @@ type
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
     FSchema: string;
+    FContext: IDbContext;
     FTenantProvider: ITenantProvider;
 
     function GetNextParamName: string;
@@ -159,7 +160,7 @@ type
     function TryUnwrapSmartValue(var AValue: TValue): Boolean;
 
   public
-    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
+    constructor Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
     destructor Destroy; override;
     
     property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
@@ -799,9 +800,14 @@ end;
 
 { TSQLGenerator<T> }
 
-constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
+constructor TSQLGenerator<T>.Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
 begin
-  FDialect := ADialect;
+  FContext := AContext;
+  if FContext <> nil then
+    FDialect := FContext.Dialect
+  else
+    FDialect := nil;
+    
   FMap := AMap;
   if FMap = nil then
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
@@ -1277,6 +1283,51 @@ begin
         FParamTypes.Add(ParamName, PropMap.DataType);
     end;
     
+    // Add SHADOW PROPERTIES
+    if (FMap <> nil) and (FContext <> nil) then
+    begin
+      for PropMap in FMap.Properties.Values do
+      begin
+        if PropMap.IsShadow and not PropMap.IsIgnored then
+        begin
+          ColName := PropMap.ColumnName;
+          if ColName = '' then ColName := PropMap.PropertyName;
+          
+          if not First then
+          begin
+            SBCols.Append(', ');
+            SBVals.Append(', ');
+          end;
+          First := False;
+          
+          SBCols.Append(FDialect.QuoteIdentifier(ColName));
+          
+          Val := FContext.Entry(AEntity).Member(PropMap.PropertyName).CurrentValue;
+          TryUnwrapSmartValue(Val);
+          
+          if Val.IsEmpty then
+          begin
+            SBVals.Append('NULL');
+            Continue;
+          end;
+          
+          ParamName := GetNextParamName;
+          Converter := PropMap.Converter;
+          if (Converter = nil) and PropMap.IsJsonColumn then
+            Converter := TJsonConverter.Create(PropMap.UseJsonB);
+            
+          if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
+            SBVals.Append(Converter.GetSQLCast(':' + ParamName, GetDialectEnum))
+          else
+            SBVals.Append(':').Append(ParamName);
+            
+          FParams.Add(ParamName, Val);
+          if PropMap.DataType <> ftUnknown then
+            FParamTypes.Add(ParamName, PropMap.DataType);
+        end;
+      end;
+    end;
+
     // Add Discriminator
     if (FMap <> nil) and (FMap.InheritanceStrategy = TInheritanceStrategy.TablePerHierarchy) and 
        (FMap.DiscriminatorColumn <> '') then
@@ -1573,11 +1624,47 @@ begin
 
         SBSet.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(SQLCastStr);
       end;
-    end;
-    
     if SBWhere.Length = 0 then
       raise Exception.Create('Cannot generate UPDATE: No Primary Key defined.');
       
+    // ADD SHADOW PROPERTIES TO UPDATE
+    if (FMap <> nil) and (FContext <> nil) then
+    begin
+      for PropMap in FMap.Properties.Values do
+      begin
+        if PropMap.IsShadow and not PropMap.IsIgnored and not PropMap.IsPK then
+        begin
+          ColName := PropMap.ColumnName;
+          if ColName = '' then ColName := PropMap.PropertyName;
+          
+          if SBSet.Length > 0 then SBSet.Append(', ');
+          
+          Val := FContext.Entry(AEntity).Member(PropMap.PropertyName).CurrentValue;
+          TryUnwrapSmartValue(Val);
+          
+          if Val.IsEmpty then
+          begin
+             SBSet.Append(Format('%s = NULL', [FDialect.QuoteIdentifier(ColName)]));
+             Continue;
+          end;
+          
+          ParamNameNew := GetNextParamName;
+          Converter := PropMap.Converter;
+          if (Converter = nil) and PropMap.IsJsonColumn then
+            Converter := TJsonConverter.Create(PropMap.UseJsonB);
+            
+          if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
+            SBSet.Append(Format('%s = %s', [FDialect.QuoteIdentifier(ColName), Converter.GetSQLCast(':' + ParamNameNew, GetDialectEnum)]))
+          else
+            SBSet.Append(Format('%s = :%s', [FDialect.QuoteIdentifier(ColName), ParamNameNew]));
+            
+          FParams.Add(ParamNameNew, Val);
+          if PropMap.DataType <> ftUnknown then
+            FParamTypes.Add(ParamNameNew, PropMap.DataType);
+        end;
+      end;
+    end;
+
     Result := Format('UPDATE %s SET %s WHERE %s', 
       [GetTableName, SBSet.ToString, SBWhere.ToString]);
       

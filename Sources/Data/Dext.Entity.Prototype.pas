@@ -109,11 +109,8 @@ class function Prototype.CreatePrototype(ATypeInfo: PTypeInfo): TObject;
 var
   Ctx: TRttiContext;
   Typ: TRttiType;
-  Fld: TRttiField;
   PropInfo: IPropInfo;
   MetaVal: TValue;
-  RecType: TRttiRecordType;
-  InfoField: TRttiField;
   InstancePtr: Pointer;
   PropertyName, ColumnName: string;
   EntityMap: TEntityMap;
@@ -125,51 +122,26 @@ begin
     if (Typ = nil) or (Typ.TypeKind <> tkClass) then
       raise Exception.Create('Prototype.Entity<T> only supports class types.');
 
-    // Create Instance using RTTI
-    var Method := Typ.GetMethod('Create');
-    if Method <> nil then
-    begin
-      var Val := Method.Invoke(Typ.AsInstance.MetaclassType, []);
-      Result := Val.AsObject;
-    end
-    else
-    begin
-      Result := Typ.AsInstance.MetaclassType.Create;
-    end;
-    
+    // Create Instance - Prefer default constructor if available
+    Result := Typ.AsInstance.MetaclassType.Create;
     InstancePtr := Result;
 
     EntityMap := TModelBuilder.Instance.GetMap(ATypeInfo);
     if EntityMap <> nil then
     begin
-      for Fld in Typ.GetFields do
+      for PropMap in EntityMap.Properties.Values do
       begin
-        if not Fld.FieldType.Name.StartsWith('Prop<') then
-          Continue;
-
-        PropertyName := Fld.Name;
-        if (PropertyName.Length > 1) and 
-           (PropertyName.Chars[0] = 'F') and 
-           (PropertyName.Chars[1].IsUpper) then
-          Delete(PropertyName, 1, 1);
-
-        if EntityMap.Properties.TryGetValue(PropertyName, PropMap) then
-          ColumnName := PropMap.ColumnName
-        else
-          ColumnName := PropertyName; 
-
-        PropInfo := TPropInfo.Create(ColumnName);
-        TValue.Make(@PropInfo, TypeInfo(IPropInfo), MetaVal);
-
-        RecType := Fld.FieldType.AsRecord;
-        InfoField := RecType.GetField('FInfo');
-
-        if InfoField <> nil then
+        // If we have a cached offset, we can set it directly without RTTI for fields
+        if PropMap.FieldOffset <> -1 then
         begin
-          InfoField.SetValue(
-            Pointer(NativeInt(InstancePtr) + Fld.Offset), 
-            MetaVal
-          );
+          ColumnName := PropMap.ColumnName;
+          if ColumnName = '' then ColumnName := PropMap.PropertyName;
+
+          PropInfo := TPropInfo.Create(ColumnName);
+          TValue.Make(@PropInfo, TypeInfo(IPropInfo), MetaVal);
+
+          // Direct memory copy (Fast!)
+          MetaVal.ExtractRawData(Pointer(NativeInt(InstancePtr) + PropMap.FieldOffset));
         end;
       end;
     end;
@@ -185,22 +157,19 @@ var
 begin
   TypeInfoPtr := TypeInfo(T);
   
-  // Runtime check for class type
   if PTypeInfo(TypeInfoPtr).Kind <> tkClass then
     raise Exception.Create('Prototype.Entity<T> only supports class types.');
   
-  // Check cache first
   if FCache.TryGetValue(TypeInfoPtr, Obj) then
   begin
-    // Use TValue to convert TObject to T without compile-time constraint
-    Result := TValue.From(Obj).AsType<T>;
+    // Fast path: direct cast
+    Result := T(Pointer(@Obj)^); 
     Exit;
   end;
   
-  // Create and cache new prototype
   Obj := CreatePrototype(TypeInfoPtr);
   FCache.Add(TypeInfoPtr, Obj);
-  Result := TValue.From(Obj).AsType<T>;
+  Result := T(Pointer(@Obj)^);
 end;
 
 end.

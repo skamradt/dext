@@ -64,9 +64,10 @@ type
     FIsPagingEnabled: Boolean;
     FIsTracking: Boolean;
     
-    FSelectedColumns: TList<string>;
     FJoins: TList<IJoin>;
     FGroupBy: TList<string>;
+    FIgnoreQueryFilters: Boolean;
+    FOnlyDeleted: Boolean;
     
     // Implementation of ISpecification<T>
     
@@ -82,6 +83,8 @@ type
     function GetSelectedColumns: TArray<string>;
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
+    function IsIgnoringFilters: Boolean;
+    function IsOnlyDeleted: Boolean;
     function GetSignature: string; virtual;
   public
     constructor Create; overload; virtual;
@@ -95,6 +98,8 @@ type
     procedure Select(const AColumn: string); virtual;
     procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression); virtual;
     procedure GroupBy(const AColumn: string); virtual;
+    procedure IgnoreQueryFilters(const AValue: Boolean = True); virtual;
+    procedure OnlyDeleted(const AValue: Boolean = True); virtual;
     
     // Legacy support
     procedure AddInclude(const APath: string);
@@ -125,6 +130,8 @@ begin
   FGroupBy := TList<string>.Create;
   FExpression := nil; // Empty expression matches all
   FIsTracking := True; // Tracking enabled by default
+  FIgnoreQueryFilters := False;
+  FOnlyDeleted := False;
 end;
 
 constructor TSpecification<T>.Create(const AExpression: IExpression);
@@ -261,6 +268,16 @@ begin
   FGroupBy.Add(AColumn);
 end;
 
+procedure TSpecification<T>.IgnoreQueryFilters(const AValue: Boolean);
+begin
+  FIgnoreQueryFilters := AValue;
+end;
+
+procedure TSpecification<T>.OnlyDeleted(const AValue: Boolean);
+begin
+  FOnlyDeleted := AValue;
+end;
+
 function TSpecification<T>.GetJoins: TArray<IJoin>;
 begin
   Result := FJoins.ToArray;
@@ -269,6 +286,16 @@ end;
 function TSpecification<T>.GetGroupBy: TArray<string>;
 begin
   Result := FGroupBy.ToArray;
+end;
+
+function TSpecification<T>.IsIgnoringFilters: Boolean;
+begin
+  Result := FIgnoreQueryFilters;
+end;
+
+function TSpecification<T>.IsOnlyDeleted: Boolean;
+begin
+  Result := FOnlyDeleted;
 end;
 
 function TSpecification<T>.GetSignature: string;

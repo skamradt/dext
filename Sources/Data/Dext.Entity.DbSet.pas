@@ -54,7 +54,9 @@ uses
   Dext.Types.Nullable,
   Dext.Types.UUID,
   Dext.MultiTenancy,
-  Dext.Entity.Tenancy;
+  Dext.Entity.Tenancy,
+  Dext.Entity.Collections,
+  Dext.Entity.LazyLoading;
 
 // Helper function to convert TValue to string for identity map keys
 // TValue.ToString does not work correctly for TGUID (returns type name, not value)
@@ -145,8 +147,11 @@ type
 
     function ToList(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
+    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
+    function Any(const ASpec: ISpecification<T>): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
+    function Count(const ASpec: ISpecification<T>): Integer; overload;
     
     // Smart Properties Support
     function Where(const APredicate: TQueryPredicate<T>): TFluentQuery<T>; overload;
@@ -207,6 +212,7 @@ implementation
 uses
   Data.DB,
   Dext.Entity.LazyLoading,
+  Dext.Entity.ProxyFactory,
   Dext.Utils;
 
 function TValueToKeyString(const AValue: TValue): string;
@@ -274,6 +280,69 @@ begin
     on E: Exception do
       Result := AValue.ToString;
   end;
+end;
+
+function TValueToKeyString(const AValue: TValue): string;
+begin
+  if AValue.Kind = tkRecord then
+  begin
+    if AValue.TypeInfo.Name = 'TGUID' then
+      Result := GUIDToString(AValue.AsType<TGUID>)
+    else
+      Result := AValue.ToString;
+  end
+  else
+    Result := AValue.ToString;
+end;
+
+type
+  TSqlQueryIterator<T: class> = class(TQueryIterator<T>)
+  private
+    FDbSet: TDbSet<T>;
+    FSql: string;
+    FParams: TArray<TValue>;
+    FReader: IDbReader;
+    FInitialized: Boolean;
+  protected
+    function MoveNextCore: Boolean; override;
+  public
+    constructor Create(ADbSet: TDbSet<T>; const ASql: string; const AParams: array of TValue);
+  end;
+
+{ TSqlQueryIterator<T> }
+
+constructor TSqlQueryIterator<T>.Create(ADbSet: TDbSet<T>; const ASql: string; const AParams: array of TValue);
+begin
+  inherited Create;
+  FDbSet := ADbSet;
+  FSql := ASql;
+  SetLength(FParams, Length(AParams));
+  if Length(AParams) > 0 then
+    TArray.Copy<TValue>(AParams, FParams, Length(AParams));
+end;
+
+function TSqlQueryIterator<T>.MoveNextCore: Boolean;
+var
+  Cmd: IDbCommand;
+  i: Integer;
+begin
+  if not FInitialized then
+  begin
+    Cmd := FDbSet.FContext.Connection.CreateCommand(FSql);
+    for i := 0 to Length(FParams) - 1 do
+      Cmd.AddParam('p' + IntToStr(i), FParams[i]);
+      
+    FReader := Cmd.ExecuteQuery;
+    FInitialized := True;
+  end;
+  
+  if FReader.Next then
+  begin
+    FCurrent := FDbSet.Hydrate(FReader, False); // Default to NoTracking for raw SQL for now
+    Result := True;
+  end
+  else
+    Result := False;
 end;
 
 { TDbSet<T> }
@@ -451,7 +520,7 @@ end;
 
 function TDbSet<T>.CreateGenerator: TSqlGenerator<T>;
 begin
-  Result := TSqlGenerator<T>.Create(FContext.Dialect, FMap);
+  Result := TSqlGenerator<T>.Create(FContext, FMap);
   Result.NamingStrategy := FContext.NamingStrategy;
   Result.IgnoreQueryFilters := FIgnoreQueryFilters;
   Result.OnlyDeleted := FOnlyDeleted;
@@ -630,10 +699,10 @@ begin
        Result := T(ObjInstance);
      end
      else
-       Result := TActivator.CreateInstance<T>;
+       Result := TEntityProxyFactory.CreateInstance<T>(FContext);
   end
   else
-    Result := TActivator.CreateInstance<T>;
+    Result := TEntityProxyFactory.CreateInstance<T>(FContext);
 
   try
     if Tracking and (PKVal <> '') then
@@ -1297,6 +1366,19 @@ begin
   Result := ToList(ISpecification<T>(nil));
 end;
 
+function TDbSet<T>.ToListAsync: TAsyncBuilder<IList<T>>;
+begin
+  if not FContext.Connection.Pooled then
+    raise Exception.Create('ToListAsync requires a pooled connection to ensure thread safety.');
+
+  Result := TAsyncTask.Run<IList<T>>(
+    function: IList<T>
+    begin
+      Result := ToList;
+    end
+  );
+end;
+
 function TDbSet<T>.ToList(const AExpression: IExpression): IList<T>;
 var
   Spec: ISpecification<T>;
@@ -1375,6 +1457,28 @@ begin
     Generator.Free;
     ResetQueryFlags;
   end;
+end;
+
+function TDbSet<T>.FromSql(const ASql: string; const AParams: array of TValue): TFluentQuery<T>;
+var
+  LParams: TArray<TValue>;
+begin
+  SetLength(LParams, Length(AParams));
+  if Length(AParams) > 0 then
+    TArray.Copy<TValue>(AParams, LParams, Length(AParams));
+
+  Result := TFluentQuery<T>.Create(
+    function: TQueryIterator<T>
+    begin
+      Result := TSqlQueryIterator<T>.Create(Self, ASql, LParams);
+    end,
+    FContext.Connection
+  );
+end;
+
+function TDbSet<T>.FromSql(const ASql: string): TFluentQuery<T>;
+begin
+  Result := FromSql(ASql, []);
 end;
 
 procedure TDbSet<T>.ApplyTenantFilter(var ASpec: ISpecification<T>);
@@ -1683,7 +1787,7 @@ begin
           TargetFKValue := ObjProp.GetValue(Obj);
           
           // CRITICAL: Must unwrap if it is Prop<T> or Nullable
-
+          if not TryUnwrapAndValidateFK(TargetFKValue, FRttiContext) then Continue;
 
           TargetFKStr := TValueToKeyString(TargetFKValue);
           
@@ -1691,6 +1795,15 @@ begin
           begin
              var Parent := ParentMap[TargetFKStr];
              Val := NavProp.GetValue(Pointer(Parent));
+
+             // Ensure List is initialized
+             if Val.IsEmpty or ((Val.Kind = tkInterface) and (Val.AsInterface = nil)) then
+             begin
+                 var NewList := TTrackingListFactory.CreateList(TargetType.Handle, FContext, Parent, NavProp.Name);
+                 TReflection.SetValue(Parent, NavProp, NewList);
+                 Val := NavProp.GetValue(Pointer(Parent));
+             end;
+
              if Val.Kind = tkInterface then
              begin
                 ListIntf := Val.AsInterface;
@@ -2111,7 +2224,23 @@ begin
           Result := LSelf.ToList(LSpec);
         end);
     end;
-  Result := TFluentQuery<T>.Create(LFactory, LSpec);
+  Result := TFluentQuery<T>.Create(
+    LFactory, 
+    LSpec,
+    function(S: ISpecification<T>): Integer
+    begin
+      Result := LSelf.Count(S);
+    end,
+    function(S: ISpecification<T>): Boolean
+    begin
+      Result := LSelf.Any(S);
+    end,
+    function(S: ISpecification<T>): T
+    begin
+      Result := LSelf.FirstOrDefault(S);
+    end,
+    FContext.Connection
+  );
 end;
 
 function TDbSet<T>.Query(const AExpression: IExpression): TFluentQuery<T>;
@@ -2206,6 +2335,11 @@ begin
 end;
 
 function TDbSet<T>.Count(const AExpression: IExpression): Integer;
+begin
+  Result := Count(TSpecification<T>.Create(AExpression));
+end;
+
+function TDbSet<T>.Count(const ASpec: ISpecification<T>): Integer;
 var
   Generator: TSqlGenerator<T>;
   Sql: string;
@@ -2214,7 +2348,7 @@ var
 begin
   Generator := CreateGenerator;
   try
-    LSpec := TSpecification<T>.Create(AExpression);
+    LSpec := ASpec;
     ApplyTenantFilter(LSpec);
     Sql := Generator.GenerateCount(LSpec);
     
@@ -2228,11 +2362,41 @@ begin
         Cmd.AddParam(Pair.Key, Pair.Value);
     end;
     var Val := Cmd.ExecuteScalar;
-    Result := Val.AsInteger;
+    if Val.IsEmpty then Result := 0 else Result := Val.AsInteger;
   finally
     Generator.Free;
     ResetQueryFlags;
   end;
+end;
+
+function TDbSet<T>.Any(const ASpec: ISpecification<T>): Boolean;
+begin
+  Result := Count(ASpec) > 0;
+end;
+
+function TDbSet<T>.Any(const AExpression: IExpression): Boolean;
+begin
+  Result := Any(TSpecification<T>.Create(AExpression));
+end;
+
+function TDbSet<T>.FirstOrDefault(const ASpec: ISpecification<T>): T;
+var
+  L: IList<T>;
+begin
+  // Optimization: Apply Take(1) to the spec if it doesn't have it
+  if (ASpec <> nil) and (ASpec.GetTake <= 0) then
+    ASpec.Take(1);
+    
+  L := ToList(ASpec);
+  if L.Count > 0 then
+    Result := L[0]
+  else
+    Result := nil;
+end;
+
+function TDbSet<T>.FirstOrDefault(const AExpression: IExpression): T;
+begin
+  Result := FirstOrDefault(TSpecification<T>.Create(AExpression));
 end;
 
 

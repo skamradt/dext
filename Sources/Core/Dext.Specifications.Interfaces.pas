@@ -79,6 +79,8 @@ type
     function IsTrackingEnabled: Boolean;
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
+    function IsIgnoringFilters: Boolean;
+    function IsOnlyDeleted: Boolean;
     
     /// <summary>
     ///  Generates a unique signature for the query structure (excluding param values).
@@ -104,6 +106,8 @@ type
     procedure Where(const AExpression: IExpression);
     procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression);
     procedure GroupBy(const AColumn: string);
+    procedure IgnoreQueryFilters(const AValue: Boolean = True);
+    procedure OnlyDeleted(const AValue: Boolean = True);
   end;
 
   /// <summary>

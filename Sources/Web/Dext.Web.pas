@@ -850,6 +850,15 @@ type
     function RequireAuthorization: AppBuilder; overload;
     function RequireAuthorization(const AScheme: string): AppBuilder; overload;
     function RequireAuthorization(const ASchemes: array of string): AppBuilder; overload;
+
+    {$IFDEF DEXT_ENABLE_ENTITY}
+    /// <summary>
+    ///  Configures a Database as API endpoint for the specified entity type. 
+    /// </summary>
+    function MapDataApi<T: class>(const APath: string): AppBuilder; overload;
+    function MapDataApi<T: class>(const APath: string; AOptions: TDataApiOptions): AppBuilder; overload;
+    function MapDataApi(const AEntityClass: TClass; const APath: string; AOptions: TDataApiOptions = nil): AppBuilder; overload;
+    {$ENDIF}
   end;
 
 // ===========================================================================
@@ -861,6 +870,10 @@ function CorsOptions: TCorsBuilder;
 function JwtOptions(const ASecretKey: string): TJwtOptionsBuilder;
 function ResponseCacheOptions: TResponseCacheBuilder;
 function SwaggerOptions: TOpenAPIBuilder;
+
+{$IFDEF DEXT_ENABLE_ENTITY}
+function DataApiOptions: TDataApiOptions<TObject>;
+{$ENDIF}
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const); overload;
@@ -899,6 +912,13 @@ function SwaggerOptions: TOpenAPIBuilder;
 begin
   Result := TOpenAPIBuilder.Create;
 end;
+
+{$IFDEF DEXT_ENABLE_ENTITY}
+function DataApiOptions: TDataApiOptions<TObject>;
+begin
+  Result := Dext.Web.DataApi.DataApiOptions;
+end;
+{$ENDIF}
 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string);
 begin
@@ -1377,6 +1397,26 @@ begin
   Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, ASchemes);
   Result := Self;
 end;
+
+{$IFDEF DEXT_ENABLE_ENTITY}
+function THttpAppBuilderHelper.MapDataApi<T>(const APath: string): AppBuilder;
+begin
+  TDataApiHandler<T>.Map(Self.Unwrap, APath);
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.MapDataApi<T>(const APath: string; AOptions: TDataApiOptions): AppBuilder;
+begin
+  TDataApiHandler<T>.Map(Self.Unwrap, APath, TDataApiOptions<T>(AOptions));
+  Result := Self;
+end;
+
+function THttpAppBuilderHelper.MapDataApi(const AEntityClass: TClass; const APath: string; AOptions: TDataApiOptions): AppBuilder;
+begin
+  TDataApi.Map(Self.Unwrap, AEntityClass, APath, AOptions);
+  Result := Self;
+end;
+{$ENDIF}
 
 { TWebServicesHelper }
 

@@ -117,6 +117,38 @@ type
     function ValueSpanEquals(const AText: string): Boolean;
   end;
 
+  /// <summary>
+  ///   A high-performance, forward-only JSON writer that writes UTF-8 encoded text directly to a stream.
+  /// </summary>
+  TUtf8JsonWriter = record
+  private
+    FStream: TStream;
+    FIndented: Boolean;
+    FNeedComma: array[0..63] of Boolean; // Max depth of 64
+    FDepth: Integer;
+    procedure WriteRaw(const S: string); inline;
+    procedure WriteRawByte(B: Byte); inline;
+    procedure WriteIndent;
+    procedure CheckComma;
+  public
+    constructor Create(AStream: TStream; AIndented: Boolean = False);
+    
+    procedure WriteStartObject;
+    procedure WriteEndObject;
+    procedure WriteStartArray;
+    procedure WriteEndArray;
+    
+    procedure WritePropertyName(const AName: string);
+    procedure WriteString(const AValue: string);
+    procedure WriteNumber(AValue: Int64); overload;
+    procedure WriteNumber(AValue: Double); overload;
+    procedure WriteBoolean(AValue: Boolean);
+    procedure WriteNull;
+    
+    /// <summary>Writes a raw TValue. Handles basic types.</summary>
+    procedure WriteValue(const AValue: TValue);
+  end;
+
 implementation
 
 { TUtf8JsonReader }
@@ -422,6 +454,148 @@ end;
 function TUtf8JsonReader.ValueSpanEquals(const AText: string): Boolean;
 begin
   Result := FValueSpan.EqualsString(AText);
+end;
+
+{ TUtf8JsonWriter }
+
+constructor TUtf8JsonWriter.Create(AStream: TStream; AIndented: Boolean);
+begin
+  FStream := AStream;
+  FIndented := AIndented;
+  FDepth := 0;
+  FillChar(FNeedComma, SizeOf(FNeedComma), 0);
+end;
+
+procedure TUtf8JsonWriter.CheckComma;
+begin
+  if (FDepth > 0) and FNeedComma[FDepth - 1] then
+    WriteRawByte(Ord(','));
+  
+  if FDepth > 0 then
+    FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WriteIndent;
+begin
+  if not FIndented then Exit;
+  WriteRawByte(10); // LF
+  for var i := 0 to FDepth - 1 do
+    WriteRaw('  ');
+end;
+
+procedure TUtf8JsonWriter.WriteRaw(const S: string);
+begin
+  var B := TEncoding.UTF8.GetBytes(S);
+  if Length(B) > 0 then
+    FStream.WriteBuffer(B[0], Length(B));
+end;
+
+procedure TUtf8JsonWriter.WriteRawByte(B: Byte);
+begin
+  FStream.WriteBuffer(B, 1);
+end;
+
+procedure TUtf8JsonWriter.WriteStartObject;
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRawByte(Ord('{'));
+  Inc(FDepth);
+  FNeedComma[FDepth - 1] := False;
+end;
+
+procedure TUtf8JsonWriter.WriteEndObject;
+begin
+  Dec(FDepth);
+  WriteIndent;
+  WriteRawByte(Ord('}'));
+  if FDepth > 0 then FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WriteStartArray;
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRawByte(Ord('['));
+  Inc(FDepth);
+  FNeedComma[FDepth - 1] := False;
+end;
+
+procedure TUtf8JsonWriter.WriteEndArray;
+begin
+  Dec(FDepth);
+  WriteIndent;
+  WriteRawByte(Ord(']'));
+  if FDepth > 0 then FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WritePropertyName(const AName: string);
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRaw('"' + EscapeJsonString(AName) + '":');
+  FNeedComma[FDepth - 1] := False; // Property written, next is value (no comma)
+end;
+
+procedure TUtf8JsonWriter.WriteString(const AValue: string);
+begin
+  CheckComma;
+  WriteRaw('"' + EscapeJsonString(AValue) + '"');
+end;
+
+procedure TUtf8JsonWriter.WriteNumber(AValue: Int64);
+begin
+  CheckComma;
+  WriteRaw(IntToStr(AValue));
+end;
+
+procedure TUtf8JsonWriter.WriteNumber(AValue: Double);
+begin
+  CheckComma;
+  WriteRaw(FloatToStr(AValue, TFormatSettings.Invariant));
+end;
+
+procedure TUtf8JsonWriter.WriteBoolean(AValue: Boolean);
+begin
+  CheckComma;
+  if AValue then WriteRaw('true') else WriteRaw('false');
+end;
+
+procedure TUtf8JsonWriter.WriteNull;
+begin
+  CheckComma;
+  WriteRaw('null');
+end;
+
+procedure TUtf8JsonWriter.WriteValue(const AValue: TValue);
+var
+  FS: TFormatSettings;
+begin
+  if AValue.IsEmpty then
+  begin
+    WriteNull;
+    Exit;
+  end;
+
+  case AValue.Kind of
+    tkInteger, tkInt64: WriteNumber(AValue.AsInt64);
+    tkFloat: 
+      begin
+        if AValue.TypeInfo = TypeInfo(TDateTime) then
+          WriteString(DateToISO8601(AValue.AsType<TDateTime>))
+        else
+          WriteNumber(AValue.AsExtended);
+      end;
+    tkString, tkUString, tkWString, tkLString, tkChar, tkWChar:
+      WriteString(AValue.AsString);
+    tkEnumeration:
+      if AValue.TypeInfo = TypeInfo(Boolean) then
+        WriteBoolean(AValue.AsBoolean)
+      else
+        WriteNumber(AValue.AsOrdinal);
+  else
+    WriteString(AValue.ToString);
+  end;
 end;
 
 end.
