@@ -34,7 +34,8 @@ uses
   Data.DB,
   Dext.Types.UUID,
   Dext.Entity.Attributes,
-  Dext.Entity.Migrations.Operations;
+  Dext.Entity.Migrations.Operations,
+  Dext.Specifications.Interfaces;
 
 type
   /// <summary>
@@ -92,6 +93,12 @@ type
 
     // JSON Support
     function GetJsonValueSQL(const AColumn, APath: string): string;
+
+    // Stored Procedure Support
+    function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string;
+
+    // Locking Support
+    function GetLockingSQL(ALockMode: TLockMode): string;
   end;
 
   /// <summary>
@@ -137,8 +144,13 @@ type
 
     function RequiresOrderByForPaging: Boolean; virtual;
     
+    // Migration Support
     function GenerateMigration(AOperation: TMigrationOperation): string; virtual;
+    
     function GenerateColumnDefinition(AColumn: TColumnDefinition): string; virtual;
+    function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; virtual;
+
+    function GetLockingSQL(ALockMode: TLockMode): string; virtual;
 
     function GetDialect: TDatabaseDialect; virtual;
     function GetJsonValueSQL(const AColumn, APath: string): string; virtual;
@@ -177,6 +189,8 @@ type
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
     function GetJsonValueSQL(const AColumn, APath: string): string; override;
+    function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
+    function GetLockingSQL(ALockMode: TLockMode): string; override;
   end;
 
   /// <summary>
@@ -216,6 +230,8 @@ type
     function GetCreateSchemaSQL(const ASchemaName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
     function GetJsonValueSQL(const AColumn, APath: string): string; override;
+    function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
+    function GetLockingSQL(ALockMode: TLockMode): string; override;
   end;
 
   /// <summary>
@@ -251,6 +267,8 @@ type
     function SupportsInsertReturning: Boolean; override;
     function GetReturningSQL(const AColumnName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
+    function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
+    function GetLockingSQL(ALockMode: TLockMode): string; override;
   end;
 
   /// <summary>
@@ -323,6 +341,50 @@ end;
 function TBaseDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddUnknown;
+end;
+
+function TBaseDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := '';
+end;
+
+function TBaseDialect.GetReturningPosition: TReturningPosition;
+begin
+  Result := rpAtEnd;
+end;
+
+function TBaseDialect.RequiresOrderByForPaging: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseDialect.GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string;
+var
+  i: Integer;
+  Params: string;
+begin
+  Params := '';
+  for i := 0 to High(AParamNames) do
+  begin
+    if i > 0 then Params := Params + ', ';
+    Params := Params + GetParamPrefix + AParamNames[i];
+  end;
+  Result := Format('CALL %s(%s)', [AProcName, Params]);
+end;
+
+function TBaseDialect.GetLockingSQL(ALockMode: TLockMode): string;
+begin
+  case ALockMode of
+    lmShared: Result := 'FOR SHARE';
+    lmExclusive: Result := 'FOR UPDATE';
+    lmExclusiveNoWait: Result := 'FOR UPDATE NOWAIT';
+    else Result := '';
+  end;
 end;
 
 function TBaseDialect.GetJsonValueSQL(const AColumn, APath: string): string;
@@ -768,6 +830,54 @@ begin
   Result := Format('%s #>> ''{%s}''', [AColumn, APath.Replace('.', ',')]);
 end;
 
+function TPostgreSQLDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := True;
+end;
+
+function TPostgreSQLDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
+end;
+
+function TPostgreSQLDialect.GetSetSchemaSQL(const ASchemaName: string): string;
+begin
+  if ASchemaName <> '' then
+    Result := Format('SET search_path TO %s, public;', [QuoteIdentifier(ASchemaName)])
+  else
+    Result := 'SET search_path TO public;';
+end;
+
+function TPostgreSQLDialect.GetCreateSchemaSQL(const ASchemaName: string): string;
+begin
+  Result := Format('CREATE SCHEMA IF NOT EXISTS %s;', [QuoteIdentifier(ASchemaName)]);
+end;
+
+function TPostgreSQLDialect.GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string;
+var
+  i: Integer;
+  Params: string;
+begin
+  Params := '';
+  for i := 0 to High(AParamNames) do
+  begin
+    if i > 0 then Params := Params + ', ';
+    Params := Params + GetParamPrefix + AParamNames[i];
+  end;
+  // PostgreSQL: CALL ProcName(p1, p2)
+  Result := Format('CALL %s(%s)', [AProcName, Params]);
+end;
+
+function TPostgreSQLDialect.GetLockingSQL(ALockMode: TLockMode): string;
+begin
+  case ALockMode of
+    lmShared: Result := 'FOR SHARE';
+    lmExclusive: Result := 'FOR UPDATE';
+    lmExclusiveNoWait: Result := 'FOR UPDATE NOWAIT';
+    else Result := '';
+  end;
+end;
+
 { TInterBaseDialect }
 
 function TInterBaseDialect.BooleanToSQL(AValue: Boolean): string;
@@ -875,6 +985,16 @@ end;
 function TFirebirdDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddFirebird;
+end;
+
+function TFirebirdDialect.SupportsInsertReturning: Boolean;
+begin
+  Result := True;
+end;
+
+function TFirebirdDialect.GetReturningSQL(const AColumnName: string): string;
+begin
+  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
 end;
 
 { TSQLServerDialect }
@@ -990,6 +1110,31 @@ end;
 function TSQLServerDialect.GetDialect: TDatabaseDialect;
 begin
   Result := ddSQLServer;
+end;
+
+function TSQLServerDialect.GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string;
+var
+  i: Integer;
+  Params: string;
+begin
+  Params := '';
+  for i := 0 to High(AParamNames) do
+  begin
+    if i > 0 then Params := Params + ', ';
+    Params := Params + GetParamPrefix + AParamNames[i];
+  end;
+  // SQL Server: EXEC ProcName p1, p2
+  Result := Format('EXEC %s %s', [AProcName, Params]);
+end;
+
+function TSQLServerDialect.GetLockingSQL(ALockMode: TLockMode): string;
+begin
+  case ALockMode of
+    lmShared: Result := 'WITH (HOLDLOCK)';
+    lmExclusive: Result := 'WITH (UPDLOCK, ROWLOCK)';
+    lmExclusiveNoWait: Result := 'WITH (UPDLOCK, ROWLOCK, NOWAIT)';
+    else Result := '';
+  end;
 end;
 
 function TSQLServerDialect.GetJsonValueSQL(const AColumn, APath: string): string;
@@ -1180,64 +1325,29 @@ begin
   Result := ddOracle;
 end;
 
-{ TBaseDialect }
-
-function TBaseDialect.SupportsInsertReturning: Boolean;
+function TOracleDialect.GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string;
+var
+  i: Integer;
+  Params: string;
 begin
-  Result := False;
+  Params := '';
+  for i := 0 to High(AParamNames) do
+  begin
+    if i > 0 then Params := Params + ', ';
+    Params := Params + GetParamPrefix + AParamNames[i];
+  end;
+  // Oracle: BEGIN ProcName(p1, p2); END;
+  Result := Format('BEGIN %s(%s); END;', [AProcName, Params]);
 end;
 
-function TBaseDialect.GetReturningSQL(const AColumnName: string): string;
+function TOracleDialect.GetLockingSQL(ALockMode: TLockMode): string;
 begin
-  Result := '';
-end;
-
-function TBaseDialect.GetReturningPosition: TReturningPosition;
-begin
-  Result := rpAtEnd;
-end;
-
-function TBaseDialect.RequiresOrderByForPaging: Boolean;
-begin
-  Result := False;
-end;
-
-{ TPostgreSQLDialect }
-
-function TPostgreSQLDialect.SupportsInsertReturning: Boolean;
-begin
-  Result := True;
-end;
-
-function TPostgreSQLDialect.GetReturningSQL(const AColumnName: string): string;
-begin
-  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
-end;
-
-function TPostgreSQLDialect.GetSetSchemaSQL(const ASchemaName: string): string;
-begin
-  if ASchemaName <> '' then
-    Result := Format('SET search_path TO %s, public;', [QuoteIdentifier(ASchemaName)])
-  else
-    Result := 'SET search_path TO public;';
-end;
-
-function TPostgreSQLDialect.GetCreateSchemaSQL(const ASchemaName: string): string;
-begin
-  Result := Format('CREATE SCHEMA IF NOT EXISTS %s;', [QuoteIdentifier(ASchemaName)]);
-end;
-
-{ TFirebirdDialect }
-
-function TFirebirdDialect.SupportsInsertReturning: Boolean;
-begin
-  Result := True;
-end;
-
-function TFirebirdDialect.GetReturningSQL(const AColumnName: string): string;
-begin
-  Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
+  case ALockMode of
+    lmShared: Result := 'FOR SHARE';
+    lmExclusive: Result := 'FOR UPDATE';
+    lmExclusiveNoWait: Result := 'FOR UPDATE NOWAIT';
+    else Result := '';
+  end;
 end;
 
 end.
-

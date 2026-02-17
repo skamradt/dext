@@ -156,6 +156,8 @@
         <DCCReference Include="Data\Dext.Entity.Cache.pas"/>
         <DCCReference Include="Data\Dext.Entity.Drivers.FireDAC.Links.pas"/>
         <DCCReference Include="Data\Dext.Entity.Validator.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Collections.pas"/>
+        <DCCReference Include="Data\Dext.Entity.ProxyFactory.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

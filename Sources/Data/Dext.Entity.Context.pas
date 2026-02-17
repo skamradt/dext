@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -29,6 +29,7 @@ interface
 
 uses
   System.SysUtils,
+  Data.DB,
   System.TypInfo,
   System.Rtti,
   System.Generics.Collections,
@@ -49,7 +50,8 @@ uses
   Dext.Entity.TypeSystem,
   Dext.Specifications.Fluent,
   Dext.Specifications.Types,
-  Dext.Core.Reflection;
+  Dext.Core.Reflection,
+  Dext.Threading.Async;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
@@ -89,6 +91,8 @@ type
     function GetShadowState(const AEntity: TObject): TEntityShadowState;
   end;
 
+  TDbContext = class;
+
   TPropertyEntry = class(TInterfacedObject, IPropertyEntry)
   private
     FContext: TDbContext;
@@ -103,7 +107,7 @@ type
     procedure SetIsModified(const AValue: Boolean);
   end;
 
-  TDbContext = class;
+
 
   TCollectionEntry = class(TInterfacedObject, ICollectionEntry)
   private
@@ -224,9 +228,11 @@ type
     procedure ExecuteSchemaSetup;
     
     function SaveChanges: Integer;
+    function SaveChangesAsync: TAsyncBuilder<Integer>;
     procedure Clear;
     procedure DetachAll;
     procedure Detach(const AEntity: TObject);
+    procedure ExecuteProcedure(const ADto: TObject);
     function ChangeTracker: IChangeTracker;
     
     function GetMapping(AType: PTypeInfo): TObject;
@@ -245,6 +251,7 @@ implementation
 
 uses
   Dext.Utils,
+  Dext.Validation,
   Dext.Entity.Validator;
 
 { Helper Functions }
@@ -1080,6 +1087,75 @@ begin
   DataSet(AEntity.ClassInfo).Detach(AEntity);
 end;
 
+procedure TDbContext.ExecuteProcedure(const ADto: TObject);
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  ProcAttr: StoredProcedureAttribute;
+  ProcName: string;
+  Prop: TRttiProperty;
+  ParamAttr: DbParamAttribute;
+  Cmd: IDbCommand;
+  ParamNames: TList<string>;
+  PropList: TList<TRttiProperty>;
+  i: Integer;
+begin
+  Ctx := TRttiContext.Create;
+  ParamNames := TList<string>.Create;
+  PropList := TList<TRttiProperty>.Create;
+  try
+    Typ := Ctx.GetType(ADto.ClassType);
+    ProcAttr := Typ.GetAttribute<StoredProcedureAttribute>;
+    if ProcAttr <> nil then
+      ProcName := ProcAttr.Name
+    else
+      ProcName := ADto.ClassName;
+
+    for Prop in Typ.GetProperties do
+    begin
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      if ParamAttr <> nil then
+      begin
+        if ParamAttr.Name <> '' then
+          ParamNames.Add(ParamAttr.Name)
+        else
+          ParamNames.Add(Prop.Name);
+          
+        PropList.Add(Prop);
+      end;
+    end;
+
+    Cmd := FConnection.CreateCommand(FDialect.GenerateProcedureCallSQL(ProcName, ParamNames.ToArray));
+    for i := 0 to PropList.Count - 1 do
+    begin
+      Prop := PropList[i];
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      var ParamName := ParamNames[i];
+      
+      Cmd.AddParam(ParamName, Prop.GetValue(Pointer(ADto)));
+      if ParamAttr.ParamType <> ptInput then
+        Cmd.SetParamType(ParamName, ParamAttr.ParamType);
+    end;
+
+    Cmd.Execute;
+
+    // Map back output parameters
+    for i := 0 to PropList.Count - 1 do
+    begin
+      Prop := PropList[i];
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      if ParamAttr.ParamType in [ptOutput, ptInputOutput, ptResult] then
+      begin
+        Prop.SetValue(Pointer(ADto), Cmd.GetParamValue(ParamNames[i]));
+      end;
+    end;
+  finally
+    ParamNames.Free;
+    PropList.Free;
+    Ctx.Free;
+  end;
+end;
+
 function TDbContext.ChangeTracker: IChangeTracker;
 begin
   Result := FChangeTracker;
@@ -1094,8 +1170,8 @@ end;
 
 constructor TEntityShadowState.Create;
 begin
-  FShadowValues := TDictionary\u003cstring, TValue\u003e.Create;
-  FModifiedProperties := TDictionary\u003cstring, Boolean\u003e.Create;
+  FShadowValues := TDictionary<string, TValue>.Create;
+  FModifiedProperties := TDictionary<string, Boolean>.Create;
 end;
 
 destructor TEntityShadowState.Destroy;
@@ -1110,8 +1186,8 @@ end;
 constructor TChangeTracker.Create;
 begin
   inherited Create;
-  FTrackedEntities := TDictionary\u003cTObject, TEntityState\u003e.Create;
-  FShadowStates := TObjectDictionary\u003cTObject, TEntityShadowState\u003e.Create([doOwnsValues]);
+  FTrackedEntities := TDictionary<TObject, TEntityState>.Create;
+  FShadowStates := TObjectDictionary<TObject, TEntityShadowState>.Create([doOwnsValues]);
 end;
 
 destructor TChangeTracker.Destroy;
@@ -1141,7 +1217,7 @@ end;
 
 function TChangeTracker.HasChanges: Boolean;
 var
-  Pair: TPair\u003cTObject, TEntityState\u003e;
+  Pair: TPair<TObject, TEntityState>;
 begin
   Result := False;
   for Pair in FTrackedEntities do
@@ -1171,7 +1247,7 @@ begin
   FShadowStates.Clear;
 end;
 
-function TChangeTracker.GetTrackedEntities: TEnumerable\u003cTPair\u003cTObject, TEntityState\u003e\u003e;
+function TChangeTracker.GetTrackedEntities: TEnumerable<TPair<TObject, TEntityState>>;
 begin
   Result := FTrackedEntities;
 end;
@@ -1197,7 +1273,7 @@ begin
   
   var Map := FContext.ModelBuilder.GetMap(FEntity.ClassInfo);
   var PropMap: TPropertyMap;
-  if (Map \u003c\u003e nil) and Map.Properties.TryGetValue(FPropName, PropMap) then
+  if (Map <> nil) and Map.Properties.TryGetValue(FPropName, PropMap) then
     FIsShadow := PropMap.IsShadow
   else
     FIsShadow := False;
@@ -1218,7 +1294,7 @@ begin
     try
       var Typ := Ctx.GetType(FEntity.ClassType);
       var Prop := Typ.GetProperty(FPropName);
-      if Prop \u003c\u003e nil then
+      if Prop <> nil then
         Result := Prop.GetValue(Pointer(FEntity))
       else
         Result := TValue.Empty;
@@ -1243,7 +1319,7 @@ begin
     try
       var Typ := Ctx.GetType(FEntity.ClassType);
       var Prop := Typ.GetProperty(FPropName);
-      if Prop \u003c\u003e nil then
+      if Prop <> nil then
       begin
         Prop.SetValue(Pointer(FEntity), AValue);
         SetIsModified(True);

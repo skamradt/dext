@@ -28,7 +28,10 @@ unit Dext.Json.Utf8;
 interface
 
 uses
+  System.Classes,
+  System.Rtti,
   System.SysUtils,
+  System.TypInfo,
   Dext.Core.Span;
 
 type
@@ -149,7 +152,100 @@ type
     procedure WriteValue(const AValue: TValue);
   end;
 
+function EscapeJsonString(const S: string): string;
+function GetJsonVal(const AVal: TValue): string;
+
 implementation
+
+uses
+  System.DateUtils,
+  Dext.Json;
+
+function EscapeJsonString(const S: string): string;
+var
+  i: Integer;
+  c: Char;
+begin
+  Result := '';
+  for i := 1 to Length(S) do
+  begin
+    c := S[i];
+    case c of
+      '"': Result := Result + '\"';
+      '\': Result := Result + '\\';
+      '/': Result := Result + '\/';
+      #8: Result := Result + '\b';
+      #9: Result := Result + '\t';
+      #10: Result := Result + '\n';
+      #12: Result := Result + '\f';
+      #13: Result := Result + '\r';
+    else
+      if (Ord(c) < 32) then
+        Result := Result + Format('\u%.4x', [Ord(c)])
+      else
+        Result := Result + c;
+    end;
+  end;
+end;
+
+function GetJsonVal(const AVal: TValue): string;
+var
+  FS: TFormatSettings;
+begin
+   if AVal.IsEmpty then Exit('null');
+
+   // Prepare invariant format settings for JSON (dot separator)
+   FS := TFormatSettings.Create;
+   FS.DecimalSeparator := '.';
+
+   // Smart Properties Support: Unwrap Prop<T> before serialization
+   if (AVal.Kind = tkRecord) and (AVal.TypeInfo <> nil) and
+      string(AVal.TypeInfo.Name).StartsWith('Prop<') then
+   begin
+     var Ctx := TRttiContext.Create;
+     try
+        var RecType := Ctx.GetType(AVal.TypeInfo).AsRecord;
+        if RecType <> nil then
+        begin
+          var Field := RecType.GetField('FValue');
+          if Field <> nil then
+          begin
+             Result := GetJsonVal(Field.GetValue(AVal.GetReferenceToRawData));
+             Exit;
+          end;
+        end;
+     finally
+        Ctx.Free;
+     end;
+   end;
+
+   // Try to use framework serializer for other complex types (objects/arrays)
+   if AVal.Kind in [tkRecord, tkMRecord, tkDynArray, tkArray, tkClass] then
+   begin
+     // For normal records/objects, delegate to Dext.Json
+     Result := TDextJson.Serialize(AVal);
+     Exit;
+   end;
+
+   case AVal.Kind of
+     tkInteger, tkInt64: Result := IntToStr(AVal.AsInt64);
+     tkFloat:
+     begin
+       if AVal.TypeInfo = TypeInfo(TDateTime) then
+         Result := '"' + DateToISO8601(AVal.AsType<TDateTime>) + '"'
+       else
+         Result := FloatToStr(AVal.AsExtended, FS);
+     end;
+     tkString, tkUString, tkWString, tkChar, tkWChar: Result := '"' + EscapeJsonString(AVal.AsString) + '"';
+     tkEnumeration:
+       if AVal.TypeInfo = TypeInfo(Boolean) then
+         Result := BoolToStr(AVal.AsBoolean, true).ToLower
+       else
+         Result := IntToStr(AVal.AsOrdinal);
+     else
+       Result := '"' + EscapeJsonString(AVal.ToString) + '"';
+   end;
+end;
 
 { TUtf8JsonReader }
 
@@ -568,8 +664,6 @@ begin
 end;
 
 procedure TUtf8JsonWriter.WriteValue(const AValue: TValue);
-var
-  FS: TFormatSettings;
 begin
   if AValue.IsEmpty then
   begin
@@ -584,7 +678,7 @@ begin
         if AValue.TypeInfo = TypeInfo(TDateTime) then
           WriteString(DateToISO8601(AValue.AsType<TDateTime>))
         else
-          WriteNumber(AValue.AsExtended);
+          WriteNumber(AValue.AsType<Double>);
       end;
     tkString, tkUString, tkWString, tkLString, tkChar, tkWChar:
       WriteString(AValue.AsString);
@@ -593,6 +687,30 @@ begin
         WriteBoolean(AValue.AsBoolean)
       else
         WriteNumber(AValue.AsOrdinal);
+    tkClass:
+      begin
+        var Obj := AValue.AsObject;
+        if Obj = nil then WriteNull
+        else
+        begin
+          var Ctx := TRttiContext.Create;
+          try
+            var Typ := Ctx.GetType(Obj.ClassInfo);
+            WriteStartObject;
+            for var Prop in Typ.GetProperties do
+            begin
+              if Prop.IsReadable and (Prop.Visibility in [mvPublic, mvPublished]) then
+              begin
+                 WritePropertyName(Prop.Name);
+                 WriteValue(Prop.GetValue(Obj));
+              end;
+            end;
+            WriteEndObject;
+          finally
+            Ctx.Free;
+          end;
+        end;
+      end;
   else
     WriteString(AValue.ToString);
   end;

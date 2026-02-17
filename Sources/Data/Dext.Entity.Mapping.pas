@@ -33,6 +33,7 @@ uses
   System.TypInfo,
   System.Rtti,
   System.Variants,
+  System.Character,
   Data.DB,
   Dext.Entity.Attributes,
   Dext.Entity.TypeConverters,
@@ -57,11 +58,9 @@ type
     function HasKey(const APropertyNames: array of string): IEntityTypeBuilder<T>; overload;
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
-    function Prop(const APropertyName: string): IPropertyBuilder<T>; overload;
-    function Prop<TProp>(const AProp: Prop<TProp>): IPropertyBuilder<T>; overload;
+    function Prop(const APropertyName: string): IPropertyBuilder<T>;
     function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
-    function Ignore(const APropertyName: string): IEntityTypeBuilder<T>; overload;
-    function Ignore<TProp>(const AProp: Prop<TProp>): IEntityTypeBuilder<T>; overload;
+    function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     
     // Relationships
     function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
@@ -222,8 +221,8 @@ type
     function MapInheritance(AStrategy: TInheritanceStrategy): TEntityBuilder<T>;
     
     // Property Selection
-    function Prop(const APropertyName: string): TEntityBuilder<T>; overload;
-    function Property<TProp>(const AProp: Prop<TProp>): TEntityBuilder<T>;
+    function Prop(const APropertyName: string): TEntityBuilder<T>;
+    function HasProperty(const APropertyName: string): TEntityBuilder<T>;
     
     // Property Configuration (Applied to current property)
     function Column(const AName: string): TEntityBuilder<T>;
@@ -271,6 +270,7 @@ type
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
     function Prop(const APropertyName: string): IPropertyBuilder<T>;
+    function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
     function HasOne(const APropertyName: string): IRelationshipBuilder<T>;
@@ -296,6 +296,11 @@ type
     function HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
     function HasFieldName(const AName: string): IPropertyBuilder<T>;
     function UseField: IPropertyBuilder<T>;
+    function IsLazy(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsVersion(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsCreatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsUpdatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsShadow(AValue: Boolean = True): IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -404,8 +409,8 @@ begin
         if Fld.FieldType.Name.StartsWith('Prop<') then
         begin
            var FldName := Fld.Name;
-           if (FldName.Length > 1) and (FldName.Chars[0] = 'F') and (FldName.Chars[1].IsUpper) then
-             Delete(FldName, 1, 1);
+           if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
+             FldName := FldName.Substring(1);
            
            PropMap := GetOrAddProperty(FldName);
            PropMap.FieldOffset := Fld.Offset;
@@ -537,7 +542,7 @@ begin
               begin
                   var Method := RType.GetMethod('Create');
                   if Method <> nil then
-                      PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
+                    PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
                   else
                   begin
                       // Try basic Create
@@ -730,9 +735,9 @@ begin
   Result := Self;
 end;
 
-function TEntityBuilder<T>.Property<TProp>(const AProp: Prop<TProp>): TEntityBuilder<T>;
+function TEntityBuilder<T>.HasProperty(const APropertyName: string): TEntityBuilder<T>;
 begin
-  Result := Prop(AProp.Name);
+  Result := Prop(APropertyName);
 end;
 
 function TEntityBuilder<T>.Column(const AName: string): TEntityBuilder<T>;
@@ -937,10 +942,7 @@ begin
   Result := TPropertyBuilder<T>.Create(FMap.GetOrAddProperty(APropertyName));
 end;
 
-function TEntityTypeBuilder<T>.Prop<TProp>(const AProp: Prop<TProp>): IPropertyBuilder<T>;
-begin
-  Result := Prop(AProp.Name);
-end;
+
 
 function TEntityTypeBuilder<T>.ShadowProperty(const APropName: string): IPropertyBuilder<T>;
 begin
@@ -953,10 +955,7 @@ begin
   Result := Self;
 end;
 
-function TEntityTypeBuilder<T>.Ignore<TProp>(const AProp: Prop<TProp>): IEntityTypeBuilder<T>;
-begin
-  Result := Ignore(AProp.Name);
-end;
+
 
 function TEntityTypeBuilder<T>.HasMany(const APropertyName: string): IRelationshipBuilder<T>;
 var
@@ -1098,11 +1097,7 @@ begin
   Result := Self;
 end;
 
-function TPropertyBuilder<T>.IsVersion(AValue: Boolean): IPropertyBuilder<T>;
-begin
-  FPropMap.IsVersion := AValue;
-  Result := Self;
-end;
+
 
 function TPropertyBuilder<T>.IsCreatedAt(AValue: Boolean): IPropertyBuilder<T>;
 begin

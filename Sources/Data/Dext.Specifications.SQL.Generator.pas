@@ -39,6 +39,7 @@ uses
   Dext.Utils,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
+  Dext.Entity.Core,
   Dext.Entity.Dialects,
   Dext.Entity.Attributes,
   Dext.Entity.Mapping,
@@ -1624,6 +1625,8 @@ begin
 
         SBSet.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(SQLCastStr);
       end;
+    end; // End of property loop
+    
     if SBWhere.Length = 0 then
       raise Exception.Create('Cannot generate UPDATE: No Primary Key defined.');
       
@@ -1922,6 +1925,12 @@ begin
     
     SB.Append(' FROM ').Append(GetTableName);
     
+    // Apply SQL Server Locking Hints if needed
+    if (GetDialectEnum = ddSQLServer) and (ASpec <> nil) and (ASpec.GetLockMode <> lmNone) then
+    begin
+      SB.Append(' ').Append(FDialect.GetLockingSQL(ASpec.GetLockMode));
+    end;
+    
     // Add soft delete filter
     SoftDeleteFilter := GetSoftDeleteFilter;
     DiscriminatorFilter := GetDiscriminatorFilter;
@@ -2014,7 +2023,15 @@ begin
     
     // Add to cache
     if (ASpec <> nil) and (Result <> '') then
+    begin
+      // Add Locking Clause for non-MSSQL at the very end
+      if (GetDialectEnum <> ddSQLServer) and (ASpec.GetLockMode <> lmNone) then
+      begin
+        Result := Result + ' ' + FDialect.GetLockingSQL(ASpec.GetLockMode);
+      end;
+      
       TSQLCache.Instance.AddSQL(Sig, Result);
+    end;
       
   finally
     SB.Free;

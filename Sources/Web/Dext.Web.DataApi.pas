@@ -83,10 +83,6 @@ type
     function UseSql(const ASql: string): TDataApiOptions<T>;
   end;
 
-/// <summary>Factory function for Data API options to simplify syntax.</summary>
-function DataApiOptions: TDataApiOptions<TObject>;
-
-
   TDataApiHandler<T: class> = class
   private
     FOptions: TDataApiOptions<T>;
@@ -125,9 +121,8 @@ function DataApiOptions: TDataApiOptions<TObject>;
     class procedure Map(const ABuilder: IApplicationBuilder; const AClass: TClass; const APath: string; AOptions: TDataApiOptions = nil);
   end;
 
-function GetJsonVal(const AVal: TValue): string;
-function EscapeJsonString(const S: string): string;
-
+/// <summary>Factory function for Data API options to simplify syntax.</summary>
+function DataApiOptions: TDataApiOptions<TObject>;
 
 implementation
 
@@ -139,37 +134,12 @@ uses
   Dext.Core.DateUtils,
   Dext.Specifications.Types,
   Dext.Specifications.Interfaces,
+  Dext.Specifications.OrderBy,
   Dext.Specifications.SQL.Generator,
+  Dext.Json.Utf8,
   Dext.Auth.Identity,
   Dext.Web.Results;
 
-
-function EscapeJsonString(const S: string): string;
-var
-  i: Integer;
-  c: Char;
-begin
-  Result := '';
-  for i := 1 to Length(S) do
-  begin
-    c := S[i];
-    case c of
-      '"': Result := Result + '\"';
-      '\': Result := Result + '\\';
-      '/': Result := Result + '\/';
-      #8: Result := Result + '\b';
-      #9: Result := Result + '\t';
-      #10: Result := Result + '\n';
-      #12: Result := Result + '\f';
-      #13: Result := Result + '\r';
-    else
-      if (Ord(c) < 32) then
-        Result := Result + Format('\u%.4x', [Ord(c)])
-      else
-        Result := Result + c;
-    end;
-  end;
-end;
 
 { TDataApiOptions }
 
@@ -557,65 +527,6 @@ begin
 end;
 
 
-function GetJsonVal(const AVal: TValue): string;
-var
-  FS: TFormatSettings;
-begin
-   if AVal.IsEmpty then Exit('null');
-   
-   // Prepare invariant format settings for JSON (dot separator)
-   FS := TFormatSettings.Create;
-   FS.DecimalSeparator := '.';
-   
-   // Smart Properties Support: Unwrap Prop<T> before serialization
-   if (AVal.Kind = tkRecord) and (AVal.TypeInfo <> nil) and 
-      string(AVal.TypeInfo.Name).StartsWith('Prop<') then
-   begin
-     var Ctx := TRttiContext.Create;
-     try
-        var RecType := Ctx.GetType(AVal.TypeInfo).AsRecord;
-        if RecType <> nil then
-        begin
-          var Field := RecType.GetField('FValue');
-          if Field <> nil then
-          begin
-             Result := GetJsonVal(Field.GetValue(AVal.GetReferenceToRawData));
-             Exit;
-          end;
-        end;
-     finally
-        Ctx.Free;
-     end;
-   end;
-
-   // Try to use framework serializer for other complex types (objects/arrays)
-   if AVal.Kind in [tkRecord, tkMRecord, tkDynArray, tkArray, tkClass] then
-   begin
-     // For normal records/objects, delegate to Dext.Json
-     Result := TDextJson.Serialize(AVal);
-     Exit;
-   end;
-
-   case AVal.Kind of
-     tkInteger, tkInt64: Result := IntToStr(AVal.AsInt64);
-     tkFloat: 
-     begin
-       if AVal.TypeInfo = TypeInfo(TDateTime) then
-         Result := '"' + DateToISO8601(AVal.AsType<TDateTime>) + '"'
-       else
-         Result := FloatToStr(AVal.AsExtended, FS);
-     end;
-     tkString, tkUString, tkWString, tkChar, tkWChar: Result := '"' + EscapeJsonString(AVal.AsString) + '"';
-     tkEnumeration:
-       if AVal.TypeInfo = TypeInfo(Boolean) then
-         Result := BoolToStr(AVal.AsBoolean, true).ToLower
-       else
-         Result := IntToStr(AVal.AsOrdinal);
-     else
-       Result := '"' + EscapeJsonString(AVal.ToString) + '"';
-   end;
-end;
-
 function TDataApiHandler<T>.HandleGetList(const Context: IHttpContext): IResult;
 var
   DbCtx: TDbContext;
@@ -712,14 +623,13 @@ begin
             else if Suffix = 'gt' then BinaryOp := boGreaterThan
             else if Suffix = 'gte' then BinaryOp := boGreaterThanOrEqual
             else if Suffix = 'lt' then BinaryOp := boLessThan
-            else if Suffix = 'lte' then BinaryOp := boLessEqual
+            else if Suffix = 'lte' then BinaryOp := boLessThanOrEqual
             else if (Suffix = 'cont') or (Suffix = 'contains') then BinaryOp := boLike
             else if Suffix = 'sw' then BinaryOp := boLike
             else if Suffix = 'ew' then BinaryOp := boLike
             else if Suffix = 'in' then BinaryOp := boIn
             else Handled := False;
 
-            if Handled then
             if Handled then
                ActualPropName := ParamName.Substring(0, UnderscorePos);
           end;
@@ -824,23 +734,28 @@ begin
       // TODO: Apply OrderList to Entities before pagination
       // Note: In a real implementation, OrderList should be passed to the Repository/DbSet
       
-      // Build JSON response with pagination
-      JsonResult := '[';
-      First := True;
-      i := 0;
-      for Entity in Entities do
-      begin
-        if (Offset > 0) and (i < Offset) then begin Inc(i); Continue; end;
-        if (Limit > 0) and (i >= Offset + Limit) then Break;
+      // Build JSON response with high-performance UTF8 writer
+      var Stream := TMemoryStream.Create;
+      try
+        var Writer := TUtf8JsonWriter.Create(Stream, False);
+        Writer.WriteStartArray;
+        i := 0;
+        for Entity in Entities do
+        begin
+          if (Offset > 0) and (i < Offset) then begin Inc(i); Continue; end;
+          if (Limit > 0) and (i >= Offset + Limit) then Break;
+          
+          Writer.WriteValue(TValue.From<T>(T(Entity)));
+          Inc(i);
+        end;
+        Writer.WriteEndArray;
         
-        if not First then JsonResult := JsonResult + ',';
-        First := False;
-        JsonResult := JsonResult + EntityToJson(T(Entity));
-        Inc(i);
+        Stream.Position := 0;
+        Result := Results.Stream(Stream, 'application/json');
+      except
+        Stream.Free;
+        raise;
       end;
-      JsonResult := JsonResult + ']';
-      
-      Result := Results.Json(JsonResult);
     finally
       OrderList.Free;
     end;
@@ -1218,7 +1133,7 @@ class procedure TDataApi.Map(const ABuilder: IApplicationBuilder; const AClass: 
   const APath: string; AOptions: TDataApiOptions);
 var
   Ctx: TRttiContext;
-  Typ: TRttiInstanceType;
+  Typ: TRttiType;
   GenericTyp: TRttiType;
   Method: TRttiMethod;
 begin
@@ -1233,7 +1148,9 @@ begin
        raise Exception.Create('Could not find TDataApiHandler<T> type');
 
     // Make generic with AClass
-    Typ := GenericTyp.AsInstance.Instantiate([AClass]).AsInstance;
+    // TODO: Delphi RTTI does not support generic instantiation at runtime.
+    // This requires a registration-based approach instead.
+    Typ := Ctx.GetType(AClass);
     
     // Find Map(ABuilder, APath, AOptions)
     // Since TDataApiOptions is a base class, we might need to find the right overload
@@ -1242,7 +1159,7 @@ begin
        var Params := Method.GetParameters;
        if (Length(Params) = 3) and 
           (Params[0].ParamType.Handle = TypeInfo(IApplicationBuilder)) and
-          (Params[1].ParamType.IsStringType) then
+           (Params[1].ParamType.TypeKind in [tkString, tkUString, tkWString, tkLString]) then
        begin
           Method.Invoke(nil, [TValue.From<IApplicationBuilder>(ABuilder), APath, AOptions]);
           Exit;

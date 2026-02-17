@@ -56,7 +56,8 @@ uses
   Dext.MultiTenancy,
   Dext.Entity.Tenancy,
   Dext.Entity.Collections,
-  Dext.Entity.LazyLoading;
+  Dext.Entity.LazyLoading,
+  Dext.Threading.Async;
 
 // Helper function to convert TValue to string for identity map keys
 // TValue.ToString does not work correctly for TGUID (returns type name, not value)
@@ -79,8 +80,7 @@ type
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
 
-    function GetFContext: IDbContext;
-    property FContext: IDbContext read GetFContext;
+
 
     procedure MapEntity;
     function Hydrate(const Reader: IDbReader; const Tracking: Boolean = True): T;
@@ -105,6 +105,9 @@ type
     constructor Create(const AContext: IDbContext); reintroduce;
     destructor Destroy; override;
 
+    function GetFContext: IDbContext;
+    property FContext: IDbContext read GetFContext;
+
     function GetTableName: string;
     function GetEntityType: PTypeInfo;
     function FindObject(const AId: Variant): TObject; overload;
@@ -121,8 +124,9 @@ type
     procedure Clear;
     procedure DetachAll;
     procedure Detach(const AEntity: TObject); overload;
-
-
+    procedure LinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject); overload;
+    procedure UnlinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject); overload;
+    
     function Add(const AEntity: T): IDbSet<T>; overload;
     function Add(const ABuilder: TFunc<IEntityBuilder<T>, T>): IDbSet<T>; overload;
     function Update(const AEntity: T): IDbSet<T>; overload;
@@ -192,26 +196,48 @@ type
     /// <summary>
     ///   Links two entities in a Many-to-Many relationship.
     /// </summary>
-    procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject); overload;
     
     /// <summary>
     ///   Unlinks two entities in a Many-to-Many relationship.
     /// </summary>
-    procedure UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject); overload;
     
     /// <summary>
     ///   Syncronizes a Many-to-Many relationship, replacing all existing links with new ones.
     /// </summary>
     procedure SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
+    
+    // New Methods Implementation
+    function ToListAsync: TAsyncBuilder<IList<T>>;
+    function FromSql(const ASql: string; const AParams: array of TValue): TFluentQuery<T>; overload;
+    function FromSql(const ASql: string): TFluentQuery<T>; overload;
+    function TryLock(const AEntity: T; const AToken: string; ADurationMinutes: Integer = 30): Boolean;
+    function Unlock(const AEntity: T): Boolean;
   end;
 
+
 function TValueToVariant(const AValue: TValue): Variant;
+
+type
+  TSqlQueryIterator<T: class> = class(TQueryIterator<T>)
+  private
+    FDbSet: TDbSet<T>;
+    FSql: string;
+    FParams: TArray<TValue>;
+    FReader: IDbReader;
+    FInitialized: Boolean;
+  protected
+    function MoveNextCore: Boolean; override;
+  public
+    constructor Create(ADbSet: TDbSet<T>; const ASql: string; const AParams: array of TValue);
+  end;
+
 
 implementation
 
 uses
   Data.DB,
-  Dext.Entity.LazyLoading,
   Dext.Entity.ProxyFactory,
   Dext.Utils;
 
@@ -282,32 +308,9 @@ begin
   end;
 end;
 
-function TValueToKeyString(const AValue: TValue): string;
-begin
-  if AValue.Kind = tkRecord then
-  begin
-    if AValue.TypeInfo.Name = 'TGUID' then
-      Result := GUIDToString(AValue.AsType<TGUID>)
-    else
-      Result := AValue.ToString;
-  end
-  else
-    Result := AValue.ToString;
-end;
 
-type
-  TSqlQueryIterator<T: class> = class(TQueryIterator<T>)
-  private
-    FDbSet: TDbSet<T>;
-    FSql: string;
-    FParams: TArray<TValue>;
-    FReader: IDbReader;
-    FInitialized: Boolean;
-  protected
-    function MoveNextCore: Boolean; override;
-  public
-    constructor Create(ADbSet: TDbSet<T>; const ASql: string; const AParams: array of TValue);
-  end;
+
+
 
 { TSqlQueryIterator<T> }
 
@@ -438,6 +441,9 @@ begin
 
         // [JsonColumn] always forces mapping as a simple column
         if Attr is JsonColumnAttribute then IsMapped := True;
+
+        // [Nested] allows mapping classes as nested objects (multi-mapping)
+        if Attr is NestedAttribute then IsMapped := True;
       end;
       
       if not IsMapped then Continue;
@@ -727,34 +733,42 @@ begin
     begin
       try
         // Determine Converter: Check Property Map first (Attributes/Fluent), then Registry default
-        var Converter: ITypeConverter := nil;
-        if Converter = nil then
-           Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
-           
+        var Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
         if Converter <> nil then
-        begin
-          // Use type converter to convert from database format
-          Val := Converter.FromDatabase(Val, Prop.PropertyType.Handle);
-        end;
+           Val := Converter.FromDatabase(Val, Prop.PropertyType.Handle);
         
         // Use centralized reflection helper that handles Smart Types, Nullables and conversion
         if FFields.TryGetValue(ColName.ToLower, Field) then
-        begin
-          TReflection.SetValue(Pointer(Result), Field, Val);
-        end
-        else if FProps.TryGetValue(ColName.ToLower, Prop) then
-        begin
+          TReflection.SetValue(Pointer(Result), Field, Val)
+        else
           TReflection.SetValue(Pointer(Result), Prop, Val);
-        end;
       except
         on E: Exception do
         begin
           var VTypeName := 'Unknown';
           if Val.TypeInfo <> nil then VTypeName := string(Val.TypeInfo.Name);
-          
-          // Re-raise with context to help debugging
           raise Exception.CreateFmt('Error hydrating property %s.%s from column %s (Value Type: %s): %s', 
             [string(PTypeInfo(TypeInfo(T))^.Name), Prop.Name, ColName, VTypeName, E.Message]);
+        end;
+      end;
+    end
+    else
+    begin
+      // Multi-Mapping support: Handle "Property_SubProperty" or "Property.SubProperty"
+      var SeparatorIdx := -1;
+      if ColName.Contains('_') then SeparatorIdx := Pos('_', ColName)
+      else if ColName.Contains('.') then SeparatorIdx := Pos('.', ColName);
+      
+      if SeparatorIdx > 0 then
+      begin
+        var Prefix := Copy(ColName, 1, SeparatorIdx - 1);
+        if FProps.TryGetValue(Prefix.ToLower, Prop) and (Prop.PropertyType.TypeKind = tkClass) then
+        begin
+          try
+             TReflection.SetValueByPath(TObject(Result), ColName, Val);
+          except
+             // Ignore mapping failures for non-existent nested paths
+          end;
         end;
       end;
     end;
@@ -1312,6 +1326,171 @@ begin
   end;
 end;
 
+function TDbSet<T>.TryLock(const AEntity: T; const AToken: string; ADurationMinutes: Integer): Boolean;
+var
+  Typ: TRttiType;
+  Prop, TokenProp, ExpiryProp: TRttiProperty;
+  TokenCol, ExpiryCol: string;
+  Sql: string;
+  Cmd: IDbCommand;
+  PKCols: TArray<string>;
+  i: Integer;
+begin
+  Result := False;
+  TokenProp := nil;
+  ExpiryProp := nil;
+  TokenCol := '';
+  ExpiryCol := '';
+
+  Typ := FRttiContext.GetType(T);
+  for Prop in Typ.GetProperties do
+  begin
+    if Prop.HasAttribute<LockTokenAttribute> then TokenProp := Prop;
+    if Prop.HasAttribute<LockExpirationAttribute> then ExpiryProp := Prop;
+  end;
+
+  if (TokenProp = nil) or (ExpiryProp = nil) then
+    raise Exception.Create('Entity ' + Typ.Name + ' does not have [LockToken] and [LockExpiration] attributes.');
+
+  // Find Column Names
+  TokenCol := TokenProp.Name;
+  ExpiryCol := ExpiryProp.Name;
+  if FMap <> nil then
+  begin
+    var PMap: TPropertyMap;
+    if FMap.Properties.TryGetValue(TokenProp.Name, PMap) and (PMap.ColumnName <> '') then TokenCol := PMap.ColumnName;
+    if FMap.Properties.TryGetValue(ExpiryProp.Name, PMap) and (PMap.ColumnName <> '') then ExpiryCol := PMap.ColumnName;
+  end;
+
+  // Build atomic update
+  // UPDATE Table SET Token = :me, Expiry = :future 
+  // WHERE PK = :id AND (Token IS NULL OR Token = :me OR Expiry < :now)
+  PKCols := GetPKColumns;
+  if Length(PKCols) = 0 then raise Exception.Create('Entity must have a primary key for locking.');
+
+  Sql := Format('UPDATE %s SET %s = :token, %s = :expiry WHERE ', 
+    [GetTableName, FContext.Dialect.QuoteIdentifier(TokenCol), FContext.Dialect.QuoteIdentifier(ExpiryCol)]);
+
+  for i := 0 to High(PKCols) do
+  begin
+    if i > 0 then Sql := Sql + ' AND ';
+    Sql := Sql + FContext.Dialect.QuoteIdentifier(PKCols[i]) + ' = :pk' + IntToStr(i);
+  end;
+
+  Sql := Sql + Format(' AND (%s IS NULL OR %s = :token OR %s < :now)', 
+    [FContext.Dialect.QuoteIdentifier(TokenCol), FContext.Dialect.QuoteIdentifier(TokenCol), FContext.Dialect.QuoteIdentifier(ExpiryCol)]);
+
+  Cmd := FContext.Connection.CreateCommand(Sql);
+  Cmd.AddParam('token', AToken);
+  Cmd.AddParam('expiry', Now + (ADurationMinutes / 1440.0));
+  Cmd.AddParam('now', Now);
+
+  // Add PK Params
+  // Extract PK values from entity
+  for i := 0 to High(PKCols) do
+  begin
+    // Simple lookup: Find property matching PK column or name
+    var Done := False;
+    for Prop in Typ.GetProperties do
+    begin
+       var CurCol: string := Prop.Name;
+       if FMap <> nil then
+       begin
+         var PMap: TPropertyMap;
+         if FMap.Properties.TryGetValue(Prop.Name, PMap) and (PMap.ColumnName <> '') then CurCol := PMap.ColumnName;
+       end;
+       if SameText(CurCol, PKCols[i]) then
+       begin
+         Cmd.AddParam('pk' + IntToStr(i), Prop.GetValue(Pointer(AEntity)));
+         Done := True;
+         Break;
+       end;
+    end;
+    if not Done then raise Exception.Create('Could not find PK property for ' + PKCols[i]);
+  end;
+
+  if Cmd.ExecuteNonQuery = 1 then
+  begin
+    // Update local entity
+    TokenProp.SetValue(Pointer(AEntity), AToken);
+    ExpiryProp.SetValue(Pointer(AEntity), Now + (ADurationMinutes / 1440.0));
+    Result := True;
+  end;
+end;
+
+function TDbSet<T>.Unlock(const AEntity: T): Boolean;
+var
+  Typ: TRttiType;
+  Prop, TokenProp, ExpiryProp: TRttiProperty;
+  TokenCol, ExpiryCol: string;
+  Sql: string;
+  Cmd: IDbCommand;
+  PKCols: TArray<string>;
+  i: Integer;
+begin
+  Result := False;
+  TokenProp := nil;
+  ExpiryProp := nil;
+
+  Typ := FRttiContext.GetType(T);
+  for Prop in Typ.GetProperties do
+  begin
+    if Prop.HasAttribute<LockTokenAttribute> then TokenProp := Prop;
+    if Prop.HasAttribute<LockExpirationAttribute> then ExpiryProp := Prop;
+  end;
+
+  if (TokenProp = nil) or (ExpiryProp = nil) then Exit;
+
+  // Find Column Names
+  TokenCol := TokenProp.Name;
+  ExpiryCol := ExpiryProp.Name;
+  if FMap <> nil then
+  begin
+    var PMap: TPropertyMap;
+    if FMap.Properties.TryGetValue(TokenProp.Name, PMap) and (PMap.ColumnName <> '') then TokenCol := PMap.ColumnName;
+    if FMap.Properties.TryGetValue(ExpiryProp.Name, PMap) and (PMap.ColumnName <> '') then ExpiryCol := PMap.ColumnName;
+  end;
+
+  PKCols := GetPKColumns;
+  Sql := Format('UPDATE %s SET %s = NULL, %s = NULL WHERE ', 
+    [GetTableName, FContext.Dialect.QuoteIdentifier(TokenCol), FContext.Dialect.QuoteIdentifier(ExpiryCol)]);
+
+  for i := 0 to High(PKCols) do
+  begin
+    if i > 0 then Sql := Sql + ' AND ';
+    Sql := Sql + FContext.Dialect.QuoteIdentifier(PKCols[i]) + ' = :pk' + IntToStr(i);
+  end;
+
+  // Important: only unlock if I am the owner (optional business rule?)
+  // For now, let's keep it simple: just unlock.
+  
+  Cmd := FContext.Connection.CreateCommand(Sql);
+  for i := 0 to High(PKCols) do
+  begin
+    for Prop in Typ.GetProperties do
+    begin
+       var CurCol: string := Prop.Name;
+       if FMap <> nil then
+       begin
+         var PMap: TPropertyMap;
+         if FMap.Properties.TryGetValue(Prop.Name, PMap) and (PMap.ColumnName <> '') then CurCol := PMap.ColumnName;
+       end;
+       if SameText(CurCol, PKCols[i]) then
+       begin
+         Cmd.AddParam('pk' + IntToStr(i), Prop.GetValue(Pointer(AEntity)));
+         Break;
+       end;
+    end;
+  end;
+
+  if Cmd.ExecuteNonQuery = 1 then
+  begin
+    TokenProp.SetValue(Pointer(AEntity), TValue.Empty);
+    ExpiryProp.SetValue(Pointer(AEntity), TValue.Empty);
+    Result := True;
+  end;
+end;
+
 function TDbSet<T>.GenerateCreateTableScript: string;
 var
   Generator: TSqlGenerator<T>;
@@ -1800,7 +1979,7 @@ begin
              if Val.IsEmpty or ((Val.Kind = tkInterface) and (Val.AsInterface = nil)) then
              begin
                  var NewList := TTrackingListFactory.CreateList(TargetType.Handle, FContext, Parent, NavProp.Name);
-                 TReflection.SetValue(Parent, NavProp, NewList);
+                 TReflection.SetValue(Pointer(Parent), NavProp, NewList);
                  Val := NavProp.GetValue(Pointer(Parent));
              end;
 
@@ -2043,6 +2222,18 @@ begin
   Cmd.AddParam('p1', EntityId);
   Cmd.AddParam('p2', RelatedId);
   Cmd.Execute;
+end;
+
+{ Non-generic IDbSet implementations }
+
+procedure TDbSet<T>.LinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+begin
+  LinkManyToMany(T(AEntity), APropertyName, ARelatedEntity);
+end;
+
+procedure TDbSet<T>.UnlinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+begin
+  UnlinkManyToMany(T(AEntity), APropertyName, ARelatedEntity);
 end;
 
 procedure TDbSet<T>.SyncManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntities: TArray<TObject>);
@@ -2374,10 +2565,7 @@ begin
   Result := Count(ASpec) > 0;
 end;
 
-function TDbSet<T>.Any(const AExpression: IExpression): Boolean;
-begin
-  Result := Any(TSpecification<T>.Create(AExpression));
-end;
+
 
 function TDbSet<T>.FirstOrDefault(const ASpec: ISpecification<T>): T;
 var
@@ -2394,10 +2582,7 @@ begin
     Result := nil;
 end;
 
-function TDbSet<T>.FirstOrDefault(const AExpression: IExpression): T;
-begin
-  Result := FirstOrDefault(TSpecification<T>.Create(AExpression));
-end;
+
 
 
 function TDbSet<T>.IgnoreQueryFilters: IDbSet<T>;
@@ -2553,6 +2738,9 @@ function TDbSet<T>.Prototype<TEntity>: TEntity;
 begin
   Result := Dext.Entity.Prototype.Prototype.Entity<TEntity>;
 end;
+
+
+
 
 end.
 

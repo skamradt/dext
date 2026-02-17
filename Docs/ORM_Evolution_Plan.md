@@ -52,13 +52,22 @@ Este documento consolida a visão estratégica de roadmap do Dext ORM, integrand
     *   *Requisito*: Validar uso de Connection Pooling (Exception se inativo).
     *   *Infra*: Baseado em `Dext.Threading.Async` e `CancellationToken`.
     *   *Docs*: Guia didático sobre o custo de threads vs. benefício de paralelismo, com referência ao livro [Delphi Multithreading](https://www.cesarromero.com.br/#livros).
-- [ ] **Task 4.2**: Suporte a **Multi-Mapping** (Dapper-Style) e Otimização do Database as API.
-    *   *Status*: [Em Progresso] Dynamic Specification Mapping (Filtros via QueryString) concluído. Implementation of `TUtf8JsonWriter` for zero-allocation responses.
-    *   *Pendente*: Multi-Mapping engine e integração do writer no generic handler.
-- [ ] **Task 4.3**: Implementar **Pessimistic Locking** (SELECT FOR UPDATE / Bloqueios Offline).
+- [x] **Task 4.2**: Suporte a **Multi-Mapping** (Dapper-Style) e Otimização do Database as API.
+    *   *Concluído*: Sintaxe fluente `.MapDataApi<T>`, `DataApiOptions` record, e **Dynamic Specification Mapping** (Filtros via QueryString com operadores `_gt`, `_lt`, etc). 
+    *   *Concluído*: Multi-Mapping engine via atributo `[Nested]` e hidratação recursiva por caminhos (`Customer_Name`). 
+    *   *Performance*: Integração total do `TUtf8JsonWriter` e `TStreamResult` para respostas JSON com **Zero-Allocation** de strings residuais.
+- [x] **Task 4.3: Pessimistic Locking**
+  - Suporte a `FOR UPDATE` (Postgres/Oracle) e `WITH (UPDLOCK)` (SQL Server) via `.WithLock()` na Fluent API.
+  - Suporte a Offline Locking ("Lock Token") via atributos `[LockToken]`, `[LockExpiration]` e métodos `TryLock`/`Unlock`.
+- [x] **Task 4.4: IDbCommand Evolution**
+  - Suporte total a parâmetros `OUT` e `Result` para Stored Procedures.
+  - Mapeamento declarativo via `[Procedure]` e `[DbParam]`.
+  - Método `IDbContext.ExecuteProcedure<T>` para execução simplificada.
 
 ### Fase 5: Entidades Não-Tabela (View/Query Mapping)
-- [ ] **Task 5.1**: Mapeamento de resultados de Stored Procedures e Views complexas para POCOs sem necessidade de tabela física.
+- [x] **Task 5.1**: Mapeamento de resultados de Stored Procedures e Views complexas para POCOs sem necessidade de tabela física.
+    *   *Concluído*: Suporte a `FromSql`, hidratação de DTOs anônimos e Multi-Mapping via `[Nested]`.
+    *   *Phys Engine*: Integração direta com `IFDPhysCommand` para performance máxima.
 
 ---
 

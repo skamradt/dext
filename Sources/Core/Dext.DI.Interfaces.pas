@@ -151,6 +151,7 @@ type
 
     // Generic Overloads for Instance registration
     function AddSingleton<T: IInterface>(const AInstance: T): TDextServices; overload;
+    function AddSingletonInstance<T: class>(const AInstance: T): TDextServices; overload;
 
     // Generic Overloads for Class-only registration (no interface)
     function AddSingleton<T: class>: TDextServices; overload;
@@ -330,6 +331,12 @@ var
 begin
   Guid := GetTypeData(TypeInfo(TService))^.Guid;
   FServices.AddSingleton(TServiceType.FromInterface(Guid), TImplementation, AFactory);
+  Result := Self;
+end;
+
+function TDextServices.AddSingletonInstance<T>(const AInstance: T): TDextServices;
+begin
+  FServices.AddSingleton(TServiceType.FromClass(TypeInfo(T)), AInstance);
   Result := Self;
 end;
 

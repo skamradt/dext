@@ -94,6 +94,8 @@ type
     ///   specifies a different type than what would be inferred from TValue.
     /// </summary>
     procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
+    procedure SetParamType(const AName: string; AType: TParamType);
+    function GetParamValue(const AName: string): TValue;
     procedure ClearParams;
     
     procedure Execute;

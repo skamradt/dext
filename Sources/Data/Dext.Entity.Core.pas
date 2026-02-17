@@ -96,6 +96,10 @@ type
     
     function GetEntityId(const AEntity: TObject): string;
     
+    // Many-to-Many link management (non-generic versions for TTrackingList)
+    procedure LinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure UnlinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+    
     property EntityType: PTypeInfo read GetEntityType;
   end;
 
@@ -136,6 +140,7 @@ type
     // Inline Queries (aceita IExpression diretamente)
     function ToList(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
+    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
     function Count(const ASpec: ISpecification<T>): Integer; overload;
@@ -174,6 +179,10 @@ type
     function OnlyDeleted: IDbSet<T>;
     function HardDelete(const AEntity: T): IDbSet<T>;
     function Restore(const AEntity: T): IDbSet<T>;
+
+    // Offline Locking
+    function TryLock(const AEntity: T; const AToken: string; ADurationMinutes: Integer = 30): Boolean;
+    function Unlock(const AEntity: T): Boolean;
 
     // Many-to-Many Direct Management
     procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
@@ -257,6 +266,12 @@ type
     ///   Detaches a specific entity from the context.
     /// </summary>
     procedure Detach(const AEntity: TObject);
+
+    /// <summary>
+    ///   Executes a stored procedure and maps output parameters and return values
+    ///   back to the provided DTO object using [DbParam] attributes.
+    /// </summary>
+    procedure ExecuteProcedure(const ADto: TObject);
 
     /// <summary>
     ///   Access the Change Tracker.

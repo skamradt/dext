@@ -150,8 +150,6 @@ type
     function AsCurrency: Currency;
     function AsBoolean: Boolean;
     function AsDateTime: TDateTime;
-    function As<TTarget>: TTarget;
-
     // Factory for calculated properties
     class function FromExpression(const AExpr: IExpression): Prop<T>; static;
 
@@ -643,14 +641,6 @@ end;
 function Prop<T>.AsDateTime: TDateTime;
 begin
   Result := TDateTime(Self);
-end;
-
-function Prop<T>.As<TTarget>: TTarget;
-begin
-  if TypeInfo(T) = TypeInfo(TTarget) then
-    Result := TValue.From<T>(FValue).AsType<TTarget>
-  else
-    Result := TValue.From<T>(FValue).Cast(TypeInfo(TTarget)).AsType<TTarget>;
 end;
 
 class operator Prop<T>.Equal(const LHS: Prop<T>; const RHS: T): BooleanExpression;

@@ -41,7 +41,9 @@ type
     class destructor Destroy;
   public
     class function GetMetadata(AType: PTypeInfo): TTypeMetadata; static;
+    class function GetValue(AInstance: TObject; const APropertyName: string): TValue; static;
     class procedure SetValue(AInstance: Pointer; AMember: TRttiMember; const AValue: TValue); static;
+    class procedure SetValueByPath(AInstance: TObject; const APath: string; const AValue: TValue); static;
     class function IsSmartProp(AType: PTypeInfo): Boolean; static;
     class function TryUnwrapProp(const ASource: TValue; var ADest: TValue): Boolean; static;
   end;
@@ -49,7 +51,9 @@ type
 implementation
 
 uses
-  Dext.Core.ValueConverters;
+  Dext.Core.Activator,
+  Dext.Core.ValueConverters,
+  Dext.DI.Core;
 
 { TRttiObjectHelper }
 
@@ -138,6 +142,60 @@ begin
   var Converted := TValueConverter.Convert(AValue, TargetType);
   if AMember is TRttiProperty then TRttiProperty(AMember).SetValue(AInstance, Converted)
   else if AMember is TRttiField then TRttiField(AMember).SetValue(AInstance, Converted);
+end;
+
+class function TReflection.GetValue(AInstance: TObject; const APropertyName: string): TValue;
+var
+  Prop: TRttiProperty;
+  Raw, Unwrapped: TValue;
+begin
+  Result := TValue.Empty;
+  if AInstance = nil then Exit;
+  Prop := FContext.GetType(AInstance.ClassType).GetProperty(APropertyName);
+  if Prop = nil then Exit;
+  Raw := Prop.GetValue(Pointer(AInstance));
+  if TryUnwrapProp(Raw, Unwrapped) then
+    Result := Unwrapped
+  else
+    Result := Raw;
+end;
+
+class procedure TReflection.SetValueByPath(AInstance: TObject; const APath: string; const AValue: TValue);
+var
+  Parts: TArray<string>;
+  Prop: TRttiProperty;
+  CurObj: TObject;
+  SubPath: string;
+begin
+  if (AInstance = nil) or (APath = '') then Exit;
+  
+  // Support both . and _ as separators
+  if APath.Contains('_') then Parts := APath.Split(['_'])
+  else Parts := APath.Split(['.']);
+
+  if Length(Parts) = 1 then
+  begin
+    Prop := FContext.GetType(AInstance.ClassInfo).GetProperty(Parts[0]);
+    if Prop <> nil then SetValue(Pointer(AInstance), Prop, AValue);
+    Exit;
+  end;
+
+  // Level 1: Find the first part
+  Prop := FContext.GetType(AInstance.ClassInfo).GetProperty(Parts[0]);
+  if (Prop <> nil) and (Prop.PropertyType.TypeKind = tkClass) then
+  begin
+    CurObj := Prop.GetValue(Pointer(AInstance)).AsObject;
+    if CurObj = nil then
+    begin
+       // Auto-instantiate nested classes
+       CurObj := TActivator.CreateInstance(GetTypeData(Prop.PropertyType.Handle)^.ClassType, []);
+       Prop.SetValue(Pointer(AInstance), CurObj);
+    end;
+    
+    // Recursive call for the rest of the path
+    SubPath := string.Join('.', Parts, 1, Length(Parts) - 1);
+    SetValueByPath(CurObj, SubPath, AValue);
+  end;
 end;
 
 class function TReflection.IsSmartProp(AType: PTypeInfo): Boolean;

@@ -143,6 +143,7 @@
         <DCCReference Include="WebFrameworkTests.Tests.Base.pas"/>
         <DCCReference Include="WebFrameworkTests.Tests.Routing.pas"/>
         <DCCReference Include="WebFrameworkTests.Tests.Async.pas"/>
+        <DCCReference Include="WebFrameworkTests.Tests.DataApi.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -112,7 +112,7 @@ var
   PropInfo: IPropInfo;
   MetaVal: TValue;
   InstancePtr: Pointer;
-  PropertyName, ColumnName: string;
+  ColumnName: string;
   EntityMap: TEntityMap;
   PropMap: TPropertyMap;
 begin

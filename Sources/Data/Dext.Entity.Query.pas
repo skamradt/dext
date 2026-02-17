@@ -41,6 +41,7 @@ uses
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Threading.Async,
+  Dext.Entity.Drivers.Interfaces, // Add IDbConnection
   Dext.Core.SmartTypes; // Add SmartTypes
 
 type
@@ -157,8 +158,8 @@ type
     /// <summary>
     ///   Sorts the elements of a sequence in a specified order.
     /// </summary>
-    function OrderBy(const AOrderBy: IOrderBy): TFluentQuery<T>;
-    function OrderByDescending(const AOrderBy: IOrderBy): TFluentQuery<T>;
+    function OrderBy(const AOrderBy: IOrderBy): TFluentQuery<T>; overload;
+    function OrderByDescending(const AOrderBy: IOrderBy): TFluentQuery<T>; overload;
     function OrderBy<TProp>(const AProp: Prop<TProp>): TFluentQuery<T>; overload;
     function OrderByDescending<TProp>(const AProp: Prop<TProp>): TFluentQuery<T>; overload;
     function ThenBy<TProp>(const AProp: Prop<TProp>): TFluentQuery<T>;
@@ -197,8 +198,11 @@ type
 
     function IgnoreQueryFilters: TFluentQuery<T>;
     function OnlyDeleted: TFluentQuery<T>;
+    function WithLock(const ALockMode: TLockMode): TFluentQuery<T>;
+    
+    property Connection: IDbConnection read FConnection;
 
-    // Join
+    // Set operations
     function Join<TInner, TKey, TResult>(
       const AInner: TFluentQuery<TInner>;
       const AOuterKeyProp: string;
@@ -444,10 +448,17 @@ begin
   FExecuteAny := nil;
   FExecuteFirstOrDefault := nil;
   FConnection := AConnection;
+  FLastIncludePath := '';
 end;
 
-constructor TFluentQuery<T>.Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification<T>;
-  const AExecFirstOrDefault: TFunc<ISpecification<T>, T>; const AConnection: IDbConnection);
+constructor TFluentQuery<T>.Create(
+  const AIteratorFactory: TFunc<TQueryIterator<T>>; 
+  const ASpec: ISpecification<T>;
+  const AExecCount: TFunc<ISpecification<T>, Integer>;
+  const AExecAny: TFunc<ISpecification<T>, Boolean>;
+  const AExecFirstOrDefault: TFunc<ISpecification<T>, T>;
+  const AConnection: IDbConnection
+);
 begin
   FIteratorFactory := AIteratorFactory;
   FSpecification := ASpec;
@@ -455,6 +466,7 @@ begin
   FExecuteAny := AExecAny;
   FExecuteFirstOrDefault := AExecFirstOrDefault;
   FConnection := AConnection;
+  FLastIncludePath := '';
 end;
 
 function TFluentQuery<T>.GetEnumerator: TEnumerator<T>;
@@ -560,6 +572,13 @@ begin
   Result := Self;
 end;
 
+function TFluentQuery<T>.WithLock(const ALockMode: TLockMode): TFluentQuery<T>;
+begin
+  if FSpecification <> nil then
+     FSpecification.WithLock(ALockMode);
+  Result := Self;
+end;
+
 function TFluentQuery<T>.Select<TResult>(const ASelector: TFunc<T, TResult>): TFluentQuery<TResult>;
 var
   LSource: TFluentQuery<T>;
@@ -570,7 +589,9 @@ begin
     begin
       Result := TProjectingIterator<T, TResult>.Create(LSource, ASelector);
     end,
-    FConnection);
+    nil, // Spec
+    FConnection
+  );
 end;
 
 function TFluentQuery<T>.Select<TResult>(const AProp: Prop<TResult>): TFluentQuery<TResult>;
@@ -611,7 +632,9 @@ begin
     begin
       Result := TProjectingIterator<T, TResult>.Create(LSource, Selector);
     end,
-    FConnection);
+    nil, // Spec
+    FConnection
+  );
 end;
 
 function TFluentQuery<T>.Select(const AProperties: array of string): TFluentQuery<T>;
@@ -663,7 +686,9 @@ begin
             raise Exception.Create('Select with properties only supports classes');
         end));
     end,
-    FConnection);
+    nil, // Spec
+    FConnection
+  );
 end;
 
 function TFluentQuery<T>.WherePredicate(const APredicate: TPredicate<T>): TFluentQuery<T>;
@@ -676,7 +701,9 @@ begin
     begin
       Result := TFilteringIterator<T>.Create(LSource, APredicate);
     end,
-    FConnection);
+    nil, // Spec
+    FConnection
+  );
 end;
 
 function TFluentQuery<T>.Where(const APredicate: TPredicate<T>): TFluentQuery<T>;
@@ -836,10 +863,11 @@ begin
   if (FConnection <> nil) and not FConnection.Pooled then
     raise Exception.Create('ToListAsync requires a pooled connection to ensure thread safety.');
 
-  Result := TAsyncTask.Run<IList<T>>(
+  var LSelf := Self;
+  Result := Dext.Threading.Async.TAsyncTask.Run<IList<T>>(
     function: IList<T>
     begin
-      Result := ToList;
+      Result := LSelf.ToList;
     end
   );
 end;

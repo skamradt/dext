@@ -88,10 +88,28 @@ begin
   AssertEqual('CREATE TABLE IF NOT EXISTS "Users" (Id SERIAL PRIMARY KEY);', 
     FDialect.GetCreateTableSQL('"Users"', 'Id SERIAL PRIMARY KEY'), 'Create Table SQL');
 
-  // 8. UUID Support (Check current behavior)
-  // Note: Currently TGuid might fall back to TEXT or fail if not explicitly handled.
-  // Let's see what it does.
   AssertEqual('UUID', FDialect.GetColumnType(TypeInfo(TGUID)), 'GUID mapping should be UUID');
+
+  // 9. Stored Procedure Call
+  AssertEqual('CALL ProcessOrder(:OrderId, :Status)', 
+    FDialect.GenerateProcedureCallSQL('ProcessOrder', ['OrderId', 'Status']), 'Procedure Call SQL');
+
+  // 10. Locking SQL
+  TestLockingSQL;
+end;
+
+procedure TPostgreSQLDialectTest.TestLockingSQL;
+var
+  SQL: string;
+begin
+  Log('10. Locking SQL');
+  Log('-----------------');
+
+  SQL := FDialect.GetLockingSQL(lmExclusive);
+  AssertEqual('FOR UPDATE', SQL, 'GetLockingSQL(lmExclusive) should be FOR UPDATE');
+  
+  SQL := FDialect.GetLockingSQL(lmShared);
+  AssertEqual('FOR SHARE', SQL, 'GetLockingSQL(lmShared) should be FOR SHARE');
 end;
 
 end.

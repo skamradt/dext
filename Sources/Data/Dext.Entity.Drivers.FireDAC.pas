@@ -104,6 +104,8 @@ type
     procedure SetSQL(const ASQL: string);
     procedure AddParam(const AName: string; const AValue: TValue); overload;
     procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
+    procedure SetParamType(const AName: string; AType: TParamType);
+    function GetParamValue(const AName: string): TValue;
     procedure ClearParams;
     
     procedure Execute;
@@ -135,6 +137,7 @@ type
     function CreateCommand(const ASQL: string): IDbCommand;
     function GetLastInsertId: Variant;
     function TableExists(const ATableName: string): Boolean;
+    function IsPooled: Boolean;
 
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
@@ -687,6 +690,16 @@ begin
         Param.DataType := ftString;
     end;
   end;  // end else (no converter)
+end;
+
+procedure TFireDACCommand.SetParamType(const AName: string; AType: TParamType);
+begin
+  FQuery.ParamByName(AName).ParamType := AType;
+end;
+
+function TFireDACCommand.GetParamValue(const AName: string): TValue;
+begin
+  Result := TValue.FromVariant(FQuery.ParamByName(AName).Value);
 end;
 
 procedure TFireDACCommand.ClearParams;

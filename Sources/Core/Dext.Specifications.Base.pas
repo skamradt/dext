@@ -58,6 +58,7 @@ type
   protected
     FExpression: IExpression;
     FIncludes: TList<string>;
+    FSelectedColumns: TList<string>;
     FOrderBy: TList<IOrderBy>;
     FSkip: Integer;
     FTake: Integer;
@@ -68,6 +69,7 @@ type
     FGroupBy: TList<string>;
     FIgnoreQueryFilters: Boolean;
     FOnlyDeleted: Boolean;
+    FLockMode: TLockMode;
     
     // Implementation of ISpecification<T>
     
@@ -85,6 +87,7 @@ type
     function GetGroupBy: TArray<string>;
     function IsIgnoringFilters: Boolean;
     function IsOnlyDeleted: Boolean;
+    function GetLockMode: TLockMode;
     function GetSignature: string; virtual;
   public
     constructor Create; overload; virtual;
@@ -100,7 +103,8 @@ type
     procedure GroupBy(const AColumn: string); virtual;
     procedure IgnoreQueryFilters(const AValue: Boolean = True); virtual;
     procedure OnlyDeleted(const AValue: Boolean = True); virtual;
-    
+    procedure WithLock(const ALockMode: TLockMode); virtual;
+
     // Legacy support
     procedure AddInclude(const APath: string);
     procedure AddOrderBy(const AOrderBy: IOrderBy);
@@ -128,6 +132,7 @@ begin
   FOrderBy := TList<IOrderBy>.Create;
   FJoins := TList<IJoin>.Create;
   FGroupBy := TList<string>.Create;
+  FLockMode := lmNone;
   FExpression := nil; // Empty expression matches all
   FIsTracking := True; // Tracking enabled by default
   FIgnoreQueryFilters := False;
@@ -246,6 +251,16 @@ end;
 function TSpecification<T>.IsTrackingEnabled: Boolean;
 begin
   Result := FIsTracking;
+end;
+
+function TSpecification<T>.GetLockMode: TLockMode;
+begin
+  Result := FLockMode;
+end;
+
+procedure TSpecification<T>.WithLock(const ALockMode: TLockMode);
+begin
+  FLockMode := ALockMode;
 end;
 
 procedure TSpecification<T>.EnableTracking(const AValue: Boolean);

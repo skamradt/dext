@@ -61,6 +61,8 @@ type
 implementation
 
 uses
+  Dext.Core.Reflection,
+  Dext.Core.Activator,
   Dext.Entity.Mapping,
   Dext.Entity.Context; // To access TDbContext internals if needed, or stick to IDbContext
 
@@ -147,7 +149,7 @@ begin
     if InvProp <> nil then
     begin
        // Use TReflection to handle Prop<T> or standard property
-       TReflection.SetValue(AItem, InvProp, FOwner);
+       TReflection.SetValue(Pointer(AItem), InvProp, TValue.From<TObject>(FOwner));
     end;
   finally
     Ctx.Free;
@@ -171,7 +173,7 @@ begin
     Typ := Ctx.GetType(AItem.ClassType);
     InvProp := Typ.GetProperty(PropMap.InverseProperty);
     if InvProp <> nil then
-       TReflection.SetValue(AItem, InvProp, nil);
+       TReflection.SetValue(Pointer(AItem), InvProp, TValue.Empty);
   finally
     Ctx.Free;
   end;

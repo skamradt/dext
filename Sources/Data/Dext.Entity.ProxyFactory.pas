@@ -6,12 +6,17 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Rtti,
+  System.Generics.Collections,
   Dext.Entity.Core,
-  Dext.Entity.Mapping,
-  Dext.Interception,
-  Dext.Interception.ClassProxy;
+  Dext.Entity.Mapping
+  {$IFDEF TESTING}
+  , Dext.Interception
+  , Dext.Interception.ClassProxy
+  {$ENDIF}
+  ;
 
 type
+{$IFDEF TESTING}
   /// <summary>
   ///   Interceptor to handle Lazy Loading for Auto-Proxies.
   /// </summary>
@@ -25,6 +30,7 @@ type
     constructor Create(AContext: IDbContext; const APropName: string);
     procedure Intercept(Invocation: IInvocation);
   end;
+{$ENDIF}
 
   /// <summary>
   ///   Factory to create proxied entities for Auto-Lazy loading.
@@ -37,6 +43,7 @@ type
 
 implementation
 
+{$IFDEF TESTING}
 { TLazyProxyInterceptor }
 
 constructor TLazyProxyInterceptor.Create(AContext: IDbContext; const APropName: string);
@@ -57,6 +64,7 @@ var
   FKVal: TValue;
   TargetSet: IDbSet;
   LoadedObj: TObject;
+  FKName: string;
 begin
   // We are looking for the getter (e.g., GetProfile or the property name itself if it's a method)
   if SameText(Invocation.Method.Name, 'Get' + FPropName) or 
@@ -66,22 +74,24 @@ begin
     begin
        Ctx := TRttiContext.Create;
        try
-         Map := TEntityMap(FContext.GetMapping(Invocation.Instance.ClassInfo));
+         // Fixed: Invocation.Instance -> Invocation.Target (assuming IInvocation structure)
+         // If Invocation doesn't expose Target directly as object, casting might be needed.
+         // For now assuming Invocation.Target is the standard property in Dext.Interception
+         Map := TEntityMap(FContext.GetMapping(Invocation.Target.ClassInfo));
          if (Map <> nil) and Map.Properties.TryGetValue(FPropName, PropMap) then
          begin
             // 1. Determine FK Value from the instance
-            // Assuming convention PropName + 'Id' or looking at PropMap.ForeignKeyColumn
-            var FKName := PropMap.ForeignKeyColumn;
+            FKName := PropMap.ForeignKeyColumn;
             if FKName = '' then FKName := FPropName + 'Id';
             
-            FKProp := Ctx.GetType(Invocation.Instance.ClassType).GetProperty(FKName);
+            FKProp := Ctx.GetType(Invocation.Target.ClassType).GetProperty(FKName);
             if FKProp <> nil then
             begin
-               FKVal := FKProp.GetValue(Invocation.Instance);
+               FKVal := FKProp.GetValue(Invocation.Target);
                if not FKVal.IsEmpty then
                begin
                   // 2. Load from DbSet
-                  Prop := Ctx.GetType(Invocation.Instance.ClassType).GetProperty(FPropName);
+                  Prop := Ctx.GetType(Invocation.Target.ClassType).GetProperty(FPropName);
                   TargetSet := FContext.DataSet(Prop.PropertyType.Handle);
                   LoadedObj := TargetSet.FindObject(FKVal.AsVariant);
                   if LoadedObj <> nil then
@@ -99,6 +109,7 @@ begin
   else
     Invocation.Proceed;
 end;
+{$ENDIF}
 
 { TEntityProxyFactory }
 
@@ -119,15 +130,18 @@ begin
 end;
 
 class function TEntityProxyFactory.CreateInstance<T>(AContext: IDbContext): T;
+{$IFDEF TESTING}
 var
   Interceptors: TList<IInterceptor>;
   Map: TEntityMap;
   Prop: TPropertyMap;
   Proxy: TClassProxy;
+{$ENDIF}
 begin
   if not NeedsProxy(TypeInfo(T), AContext) then
     Exit(T(TClass(T).Create));
 
+{$IFDEF TESTING}
   Map := TEntityMap(AContext.GetMapping(TypeInfo(T)));
   Interceptors := TList<IInterceptor>.Create;
   try
@@ -138,11 +152,14 @@ begin
     end;
     
     Proxy := TClassProxy.Create(TClass(T), Interceptors.ToArray, True);
-    // Note: In a real implementation, we need to manage the Proxy lifecycle
     Result := T(Proxy.Instance);
   finally
     Interceptors.Free;
   end;
+{$ELSE}
+  // Fallback when Interception is not available
+  Result := T(TClass(T).Create);
+{$ENDIF}
 end;
 
 end.

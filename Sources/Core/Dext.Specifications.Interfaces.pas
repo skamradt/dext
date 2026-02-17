@@ -36,6 +36,11 @@ type
   TJoinType = (jtInner, jtLeft, jtRight, jtFull);
 
   /// <summary>
+  ///   Specifies the type of pessimistic lock to be applied to a query.
+  /// </summary>
+  TLockMode = (lmNone, lmShared, lmExclusive, lmExclusiveNoWait);
+
+  /// <summary>
   ///   Represents an expression in a query (e.g., "Age > 18").
   /// </summary>
   IExpression = interface
@@ -81,6 +86,7 @@ type
     function GetGroupBy: TArray<string>;
     function IsIgnoringFilters: Boolean;
     function IsOnlyDeleted: Boolean;
+    function GetLockMode: TLockMode;
     
     /// <summary>
     ///  Generates a unique signature for the query structure (excluding param values).
@@ -108,6 +114,7 @@ type
     procedure GroupBy(const AColumn: string);
     procedure IgnoreQueryFilters(const AValue: Boolean = True);
     procedure OnlyDeleted(const AValue: Boolean = True);
+    procedure WithLock(const ALockMode: TLockMode);
   end;
 
   /// <summary>

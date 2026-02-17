@@ -47,6 +47,7 @@ uses
   Dext,
   Dext.Collections,
   Dext.Core.SmartTypes,
+  Dext.Types.Nullable,
   Dext.Types.UUID;
 
 type
