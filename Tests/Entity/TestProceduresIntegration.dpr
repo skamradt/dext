@@ -12,7 +12,9 @@ uses
   Dext.Entity.Context,
   Dext.Entity.Dialects,
   Dext.Entity.Drivers.Interfaces,
-  Dext.Mocks;
+  Dext.Mocks,
+  Dext.Mocks.Matching,
+  Dext.Utils;
 
 type
   [StoredProcedure('GetEmployeeSalary')]
@@ -47,7 +49,7 @@ begin
   // Setup connection
   ConnMock.Setup.Returns(TValue.From<TDatabaseDialect>(ddSQLServer)).When.GetDialect;
   ConnMock.Setup.Returns(True).When.IsConnected;
-  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand('');
+  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand(Arg.Any<string>);
 
   // Setup command to return output values
   CmdMock.Setup.Returns(TValue.From<Double>(5000.0)).When.GetParamValue('Salary');
@@ -75,10 +77,12 @@ begin
 end;
 
 begin
+  SetConsoleCharset;
   try
     TestProcedureMapping;
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

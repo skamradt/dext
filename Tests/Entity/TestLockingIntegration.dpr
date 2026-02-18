@@ -8,6 +8,7 @@ uses
   System.Generics.Collections,
   Data.DB,
   Dext,
+  Dext.Utils,
   Dext.Entity,
   Dext.Entity.Attributes,
   Dext.Entity.Context,
@@ -15,6 +16,7 @@ uses
   Dext.Entity.Dialects,
   Dext.Entity.Drivers.Interfaces,
   Dext.Mocks,
+  Dext.Mocks.Matching,
   Dext.Specifications.Types,
   Dext.Specifications.Interfaces;
 
@@ -49,6 +51,7 @@ procedure TestDBLocking;
 var
   ConnMock: Mock<IDbConnection>;
   CmdMock: Mock<IDbCommand>;
+  ReaderMock: Mock<IDbReader>;
   Ctx: TDbContext;
 begin
   Log('--- Testing DB-Level Locking ---');
@@ -56,12 +59,17 @@ begin
   // 1. SQL Server Hint
   ConnMock := Mock<IDbConnection>.Create;
   CmdMock := Mock<IDbCommand>.Create;
+  ReaderMock := Mock<IDbReader>.Create;
 
   // Setup: Connection returns dialect and creates command
   ConnMock.Setup.Returns(TValue.From<TDatabaseDialect>(ddSQLServer)).When.GetDialect;
   ConnMock.Setup.Returns(True).When.IsConnected;
-  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand('');
+  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand(Arg.Any<string>);
 
+  // Setup: Command returns mock reader for ToList
+  ReaderMock.Setup.Returns(False).When.Next;
+  CmdMock.Setup.Returns(TValue.From<IDbReader>(ReaderMock.Instance)).When.ExecuteQuery;
+  
   // Setup: Command returns 0 rows (no actual results needed)
   CmdMock.Setup.Returns(0).When.ExecuteNonQuery;
 
@@ -82,10 +90,14 @@ begin
   // 2. PostgreSQL Clause
   ConnMock := Mock<IDbConnection>.Create;
   CmdMock := Mock<IDbCommand>.Create;
+  ReaderMock := Mock<IDbReader>.Create;
 
   ConnMock.Setup.Returns(TValue.From<TDatabaseDialect>(ddPostgreSQL)).When.GetDialect;
   ConnMock.Setup.Returns(True).When.IsConnected;
-  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand('');
+  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand(Arg.Any<string>);
+
+  ReaderMock.Setup.Returns(False).When.Next;
+  CmdMock.Setup.Returns(TValue.From<IDbReader>(ReaderMock.Instance)).When.ExecuteQuery;
 
   CmdMock.Setup.Returns(0).When.ExecuteNonQuery;
 
@@ -118,7 +130,7 @@ begin
 
   ConnMock.Setup.Returns(TValue.From<TDatabaseDialect>(ddPostgreSQL)).When.GetDialect;
   ConnMock.Setup.Returns(True).When.IsConnected;
-  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand('');
+  ConnMock.Setup.Returns(TValue.From<IDbCommand>(CmdMock.Instance)).When.CreateCommand(Arg.Any<string>);
 
   // ExecuteNonQuery returns 1 = success (1 row affected)
   CmdMock.Setup.Returns(1).When.ExecuteNonQuery;
@@ -156,6 +168,7 @@ begin
 end;
 
 begin
+  SetConsoleCharset;
   try
     TestDBLocking;
     WriteLn;
@@ -164,4 +177,5 @@ begin
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

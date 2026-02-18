@@ -36,6 +36,7 @@ uses
   Dext.Entity.Dialects;
 
 type
+  {$M+}
   IDbReader = interface;
   IDbTransaction = interface;
   IDbCommand = interface;
@@ -124,6 +125,7 @@ type
     
     procedure Close;
   end;
+  {$M-}
 
 implementation
 

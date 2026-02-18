@@ -552,12 +552,8 @@ begin
 end;
 
 function TDbSet<T>.GetPKColumns: TArray<string>;
-var
-  i: Integer;
 begin
-  SetLength(Result, FPKColumns.Count);
-  for i := 0 to FPKColumns.Count - 1 do
-    Result[i] := FContext.Dialect.QuoteIdentifier(FPKColumns[i]);
+  Result := FPKColumns.ToArray;
 end;
 
 function TDbSet<T>.GetEntityId(const AEntity: T): string;

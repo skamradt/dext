@@ -18,8 +18,8 @@ uses
   Dext.DI.Interfaces,
   Dext.Entity,
   Dext.Entity.Core,
-  Dext.Entity.Context,
   Dext.Json,
+  Dext.Json.Types,
   Dext.Web.Interfaces,
   Dext.Web.Routing,
   Dext.Web.Pipeline,
@@ -130,15 +130,16 @@ uses
   System.DateUtils,
   System.TypInfo,
   Dext.Collections,
-  Dext.Json.Types,
   Dext.Core.DateUtils,
   Dext.Specifications.Types,
   Dext.Specifications.Interfaces,
   Dext.Specifications.OrderBy,
   Dext.Specifications.SQL.Generator,
+  Dext.Entity.Query,
   Dext.Json.Utf8,
   Dext.Auth.Identity,
-  Dext.Web.Results;
+  Dext.Web.Results,
+  Dext.Utils;
 
 
 { TDataApiOptions }
@@ -530,11 +531,6 @@ end;
 function TDataApiHandler<T>.HandleGetList(const Context: IHttpContext): IResult;
 var
   DbCtx: TDbContext;
-  DbSet: IDbSet;
-  Entities: IList<TObject>;
-  Entity: TObject;
-  JsonResult: string;
-  First: Boolean;
   Query: TStrings;
   i: Integer;
   ParamName, ParamValue: string;
@@ -547,6 +543,7 @@ var
   IntVal: Integer;
   BoolVal: Boolean;
   Limit, Offset: Integer;
+  OrderList: TList<IOrderBy>;
   AuthResult: IResult;
   Map: TEntityMap;
   PropMap: TPropertyMap;
@@ -565,7 +562,7 @@ begin
     Limit := 0;
     Offset := 0;
     
-    var OrderList := TList<IOrderBy>.Create;
+    OrderList := TList<IOrderBy>.Create;
     try
       Ctx := TRttiContext.Create;
       try
@@ -693,75 +690,57 @@ begin
         Ctx.Free;
       end;
       
-      // Check if we are using a custom SQL/View source
-      if FOptions.Sql <> '' then
-      begin
-         // If generic T is a class, we can try to map the result
-         var TypedList: IList<T>;
-        
-         if FilterExpr <> nil then
-         begin
-             var Mapper := TSQLColumnMapper<T>.Create(DbCtx.NamingStrategy);
-             var WhereGen := TSQLWhereGenerator.Create(DbCtx.Dialect, Mapper);
-             try
-                var WhereClause := WhereGen.Generate(FilterExpr);
-                // Wrap in subquery to apply filters
-                var FullSql := 'SELECT * FROM (' + FOptions.Sql + ') Source WHERE ' + WhereClause;
-                TypedList := DbCtx.Entities<T>.FromSql(FullSql, WhereGen.Params.Values.ToArray).ToList;
-             finally
-                WhereGen.Free;
-             end;
-         end
-         else
-         begin
-             TypedList := DbCtx.Entities<T>.FromSql(FOptions.Sql).ToList;
-         end;
+       var Qry: TFluentQuery<T>;
+       if not FOptions.Sql.IsEmpty then
+         Qry := DbCtx.Entities<T>.FromSql(FOptions.Sql)
+       else
+         Qry := DbCtx.Entities<T>.QueryAll;
 
-         // Convert IList<T> to IList<TObject>
-         Entities := TCollections.CreateList<TObject>;
-         for var Item in TypedList do
-           Entities.Add(TObject(Item));
-      end
-      else
-      begin
-         DbSet := DbCtx.Entities<T>;
-         Entities := DbSet.ListObjects(FilterExpr);
-      end;
-      
-      // Execute Query with Sorting and Pagination at DB Level if possible
-      // For now, let's keep it simple and filter/paginate in memory if ListObjects doesn't support them yet
-      
-      // TODO: Apply OrderList to Entities before pagination
-      // Note: In a real implementation, OrderList should be passed to the Repository/DbSet
-      
-      // Build JSON response with high-performance UTF8 writer
-      var Stream := TMemoryStream.Create;
-      try
-        var Writer := TUtf8JsonWriter.Create(Stream, False);
-        Writer.WriteStartArray;
-        i := 0;
-        for Entity in Entities do
-        begin
-          if (Offset > 0) and (i < Offset) then begin Inc(i); Continue; end;
-          if (Limit > 0) and (i >= Offset + Limit) then Break;
-          
-          Writer.WriteValue(TValue.From<T>(T(Entity)));
-          Inc(i);
-        end;
-        Writer.WriteEndArray;
-        
-        Stream.Position := 0;
-        Result := Results.Stream(Stream, 'application/json');
-      except
-        Stream.Free;
-        raise;
-      end;
-    finally
-      OrderList.Free;
-    end;
+       Qry := Qry.AsNoTracking;
+
+       if FilterExpr <> nil then
+         Qry := Qry.Where(FilterExpr);
+
+       for var OrderItem in OrderList do
+         Qry := Qry.OrderBy(OrderItem);
+
+       if Offset > 0 then Qry := Qry.Skip(Offset);
+       if Limit > 0 then Qry := Qry.Take(Limit);
+
+       var FinalItems := Qry.ToList;
+       try
+         // Build JSON response with high-performance UTF8 writer
+         var Stream := TMemoryStream.Create;
+         try
+           var Writer := TUtf8JsonWriter.Create(Stream, False);
+           Writer.CaseStyle := FOptions.NamingStrategy;
+           Writer.WriteStartArray;
+           for var Item in FinalItems do
+           begin
+             Writer.WriteValue(TValue.From<T>(Item));
+           end;
+           Writer.WriteEndArray;
+           
+           Stream.Position := 0;
+           Result := Results.Stream(Stream, 'application/json');
+         except
+           Stream.Free;
+           raise;
+         end;
+       finally
+         // Items will be freed automatically if the list returned by ToList owns them (AsNoTracking)
+       end;
+     finally
+       OrderList.Free;
+       if FilterExpr <> nil then
+         FilterExpr := nil; // IExpression is an interface, will be released
+     end;
   except
     on E: Exception do
-      Result := Results.StatusCode(500, Format('{"error":"%s"}', [EscapeJsonString(E.Message)]));
+    begin
+      SafeWriteLn(Format('[DataApi] Error in HandleGetList: [%s] %s', [E.ClassName, E.Message]));
+      Result := Results.StatusCode(500, Format('{"error":"[%s] %s"}', [E.ClassName, EscapeJsonString(E.Message)]));
+    end;
   end;
 end;
 

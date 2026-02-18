@@ -33,6 +33,20 @@ uses
 type
   TDextJsonNodeType = (jntNull, jntString, jntNumber, jntBoolean, jntObject, jntArray);
 
+  /// <summary>
+  ///   Defines the casing style for JSON property names.
+  /// </summary>
+  TCaseStyle = (
+    /// <summary>Keep names as they are in the record/class.</summary>
+    Unchanged, 
+    /// <summary>Convert to camelCase (e.g., myProperty).</summary>
+    CamelCase, 
+    /// <summary>Convert to PascalCase (e.g., MyProperty).</summary>
+    PascalCase, 
+    /// <summary>Convert to snake_case (e.g., my_property).</summary>
+    SnakeCase
+  );
+
   IDextJsonNode = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
     function GetNodeType: TDextJsonNodeType;

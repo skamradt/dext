@@ -105,20 +105,6 @@ type
   /// </summary>
   JsonBooleanAttribute = class(DextJsonAttribute);
 
-  /// <summary>
-  ///   Defines the casing style for JSON property names.
-  /// </summary>
-  TCaseStyle = (
-    /// <summary>Keep names as they are in the record/class.</summary>
-    Unchanged, 
-    /// <summary>Convert to camelCase (e.g., myProperty).</summary>
-    CamelCase, 
-    /// <summary>Convert to PascalCase (e.g., MyProperty).</summary>
-    PascalCase, 
-    /// <summary>Convert to snake_case (e.g., my_property).</summary>
-    SnakeCase
-  );
-  
   /// <summary>Deprecated alias for TCaseStyle.</summary>
   TDextCaseStyle = TCaseStyle deprecated 'Use TCaseStyle instead';
 

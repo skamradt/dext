@@ -49,6 +49,7 @@ type
     FName: string;
     FCategory: TCategoryDTO;
   public
+    destructor Destroy; override;
     property Id: Integer read FId write FId;
     property Name: string read FName write FName;
     [Nested]
@@ -70,6 +71,14 @@ type
 
 implementation
 
+{ TItemWithCategoryDTO }
+
+destructor TItemWithCategoryDTO.Destroy;
+begin
+  FCategory.Free;
+  inherited;
+end;
+
 { TDataApiTest }
 
 procedure TDataApiTest.Setup;
@@ -90,7 +99,6 @@ end;
 procedure TDataApiTest.TearDown;
 begin
   inherited;
-  FDb.Free;
 end;
 
 procedure TDataApiTest.SeedData;
@@ -161,9 +169,9 @@ begin
   Resp := FClient.Get(GetBaseUrl + '/api/test-items?name=Item 3');
   JsonArray := TDextJson.Provider.Parse(Resp.ContentAsString) as IDextJsonArray;
   AssertTrue(JsonArray.GetCount = 1, 'Should return 1 item', 'Returned ' + JsonArray.GetCount.ToString + ' items');
-
+{}
   // 4. Test pagination: _limit and _offset
-  Resp := FClient.Get(GetBaseUrl + '/api/test-items?_limit=2&_offset=1');
+  Resp := FClient.Get(GetBaseUrl + '/api/test-items?_limit=2&_offset=1&_sort=id');
   JsonArray := TDextJson.Provider.Parse(Resp.ContentAsString) as IDextJsonArray;
   AssertTrue(JsonArray.GetCount = 2, 'Should return 2 items due to limit', 'Returned ' + JsonArray.GetCount.ToString + ' items');
   AssertEqual('Item 2', JsonArray.GetObject(0).GetString('name'), 'First item should be Item 2 (offset 1)');
@@ -172,7 +180,7 @@ begin
   Resp := FClient.Get(GetBaseUrl + '/api/test-items?_orderby=Value desc&_limit=1');
   JsonArray := TDextJson.Provider.Parse(Resp.ContentAsString) as IDextJsonArray;
   AssertEqual('100', JsonArray.GetObject(0).GetInteger('value').ToString, 'Highest value should be 100');
-
+{}
   // 6. Test Multi-Mapping (Joins/Nested)
   Resp := FClient.Get(GetBaseUrl + '/api/composed-items?_limit=1');
   AssertEqual('200', Resp.StatusCode.ToString, 'Composed GET List');

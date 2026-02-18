@@ -92,6 +92,7 @@ type
     ///  Generates a unique signature for the query structure (excluding param values).
     /// </summary>
     function GetSignature: string;
+    function Clone: ISpecification<T>;
     
     property Expression: IExpression read GetExpression;
     

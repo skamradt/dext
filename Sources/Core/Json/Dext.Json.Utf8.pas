@@ -32,7 +32,8 @@ uses
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
-  Dext.Core.Span;
+  Dext.Core.Span,
+  Dext.Json.Types;
 
 type
   EJsonException = class(Exception);
@@ -127,6 +128,7 @@ type
   private
     FStream: TStream;
     FIndented: Boolean;
+    FCaseStyle: TCaseStyle;
     FNeedComma: array[0..63] of Boolean; // Max depth of 64
     FDepth: Integer;
     procedure WriteRaw(const S: string); inline;
@@ -135,6 +137,8 @@ type
     procedure CheckComma;
   public
     constructor Create(AStream: TStream; AIndented: Boolean = False);
+    
+    property CaseStyle: TCaseStyle read FCaseStyle write FCaseStyle;
     
     procedure WriteStartObject;
     procedure WriteEndObject;
@@ -558,6 +562,7 @@ constructor TUtf8JsonWriter.Create(AStream: TStream; AIndented: Boolean);
 begin
   FStream := AStream;
   FIndented := AIndented;
+  FCaseStyle := TCaseStyle.Unchanged;
   FDepth := 0;
   FillChar(FNeedComma, SizeOf(FNeedComma), 0);
 end;
@@ -701,7 +706,7 @@ begin
             begin
               if Prop.IsReadable and (Prop.Visibility in [mvPublic, mvPublished]) then
               begin
-                 WritePropertyName(Prop.Name);
+                 WritePropertyName(TJsonUtils.ApplyCaseStyle(Prop.Name, FCaseStyle));
                  WriteValue(Prop.GetValue(Obj));
               end;
             end;

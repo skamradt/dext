@@ -89,6 +89,7 @@ type
     function IsOnlyDeleted: Boolean;
     function GetLockMode: TLockMode;
     function GetSignature: string; virtual;
+    function Clone: ISpecification<T>; virtual;
   public
     constructor Create; overload; virtual;
     constructor Create(const AExpression: IExpression); overload; virtual;
@@ -373,7 +374,9 @@ begin
     
     // 7. Paging
     if FIsPagingEnabled then
-      SB.AppendFormat(':PAGE[%d,%d]', [FSkip, FTake]);
+      SB.Append(':P[').Append(FSkip).Append(',').Append(FTake).Append(']')
+    else
+      SB.Append(':P[OFF]');
       
     // 8. GroupBy
     if FGroupBy.Count > 0 then
@@ -383,9 +386,12 @@ begin
         SB.Append(FGroupBy[I]).Append(',');
       SB.Append(']');
     end;
-    
-    // 9. Tracking
-    if not FIsTracking then SB.Append(':NOTRACK');
+
+    // 9. Tracking & Filters
+    SB.Append(':TRK[').Append(Ord(FIsTracking)).Append(']');
+    SB.Append(':IGN[').Append(Ord(FIgnoreQueryFilters)).Append(']');
+    SB.Append(':DEL[').Append(Ord(FOnlyDeleted)).Append(']');
+    SB.Append(':LCK[').Append(Ord(FLockMode)).Append(']');
     
     Result := SB.ToString;
   finally
@@ -421,6 +427,26 @@ end;
 function TJoin.GetCondition: IExpression;
 begin
   Result := FCondition;
+end;
+
+function TSpecification<T>.Clone: ISpecification<T>;
+var
+  NewSpec: TSpecification<T>;
+begin
+  NewSpec := TSpecification<T>.Create(FExpression);
+  NewSpec.FIncludes.AddRange(FIncludes);
+  NewSpec.FSelectedColumns.AddRange(FSelectedColumns);
+  NewSpec.FOrderBy.AddRange(FOrderBy);
+  NewSpec.FJoins.AddRange(FJoins);
+  NewSpec.FGroupBy.AddRange(FGroupBy);
+  NewSpec.FSkip := FSkip;
+  NewSpec.FTake := FTake;
+  NewSpec.FIsPagingEnabled := FIsPagingEnabled;
+  NewSpec.FIsTracking := FIsTracking;
+  NewSpec.FIgnoreQueryFilters := FIgnoreQueryFilters;
+  NewSpec.FOnlyDeleted := FOnlyDeleted;
+  NewSpec.FLockMode := FLockMode;
+  Result := NewSpec;
 end;
 
 end.

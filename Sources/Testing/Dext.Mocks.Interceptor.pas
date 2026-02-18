@@ -44,6 +44,7 @@ type
     FExceptionMessage: string;
     FAction: TProc<IInvocation>;
     FArgumentMatchers: TArray<TPredicate<TValue>>;
+    FSetupArguments: TArray<TValue>;
   public
     constructor Create(const AName: string);
     function MatchesArguments(const Args: TArray<TValue>): Boolean;
@@ -173,11 +174,41 @@ begin
   FCurrentValueIndex := 0;
 end;
 
+function DextTValueEquals(const V1, V2: TValue): Boolean;
+begin
+  if V1.TypeInfo <> V2.TypeInfo then 
+  begin
+    if V1.IsEmpty and V2.IsEmpty then Exit(True);
+    if (V1.Kind in [tkChar, tkWChar, tkString, tkWString, tkLString, tkUString]) and
+       (V2.Kind in [tkChar, tkWChar, tkString, tkWString, tkLString, tkUString]) then
+      Exit(V1.AsString = V2.AsString);
+    Exit(False);
+  end;
+  if V1.IsEmpty then Exit(V2.IsEmpty);
+  if V2.IsEmpty then Exit(False);
+  case V1.Kind of
+    tkInteger, tkInt64, tkEnumeration: Result := V1.AsOrdinal = V2.AsOrdinal;
+    tkFloat: Result := V1.AsExtended = V2.AsExtended;
+    tkString, tkLString, tkWString, tkUString: Result := V1.AsString = V2.AsString;
+    tkVariant: Result := V1.AsVariant = V2.AsVariant;
+    tkClass: Result := V1.AsObject = V2.AsObject;
+    tkInterface: Result := V1.AsInterface = V2.AsInterface;
+    else Result := V1.ToString = V2.ToString;
+  end;
+end;
+
 function TMethodSetup.MatchesArguments(const Args: TArray<TValue>): Boolean;
 var
   I: Integer;
 begin
-  if Length(FArgumentMatchers) = 0 then Exit(True);
+  if Length(FArgumentMatchers) = 0 then
+  begin
+    if Length(Args) <> Length(FSetupArguments) then Exit(False);
+    for I := 0 to High(Args) do
+       if not DextTValueEquals(Args[I], FSetupArguments[I]) then Exit(False);
+    Exit(True);
+  end;
+  
   if Length(Args) <> Length(FArgumentMatchers) then Exit(False);
   for I := 0 to High(Args) do
     if Assigned(FArgumentMatchers[I]) and not FArgumentMatchers[I](Args[I]) then Exit(False);
@@ -236,6 +267,7 @@ begin
       if Assigned(FPendingSetup) then
       begin
         FPendingSetup.FName := MethodName;
+        FPendingSetup.FSetupArguments := Copy(Invocation.Arguments);
         Matchers := TMatcherFactory.GetMatchers;
         if Length(Matchers) > 0 then FPendingSetup.FArgumentMatchers := Matchers;
         FSetups.Add(FPendingSetup);

@@ -109,6 +109,7 @@ type
     FExecuteAny: TFunc<ISpecification<T>, Boolean>;
     FExecuteFirstOrDefault: TFunc<ISpecification<T>, T>;
     FConnection: IDbConnection; // Track connection for async safety
+    FNoTracking: Boolean;
     procedure AssignSpecTracking(const AEnable: Boolean);
   public
     /// <summary>
@@ -438,6 +439,7 @@ begin
   FIteratorFactory := AIteratorFactory;
   FSpecification := nil;
   FConnection := AConnection;
+  FNoTracking := False;
 end;
 
 constructor TFluentQuery<T>.Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification<T>; const AConnection: IDbConnection);
@@ -449,6 +451,7 @@ begin
   FExecuteFirstOrDefault := nil;
   FConnection := AConnection;
   FLastIncludePath := '';
+  FNoTracking := False;
 end;
 
 constructor TFluentQuery<T>.Create(
@@ -467,6 +470,7 @@ begin
   FExecuteFirstOrDefault := AExecFirstOrDefault;
   FConnection := AConnection;
   FLastIncludePath := '';
+  FNoTracking := False;
 end;
 
 function TFluentQuery<T>.GetEnumerator: TEnumerator<T>;
@@ -496,6 +500,7 @@ begin
   // Return self (record copy) with the modified state
   // Since Specification is a reference type (interface/object), the change persists
   Result := Self;
+  Result.FNoTracking := True;
 end;
 
 function TFluentQuery<T>.Include(const APath: string): TFluentQuery<T>;
@@ -752,8 +757,12 @@ var
   LSource: TFluentQuery<T>;
   LFactory: TFunc<TQueryIterator<T>>;
 begin
+  Result := Self; 
   if FSpecification <> nil then
+  begin
     FSpecification.Skip(ACount);
+    Exit;
+  end;
     
   LSource := Self;
   LFactory := function: TQueryIterator<T>
@@ -761,6 +770,7 @@ begin
       Result := TSkipIterator<T>.Create(LSource, ACount);
     end;
   Result := TFluentQuery<T>.Create(LFactory, FSpecification, FConnection);
+  Result.FNoTracking := FNoTracking;
 end;
 
 function TFluentQuery<T>.Take(const ACount: Integer): TFluentQuery<T>;
@@ -768,8 +778,12 @@ var
   LSource: TFluentQuery<T>;
   LFactory: TFunc<TQueryIterator<T>>;
 begin
+  Result := Self;
   if FSpecification <> nil then
+  begin
     FSpecification.Take(ACount);
+    Exit;
+  end;
 
   LSource := Self;
   LFactory := function: TQueryIterator<T>
@@ -777,6 +791,7 @@ begin
       Result := TTakeIterator<T>.Create(LSource, ACount);
     end;
   Result := TFluentQuery<T>.Create(LFactory, FSpecification, FConnection);
+  Result.FNoTracking := FNoTracking;
 end;
 
 function TFluentQuery<T>.OrderBy(const AOrderBy: IOrderBy): TFluentQuery<T>;
@@ -826,7 +841,7 @@ begin
   // Therefore, the List MUST own them to avoid memory leaks.
   
   // Checking implicit ownership requirement
-  OwnsObjects := False;
+  OwnsObjects := FNoTracking;
   if (FSpecification <> nil) and (not FSpecification.IsTrackingEnabled) then
     OwnsObjects := True;
 
