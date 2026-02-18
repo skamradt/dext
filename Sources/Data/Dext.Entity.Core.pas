@@ -286,6 +286,12 @@ type
     
     function Entry(const AEntity: TObject): IEntityEntry;
     
+    /// <summary>
+    ///  Tracks internal framework objects (like proxy managers) that need to be
+    ///  freed when the context is destroyed.
+    /// </summary>
+    procedure TrackProxy(const AProxy: TObject);
+    
     // Tenancy
     function GetTenantProvider: ITenantProvider;
     property TenantProvider: ITenantProvider read GetTenantProvider;

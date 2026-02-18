@@ -33,13 +33,7 @@
         <Projects Include="..\Apps\CLI\DextTool.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\Tests\Entity\TestLockingIntegration.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Tests\Entity\TestProceduresIntegration.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Tests\Web.FrameworkTests\Web.FrameworkTests.dproj">
+        <Projects Include="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -140,41 +134,23 @@
     <Target Name="DextTool:Make">
         <MSBuild Projects="..\Apps\CLI\DextTool.dproj" Targets="Make"/>
     </Target>
-    <Target Name="TestLockingIntegration">
-        <MSBuild Projects="..\Tests\Entity\TestLockingIntegration.dproj"/>
+    <Target Name="Orm_EntityDemo">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj"/>
     </Target>
-    <Target Name="TestLockingIntegration:Clean">
-        <MSBuild Projects="..\Tests\Entity\TestLockingIntegration.dproj" Targets="Clean"/>
+    <Target Name="Orm_EntityDemo:Clean">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="TestLockingIntegration:Make">
-        <MSBuild Projects="..\Tests\Entity\TestLockingIntegration.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="TestProceduresIntegration">
-        <MSBuild Projects="..\Tests\Entity\TestProceduresIntegration.dproj"/>
-    </Target>
-    <Target Name="TestProceduresIntegration:Clean">
-        <MSBuild Projects="..\Tests\Entity\TestProceduresIntegration.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="TestProceduresIntegration:Make">
-        <MSBuild Projects="..\Tests\Entity\TestProceduresIntegration.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Web_FrameworkTests">
-        <MSBuild Projects="..\Tests\Web.FrameworkTests\Web.FrameworkTests.dproj"/>
-    </Target>
-    <Target Name="Web_FrameworkTests:Clean">
-        <MSBuild Projects="..\Tests\Web.FrameworkTests\Web.FrameworkTests.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Web_FrameworkTests:Make">
-        <MSBuild Projects="..\Tests\Web.FrameworkTests\Web.FrameworkTests.dproj" Targets="Make"/>
+    <Target Name="Orm_EntityDemo:Make">
+        <MSBuild Projects="..\Examples\Orm.EntityDemo\Orm.EntityDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Testing;Dext_Web_Hubs;Dext_Hosting;Dext_UI;Dext_Net;DextSidecar;DextTool;TestLockingIntegration;TestProceduresIntegration;Web_FrameworkTests"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_Web_Core;Dext_Testing;Dext_Web_Hubs;Dext_Hosting;Dext_UI;Dext_Net;DextSidecar;DextTool;Orm_EntityDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;TestLockingIntegration:Clean;TestProceduresIntegration:Clean;Web_FrameworkTests:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;Dext_Web_Hubs:Clean;Dext_Hosting:Clean;Dext_UI:Clean;Dext_Net:Clean;DextSidecar:Clean;DextTool:Clean;Orm_EntityDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Testing:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;TestLockingIntegration:Make;TestProceduresIntegration:Make;Web_FrameworkTests:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_Web_Core:Make;Dext_Testing:Make;Dext_Web_Hubs:Make;Dext_Hosting:Make;Dext_UI:Make;Dext_Net:Make;DextSidecar:Make;DextTool:Make;Orm_EntityDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

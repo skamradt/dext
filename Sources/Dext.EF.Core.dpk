@@ -80,3 +80,4 @@ contains
   Dext.Entity.ProxyFactory in 'Data\Dext.Entity.ProxyFactory.pas';
 
 end.
+

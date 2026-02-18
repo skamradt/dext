@@ -55,8 +55,8 @@ type
     function GetAddress: TAddress;
     procedure SetAddress(const Value: TAddress);
   public
-    constructor Create; overload;
-    constructor Create(const AName: string; AAge: Integer); overload;
+    constructor Create; overload; virtual;
+    constructor Create(const AName: string; AAge: Integer); overload; virtual;
     destructor Destroy; override;
 
     [PK, AutoInc]
@@ -149,6 +149,7 @@ type
     FContentType: string;
     FContent: TBytes;
     FFileSize: Integer;
+    function GetContent: TBytes; virtual;
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
@@ -162,7 +163,7 @@ type
     /// <summary>
     ///   BLOB field - lazy loaded to avoid loading large data unnecessarily
     /// </summary>
-    property Content: TBytes read FContent write FContent;
+    property Content: TBytes read GetContent write FContent;
     
     [Column('file_size')]
     property FileSize: Integer read FFileSize write FFileSize;
@@ -182,7 +183,7 @@ type
     FWordCount: Integer;
     procedure SetBody(const Value: TStrings);
   public
-    constructor Create;
+    constructor Create; virtual;
     destructor Destroy; override;
 
     [PK, AutoInc]
@@ -197,13 +198,14 @@ type
     [MaxLength(500)]
     property Summary: string read FSummary write FSummary;
     
+    [Column('word_count')]
+    property WordCount: Integer read FWordCount write FWordCount;
+
+    function GetBody: TStrings; virtual;
     /// <summary>
     ///   Large text field - should be lazy loaded (LONGTEXT in MySQL)
     /// </summary>
-    property Body: TStrings read FBody write SetBody;
-    
-    [Column('word_count')]
-    property WordCount: Integer read FWordCount write FWordCount;
+    property Body: TStrings read GetBody write SetBody;
   end;
 
   /// <summary>
@@ -429,6 +431,18 @@ begin
     FBody.Free;
     FBody := Value;
   end;
+end;
+
+function TArticle.GetBody: TStrings;
+begin
+  Result := FBody;
+end;
+
+{ TDocument }
+
+function TDocument.GetContent: TBytes;
+begin
+  Result := FContent;
 end;
 
 { TTask - Soft Delete Test Entity }

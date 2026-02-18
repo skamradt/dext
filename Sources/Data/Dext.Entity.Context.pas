@@ -55,9 +55,9 @@ uses
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
-  
   // TypeSystem
   TPropertyInfo = Dext.Entity.TypeSystem.TPropertyInfo;
+  TDbContext = class;
 
   /// <summary>
   ///   Concrete implementation of DbContext.
@@ -91,8 +91,6 @@ type
     function GetShadowState(const AEntity: TObject): TEntityShadowState;
   end;
 
-  TDbContext = class;
-
   TPropertyEntry = class(TInterfacedObject, IPropertyEntry)
   private
     FContext: TDbContext;
@@ -106,8 +104,6 @@ type
     function GetIsModified: Boolean;
     procedure SetIsModified(const AValue: Boolean);
   end;
-
-
 
   TCollectionEntry = class(TInterfacedObject, ICollectionEntry)
   private
@@ -170,6 +166,7 @@ type
     FTenantConfigApplied: Boolean;
     FLastAppliedTenantId: string;
     FOnLog: TProc<string>;
+    FProxies: TObjectList<TObject>;
     procedure SetOnLog(const AValue: TProc<string>);
     function GetOnLog: TProc<string>;
     procedure ApplyTenantConfig(ACreateSchema: Boolean = False);
@@ -243,6 +240,7 @@ type
     function Entities<T: class>: IDbSet<T>;
     
     function Entry(const AEntity: TObject): IEntityEntry;
+    procedure TrackProxy(const AProxy: TObject);
     
     property OnLog: TProc<string> read GetOnLog write SetOnLog;
   end;
@@ -386,6 +384,7 @@ begin
   FChangeTracker := TChangeTracker.Create;
   FTenantProvider := ATenantProvider;
   FTenantConfigApplied := False;
+  FProxies := TObjectList<TObject>.Create(True);
   
   // Model Caching Logic
   System.TMonitor.Enter(FCriticalSection);
@@ -428,6 +427,7 @@ begin
   if FChangeTracker <> nil then
     FChangeTracker.Clear;
     
+  FProxies.Free;
   FCache.Free;
   if FOwnsModelBuilder then
     FModelBuilder.Free;
@@ -498,6 +498,12 @@ procedure TDbContext.OnModelCreating(Builder: TModelBuilder);
 begin
   // Default implementation does nothing.
   // Override this in your derived context to configure mappings.
+end;
+
+procedure TDbContext.TrackProxy(const AProxy: TObject);
+begin
+  if AProxy <> nil then
+    FProxies.Add(AProxy);
 end;
 
 procedure TDbContext.PreloadDbSets;

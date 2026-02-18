@@ -120,9 +120,6 @@
         <DCCReference Include="Dext.EF.Core.dcp"/>
         <DCCReference Include="Dext.Web.Core.dcp"/>
         <DCCReference Include="Testing\Dext.Assertions.pas"/>
-        <DCCReference Include="Testing\Dext.Interception.ClassProxy.pas"/>
-        <DCCReference Include="Testing\Dext.Interception.pas"/>
-        <DCCReference Include="Testing\Dext.Interception.Proxy.pas"/>
         <DCCReference Include="Testing\Dext.Mocks.Auto.pas"/>
         <DCCReference Include="Testing\Dext.Mocks.Interceptor.pas"/>
         <DCCReference Include="Testing\Dext.Mocks.Matching.pas"/>
@@ -135,6 +132,7 @@
         <DCCReference Include="Testing\Dext.Testing.History.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Report.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Runner.pas"/>
+        <DCCReference Include="Testing\Dext.Testing.Listeners.Telemetry.pas"/>
         <DCCReference Include="Testing\Dext.Testing.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

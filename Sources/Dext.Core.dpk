@@ -99,6 +99,9 @@ contains
   Dext.Logging.Async in 'Core\Dext.Logging.Async.pas',
   Dext.Logging.Sinks in 'Core\Dext.Logging.Sinks.pas',
   Dext.Logging.RingBuffer in 'Core\Dext.Logging.RingBuffer.pas',
+  Dext.Interception in 'Core\Interception\Dext.Interception.pas',
+  Dext.Interception.Proxy in 'Core\Interception\Dext.Interception.Proxy.pas',
+  Dext.Interception.ClassProxy in 'Core\Interception\Dext.Interception.ClassProxy.pas',
   Dext.Logging in 'Core\Dext.Logging.pas',
   Dext.Telemetry.Context in 'Core\Dext.Telemetry.Context.pas';
 

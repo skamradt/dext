@@ -421,18 +421,29 @@ begin
     begin
       PropMap := nil;
       
-      // Auto-detect Navigation properties (Classes/Interfaces)
-      // We do this BEFORE attribute discovery so attributes can override it if needed.
       if Prop.PropertyType.TypeKind in [tkClass, tkInterface] then
       begin
-        // Filter out standard persistable classes if any. 
-        // For now, if it's a class or interface, we assume it's NOT a plain column.
-        PropMap := GetOrAddProperty(Prop.Name);
-        PropMap.IsNavigation := True;
-        if Prop.PropertyType.TypeKind = tkInterface then
-          PropMap.Relationship := rtOneToMany // Likely IList<T>
+        // Filter out classes that have a registered converter (e.g. TStrings)
+        // These should be treated as columns, not navigation properties.
+        var LConverter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+        
+        if LConverter = nil then
+        begin
+          PropMap := GetOrAddProperty(Prop.Name);
+          PropMap.IsNavigation := True;
+          if Prop.PropertyType.TypeKind = tkInterface then
+            PropMap.Relationship := rtOneToMany // Likely IList<T>
+          else
+            PropMap.Relationship := rtManyToOne; // Likely an entity reference
+        end
         else
-          PropMap.Relationship := rtManyToOne; // Likely an entity reference
+        begin
+           // It's a convertible class (like TStrings). Treat as a normal column but enable default lazy load for large types.
+           PropMap := GetOrAddProperty(Prop.Name);
+           PropMap.IsNavigation := False;
+           PropMap.Relationship := rtNone;
+           PropMap.Converter := LConverter;
+        end;
       end;
 
       for Attr in Prop.GetAttributes do
@@ -560,6 +571,15 @@ begin
 
         if PropMap.Converter = nil then
           PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+
+        // Automatically mark large types (TStrings, TBytes) as Lazy if not explicitly configured otherwise
+        // unless they are part of the primary key or explicitly excluded.
+        if (PropMap.Converter <> nil) and not PropMap.IsPK and not PropMap.IsNavigation then
+        begin
+            var LTypeName := string(Prop.PropertyType.Handle.Name);
+            if (LTypeName = 'TStrings') or (LTypeName = 'TBytes') then
+              PropMap.IsLazy := True;
+        end;
       end;
     end;
   finally

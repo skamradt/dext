@@ -1197,6 +1197,7 @@ begin
       end;
 
       // Auto-detection for navigation properties (Relationships)
+      // Skip if it's a class/interface unless it has a converter (handled by PropMap being present)
       if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
         IsMapped := False;
 
@@ -1526,6 +1527,10 @@ begin
       
       if (ColName = Prop.Name) and (FNamingStrategy <> nil) then
          ColName := FNamingStrategy.GetColumnName(Prop);
+      
+      // Auto-detection for navigation properties (Relationships)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
       
       if not IsMapped then Continue;
       
@@ -1915,6 +1920,9 @@ begin
            ColName := FNamingStrategy.GetColumnName(Prop);
         
         if not IsMapped then Continue;
+        
+        // Skip lazy properties from default SELECT
+        if (PropMap <> nil) and PropMap.IsLazy then Continue;
         
         if not First then SB.Append(', ');
         First := False;

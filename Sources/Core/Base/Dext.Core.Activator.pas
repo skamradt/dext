@@ -58,7 +58,16 @@ type
 
     class function CreateInstance<T: class>(const AArgs: array of TValue): T; overload;
     class function CreateInstance<T: class>: T; overload;
+
+    /// <summary>
+    ///  Registers a default implementation class for a base class or interface.
+    /// </summary>
+    class procedure RegisterDefault(ABase: TClass; AImpl: TClass);
+    class function ResolveImplementation(AClass: TClass): TClass;
   private
+    class var FDefaultImplementations: TDictionary<TClass, TClass>;
+    class constructor Create;
+    class destructor Destroy;
     class function TryResolveService(AProvider: IServiceProvider; AParamType: TRttiType; out AResolvedService: TValue): Boolean;
     class function IsListType(AType: PTypeInfo): Boolean;
     class function GetListElementType(AType: PTypeInfo): PTypeInfo;
@@ -67,9 +76,33 @@ type
 implementation
 
 uses
+  System.Classes,
   Dext.Collections;
 
 { TActivator }
+
+class constructor TActivator.Create;
+begin
+  FDefaultImplementations := TDictionary<TClass, TClass>.Create;
+  // Default framework mappings
+  RegisterDefault(TStrings, TStringList);
+end;
+
+class destructor TActivator.Destroy;
+begin
+  FDefaultImplementations.Free;
+end;
+
+class procedure TActivator.RegisterDefault(ABase: TClass; AImpl: TClass);
+begin
+  FDefaultImplementations.AddOrSetValue(ABase, AImpl);
+end;
+
+class function TActivator.ResolveImplementation(AClass: TClass): TClass;
+begin
+  if (AClass = nil) or not FDefaultImplementations.TryGetValue(AClass, Result) then
+    Result := AClass;
+end;
 
 class function TActivator.TryResolveService(AProvider: IServiceProvider; AParamType: TRttiType; out AResolvedService: TValue): Boolean;
 var
@@ -118,13 +151,17 @@ var
   Args: TArray<TValue>;
   I: Integer;
   Matched: Boolean;
+  BestMethod: TRttiMethod;
+  BestArgs: TArray<TValue>;
+  TargetClass: TClass;
 begin
-
+  TargetClass := ResolveImplementation(AClass);
+  BestMethod := nil;
   Context := TRttiContext.Create;
   try
-    TypeObj := Context.GetType(AClass);
+    TypeObj := Context.GetType(TargetClass);
     if TypeObj = nil then
-      raise EArgumentException.CreateFmt('RTTI information not found for class %s', [AClass.ClassName]);
+      raise EArgumentException.CreateFmt('RTTI information not found for class %s', [TargetClass.ClassName]);
 
     for Method in TypeObj.GetMethods do
     begin
@@ -132,30 +169,24 @@ begin
       begin
         Params := Method.GetParameters;
         
-        // Hybrid Injection: Constructor must have AT LEAST as many params as provided
         if Length(Params) < Length(AArgs) then
-          Continue; // Not enough parameters
+          Continue; 
         
         Matched := True;
         SetLength(Args, Length(Params));
         
-        // Step 1: Match explicit parameters (first N)
         for I := 0 to High(AArgs) do
         begin
-          // Skip check if argument is empty/nil (TValue.Empty)
           if AArgs[I].IsEmpty then Continue;
 
-          // Check for type compatibility
           if AArgs[I].Kind <> Params[I].ParamType.TypeKind then
           begin
-            // Allow Interface <-> Interface
             if (AArgs[I].Kind = tkInterface) and (Params[I].ParamType.TypeKind = tkInterface) then
             begin
               Args[I] := AArgs[I];
               Continue;
             end;
             
-            // Allow Class <-> Class
             if (AArgs[I].Kind = tkClass) and (Params[I].ParamType.TypeKind = tkClass) then
             begin
               Args[I] := AArgs[I];
@@ -166,7 +197,6 @@ begin
             Break;
           end;
           
-          // For records and other exact types, check TypeInfo
           if (AArgs[I].Kind = tkRecord) and (AArgs[I].TypeInfo <> Params[I].ParamType.Handle) then
           begin
              Matched := False;
@@ -177,22 +207,30 @@ begin
         end;
 
         if not Matched then
-          Continue; // Type mismatch in explicit params
-        
-        // Step 2: If constructor has MORE parameters, try to resolve from DI
-        // (This is the Hybrid Injection part - only happens if we have a Provider)
-        // For now, if no provider is available, we can't resolve extra params
-        // This will be handled by the overload that accepts AProvider
+          Continue;
         
         if Length(Params) = Length(AArgs) then
         begin
-          // Exact match - use this constructor
-          Result := Method.Invoke(AClass, Args).AsObject;
-          Exit;
+          // If we find a constructor, we prefer the one from the most derived class
+          if BestMethod = nil then
+          begin
+            BestMethod := Method;
+            BestArgs := Args;
+          end
+          else if Method.Parent.Handle = TypeObj.Handle then
+          begin
+            // Current class constructor ALWAYS wins over inherited ones
+            BestMethod := Method;
+            BestArgs := Args;
+          end;
         end;
-        // If Length(Params) > Length(AArgs), we need DI to resolve remaining
-        // Fall through to try next constructor
       end;
+    end;
+
+    if BestMethod <> nil then
+    begin
+       Result := BestMethod.Invoke(AClass, BestArgs).AsObject;
+       Exit;
     end;
 
     raise EArgumentException.CreateFmt('No compatible constructor found for class %s', [AClass.ClassName]);
@@ -218,12 +256,14 @@ var
   BestArgs: TArray<TValue>;
   MaxParams: Integer;
   HasServiceConstructorAttr: Boolean;
+  TargetClass: TClass;
 begin
+  TargetClass := ResolveImplementation(AClass);
   Context := TRttiContext.Create;
   try
-    TypeObj := Context.GetType(AClass);
+    TypeObj := Context.GetType(TargetClass);
     if TypeObj = nil then
-      raise EArgumentException.CreateFmt('RTTI not found for %s', [AClass.ClassName]);
+      raise EArgumentException.CreateFmt('RTTI not found for %s', [TargetClass.ClassName]);
 
     BestMethod := nil;
     MaxParams := -1;
@@ -290,8 +330,10 @@ begin
 
         if Matched then
         begin
-          // Greedy selection: prefer constructor with MORE parameters
-          if Length(Params) > MaxParams then
+          // Greedy selection: prefer constructor with MORE parameters.
+          // If parameters are equal, prefer the one from the most derived class (Target class).
+          if (Length(Params) > MaxParams) or 
+             ((Length(Params) = MaxParams) and (Method.Parent.Handle = TypeObj.Handle)) then
           begin
             MaxParams := Length(Params);
             BestMethod := Method;
@@ -325,16 +367,18 @@ var
   I: Integer;
   Matched: Boolean;
   ResolvedService: TValue;
+  TargetClass: TClass;
 begin
+  TargetClass := ResolveImplementation(AClass);
   // If no args provided, delegate to Pure DI overload
   if Length(AArgs) = 0 then
-    Exit(CreateInstance(AProvider, AClass));
+    Exit(CreateInstance(AProvider, TargetClass));
 
   Context := TRttiContext.Create;
   try
-    TypeObj := Context.GetType(AClass);
+    TypeObj := Context.GetType(TargetClass);
     if TypeObj = nil then
-      raise EArgumentException.CreateFmt('RTTI not found for %s', [AClass.ClassName]);
+      raise EArgumentException.CreateFmt('RTTI not found for %s', [TargetClass.ClassName]);
 
     for Method in TypeObj.GetMethods do
     begin
