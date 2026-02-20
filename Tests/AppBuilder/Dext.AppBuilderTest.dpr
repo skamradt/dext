@@ -27,6 +27,7 @@ var
   Services: IServiceCollection;
   ServiceProvider: IServiceProvider;
 begin
+  SetConsoleCharSet;
   try
     Writeln('=== Testing ApplicationBuilder ===');
 

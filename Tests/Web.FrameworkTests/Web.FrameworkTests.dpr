@@ -33,7 +33,7 @@ begin
 end;
 
 begin
-  
+  SetConsoleCharSet;
   try
     WriteLn('🌐 Dext Web Framework Stability Tests');
     WriteLn('=====================================');

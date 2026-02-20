@@ -102,6 +102,7 @@ Zero-code REST endpoints a partir de entity classes.
 - [x] **JSON Body Parsing**: Deserialização automática do body para POST/PUT
 - [x] **Endpoint Configuration**: `ReadOnly`, `WriteOnly`, `AllowedMethods`
 - [x] **RegisterForDisposal**: Lifecycle management via `IApplicationBuilder.RegisterForDisposal`
+- [ ] **DataApi Query Builder**: Criar um builder tipado genérico para a criação de URLs e queries da DataAPI (resolvendo `_limit`, `_offset`, filtros compostos e `_orderby`) com segurança de tipos para uso em Testes e Clients.
 
 **Exemplo de Uso**:
 ```pascal

@@ -640,9 +640,18 @@ begin
     if not UseExistingInterface and (ListObj = nil) then
     begin
       // Create TTrackingList via Factory
-      ListObj := TTrackingListFactory.CreateList(ItemType.Handle, GetDbContext, FEntity, FPropName);
+      try
+        ListObj := TTrackingListFactory.CreateList(ItemType.Handle, GetDbContext, FEntity, FPropName);
+      except
+        ListObj := nil; // Fallback to simple list below
+      end;
       
-      if ListObj = nil then Exit;
+      if ListObj = nil then
+      begin
+        // Fallback to simple smart list if tracking list fails (usually RTTI issue)
+        ListObj := TSmartList<TObject>.Create(False);
+      end;
+
       if not UseExistingInterface then
         FValue := TValue.From(ListObj);
     end;

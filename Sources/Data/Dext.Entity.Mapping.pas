@@ -37,6 +37,7 @@ uses
   Data.DB,
   Dext.Entity.Attributes,
   Dext.Entity.TypeConverters,
+  Dext.Core.SmartTypes,
   Dext.Specifications.Interfaces;
 
 type
@@ -58,7 +59,8 @@ type
     function HasKey(const APropertyNames: array of string): IEntityTypeBuilder<T>; overload;
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
-    function Prop(const APropertyName: string): IPropertyBuilder<T>;
+    function Prop(const APropertyName: string): IPropertyBuilder<T>; overload;
+    function Prop(const AProp: IPropInfo): IPropertyBuilder<T>; overload;
     function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     
@@ -150,7 +152,9 @@ type
     IsCreatedAt: Boolean;
     IsUpdatedAt: Boolean;
     // Internal engine optimization
-    FieldOffset: Integer; 
+    FieldOffset: Integer;      // Offset of FInfo
+    FieldValueOffset: Integer; // Offset of FValue
+    PropertyType: PTypeInfo;   // Type of T in Prop<T>
     // Shadow Property support
     IsShadow: Boolean;
     // JSON Column Support
@@ -269,7 +273,8 @@ type
     function HasKey(const APropertyNames: array of string): IEntityTypeBuilder<T>; overload;
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
-    function Prop(const APropertyName: string): IPropertyBuilder<T>;
+    function Prop(const APropertyName: string): IPropertyBuilder<T>; overload;
+    function Prop(const AProp: IPropInfo): IPropertyBuilder<T>; overload;
     function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
@@ -413,7 +418,20 @@ begin
              FldName := FldName.Substring(1);
            
            PropMap := GetOrAddProperty(FldName);
-           PropMap.FieldOffset := Fld.Offset;
+           
+           PropMap.FieldOffset := -1;
+           PropMap.FieldValueOffset := -1;
+
+           for var InnerFld in Fld.FieldType.GetFields do
+           begin
+             if SameText(InnerFld.Name, 'FInfo') then
+               PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
+             else if SameText(InnerFld.Name, 'FValue') then
+             begin
+               PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
+               PropMap.PropertyType := InnerFld.FieldType.Handle;
+             end;
+           end;
         end;
     end;
 
@@ -635,6 +653,8 @@ begin
   IsCreatedAt := False;
   IsUpdatedAt := False;
   FieldOffset := -1; 
+  FieldValueOffset := -1;
+  PropertyType := nil;
   IsShadow := False;
   IsJsonColumn := False;
   UseJsonB := True; // Default for PostgreSQL
@@ -962,7 +982,10 @@ begin
   Result := TPropertyBuilder<T>.Create(FMap.GetOrAddProperty(APropertyName));
 end;
 
-
+function TEntityTypeBuilder<T>.Prop(const AProp: IPropInfo): IPropertyBuilder<T>;
+begin
+  Result := Prop(AProp.PropertyName);
+end;
 
 function TEntityTypeBuilder<T>.ShadowProperty(const APropName: string): IPropertyBuilder<T>;
 begin
@@ -974,8 +997,6 @@ begin
   FMap.GetOrAddProperty(APropertyName).IsIgnored := True;
   Result := Self;
 end;
-
-
 
 function TEntityTypeBuilder<T>.HasMany(const APropertyName: string): IRelationshipBuilder<T>;
 var

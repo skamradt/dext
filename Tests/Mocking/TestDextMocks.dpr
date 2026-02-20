@@ -69,8 +69,8 @@ begin
 
   CalculatorMock := Mock<ICalculator>.Create;
 
-  // Setup: Add should return 42 for any arguments (fluent syntax)
-  CalculatorMock.Setup.Returns(42).When.Add(0, 0);
+  // Setup: Add should return 42 for specific arguments
+  CalculatorMock.Setup.Returns(42).When.Add(10, 20);
 
   // Act
   var Result := CalculatorMock.Instance.Add(10, 20);

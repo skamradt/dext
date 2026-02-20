@@ -124,6 +124,7 @@ type
     class operator Implicit(const Value: Prop<T>): T;
     class operator Implicit(const Value: Prop<T>): BooleanExpression;
     class operator Implicit(const Value: Prop<T>): IExpression;
+    class operator Implicit(const Value: Prop<T>): IPropInfo;
 
     // Nullable<T> interop
     class operator Implicit(const Value: Prop<T>): Nullable<T>;
@@ -150,6 +151,8 @@ type
     function AsCurrency: Currency;
     function AsBoolean: Boolean;
     function AsDateTime: TDateTime;
+    function AsType<TResult>: TResult;
+    function ConvertTo<TResult>: TResult; inline;
     // Factory for calculated properties
     class function FromExpression(const AExpr: IExpression): Prop<T>; static;
 
@@ -272,7 +275,8 @@ function GetSmartValue(const AValue: TValue; const ATypeName: string): string;
 implementation
 
 uses
-  Dext.Specifications.OrderBy;
+  Dext.Specifications.OrderBy,
+  Dext.Core.ValueConverters;
 
 { TPropInfo }
 
@@ -526,6 +530,10 @@ begin
   Result := Value.GetExpression;
 end;
 
+class operator Prop<T>.Implicit(const Value: Prop<T>): IPropInfo;
+begin
+  Result := Value.FInfo;
+end;
 
 class operator Prop<T>.Implicit(const Value: Prop<T>): Nullable<T>;
 begin
@@ -554,58 +562,40 @@ end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): string;
 begin
-  if TypeInfo(T) = TypeInfo(string) then
-    Result := TValue.From<T>(Value.FValue).AsString
+  if Value.IsQueryMode then
+    Result := Value.Name
   else
-    Result := TValue.From<T>(Value.FValue).ToString;
+    Result := TValueConverter.Convert<string>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): Integer;
 begin
-  if TypeInfo(T) = TypeInfo(Integer) then
-    Result := TValue.From<T>(Value.FValue).AsInteger
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(Integer)).AsInteger;
+  Result := TValueConverter.Convert<Integer>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): Int64;
 begin
-  if TypeInfo(T) = TypeInfo(Int64) then
-    Result := TValue.From<T>(Value.FValue).AsInt64
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(Int64)).AsInt64;
+  Result := TValueConverter.Convert<Int64>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): Double;
 begin
-  if (TypeInfo(T) = TypeInfo(Double)) or (TypeInfo(T) = TypeInfo(TDateTime)) then
-    Result := TValue.From<T>(Value.FValue).AsExtended
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(Double)).AsExtended;
+  Result := TValueConverter.Convert<Double>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): Currency;
 begin
-  if TypeInfo(T) = TypeInfo(Currency) then
-    Result := TValue.From<T>(Value.FValue).AsCurrency
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(Currency)).AsCurrency;
+  Result := TValueConverter.Convert<Currency>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): Boolean;
 begin
-  if TypeInfo(T) = TypeInfo(Boolean) then
-    Result := TValue.From<T>(Value.FValue).AsBoolean
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(Boolean)).AsBoolean;
+  Result := TValueConverter.Convert<Boolean>(TValue.From<T>(Value.FValue));
 end;
 
 class operator Prop<T>.Explicit(const Value: Prop<T>): TDateTime;
 begin
-  if (TypeInfo(T) = TypeInfo(TDateTime)) or (TypeInfo(T) = TypeInfo(Double)) then
-    Result := TValue.From<T>(Value.FValue).AsType<TDateTime>
-  else
-    Result := TValue.From<T>(Value.FValue).Cast(TypeInfo(TDateTime)).AsType<TDateTime>;
+  Result := TValueConverter.Convert<TDateTime>(TValue.From<T>(Value.FValue));
 end;
 
 function Prop<T>.AsString: string;
@@ -641,6 +631,16 @@ end;
 function Prop<T>.AsDateTime: TDateTime;
 begin
   Result := TDateTime(Self);
+end;
+
+function Prop<T>.AsType<TResult>: TResult;
+begin
+  Result := TValueConverter.Convert<TResult>(TValue.From<T>(FValue));
+end;
+
+function Prop<T>.ConvertTo<TResult>: TResult;
+begin
+  Result := AsType<TResult>;
 end;
 
 class operator Prop<T>.Equal(const LHS: Prop<T>; const RHS: T): BooleanExpression;

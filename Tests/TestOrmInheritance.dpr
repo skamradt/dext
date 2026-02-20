@@ -10,7 +10,8 @@ uses
   Dext.Utils,
   Dext.Entity.Mapping,
   Dext.Specifications.SQL.Generator,
-  Dext.Entity.Dialects;
+  Dext.Entity.Dialects,
+  Dext.Entity.Core;
 
 type
   { Base Class }

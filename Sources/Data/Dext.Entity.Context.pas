@@ -563,10 +563,7 @@ end;
 
 function TDbContext.GetMapping(AType: PTypeInfo): TObject;
 begin
-  if FModelBuilder.HasMap(AType) then
-    Result := FModelBuilder.GetMap(AType)
-  else
-    Result := nil;
+  Result := FModelBuilder.GetMap(AType);
 end;
 
 procedure TDbContext.ApplyTenantConfig(ACreateSchema: Boolean);

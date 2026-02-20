@@ -98,6 +98,7 @@ type
     // Fluent Builders (public for TSpecificationBuilder)
     procedure Where(const AExpression: IExpression);
     procedure Include(const APath: string); virtual;
+    procedure RemoveInclude(const APath: string); virtual;
     procedure OrderBy(const AOrderBy: IOrderBy); virtual;
     procedure Select(const AColumn: string); virtual;
     procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression); virtual;
@@ -168,6 +169,11 @@ end;
 procedure TSpecification<T>.Include(const APath: string);
 begin
   FIncludes.Add(APath);
+end;
+
+procedure TSpecification<T>.RemoveInclude(const APath: string);
+begin
+  FIncludes.Remove(APath);
 end;
 
 procedure TSpecification<T>.AddInclude(const APath: string);

@@ -458,6 +458,7 @@ function Should(const Value: IInterface): ShouldInterface; overload;
 function Should(const Value: TGUID): ShouldGuid; overload;
 function Should(const Value: TUUID): ShouldUUID; overload;
 function Should(const Value: Variant): ShouldVariant; overload;
+function Should(const Value: TArray<string>): ShouldList<string>; overload;
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
 function Should: ShouldHelper; overload;
 
@@ -1995,6 +1996,11 @@ end;
 function Should(const Value: Variant): ShouldVariant;
 begin
   Result := ShouldVariant.Create(Value);
+end;
+
+function Should(const Value: TArray<string>): ShouldList<string>;
+begin
+  Result := ShouldList<string>.Create(Value);
 end;
 
 function ShouldDate(Value: TDateTime): ShouldDateTime;

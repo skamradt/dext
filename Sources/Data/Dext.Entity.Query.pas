@@ -32,10 +32,11 @@ unit Dext.Entity.Query;
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
   System.Generics.Collections,
   System.Generics.Defaults,
+  System.Rtti,
+  System.SysUtils,
   Dext.Collections,
   Dext.Specifications.Base,
   Dext.Specifications.Interfaces,
@@ -103,26 +104,33 @@ type
   TFluentQuery<T> = record
   private
     FIteratorFactory: TFunc<TQueryIterator<T>>;
-    FSpecification: ISpecification<T>; // Optional reference to the underlying spec
+    FSpecification: ISpecification; // Reference to the base specification
     FLastIncludePath: string; // Keeps track for ThenInclude
-    FExecuteCount: TFunc<ISpecification<T>, Integer>;
-    FExecuteAny: TFunc<ISpecification<T>, Boolean>;
-    FExecuteFirstOrDefault: TFunc<ISpecification<T>, T>;
+    FExecuteCount: TFunc<ISpecification, Integer>;
+    FExecuteAny: TFunc<ISpecification, Boolean>;
+    FExecuteFirstOrDefault: TFunc<ISpecification, T>;
     FConnection: IDbConnection; // Track connection for async safety
     FNoTracking: Boolean;
     procedure AssignSpecTracking(const AEnable: Boolean);
+    function GetSpec: ISpecification;
+    function GetConnection: IDbConnection;
+    class function CreatePropSelector<TResult>(const AProp: TRttiProperty): TFunc<T, TResult>; static;
+    class function CreatePropsSelector(const AProperties: TArray<string>): TFunc<T, T>; static;
+    class function CreateSelectFactory<TResult>(const AFactory: TFunc<TQueryIterator<T>>; const ASelector: TFunc<T, TResult>): TFunc<TQueryIterator<TResult>>; static;
   public
+    property Connection: IDbConnection read GetConnection;
+    property Specification: ISpecification read GetSpec;
     /// <summary>
     ///   Creates a new fluent query.
     /// </summary>
     constructor Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const AConnection: IDbConnection = nil); overload;
-    constructor Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification<T>; const AConnection: IDbConnection = nil); overload;
+    constructor Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification; const AConnection: IDbConnection = nil); overload;
     constructor Create(
       const AIteratorFactory: TFunc<TQueryIterator<T>>; 
-      const ASpec: ISpecification<T>;
-      const AExecCount: TFunc<ISpecification<T>, Integer>;
-      const AExecAny: TFunc<ISpecification<T>, Boolean>;
-      const AExecFirstOrDefault: TFunc<ISpecification<T>, T>;
+      const ASpec: ISpecification;
+      const AExecCount: TFunc<ISpecification, Integer>;
+      const AExecAny: TFunc<ISpecification, Boolean>;
+      const AExecFirstOrDefault: TFunc<ISpecification, T>;
       const AConnection: IDbConnection = nil
     ); overload;
     
@@ -160,6 +168,7 @@ type
     ///   Sorts the elements of a sequence in a specified order.
     /// </summary>
     function OrderBy(const AOrderBy: IOrderBy): TFluentQuery<T>; overload;
+    function OrderBy(const AOrders: array of IOrderBy): TFluentQuery<T>; overload;
     function OrderByDescending(const AOrderBy: IOrderBy): TFluentQuery<T>; overload;
     function OrderBy<TProp>(const AProp: Prop<TProp>): TFluentQuery<T>; overload;
     function OrderByDescending<TProp>(const AProp: Prop<TProp>): TFluentQuery<T>; overload;
@@ -190,19 +199,13 @@ type
     function Include(const AProp: TPropExpression): TFluentQuery<T>; overload; // Legacy TPropExpression
     function Include(const AProps: array of TPropExpression): TFluentQuery<T>; overload;
     
-    // New Typed Include/ThenInclude
-    function Include<TRelation: class>(const AProp: Prop<TRelation>): TFluentQuery<T>; overload;
-    function Include<TRelation: class>(const AProp: Prop<IList<TRelation>>): TFluentQuery<T>; overload;
-    // For ThenInclude we need a path tracking mechanism
-    function ThenInclude<TRelation: class>(const AProp: Prop<TRelation>): TFluentQuery<T>; overload;
-    function ThenInclude<TRelation: class>(const AProp: Prop<IList<TRelation>>): TFluentQuery<T>; overload;
+    function Include(const AProp: IPropInfo): TFluentQuery<T>; overload;
+    function ThenInclude(const AProp: IPropInfo): TFluentQuery<T>; overload;
 
     function IgnoreQueryFilters: TFluentQuery<T>;
     function OnlyDeleted: TFluentQuery<T>;
     function WithLock(const ALockMode: TLockMode): TFluentQuery<T>;
     
-    property Connection: IDbConnection read FConnection;
-
     // Set operations
     function Join<TInner, TKey, TResult>(
       const AInner: TFluentQuery<TInner>;
@@ -268,13 +271,12 @@ type
 
   TProjectingIterator<TSource, TResult> = class(TQueryIterator<TResult>)
   private
-    FSource: TFluentQuery<TSource>;
-    FSelector: TFunc<TSource, TResult>;
     FEnumerator: TEnumerator<TSource>;
+    FSelector: TFunc<TSource, TResult>;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const ASource: TFluentQuery<TSource>; const ASelector: TFunc<TSource, TResult>);
+    constructor Create(AEnumerator: TEnumerator<TSource>; const ASelector: TFunc<TSource, TResult>);
     destructor Destroy; override;
   end;
 
@@ -283,13 +285,12 @@ type
   /// </summary>
   TFilteringIterator<T> = class(TQueryIterator<T>)
   private
-    FSource: TFluentQuery<T>;
-    FPredicate: TPredicate<T>;
     FEnumerator: TEnumerator<T>;
+    FPredicate: TPredicate<T>;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const ASource: TFluentQuery<T>; const APredicate: TPredicate<T>);
+    constructor Create(AEnumerator: TEnumerator<T>; const APredicate: TPredicate<T>);
     destructor Destroy; override;
   end;
 
@@ -298,14 +299,13 @@ type
   /// </summary>
   TSkipIterator<T> = class(TQueryIterator<T>)
   private
-    FSource: TFluentQuery<T>;
-    FCount: Integer;
     FEnumerator: TEnumerator<T>;
+    FCount: Integer;
     FIndex: Integer;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const ASource: TFluentQuery<T>; const ACount: Integer);
+    constructor Create(AEnumerator: TEnumerator<T>; const ACount: Integer);
     destructor Destroy; override;
   end;
 
@@ -314,14 +314,13 @@ type
   /// </summary>
   TTakeIterator<T> = class(TQueryIterator<T>)
   private
-    FSource: TFluentQuery<T>;
-    FCount: Integer;
     FEnumerator: TEnumerator<T>;
+    FCount: Integer;
     FIndex: Integer;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const ASource: TFluentQuery<T>; const ACount: Integer);
+    constructor Create(AEnumerator: TEnumerator<T>; const ACount: Integer);
     destructor Destroy; override;
   end;
 
@@ -330,13 +329,12 @@ type
   /// </summary>
   TDistinctIterator<T> = class(TQueryIterator<T>)
   private
-    FSource: TFluentQuery<T>;
     FEnumerator: TEnumerator<T>;
     FSeen: TDictionary<T, Byte>;
   protected
     function MoveNextCore: Boolean; override;
   public
-    constructor Create(const ASource: TFluentQuery<T>);
+    constructor Create(AEnumerator: TEnumerator<T>);
     destructor Destroy; override;
   end;
 
@@ -348,7 +346,6 @@ type
 implementation
 
 uses
-  System.Rtti,
   System.TypInfo,
   System.Variants,
   Dext.Specifications.Evaluator,
@@ -442,7 +439,7 @@ begin
   FNoTracking := False;
 end;
 
-constructor TFluentQuery<T>.Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification<T>; const AConnection: IDbConnection);
+constructor TFluentQuery<T>.Create(const AIteratorFactory: TFunc<TQueryIterator<T>>; const ASpec: ISpecification; const AConnection: IDbConnection);
 begin
   FIteratorFactory := AIteratorFactory;
   FSpecification := ASpec;
@@ -456,10 +453,10 @@ end;
 
 constructor TFluentQuery<T>.Create(
   const AIteratorFactory: TFunc<TQueryIterator<T>>; 
-  const ASpec: ISpecification<T>;
-  const AExecCount: TFunc<ISpecification<T>, Integer>;
-  const AExecAny: TFunc<ISpecification<T>, Boolean>;
-  const AExecFirstOrDefault: TFunc<ISpecification<T>, T>;
+  const ASpec: ISpecification;
+  const AExecCount: TFunc<ISpecification, Integer>;
+  const AExecAny: TFunc<ISpecification, Boolean>;
+  const AExecFirstOrDefault: TFunc<ISpecification, T>;
   const AConnection: IDbConnection
 );
 begin
@@ -473,23 +470,31 @@ begin
   FNoTracking := False;
 end;
 
+procedure TFluentQuery<T>.AssignSpecTracking(const AEnable: Boolean);
+var
+  LSpec: ISpecification;
+begin
+  LSpec := GetSpec;
+  if LSpec <> nil then
+    LSpec.EnableTracking(AEnable);
+end;
+
+function TFluentQuery<T>.GetSpec: ISpecification;
+begin
+  Result := FSpecification;
+end;
+
+function TFluentQuery<T>.GetConnection: IDbConnection;
+begin
+  Result := FConnection;
+end;
+
 function TFluentQuery<T>.GetEnumerator: TEnumerator<T>;
 begin
   if Assigned(FIteratorFactory) then
      Result := FIteratorFactory()
   else
      Result := TEmptyIterator<T>.Create;
-end;
-
-procedure TFluentQuery<T>.AssignSpecTracking(const AEnable: Boolean);
-begin
-  if FSpecification <> nil then
-  begin
-    if AEnable then 
-      FSpecification.EnableTracking(True)
-    else 
-      FSpecification.AsNoTracking;
-  end;
 end;
 
 function TFluentQuery<T>.AsNoTracking: TFluentQuery<T>;
@@ -531,34 +536,31 @@ begin
   Result.FLastIncludePath := ''; // Reset last path because we included multiple
 end;
 
-function TFluentQuery<T>.Include<TRelation>(const AProp: Prop<TRelation>): TFluentQuery<T>;
+function TFluentQuery<T>.Include(const AProp: IPropInfo): TFluentQuery<T>;
+var
+  LName: string;
 begin
-  Result := Include(AProp.Name);
-  Result.FLastIncludePath := AProp.Name;
+  if AProp = nil then Exit(Self);
+  LName := AProp.GetPropertyName;
+  Result := Include(LName);
+  Result.FLastIncludePath := LName;
 end;
 
-function TFluentQuery<T>.Include<TRelation>(const AProp: Prop<IList<TRelation>>): TFluentQuery<T>;
+function TFluentQuery<T>.ThenInclude(const AProp: IPropInfo): TFluentQuery<T>;
+var
+  NewPath: string;
+  LSpec: ISpecification;
 begin
-  Result := Include(AProp.Name);
-  Result.FLastIncludePath := AProp.Name;
-end;
-
-function TFluentQuery<T>.ThenInclude<TRelation>(const AProp: Prop<TRelation>): TFluentQuery<T>;
-begin
+  if AProp = nil then Exit(Self);
   if FLastIncludePath = '' then
     raise Exception.Create('ThenInclude must be called after an Include or another ThenInclude');
     
-  var NewPath := FLastIncludePath + '.' + AProp.Name;
-  Result := Include(NewPath);
-  Result.FLastIncludePath := NewPath;
-end;
-
-function TFluentQuery<T>.ThenInclude<TRelation>(const AProp: Prop<IList<TRelation>>): TFluentQuery<T>;
-begin
-  if FLastIncludePath = '' then
-    raise Exception.Create('ThenInclude must be called after an Include or another ThenInclude');
+  NewPath := FLastIncludePath + '.' + AProp.GetPropertyName;
+  
+  LSpec := GetSpec;
+  if LSpec <> nil then
+    LSpec.RemoveInclude(FLastIncludePath);
     
-  var NewPath := FLastIncludePath + '.' + AProp.Name;
   Result := Include(NewPath);
   Result.FLastIncludePath := NewPath;
 end;
@@ -585,18 +587,19 @@ begin
 end;
 
 function TFluentQuery<T>.Select<TResult>(const ASelector: TFunc<T, TResult>): TFluentQuery<TResult>;
-var
-  LSource: TFluentQuery<T>;
 begin
-  LSource := Self;
   Result := TFluentQuery<TResult>.Create(
-    function: TQueryIterator<TResult>
-    begin
-      Result := TProjectingIterator<T, TResult>.Create(LSource, ASelector);
-    end,
-    nil, // Spec
+    CreateSelectFactory<TResult>(FIteratorFactory, ASelector),
     FConnection
   );
+end;
+
+class function TFluentQuery<T>.CreateSelectFactory<TResult>(const AFactory: TFunc<TQueryIterator<T>>; const ASelector: TFunc<T, TResult>): TFunc<TQueryIterator<TResult>>;
+begin
+  Result := TFunc<TQueryIterator<TResult>>(function: TQueryIterator<TResult>
+    begin
+      Result := TProjectingIterator<T, TResult>.Create(AFactory(), ASelector);
+    end);
 end;
 
 function TFluentQuery<T>.Select<TResult>(const AProp: Prop<TResult>): TFluentQuery<TResult>;
@@ -606,74 +609,64 @@ end;
 
 function TFluentQuery<T>.Select<TResult>(const AProp: TPropExpression): TFluentQuery<TResult>;
 var
-  LSource: TFluentQuery<T>;
-  Selector: TFunc<T, TResult>;
   LPropName: string;
+  LCtx: TRttiContext;
+  LTyp: TRttiType;
+  LProp: TRttiProperty;
 begin
-  LSource := Self;
   LPropName := AProp.Name;
-  Selector := TFunc<T, TResult>(function(const Item: T): TResult
+
+  if FSpecification <> nil then
+    FSpecification.Select(LPropName);
+
+  LCtx := TRttiContext.Create;
+  try
+    LTyp := LCtx.GetType(TypeInfo(T));
+    if LTyp = nil then raise Exception.Create('Could not get RTTI for type');
+    LProp := LTyp.GetProperty(LPropName);
+    if LProp = nil then
+      raise Exception.CreateFmt('Property "%s" not found on class', [LPropName]);
+  finally
+  end;
+
+  if LProp = nil then exit(Default(TFluentQuery<TResult>));
+
+  Result := Select<TResult>(CreatePropSelector<TResult>(LProp));
+end;
+
+class function TFluentQuery<T>.CreatePropSelector<TResult>(const AProp: TRttiProperty): TFunc<T, TResult>;
+begin
+  Result := TFunc<T, TResult>(function(const Item: T): TResult
+    var
+      Instance: TObject;
+    begin
+      Instance := TValue.From<T>(Item).AsObject;
+      if Instance = nil then 
+        Exit(Default(TResult));
+      Result := AProp.GetValue(Instance).AsType<TResult>;
+    end);
+end;
+
+class function TFluentQuery<T>.CreatePropsSelector(const AProperties: TArray<string>): TFunc<T, T>;
+begin
+  Result := TFunc<T, T>(function(const Source: T): T
     var
       Ctx: TRttiContext;
       Typ: TRttiType;
       Prop: TRttiProperty;
       Val: TValue;
-      Obj: TObject;
+      ObjSource, ObjDest: TObject;
+      PropName: string;
     begin
-      Obj := TValue.From<T>(Item).AsObject;
-      if Obj = nil then raise Exception.Create('Item is not an object');
-      
       Ctx := TRttiContext.Create;
-      Typ := Ctx.GetType(Obj.ClassType);
-      Prop := Typ.GetProperty(LPropName);
-      if Prop = nil then
-        raise Exception.CreateFmt('Property "%s" not found on class "%s"', [LPropName, Obj.ClassName]);
-      Val := Prop.GetValue(Obj);
-      Result := Val.AsType<TResult>;
-    end);
-
-  Result := TFluentQuery<TResult>.Create(
-    function: TQueryIterator<TResult>
-    begin
-      Result := TProjectingIterator<T, TResult>.Create(LSource, Selector);
-    end,
-    nil, // Spec
-    FConnection
-  );
-end;
-
-function TFluentQuery<T>.Select(const AProperties: array of string): TFluentQuery<T>;
-var
-  LProperties: TArray<string>;
-  LSource: TFluentQuery<T>;
-begin
-  SetLength(LProperties, Length(AProperties));
-  if Length(AProperties) > 0 then
-    Move(AProperties[0], LProperties[0], Length(AProperties) * SizeOf(string));
-
-  LSource := Self;
-  Result := TFluentQuery<T>.Create(
-    function: TQueryIterator<T>
-    begin
-      Result := TProjectingIterator<T, T>.Create(LSource, 
-        TFunc<T, T>(function(const Source: T): T
-        var
-          Ctx: TRttiContext;
-          Typ: TRttiType;
-          Prop: TRttiProperty;
-          Val: TValue;
-          ObjSource, ObjDest: TObject;
-          PropName: string;
+      try
+        Typ := Ctx.GetType(TypeInfo(T));
+        if Typ.TypeKind = tkClass then
         begin
-          Ctx := TRttiContext.Create;
-          Typ := Ctx.GetType(TypeInfo(T));
-          
-          if Typ.TypeKind = tkClass then
-          begin
-             ObjDest := Typ.AsInstance.MetaclassType.Create;
+           ObjDest := Typ.AsInstance.MetaclassType.Create;
+           try
              ObjSource := TValue.From<T>(Source).AsObject;
-             
-             for PropName in LProperties do
+             for PropName in AProperties do
              begin
                Prop := Typ.GetProperty(PropName);
                if Prop <> nil then
@@ -683,31 +676,52 @@ begin
                    Prop.SetValue(ObjDest, Val);
                end;
              end;
-             
-             Result := Default(T);
-             Move(ObjDest, Result, SizeOf(Pointer));
-          end
-          else
-            raise Exception.Create('Select with properties only supports classes');
-        end));
-    end,
-    nil, // Spec
-    FConnection
-  );
+             Result := TValue.From<TObject>(ObjDest).AsType<T>;
+           except
+             ObjDest.Free; // Free on error
+             raise;
+           end;
+        end
+        else
+          Result := Source; // Non-class types are returned as-is
+      finally
+        Ctx.Free;
+      end;
+    end);
+end;
+
+function TFluentQuery<T>.Select(const AProperties: array of string): TFluentQuery<T>;
+var
+  LProperties: TArray<string>;
+begin
+  if FSpecification <> nil then
+  begin
+    for var LProp in AProperties do
+      FSpecification.Select(LProp);
+  end;
+
+  SetLength(LProperties, Length(AProperties));
+  for var I := 0 to High(AProperties) do
+    LProperties[I] := AProperties[I];
+
+  Result := Select<T>(CreatePropsSelector(LProperties));
 end;
 
 function TFluentQuery<T>.WherePredicate(const APredicate: TPredicate<T>): TFluentQuery<T>;
 var
-  LSource: TFluentQuery<T>;
+  LFactory: TFunc<TQueryIterator<T>>;
+  LConn: IDbConnection;
+  LPredicate: TPredicate<T>;
 begin
-  LSource := Self;
+  LFactory := FIteratorFactory;
+  LConn := FConnection;
+  LPredicate := APredicate;
   Result := TFluentQuery<T>.Create(
-    function: TQueryIterator<T>
+    TFunc<TQueryIterator<T>>(function: TQueryIterator<T>
     begin
-      Result := TFilteringIterator<T>.Create(LSource, APredicate);
-    end,
-    nil, // Spec
-    FConnection
+      Result := TFilteringIterator<T>.Create(LFactory(), LPredicate);
+    end),
+    LConn
   );
 end;
 
@@ -754,8 +768,9 @@ end;
 
 function TFluentQuery<T>.Skip(const ACount: Integer): TFluentQuery<T>;
 var
-  LSource: TFluentQuery<T>;
   LFactory: TFunc<TQueryIterator<T>>;
+  LInnerFactory: TFunc<TQueryIterator<T>>;
+  LConn: IDbConnection;
 begin
   Result := Self; 
   if FSpecification <> nil then
@@ -764,19 +779,21 @@ begin
     Exit;
   end;
     
-  LSource := Self;
+  LInnerFactory := FIteratorFactory;
+  LConn := FConnection;
   LFactory := function: TQueryIterator<T>
     begin
-      Result := TSkipIterator<T>.Create(LSource, ACount);
+      Result := TSkipIterator<T>.Create(LInnerFactory(), ACount);
     end;
-  Result := TFluentQuery<T>.Create(LFactory, FSpecification, FConnection);
+  Result := TFluentQuery<T>.Create(LFactory, FSpecification, LConn);
   Result.FNoTracking := FNoTracking;
 end;
 
 function TFluentQuery<T>.Take(const ACount: Integer): TFluentQuery<T>;
 var
-  LSource: TFluentQuery<T>;
   LFactory: TFunc<TQueryIterator<T>>;
+  LInnerFactory: TFunc<TQueryIterator<T>>;
+  LConn: IDbConnection;
 begin
   Result := Self;
   if FSpecification <> nil then
@@ -785,12 +802,13 @@ begin
     Exit;
   end;
 
-  LSource := Self;
+  LInnerFactory := FIteratorFactory;
+  LConn := FConnection;
   LFactory := function: TQueryIterator<T>
     begin
-      Result := TTakeIterator<T>.Create(LSource, ACount);
+      Result := TTakeIterator<T>.Create(LInnerFactory(), ACount);
     end;
-  Result := TFluentQuery<T>.Create(LFactory, FSpecification, FConnection);
+  Result := TFluentQuery<T>.Create(LFactory, FSpecification, LConn);
   Result.FNoTracking := FNoTracking;
 end;
 
@@ -798,6 +816,18 @@ function TFluentQuery<T>.OrderBy(const AOrderBy: IOrderBy): TFluentQuery<T>;
 begin
   if FSpecification <> nil then
     FSpecification.OrderBy(AOrderBy);
+  Result := Self;
+end;
+
+function TFluentQuery<T>.OrderBy(const AOrders: array of IOrderBy): TFluentQuery<T>;
+var
+  LOrder: IOrderBy;
+begin
+  if FSpecification <> nil then
+  begin
+    for LOrder in AOrders do
+      FSpecification.OrderBy(LOrder);
+  end;
   Result := Self;
 end;
 
@@ -874,30 +904,43 @@ begin
 end;
 
 function TFluentQuery<T>.ToListAsync: TAsyncBuilder<IList<T>>;
+var
+  LSpec: ISpecification;
+  LConn: IDbConnection;
+  LFactory: TFunc<TQueryIterator<T>>;
+  LWork: TFunc<IList<T>>;
 begin
   if (FConnection <> nil) and not FConnection.Pooled then
     raise Exception.Create('ToListAsync requires a pooled connection to ensure thread safety.');
 
-  var LSelf := Self;
-  Result := Dext.Threading.Async.TAsyncTask.Run<IList<T>>(
-    function: IList<T>
+  LSpec := GetSpec;
+  LConn := FConnection;
+  LFactory := FIteratorFactory;
+
+  LWork := function: IList<T>
+    var
+      LTempQuery: TFluentQuery<T>;
     begin
-      Result := LSelf.ToList;
-    end
-  );
+      LTempQuery := TFluentQuery<T>.Create(LFactory, LSpec, LConn);
+      Result := LTempQuery.ToList;
+    end;
+    
+  Result := TAsyncTask.Run<IList<T>>(LWork);
 end;
 
 function TFluentQuery<T>.Distinct: TFluentQuery<T>;
 var
-  LSource: TFluentQuery<T>;
   LFactory: TFunc<TQueryIterator<T>>;
+  LInnerFactory: TFunc<TQueryIterator<T>>;
+  LConn: IDbConnection;
 begin
-  LSource := Self;
+  LInnerFactory := FIteratorFactory;
+  LConn := FConnection;
   LFactory := function: TQueryIterator<T>
     begin
-      Result := TDistinctIterator<T>.Create(LSource);
+      Result := TDistinctIterator<T>.Create(LInnerFactory());
     end;
-  Result := TFluentQuery<T>.Create(LFactory, FSpecification, FConnection);
+  Result := TFluentQuery<T>.Create(LFactory, FSpecification, LConn);
 end;
 
 function TFluentQuery<T>.Join<TInner, TKey, TResult>(
@@ -1411,13 +1454,12 @@ end;
 
 { TProjectingIterator<TSource, TResult> }
 
-constructor TProjectingIterator<TSource, TResult>.Create(const ASource: TFluentQuery<TSource>;
+constructor TProjectingIterator<TSource, TResult>.Create(AEnumerator: TEnumerator<TSource>;
   const ASelector: TFunc<TSource, TResult>);
 begin
   inherited Create;
-  FSource := ASource;
+  FEnumerator := AEnumerator;
   FSelector := ASelector;
-  FEnumerator := FSource.GetEnumerator;
 end;
 
 destructor TProjectingIterator<TSource, TResult>.Destroy;
@@ -1439,13 +1481,11 @@ end;
 
 { TFilteringIterator<T> }
 
-constructor TFilteringIterator<T>.Create(const ASource: TFluentQuery<T>;
-  const APredicate: TPredicate<T>);
+constructor TFilteringIterator<T>.Create(AEnumerator: TEnumerator<T>; const APredicate: TPredicate<T>);
 begin
   inherited Create;
-  FSource := ASource;
+  FEnumerator := AEnumerator;
   FPredicate := APredicate;
-  FEnumerator := FSource.GetEnumerator;
 end;
 
 destructor TFilteringIterator<T>.Destroy;
@@ -1469,12 +1509,11 @@ end;
 
 { TSkipIterator<T> }
 
-constructor TSkipIterator<T>.Create(const ASource: TFluentQuery<T>; const ACount: Integer);
+constructor TSkipIterator<T>.Create(AEnumerator: TEnumerator<T>; const ACount: Integer);
 begin
   inherited Create;
-  FSource := ASource;
+  FEnumerator := AEnumerator;
   FCount := ACount;
-  FEnumerator := FSource.GetEnumerator;
   FIndex := 0;
 end;
 
@@ -1504,12 +1543,11 @@ end;
 
 { TTakeIterator<T> }
 
-constructor TTakeIterator<T>.Create(const ASource: TFluentQuery<T>; const ACount: Integer);
+constructor TTakeIterator<T>.Create(AEnumerator: TEnumerator<T>; const ACount: Integer);
 begin
   inherited Create;
-  FSource := ASource;
+  FEnumerator := AEnumerator;
   FCount := ACount;
-  FEnumerator := FSource.GetEnumerator;
   FIndex := 0;
 end;
 
@@ -1535,11 +1573,10 @@ end;
 
 { TDistinctIterator<T> }
 
-constructor TDistinctIterator<T>.Create(const ASource: TFluentQuery<T>);
+constructor TDistinctIterator<T>.Create(AEnumerator: TEnumerator<T>);
 begin
   inherited Create;
-  FSource := ASource;
-  FEnumerator := FSource.GetEnumerator;
+  FEnumerator := AEnumerator;
   FSeen := TDictionary<T, Byte>.Create; 
 end;
 

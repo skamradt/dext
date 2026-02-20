@@ -159,9 +159,10 @@ type
     function GenerateGroupBy(const AGroupBy: TArray<string>): string;
     function QuoteColumnOrAlias(const AName: string): string;
     function TryUnwrapSmartValue(var AValue: TValue): Boolean;
-
+    procedure Initialize(ADialect: ISQLDialect; AMap: TEntityMap; ATenantProvider: ITenantProvider);
   public
-    constructor Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
+    constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil); overload;
+    constructor Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil); overload;
     destructor Destroy; override;
     
     property IgnoreQueryFilters: Boolean read FIgnoreQueryFilters write FIgnoreQueryFilters;
@@ -801,17 +802,29 @@ end;
 
 { TSQLGenerator<T> }
 
-constructor TSQLGenerator<T>.Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil);
+constructor TSQLGenerator<T>.Create(AContext: IDbContext; AMap: TEntityMap; ATenantProvider: ITenantProvider);
 begin
+  Initialize(AContext.Dialect, AMap, ATenantProvider);
   FContext := AContext;
   if FContext <> nil then
-    FDialect := FContext.Dialect
-  else
-    FDialect := nil;
-    
+    FNamingStrategy := FContext.NamingStrategy;
+end;
+
+constructor TSQLGenerator<T>.Create(ADialect: ISQLDialect; AMap: TEntityMap; ATenantProvider: ITenantProvider);
+begin
+  Initialize(ADialect, AMap, ATenantProvider);
+end;
+
+procedure TSQLGenerator<T>.Initialize(ADialect: ISQLDialect; AMap: TEntityMap; ATenantProvider: ITenantProvider);
+begin
+  FDialect := ADialect;
   FMap := AMap;
   if FMap = nil then
     FMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+    
+  if (FNamingStrategy = nil) then
+    FNamingStrategy := TDefaultNamingStrategy.Create;
+
   FTenantProvider := ATenantProvider;
   FParams := TDictionary<string, TValue>.Create;
   FParamTypes := TDictionary<string, TFieldType>.Create;
@@ -1165,7 +1178,6 @@ var
   SBCols, SBVals: TStringBuilder;
   IsAutoInc, IsMapped, First: Boolean;
   Val: TValue;
-  SQLCast: string;
   Converter: ITypeConverter;
   PropMap: TPropertyMap;
 begin
@@ -1260,23 +1272,24 @@ begin
 
       ParamName := GetNextParamName;
       
-      // Check if there's a type converter that needs SQL casting
+      // Look up converter: PropMap -> Registry -> [JsonColumn] auto-detect
+      Converter := nil;
       if PropMap <> nil then
-        Converter := PropMap.Converter
-      else
+        Converter := PropMap.Converter;
+        
+      if Converter = nil then
         Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
       
-      // If property is marked as JsonColumn but has no converter, use TJsonConverter
       if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then
         Converter := TJsonConverter.Create(PropMap.UseJsonB);
         
       if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
-      begin
-        SQLCast := Converter.GetSQLCast(':' + ParamName, GetDialectEnum);
-        SBVals.Append(SQLCast);
-      end
+        SBVals.Append(Converter.GetSQLCast(':' + ParamName, GetDialectEnum))
       else
         SBVals.Append(':').Append(ParamName);
+        
+      if Converter <> nil then
+        Val := Converter.ToDatabase(Val, GetDialectEnum);
         
       FParams.Add(ParamName, Val);
       
@@ -1314,14 +1327,21 @@ begin
           end;
           
           ParamName := GetNextParamName;
+          
           Converter := PropMap.Converter;
           if (Converter = nil) and PropMap.IsJsonColumn then
             Converter := TJsonConverter.Create(PropMap.UseJsonB);
+
+          if (Converter = nil) then
+             Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
             
           if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
             SBVals.Append(Converter.GetSQLCast(':' + ParamName, GetDialectEnum))
           else
             SBVals.Append(':').Append(ParamName);
+            
+          if Converter <> nil then
+            Val := Converter.ToDatabase(Val, GetDialectEnum);
             
           FParams.Add(ParamName, Val);
           if PropMap.DataType <> ftUnknown then
@@ -1614,6 +1634,26 @@ begin
         TryUnwrapSmartValue(Val);
 
         ParamName := GetNextParamName;
+        
+        // Look up converter: PropMap -> Registry -> [JsonColumn] auto-detect
+        Converter := nil;
+        if PropMap <> nil then
+          Converter := PropMap.Converter;
+          
+        if Converter = nil then
+          Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
+
+        if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then
+          Converter := TJsonConverter.Create(PropMap.UseJsonB);
+
+        if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
+           SQLCastStr := Converter.GetSQLCast(':' + ParamName, GetDialectEnum)
+        else
+           SQLCastStr := ':' + ParamName;
+
+        if Converter <> nil then
+          Val := Converter.ToDatabase(Val, GetDialectEnum);
+
         FParams.Add(ParamName, Val);
         
         // Store explicit type if defined via [DbType] attribute
@@ -1622,11 +1662,6 @@ begin
         
         if not FirstSet then SBSet.Append(', ');
         FirstSet := False;
-        
-        if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
-           SQLCastStr := Converter.GetSQLCast(':' + ParamName, GetDialectEnum)
-        else
-           SQLCastStr := ':' + ParamName;
 
         SBSet.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(SQLCastStr);
       end;
@@ -1657,14 +1692,21 @@ begin
           end;
           
           ParamNameNew := GetNextParamName;
+          
           Converter := PropMap.Converter;
           if (Converter = nil) and PropMap.IsJsonColumn then
             Converter := TJsonConverter.Create(PropMap.UseJsonB);
             
+          if Converter = nil then
+            Converter := TTypeConverterRegistry.Instance.GetConverter(Val.TypeInfo);
+
           if (GetDialectEnum <> ddSQLite) and (Converter <> nil) then
-            SBSet.Append(Format('%s = %s', [FDialect.QuoteIdentifier(ColName), Converter.GetSQLCast(':' + ParamNameNew, GetDialectEnum)]))
+            SBSet.Append(FDialect.QuoteIdentifier(ColName)).Append(' = ').Append(Converter.GetSQLCast(':' + ParamNameNew, GetDialectEnum))
           else
-            SBSet.Append(Format('%s = :%s', [FDialect.QuoteIdentifier(ColName), ParamNameNew]));
+            SBSet.Append(FDialect.QuoteIdentifier(ColName)).Append(' = :').Append(ParamNameNew);
+            
+          if Converter <> nil then
+            Val := Converter.ToDatabase(Val, GetDialectEnum);
             
           FParams.Add(ParamNameNew, Val);
           if PropMap.DataType <> ftUnknown then
@@ -2267,35 +2309,33 @@ begin
       if FMap <> nil then
         FMap.Properties.TryGetValue(Prop.Name, PropMap);
         
+      // Precedence: 
+      // 1. Explicit Fluent Mapping (PropMap.ColumnName)
+      // 2. Attributes ([Column], [ForeignKey])
+      // 3. Naming Strategy
+      
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
         if PropMap.IsPK then IsPK := True;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
+        if PropMap.IsRequired then IsRequired := True;
       end;
-      
+
       for Attr in Prop.GetAttributes do
       begin
         if Attr is NotMappedAttribute then IsMapped := False;
-        
-        if (PropMap = nil) or not PropMap.IsPK then
-          if Attr is PrimaryKeyAttribute then IsPK := True;
-          
-        if (PropMap = nil) or not PropMap.IsAutoInc then
-           if Attr is AutoIncAttribute then IsAutoInc := True;
-
-        if Attr is RequiredAttribute then
-          IsRequired := true;
+        if Attr is PrimaryKeyAttribute then IsPK := True;
+        if Attr is AutoIncAttribute then IsAutoInc := True;
+        if Attr is RequiredAttribute then IsRequired := True;
 
         if Attr is ForeignKeyAttribute then
         begin
-             // Use FK Attribute to define column name if not explicitly mapped
              FK := ForeignKeyAttribute(Attr);
-             if (PropMap = nil) or (PropMap.ColumnName = '') then
+             if ColName = Prop.Name then // Only if not already changed by PropMap or ColumnAttr
                 ColName := FK.ColumnName;
                 
-             // Add FK Constraint logic
              FKPropName := FK.ColumnName;
              FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
           
@@ -2317,12 +2357,14 @@ begin
              end;
         end;
         
-        if (PropMap = nil) or (PropMap.ColumnName = '') then
+        if Attr is ColumnAttribute then
         begin
-          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if (PropMap = nil) or (PropMap.ColumnName = '') then
+            ColName := ColumnAttribute(Attr).Name;
         end;
       end;
-      
+
+      // Final fallback to naming strategy
       if (ColName = Prop.Name) and (FNamingStrategy <> nil) then
          ColName := FNamingStrategy.GetColumnName(Prop);
       

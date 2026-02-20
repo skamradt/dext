@@ -1,14 +1,17 @@
-unit Dext.Entity.SmartTypes.Test;
+﻿unit Dext.Entity.SmartTypes.Test;
 
 interface
 
 uses
   System.SysUtils,
   Dext.Assertions,
+  Dext.Collections,
   Dext.Core.SmartTypes,
   Dext.Entity.Query,
   Dext.Specifications.Interfaces,
-  Dext.Specifications.Base;
+  Dext.Specifications.Base,
+  Dext.Specifications.Types,
+  Dext.Entity.Prototype;
 
 type
   TSmartTypesTest = class
@@ -18,6 +21,33 @@ type
     procedure TestAsMethods;
     procedure TestAssertions;
     procedure TestThenIncludePath;
+  end;
+
+  TTestOrderItem = class
+  private
+    FId: Prop<Integer>;
+    FProductID: Prop<Integer>;
+  public
+    property Id: Prop<Integer> read FId write FId;
+    property ProductID: Prop<Integer> read FProductID write FProductID;
+  end;
+
+  TTestOrder = class
+  private
+    FId: Prop<Integer>;
+    FItems: Prop<IList<TTestOrderItem>>;
+  public
+    property Id: Prop<Integer> read FId write FId;
+    property Items: Prop<IList<TTestOrderItem>> read FItems write FItems;
+  end;
+
+  TTestUser = class
+  private
+    FId: Prop<Integer>;
+    FOrder: Prop<TTestOrder>;
+  public
+    property Id: Prop<Integer> read FId write FId;
+    property Order: Prop<TTestOrder> read FOrder write FOrder;
   end;
 
 implementation
@@ -64,7 +94,7 @@ begin
   Age := 25;
   Should(Age.AsInteger).Be(25);
   Should(Age.AsString).Be('25');
-  Should(Age.As<Int64>).Be(25);
+  Should(Age.AsType<Int64>).Be(25);
   
   Price := 1500.50;
   Should(Price.AsDouble).Be(1500.50);
@@ -93,40 +123,32 @@ end;
 
 procedure TSmartTypesTest.TestThenIncludePath;
 var
-  Query: TFluentQuery<TObject>;
-  Spec: ISpecification<TObject>;
+  Query: TFluentQuery<TTestUser>;
+  Spec: ISpecification<TTestUser>;
+  U: TTestUser;
 begin
   Write('  - ThenInclude Paths: ');
   
-  Spec := TSpecification<TObject>.Create;
-  Query := TFluentQuery<TObject>.Create(nil, Spec);
+  U := Prototype.Entity<TTestUser>;
   
-  // Simulated property names as they would be in real entities
-  // In a real test we would use Prop<T> from a prototype, but here we can test the path building
+  Spec := TSpecification<TTestUser>.Create;
+  Query := TFluentQuery<TTestUser>.Create(nil, Spec);
+
+  // Now we can use the cleaner syntax with inference and recursion!
   Query
-    .Include('Orders')
-    .ThenInclude(Prop<TObject>.FromExpression(nil)) // Actually need a property name
+    .Include(U.Order)
+    .ThenInclude(U.Order.Value.Items)
     ;
     
-  // Let's test a more concrete path building
-  var PathQuery := Query.Include('User');
-  // Hack to set Internal LastPath for testing if needed, but better to use the public API
-  // In our implementation, Include('User') sets FLastIncludePath := 'User'
-  
-  // We can't easily inspect FLastIncludePath from here as it's private, 
-  // but we can verify it calls FSpecification.Include with the correct dotted string.
-  
-  // For a pure unit test, we check if the Spec received the combined string.
-  // We'll use a mock-like check on GetIncludes
-  
-  Spec := TSpecification<TObject>.Create;
-  Query := TFluentQuery<TObject>.Create(nil, Spec);
-  
-  Query.Include('Customer').Include('Orders');
-  Should(Spec.GetIncludes).Contain('Customer');
-  Should(Spec.GetIncludes).Contain('Orders');
+  Should(Length(Spec.GetIncludes)).Be(1);
+  // Correct path should be "Order.Items"
+  Should(Spec.GetIncludes[0]).Be('Order.Items');
   
   WriteLn('✅');
+
+  // Cleanup
+  Query := Default(TFluentQuery<TTestUser>);
+  Spec := nil;
 end;
 
 end.

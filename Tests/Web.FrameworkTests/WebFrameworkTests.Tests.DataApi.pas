@@ -110,8 +110,8 @@ begin
     Item.Value := i * 10;
     Item.Active := (i mod 2 = 0);
     FDb.Entities<TTestItem>.Add(Item);
+    FDb.SaveChanges; // Moved inside to guarantee strict chronological ID sequence
   end;
-  FDb.SaveChanges;
 end;
 
 procedure TDataApiTest.ConfigureHost(const Builder: IWebHostBuilder);
@@ -171,7 +171,8 @@ begin
   AssertTrue(JsonArray.GetCount = 1, 'Should return 1 item', 'Returned ' + JsonArray.GetCount.ToString + ' items');
 {}
   // 4. Test pagination: _limit and _offset
-  Resp := FClient.Get(GetBaseUrl + '/api/test-items?_limit=2&_offset=1&_sort=id');
+  Resp := FClient.Get(GetBaseUrl + '/api/test-items?_limit=2&_offset=1&_orderby=id');
+  var content := Resp.ContentAsString;
   JsonArray := TDextJson.Provider.Parse(Resp.ContentAsString) as IDextJsonArray;
   AssertTrue(JsonArray.GetCount = 2, 'Should return 2 items due to limit', 'Returned ' + JsonArray.GetCount.ToString + ' items');
   AssertEqual('Item 2', JsonArray.GetObject(0).GetString('name'), 'First item should be Item 2 (offset 1)');

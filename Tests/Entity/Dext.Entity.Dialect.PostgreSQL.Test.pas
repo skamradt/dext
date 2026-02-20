@@ -6,7 +6,8 @@ uses
   System.SysUtils,
   System.TypInfo,
   Dext.Entity.Dialects,
-  Dext.Entity.Attributes;
+  Dext.Entity.Attributes,
+  Dext.Specifications.Interfaces;
 
 type
   TPostgreSQLDialectTest = class
@@ -14,6 +15,7 @@ type
     FDialect: TPostgreSQLDialect;
     procedure AssertEqual(const Expected, Actual, Msg: string);
     procedure Log(const Msg: string);
+    procedure TestLockingSQL;
   public
     constructor Create;
     destructor Destroy; override;

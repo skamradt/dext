@@ -53,7 +53,7 @@ begin
     WriteLn('  OK - When returned');
 
     WriteLn('Step 6: Calling Add on setup interface...');
-    CalcForSetup.Add(0, 0);
+    CalcForSetup.Add(10, 20);
     WriteLn('  OK - Add called during setup');
 
     WriteLn('Step 7: Calling Add on Instance...');

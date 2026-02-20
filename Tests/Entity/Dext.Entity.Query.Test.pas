@@ -1,4 +1,4 @@
-unit Dext.Entity.Query.Test;
+﻿unit Dext.Entity.Query.Test;
 
 interface
 
@@ -66,13 +66,15 @@ begin
   Spec := TSpecification<TUser>.Create;
   Query := TFluentQuery<TUser>.Create(nil, Spec);
   
-  Query
-    .OrderBy(U.Name);
+  Query.OrderBy(U.Name.Asc);
     
-  Should(Spec.GetOrderBy.Count).Be(1);
+  Should(Length(Spec.GetOrderBy)).Be(1);
   Should(Spec.GetOrderBy[0].GetPropertyName).Be('Name');
   Should(Spec.GetOrderBy[0].GetAscending).BeTrue;
   WriteLn('✅');
+
+  Query := Default(TFluentQuery<TUser>);
+  Spec := nil;
 end;
 
 procedure TQueryParityTest.TestThenBy;
@@ -81,19 +83,21 @@ var
   Query: TFluentQuery<TUser>;
   Spec: ISpecification<TUser>;
 begin
-  Write('  - ThenBy / Multi OrderBy: ');
+  Write('  - Multi OrderBy (Array): ');
   U := Prototype.Entity<TUser>;
   Spec := TSpecification<TUser>.Create;
   Query := TFluentQuery<TUser>.Create(nil, Spec);
   
   Query
-    .OrderBy(U.Name)
-    .ThenByDescending(U.Id);
+    .OrderBy([U.Name.Asc, U.Id.Desc]);
     
-  Should(Spec.GetOrderBy.Count).Be(2);
+  Should(Length(Spec.GetOrderBy)).Be(2);
   Should(Spec.GetOrderBy[1].GetPropertyName).Be('Id');
   Should(Spec.GetOrderBy[1].GetAscending).BeFalse;
   WriteLn('✅');
+
+  Query := Default(TFluentQuery<TUser>);
+  Spec := nil;
 end;
 
 procedure TQueryParityTest.TestTypedSelect;
@@ -101,17 +105,23 @@ var
   U: TUser;
   Query: TFluentQuery<TUser>;
   Spec: ISpecification<TUser>;
+  Projection: TFluentQuery<string>;
 begin
   Write('  - Typed Select (Prop<T>): ');
   U := Prototype.Entity<TUser>;
   Spec := TSpecification<TUser>.Create;
   Query := TFluentQuery<TUser>.Create(nil, Spec);
   
-  Query.Select(U.Email);
+  Projection := Query.Select<string>(U.Email);
   
   Should(Length(Spec.GetSelectedColumns)).Be(1);
   Should(Spec.GetSelectedColumns[0]).Be('Email');
   WriteLn('✅');
+
+  // Explicitly clear to avoid leaks in ActRec
+  Projection := Default(TFluentQuery<string>);
+  Query := Default(TFluentQuery<TUser>);
+  Spec := nil;
 end;
 
 procedure TQueryParityTest.TestSkipTakeOptimization;
@@ -128,6 +138,9 @@ begin
   Should(Spec.GetSkip).Be(10);
   Should(Spec.GetTake).Be(20);
   WriteLn('✅');
+
+  Query := Default(TFluentQuery<TUser>);
+  Spec := nil;
 end;
 
 procedure TQueryParityTest.TestScalarOptimization;
@@ -141,20 +154,24 @@ begin
   Spec := TSpecification<TUser>.Create;
   
   Query := TFluentQuery<TUser>.Create(
-    nil, 
-    Spec,
-    function(S: ISpecification<TUser>): Integer
-    begin
-      CountCalled := True;
-      Result := 42;
-    end,
-    nil,
-    nil
-  );
+      nil, 
+      Spec,
+      function(S: ISpecification): Integer
+      begin
+        CountCalled := True;
+        Result := 42;
+      end,
+      nil,
+      nil,
+      nil
+    );
   
   Should(Query.Count).Be(42);
   Should(CountCalled).BeTrue;
   WriteLn('✅');
+
+  Query := Default(TFluentQuery<TUser>);
+  Spec := nil;
 end;
 
 end.

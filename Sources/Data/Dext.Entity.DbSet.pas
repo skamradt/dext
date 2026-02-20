@@ -729,7 +729,21 @@ begin
     begin
       try
         // Determine Converter: Check Property Map first (Attributes/Fluent), then Registry default
-        var Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+        var Converter: ITypeConverter := nil;
+        var PropMap: TPropertyMap := nil;
+        
+        if FMap <> nil then
+          FMap.Properties.TryGetValue(Prop.Name, PropMap);
+          
+        if PropMap <> nil then
+          Converter := PropMap.Converter;
+          
+        if Converter = nil then
+          Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+          
+        if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then
+          Converter := TJsonConverter.Create(PropMap.UseJsonB);
+          
         if Converter <> nil then
            Val := Converter.FromDatabase(Val, Prop.PropertyType.Handle);
         
@@ -2414,17 +2428,17 @@ begin
   Result := TFluentQuery<T>.Create(
     LFactory, 
     LSpec,
-    function(S: ISpecification<T>): Integer
+    function(S: ISpecification): Integer
     begin
-      Result := LSelf.Count(S);
+      Result := LSelf.Count(S as ISpecification<T>);
     end,
-    function(S: ISpecification<T>): Boolean
+    function(S: ISpecification): Boolean
     begin
-      Result := LSelf.Any(S);
+      Result := LSelf.Any(S as ISpecification<T>);
     end,
-    function(S: ISpecification<T>): T
+    function(S: ISpecification): T
     begin
-      Result := LSelf.FirstOrDefault(S);
+      Result := LSelf.FirstOrDefault(S as ISpecification<T>);
     end,
     FContext.Connection
   );
