@@ -42,6 +42,9 @@ type
 
 implementation
 
+uses
+  Dext.Logging.Global;
+
 { TMultiTenancyEndpoints }
 
 class procedure TMultiTenancyEndpoints.Map(const App: TDextAppBuilder);
@@ -109,7 +112,7 @@ begin
       Dto: TCreateProductDto;
     begin
       // Debug log to see what we are receiving
-      WriteLn(Format('[DEBUG] Product Request - TenantId: "%s", Name: "%s"', [Request.TenantId, Request.Name]));
+      Log.Debug('[DEBUG] Product Request - TenantId: "{TenantId}", Name: "{Name}"', [Request.TenantId, Request.Name]);
 
       if Request.TenantId = '' then
         Exit(Results.BadRequest('X-Tenant-Id header is required'));

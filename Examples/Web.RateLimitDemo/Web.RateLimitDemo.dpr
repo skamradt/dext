@@ -24,8 +24,8 @@ begin
     WriteLn('📦 Configuring Rate Limiting...');
     
     var Policy := TRateLimitPolicy.FixedWindow(10, 60)
-      .WithRejectionMessage('{"error":"Too many requests! Please slow down."}')
-      .WithRejectionStatusCode(429);
+      .RejectionMessage('{"error":"Too many requests! Please slow down."}')
+      .RejectionStatusCode(429);
       
     // Fluent middleware registration
     App.Builder.UseRateLimiting(Policy);

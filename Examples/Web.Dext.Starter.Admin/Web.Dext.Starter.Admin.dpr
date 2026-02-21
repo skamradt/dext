@@ -10,6 +10,7 @@ uses
   Dext,
   Dext.Web,
   Dext.Utils,
+  Dext.Logging.Global,
   AppStartup in 'AppStartup.pas',
   Auth.Endpoints in 'Features\Auth\Auth.Endpoints.pas',
   Dashboard.Endpoints in 'Features\Dashboard\Dashboard.Endpoints.pas',
@@ -50,13 +51,13 @@ begin
     // 5. Run DbSeeder (Sync via Startup Helper)
     TAppStartup.RunSeeder(App);
 
-    Writeln('[*] Dext Admin Starter running at http://localhost:8080');
+    Log.Info('[*] Dext Admin Starter running at http://localhost:8080');
     // Only pause if not running in automated mode
     App.Run(8080);
   except
     on E: Exception do
     begin
-      Writeln(E.ClassName, ': ', E.Message);
+      Log.Error('{ClassName}: {Message}', [E.ClassName, E.Message]);
       
       // Only pause if not running in automated mode
       ConsolePause;

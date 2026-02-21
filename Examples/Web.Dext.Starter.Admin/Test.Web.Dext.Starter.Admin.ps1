@@ -10,9 +10,7 @@ try {
     
     $encoding = $resp.Headers["Content-Encoding"]
     if ($encoding -match "gzip" -or $encoding -match "deflate") {
-        Write-Host "PASS: Response is compressed ($encoding)." -ForegroundC
-        
-        olor Green
+        Write-Host "PASS: Response is compressed ($encoding)." -ForegroundColor Green
     }
     else {
         Write-Host "FAIL: Response is NOT compressed. Headers:" -ForegroundColor Red

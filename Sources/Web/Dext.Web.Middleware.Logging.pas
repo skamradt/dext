@@ -50,19 +50,19 @@ begin
   // Format: Name {Args}
   Scope := Log.Logger.BeginScope('HTTP {Method} {Path} [{RequestId}]', [Method, Path, ReqId]);
   try
-    Log.Info('REQ: %s %s', [Method, Path]);
+    Log.Info('REQ: {Method} {Path}', [Method, Path]);
     
     try
       ANext(AContext);
     except
       on E: Exception do
       begin
-        Log.Error('Unhandled Exception processing %s %s: %s', [Method, Path, E.Message]);
+        Log.Error('Unhandled Exception processing {Method} {Path}: {Message}', [Method, Path, E.Message]);
         raise;
       end;
     end;
     
-    Log.Info('RES: %s %s -> %d', [Method, Path, AContext.Response.StatusCode]);
+    Log.Info('RES: {Method} {Path} -> {StatusCode}', [Method, Path, AContext.Response.StatusCode]);
     
   finally
     Scope.Dispose;

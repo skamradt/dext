@@ -8,6 +8,7 @@ uses
   Dext.Json,
   Dext.Web,
   Dext.Entity,
+  Dext.Logging.Global,
   // Features
   Auth.Service,
   Auth.Endpoints,
@@ -125,11 +126,11 @@ end;
 
 class procedure TAppStartup.RunSeeder(const App: IWebApplication);
 begin
-  Writeln('[*] Preparing to seed database...');
+  Log.Info('[*] Preparing to seed database...');
   var ServiceProvider := App.GetApplicationBuilder.GetServiceProvider;
   if ServiceProvider = nil then
   begin
-    Writeln('[ERROR] ServiceProvider is nil');
+    Log.Error('[ERROR] ServiceProvider is nil');
     Exit;
   end;
 
@@ -144,7 +145,7 @@ begin
     end;
   end
   else
-    Writeln('[WARN] TDbSeeder service not found.');
+    Log.Warn('[WARN] TDbSeeder service not found.');
 end;
 
 procedure TAppStartup.Configure(const App: IWebApplication);
@@ -162,6 +163,7 @@ begin
 
   // 2. Exception Handler (Global error handling)
   WebApp.UseExceptionHandler;
+  WebApp.UseMiddleware(TRequestLoggingMiddleware);
 
   // 2.1 Response Compression (gzip/deflate)
   WebApp.UseMiddleware(TCompressionMiddleware);
