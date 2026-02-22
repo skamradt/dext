@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -29,6 +29,7 @@ interface
 
 uses
   System.SysUtils,
+  Data.DB,
   System.TypInfo,
   System.Rtti,
   System.Generics.Collections,
@@ -49,19 +50,32 @@ uses
   Dext.Entity.TypeSystem,
   Dext.Specifications.Fluent,
   Dext.Specifications.Types,
-  Dext.Core.Reflection;
+  Dext.Core.Reflection,
+  Dext.Threading.Async;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
-  
   // TypeSystem
   TPropertyInfo = Dext.Entity.TypeSystem.TPropertyInfo;
+  TDbContext = class;
 
   /// <summary>
   ///   Concrete implementation of DbContext.
+  TEntityShadowState = class
+  private
+    FShadowValues: TDictionary<string, TValue>;
+    FModifiedProperties: TDictionary<string, Boolean>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    property ShadowValues: TDictionary<string, TValue> read FShadowValues;
+    property ModifiedProperties: TDictionary<string, Boolean> read FModifiedProperties;
+  end;
+
   TChangeTracker = class(TInterfacedObject, IChangeTracker)
   private
     FTrackedEntities: TDictionary<TObject, TEntityState>;
+    FShadowStates: TDictionary<TObject, TEntityShadowState>;
   public
     constructor Create;
     destructor Destroy; override;
@@ -72,9 +86,24 @@ type
     procedure AcceptAllChanges;
     procedure Clear;
     function GetTrackedEntities: TEnumerable<TPair<TObject, TEntityState>>;
+    
+    // Shadow Property Methods
+    function GetShadowState(const AEntity: TObject): TEntityShadowState;
   end;
 
-  TDbContext = class;
+  TPropertyEntry = class(TInterfacedObject, IPropertyEntry)
+  private
+    FContext: TDbContext;
+    FEntity: TObject;
+    FPropName: string;
+    FIsShadow: Boolean;
+  public
+    constructor Create(const AContext: TDbContext; const AEntity: TObject; const APropName: string);
+    function GetCurrentValue: TValue;
+    procedure SetCurrentValue(const AValue: TValue);
+    function GetIsModified: Boolean;
+    procedure SetIsModified(const AValue: Boolean);
+  end;
 
   TCollectionEntry = class(TInterfacedObject, ICollectionEntry)
   private
@@ -104,6 +133,7 @@ type
     constructor Create(const AContext: TDbContext; const AEntity: TObject);
     function Collection(const APropName: string): ICollectionEntry;
     function Reference(const APropName: string): IReferenceEntry;
+    function Member(const APropName: string): IPropertyEntry;
   end;
 
 
@@ -136,6 +166,7 @@ type
     FTenantConfigApplied: Boolean;
     FLastAppliedTenantId: string;
     FOnLog: TProc<string>;
+    FProxies: TObjectList<TObject>;
     procedure SetOnLog(const AValue: TProc<string>);
     function GetOnLog: TProc<string>;
     procedure ApplyTenantConfig(ACreateSchema: Boolean = False);
@@ -194,9 +225,11 @@ type
     procedure ExecuteSchemaSetup;
     
     function SaveChanges: Integer;
+    function SaveChangesAsync: TAsyncBuilder<Integer>;
     procedure Clear;
     procedure DetachAll;
     procedure Detach(const AEntity: TObject);
+    procedure ExecuteProcedure(const ADto: TObject);
     function ChangeTracker: IChangeTracker;
     
     function GetMapping(AType: PTypeInfo): TObject;
@@ -207,6 +240,7 @@ type
     function Entities<T: class>: IDbSet<T>;
     
     function Entry(const AEntity: TObject): IEntityEntry;
+    procedure TrackProxy(const AProxy: TObject);
     
     property OnLog: TProc<string> read GetOnLog write SetOnLog;
   end;
@@ -215,6 +249,7 @@ implementation
 
 uses
   Dext.Utils,
+  Dext.Validation,
   Dext.Entity.Validator;
 
 { Helper Functions }
@@ -349,6 +384,7 @@ begin
   FChangeTracker := TChangeTracker.Create;
   FTenantProvider := ATenantProvider;
   FTenantConfigApplied := False;
+  FProxies := TObjectList<TObject>.Create(True);
   
   // Model Caching Logic
   System.TMonitor.Enter(FCriticalSection);
@@ -391,6 +427,7 @@ begin
   if FChangeTracker <> nil then
     FChangeTracker.Clear;
     
+  FProxies.Free;
   FCache.Free;
   if FOwnsModelBuilder then
     FModelBuilder.Free;
@@ -463,6 +500,12 @@ begin
   // Override this in your derived context to configure mappings.
 end;
 
+procedure TDbContext.TrackProxy(const AProxy: TObject);
+begin
+  if AProxy <> nil then
+    FProxies.Add(AProxy);
+end;
+
 procedure TDbContext.PreloadDbSets;
 var
   ctx : TRttiContext;
@@ -520,10 +563,7 @@ end;
 
 function TDbContext.GetMapping(AType: PTypeInfo): TObject;
 begin
-  if FModelBuilder.HasMap(AType) then
-    Result := FModelBuilder.GetMap(AType)
-  else
-    Result := nil;
+  Result := FModelBuilder.GetMap(AType);
 end;
 
 procedure TDbContext.ApplyTenantConfig(ACreateSchema: Boolean);
@@ -695,7 +735,7 @@ begin
   ApplyTenantConfig(True);
   Nodes := TObjectList<TEntityNode>.Create;
   Created := TList<PTypeInfo>.Create;
-  if fCache.count = 0 then
+  if FCache.Count = 0 then
     PreloadDBSets;
   Ctx := TRttiContext.Create;
   try
@@ -814,9 +854,9 @@ begin
               except
                  on E: Exception do
                  begin
-                   // Always log failed SQL if we have a logger
                    if Assigned(FOnLog) then
                      FOnLog('FAILED SQL: ' + SQL);
+                   raise; // Propagate the error so the developer knows why it failed
                  end;
               end;
             end;
@@ -996,6 +1036,19 @@ begin
   end;
 end;
 
+function TDbContext.SaveChangesAsync: TAsyncBuilder<Integer>;
+begin
+  if (FConnection <> nil) and not FConnection.Pooled then
+    raise Exception.Create('SaveChangesAsync requires a pooled connection to ensure thread safety.');
+
+  Result := TAsyncTask.Run<Integer>(
+    function: Integer
+    begin
+      Result := SaveChanges;
+    end
+  );
+end;
+
 procedure TDbContext.Clear;
 var
   SetIntf: IInterface;
@@ -1037,6 +1090,75 @@ begin
   DataSet(AEntity.ClassInfo).Detach(AEntity);
 end;
 
+procedure TDbContext.ExecuteProcedure(const ADto: TObject);
+var
+  Ctx: TRttiContext;
+  Typ: TRttiType;
+  ProcAttr: StoredProcedureAttribute;
+  ProcName: string;
+  Prop: TRttiProperty;
+  ParamAttr: DbParamAttribute;
+  Cmd: IDbCommand;
+  ParamNames: TList<string>;
+  PropList: TList<TRttiProperty>;
+  i: Integer;
+begin
+  Ctx := TRttiContext.Create;
+  ParamNames := TList<string>.Create;
+  PropList := TList<TRttiProperty>.Create;
+  try
+    Typ := Ctx.GetType(ADto.ClassType);
+    ProcAttr := Typ.GetAttribute<StoredProcedureAttribute>;
+    if ProcAttr <> nil then
+      ProcName := ProcAttr.Name
+    else
+      ProcName := ADto.ClassName;
+
+    for Prop in Typ.GetProperties do
+    begin
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      if ParamAttr <> nil then
+      begin
+        if ParamAttr.Name <> '' then
+          ParamNames.Add(ParamAttr.Name)
+        else
+          ParamNames.Add(Prop.Name);
+          
+        PropList.Add(Prop);
+      end;
+    end;
+
+    Cmd := FConnection.CreateCommand(FDialect.GenerateProcedureCallSQL(ProcName, ParamNames.ToArray));
+    for i := 0 to PropList.Count - 1 do
+    begin
+      Prop := PropList[i];
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      var ParamName := ParamNames[i];
+      
+      Cmd.AddParam(ParamName, Prop.GetValue(Pointer(ADto)));
+      if ParamAttr.ParamType <> ptInput then
+        Cmd.SetParamType(ParamName, ParamAttr.ParamType);
+    end;
+
+    Cmd.Execute;
+
+    // Map back output parameters
+    for i := 0 to PropList.Count - 1 do
+    begin
+      Prop := PropList[i];
+      ParamAttr := Prop.GetAttribute<DbParamAttribute>;
+      if ParamAttr.ParamType in [ptOutput, ptInputOutput, ptResult] then
+      begin
+        Prop.SetValue(Pointer(ADto), Cmd.GetParamValue(ParamNames[i]));
+      end;
+    end;
+  finally
+    ParamNames.Free;
+    PropList.Free;
+    Ctx.Free;
+  end;
+end;
+
 function TDbContext.ChangeTracker: IChangeTracker;
 begin
   Result := FChangeTracker;
@@ -1047,42 +1169,47 @@ begin
   Result := TEntityEntry.Create(Self, AEntity);
 end;
 
+{ TEntityShadowState }
+
+constructor TEntityShadowState.Create;
+begin
+  FShadowValues := TDictionary<string, TValue>.Create;
+  FModifiedProperties := TDictionary<string, Boolean>.Create;
+end;
+
+destructor TEntityShadowState.Destroy;
+begin
+  FShadowValues.Free;
+  FModifiedProperties.Free;
+  inherited;
+end;
+
 { TChangeTracker }
 
 constructor TChangeTracker.Create;
 begin
   inherited Create;
-  // Use a custom comparer that treats objects as pointers.
-  // This avoids calling virtual methods (GetHashCode/Equals) on freed objects,
-  // which can happen if an object is deleted (and freed by IdentityMap) before AcceptAllChanges.
-  FTrackedEntities := TDictionary<TObject, TEntityState>.Create(
-    TEqualityComparer<TObject>.Construct(
-      function(const Left, Right: TObject): Boolean
-      begin
-        Result := Pointer(Left) = Pointer(Right);
-      end,
-      function(const Value: TObject): Integer
-      begin
-        Result := Integer(Pointer(Value));
-      end
-    )
-  );
+  FTrackedEntities := TDictionary<TObject, TEntityState>.Create;
+  FShadowStates := TObjectDictionary<TObject, TEntityShadowState>.Create([doOwnsValues]);
 end;
 
 destructor TChangeTracker.Destroy;
 begin
   FTrackedEntities.Free;
+  FShadowStates.Free;
   inherited;
 end;
 
 procedure TChangeTracker.Track(const AEntity: TObject; AState: TEntityState);
 begin
+  if AEntity = nil then Exit;
   FTrackedEntities.AddOrSetValue(AEntity, AState);
 end;
 
 procedure TChangeTracker.Remove(const AEntity: TObject);
 begin
   FTrackedEntities.Remove(AEntity);
+  FShadowStates.Remove(AEntity);
 end;
 
 function TChangeTracker.GetState(const AEntity: TObject): TEntityState;
@@ -1093,46 +1220,138 @@ end;
 
 function TChangeTracker.HasChanges: Boolean;
 var
-  State: TEntityState;
+  Pair: TPair<TObject, TEntityState>;
 begin
   Result := False;
-  for State in FTrackedEntities.Values do
+  for Pair in FTrackedEntities do
   begin
-    if State in [esAdded, esModified, esDeleted] then
+    if Pair.Value in [esAdded, esModified, esDeleted] then
       Exit(True);
   end;
 end;
 
 procedure TChangeTracker.AcceptAllChanges;
-var
-  Keys: TArray<TObject>;
-  Entity: TObject;
-  State: TEntityState;
 begin
-  // Remove Deleted entities
-  // Set Added/Modified to Unchanged
-  
-  // Cannot modify dictionary while iterating
-  Keys := FTrackedEntities.Keys.ToArray;
-  
-  for Entity in Keys do
+  for var Key in FTrackedEntities.Keys.ToArray do
   begin
-    State := FTrackedEntities[Entity];
-    if State = esDeleted then
-      FTrackedEntities.Remove(Entity)
-    else if State in [esAdded, esModified] then
-      FTrackedEntities[Entity] := esUnchanged;
+    if FTrackedEntities[Key] = esDeleted then
+      FTrackedEntities.Remove(Key)
+    else
+      FTrackedEntities[Key] := esUnchanged;
   end;
+    
+  for var State in FShadowStates.Values do
+    State.ModifiedProperties.Clear;
 end;
 
 procedure TChangeTracker.Clear;
 begin
   FTrackedEntities.Clear;
+  FShadowStates.Clear;
 end;
 
 function TChangeTracker.GetTrackedEntities: TEnumerable<TPair<TObject, TEntityState>>;
 begin
   Result := FTrackedEntities;
+end;
+
+function TChangeTracker.GetShadowState(const AEntity: TObject): TEntityShadowState;
+begin
+  if not FShadowStates.TryGetValue(AEntity, Result) then
+  begin
+    Result := TEntityShadowState.Create;
+    FShadowStates.Add(AEntity, Result);
+  end;
+end;
+
+{ TPropertyEntry }
+
+constructor TPropertyEntry.Create(const AContext: TDbContext; const AEntity: TObject;
+  const APropName: string);
+begin
+  inherited Create;
+  FContext := AContext;
+  FEntity := AEntity;
+  FPropName := APropName;
+  
+  var Map := FContext.ModelBuilder.GetMap(FEntity.ClassInfo);
+  var PropMap: TPropertyMap;
+  if (Map <> nil) and Map.Properties.TryGetValue(FPropName, PropMap) then
+    FIsShadow := PropMap.IsShadow
+  else
+    FIsShadow := False;
+end;
+
+function TPropertyEntry.GetCurrentValue: TValue;
+begin
+  if FIsShadow then
+  begin
+    var Tracker := TChangeTracker(FContext.ChangeTracker);
+    var State := Tracker.GetShadowState(FEntity);
+    if not State.ShadowValues.TryGetValue(FPropName, Result) then
+      Result := TValue.Empty;
+  end
+  else
+  begin
+    var Ctx := TRttiContext.Create;
+    try
+      var Typ := Ctx.GetType(FEntity.ClassType);
+      var Prop := Typ.GetProperty(FPropName);
+      if Prop <> nil then
+        Result := Prop.GetValue(Pointer(FEntity))
+      else
+        Result := TValue.Empty;
+    finally
+      Ctx.Free;
+    end;
+  end;
+end;
+
+procedure TPropertyEntry.SetCurrentValue(const AValue: TValue);
+begin
+  if FIsShadow then
+  begin
+    var Tracker := TChangeTracker(FContext.ChangeTracker);
+    var State := Tracker.GetShadowState(FEntity);
+    State.ShadowValues.AddOrSetValue(FPropName, AValue);
+    SetIsModified(True);
+  end
+  else
+  begin
+    var Ctx := TRttiContext.Create;
+    try
+      var Typ := Ctx.GetType(FEntity.ClassType);
+      var Prop := Typ.GetProperty(FPropName);
+      if Prop <> nil then
+      begin
+        Prop.SetValue(Pointer(FEntity), AValue);
+        SetIsModified(True);
+      end;
+    finally
+      Ctx.Free;
+    end;
+  end;
+end;
+
+function TPropertyEntry.GetIsModified: Boolean;
+begin
+  var Tracker := TChangeTracker(FContext.ChangeTracker);
+  var State := Tracker.GetShadowState(FEntity);
+  Result := State.ModifiedProperties.ContainsKey(FPropName);
+end;
+
+procedure TPropertyEntry.SetIsModified(const AValue: Boolean);
+begin
+  var Tracker := TChangeTracker(FContext.ChangeTracker);
+  var State := Tracker.GetShadowState(FEntity);
+  if AValue then
+  begin
+    State.ModifiedProperties.AddOrSetValue(FPropName, True);
+    if Tracker.GetState(FEntity) = esUnchanged then
+      Tracker.Track(FEntity, esModified);
+  end
+  else
+    State.ModifiedProperties.Remove(FPropName);
 end;
 
 { TCollectionEntry }
@@ -1372,6 +1591,11 @@ end;
 function TEntityEntry.Reference(const APropName: string): IReferenceEntry;
 begin
   Result := TReferenceEntry.Create(FContext, FEntity, APropName);
+end;
+
+function TEntityEntry.Member(const APropName: string): IPropertyEntry;
+begin
+  Result := TPropertyEntry.Create(FContext, FEntity, APropName);
 end;
 
 end.

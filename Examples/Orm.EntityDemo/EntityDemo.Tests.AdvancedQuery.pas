@@ -377,9 +377,10 @@ begin
   FContext.Entities<TUser>.Add(U2);
   FContext.SaveChanges;
 
-  // Test: Load users with Include('Address')
+  // Test: Load users with Include('Address') and OrderBy to ensure stable results
   Builder := Specification.All<TUser>;
-  Spec := Builder.Include(TUserType.Address);
+  Spec := Builder.Include(TUserType.Address)
+                 .OrderBy(TUserType.Id);
   Users := FContext.Entities<TUser>.ToList(Spec);
 
   // No try..finally

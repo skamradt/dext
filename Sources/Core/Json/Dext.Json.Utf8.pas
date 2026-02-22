@@ -28,8 +28,12 @@ unit Dext.Json.Utf8;
 interface
 
 uses
+  System.Classes,
+  System.Rtti,
   System.SysUtils,
-  Dext.Core.Span;
+  System.TypInfo,
+  Dext.Core.Span,
+  Dext.Json.Types;
 
 type
   EJsonException = class(Exception);
@@ -117,7 +121,135 @@ type
     function ValueSpanEquals(const AText: string): Boolean;
   end;
 
+  /// <summary>
+  ///   A high-performance, forward-only JSON writer that writes UTF-8 encoded text directly to a stream.
+  /// </summary>
+  TUtf8JsonWriter = record
+  private
+    FStream: TStream;
+    FIndented: Boolean;
+    FCaseStyle: TCaseStyle;
+    FNeedComma: array[0..63] of Boolean; // Max depth of 64
+    FDepth: Integer;
+    procedure WriteRaw(const S: string); inline;
+    procedure WriteRawByte(B: Byte); inline;
+    procedure WriteIndent;
+    procedure CheckComma;
+  public
+    constructor Create(AStream: TStream; AIndented: Boolean = False);
+    
+    property CaseStyle: TCaseStyle read FCaseStyle write FCaseStyle;
+    
+    procedure WriteStartObject;
+    procedure WriteEndObject;
+    procedure WriteStartArray;
+    procedure WriteEndArray;
+    
+    procedure WritePropertyName(const AName: string);
+    procedure WriteString(const AValue: string);
+    procedure WriteNumber(AValue: Int64); overload;
+    procedure WriteNumber(AValue: Double); overload;
+    procedure WriteBoolean(AValue: Boolean);
+    procedure WriteNull;
+    
+    /// <summary>Writes a raw TValue. Handles basic types.</summary>
+    procedure WriteValue(const AValue: TValue);
+  end;
+
+function EscapeJsonString(const S: string): string;
+function GetJsonVal(const AVal: TValue): string;
+
 implementation
+
+uses
+  System.DateUtils,
+  Dext.Json;
+
+function EscapeJsonString(const S: string): string;
+var
+  i: Integer;
+  c: Char;
+begin
+  Result := '';
+  for i := 1 to Length(S) do
+  begin
+    c := S[i];
+    case c of
+      '"': Result := Result + '\"';
+      '\': Result := Result + '\\';
+      '/': Result := Result + '\/';
+      #8: Result := Result + '\b';
+      #9: Result := Result + '\t';
+      #10: Result := Result + '\n';
+      #12: Result := Result + '\f';
+      #13: Result := Result + '\r';
+    else
+      if (Ord(c) < 32) then
+        Result := Result + Format('\u%.4x', [Ord(c)])
+      else
+        Result := Result + c;
+    end;
+  end;
+end;
+
+function GetJsonVal(const AVal: TValue): string;
+var
+  FS: TFormatSettings;
+begin
+   if AVal.IsEmpty then Exit('null');
+
+   // Prepare invariant format settings for JSON (dot separator)
+   FS := TFormatSettings.Create;
+   FS.DecimalSeparator := '.';
+
+   // Smart Properties Support: Unwrap Prop<T> before serialization
+   if (AVal.Kind = tkRecord) and (AVal.TypeInfo <> nil) and
+      string(AVal.TypeInfo.Name).StartsWith('Prop<') then
+   begin
+     var Ctx := TRttiContext.Create;
+     try
+        var RecType := Ctx.GetType(AVal.TypeInfo).AsRecord;
+        if RecType <> nil then
+        begin
+          var Field := RecType.GetField('FValue');
+          if Field <> nil then
+          begin
+             Result := GetJsonVal(Field.GetValue(AVal.GetReferenceToRawData));
+             Exit;
+          end;
+        end;
+     finally
+        Ctx.Free;
+     end;
+   end;
+
+   // Try to use framework serializer for other complex types (objects/arrays)
+   if AVal.Kind in [tkRecord, tkMRecord, tkDynArray, tkArray, tkClass] then
+   begin
+     // For normal records/objects, delegate to Dext.Json
+     Result := TDextJson.Serialize(AVal);
+     Exit;
+   end;
+
+   case AVal.Kind of
+     tkInteger, tkInt64: Result := IntToStr(AVal.AsInt64);
+     tkFloat:
+     begin
+       if AVal.TypeInfo = TypeInfo(TDateTime) then
+         Result := '"' + DateToISO8601(AVal.AsType<TDateTime>) + '"'
+       else
+         Result := FloatToStr(AVal.AsExtended, FS);
+     end;
+     tkString, tkUString, tkWString, tkChar, tkWChar: Result := '"' + EscapeJsonString(AVal.AsString) + '"';
+     tkEnumeration:
+       if AVal.TypeInfo = TypeInfo(Boolean) then
+         Result := BoolToStr(AVal.AsBoolean, true).ToLower
+       else
+         Result := IntToStr(AVal.AsOrdinal);
+     else
+       Result := '"' + EscapeJsonString(AVal.ToString) + '"';
+   end;
+end;
 
 { TUtf8JsonReader }
 
@@ -422,6 +554,171 @@ end;
 function TUtf8JsonReader.ValueSpanEquals(const AText: string): Boolean;
 begin
   Result := FValueSpan.EqualsString(AText);
+end;
+
+{ TUtf8JsonWriter }
+
+constructor TUtf8JsonWriter.Create(AStream: TStream; AIndented: Boolean);
+begin
+  FStream := AStream;
+  FIndented := AIndented;
+  FCaseStyle := TCaseStyle.Unchanged;
+  FDepth := 0;
+  FillChar(FNeedComma, SizeOf(FNeedComma), 0);
+end;
+
+procedure TUtf8JsonWriter.CheckComma;
+begin
+  if (FDepth > 0) and FNeedComma[FDepth - 1] then
+    WriteRawByte(Ord(','));
+  
+  if FDepth > 0 then
+    FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WriteIndent;
+begin
+  if not FIndented then Exit;
+  WriteRawByte(10); // LF
+  for var i := 0 to FDepth - 1 do
+    WriteRaw('  ');
+end;
+
+procedure TUtf8JsonWriter.WriteRaw(const S: string);
+begin
+  var B := TEncoding.UTF8.GetBytes(S);
+  if Length(B) > 0 then
+    FStream.WriteBuffer(B[0], Length(B));
+end;
+
+procedure TUtf8JsonWriter.WriteRawByte(B: Byte);
+begin
+  FStream.WriteBuffer(B, 1);
+end;
+
+procedure TUtf8JsonWriter.WriteStartObject;
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRawByte(Ord('{'));
+  Inc(FDepth);
+  FNeedComma[FDepth - 1] := False;
+end;
+
+procedure TUtf8JsonWriter.WriteEndObject;
+begin
+  Dec(FDepth);
+  WriteIndent;
+  WriteRawByte(Ord('}'));
+  if FDepth > 0 then FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WriteStartArray;
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRawByte(Ord('['));
+  Inc(FDepth);
+  FNeedComma[FDepth - 1] := False;
+end;
+
+procedure TUtf8JsonWriter.WriteEndArray;
+begin
+  Dec(FDepth);
+  WriteIndent;
+  WriteRawByte(Ord(']'));
+  if FDepth > 0 then FNeedComma[FDepth - 1] := True;
+end;
+
+procedure TUtf8JsonWriter.WritePropertyName(const AName: string);
+begin
+  CheckComma;
+  WriteIndent;
+  WriteRaw('"' + EscapeJsonString(AName) + '":');
+  FNeedComma[FDepth - 1] := False; // Property written, next is value (no comma)
+end;
+
+procedure TUtf8JsonWriter.WriteString(const AValue: string);
+begin
+  CheckComma;
+  WriteRaw('"' + EscapeJsonString(AValue) + '"');
+end;
+
+procedure TUtf8JsonWriter.WriteNumber(AValue: Int64);
+begin
+  CheckComma;
+  WriteRaw(IntToStr(AValue));
+end;
+
+procedure TUtf8JsonWriter.WriteNumber(AValue: Double);
+begin
+  CheckComma;
+  WriteRaw(FloatToStr(AValue, TFormatSettings.Invariant));
+end;
+
+procedure TUtf8JsonWriter.WriteBoolean(AValue: Boolean);
+begin
+  CheckComma;
+  if AValue then WriteRaw('true') else WriteRaw('false');
+end;
+
+procedure TUtf8JsonWriter.WriteNull;
+begin
+  CheckComma;
+  WriteRaw('null');
+end;
+
+procedure TUtf8JsonWriter.WriteValue(const AValue: TValue);
+begin
+  if AValue.IsEmpty then
+  begin
+    WriteNull;
+    Exit;
+  end;
+
+  case AValue.Kind of
+    tkInteger, tkInt64: WriteNumber(AValue.AsInt64);
+    tkFloat: 
+      begin
+        if AValue.TypeInfo = TypeInfo(TDateTime) then
+          WriteString(DateToISO8601(AValue.AsType<TDateTime>))
+        else
+          WriteNumber(AValue.AsType<Double>);
+      end;
+    tkString, tkUString, tkWString, tkLString, tkChar, tkWChar:
+      WriteString(AValue.AsString);
+    tkEnumeration:
+      if AValue.TypeInfo = TypeInfo(Boolean) then
+        WriteBoolean(AValue.AsBoolean)
+      else
+        WriteNumber(AValue.AsOrdinal);
+    tkClass:
+      begin
+        var Obj := AValue.AsObject;
+        if Obj = nil then WriteNull
+        else
+        begin
+          var Ctx := TRttiContext.Create;
+          try
+            var Typ := Ctx.GetType(Obj.ClassInfo);
+            WriteStartObject;
+            for var Prop in Typ.GetProperties do
+            begin
+              if Prop.IsReadable and (Prop.Visibility in [mvPublic, mvPublished]) then
+              begin
+                 WritePropertyName(TJsonUtils.ApplyCaseStyle(Prop.Name, FCaseStyle));
+                 WriteValue(Prop.GetValue(Obj));
+              end;
+            end;
+            WriteEndObject;
+          finally
+            Ctx.Free;
+          end;
+        end;
+      end;
+  else
+    WriteString(AValue.ToString);
+  end;
 end;
 
 end.

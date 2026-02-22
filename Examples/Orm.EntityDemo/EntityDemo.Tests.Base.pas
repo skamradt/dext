@@ -29,6 +29,7 @@ uses
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
   Dext.Entity.Mapping,
+  Dext.Entity.Cache,
   EntityDemo.Entities,
   EntityDemo.TypeConverterExample,
   EntityDemo.DbConfig;
@@ -206,6 +207,9 @@ begin
   DropTableIfExists('tasks');
   DropTableIfExists('converter_test');  // TypeConverter example
 
+  // 1.5 Clear SQL Cache to avoid interference between tests
+  TSQLCache.Instance.Clear;
+
   // 2. Initialize Context
   FContext := TDbContext.Create(DbConnection, Dialect);
   if DebugSql then
@@ -303,23 +307,23 @@ var
   FailMsg: string;
 begin
   WriteLn('');
-  WriteLn('╔════════════════════════════════════════════════════════════╗');
-  WriteLn('║                    TEST SUMMARY                            ║');
-  WriteLn('╠════════════════════════════════════════════════════════════╣');
-  WriteLn(Format('║  ✅ Passed: %-5d                                          ║', [FTotalPassed]));
-  WriteLn(Format('║  ❌ Failed: %-5d                                          ║', [FTotalFailed]));
-  WriteLn('╠════════════════════════════════════════════════════════════╣');
-  
+  WriteLn(       '╔════════════════════════════════════════════════════════════════════════════════╗');
+  WriteLn(       '║                    TEST SUMMARY                                                ║');
+  WriteLn(       '╠════════════════════════════════════════════════════════════════════════════════╣');
+  WriteLn(Format('║  ✅ Passed: %-5d                                                              ║', [FTotalPassed]));
+  WriteLn(Format('║  ❌ Failed: %-5d                                                              ║', [FTotalFailed]));
+  WriteLn(       '╠════════════════════════════════════════════════════════════════════════════════╣');
+
   if FTotalFailed > 0 then
   begin
-    WriteLn('║  FAILED TESTS:                                           ║');
+    WriteLn(     '║  FAILED TESTS:                                                                 ║');
     for FailMsg in FFailedTests do
-      WriteLn(Format('║  • %-56s║', [Copy(FailMsg, 1, 56)]));
+      WriteLn(Format('║  • %-76s║', [Copy(FailMsg, 1, 76)]));
   end
   else
-    WriteLn('║  🎉 ALL TESTS PASSED!                                      ║');
+    WriteLn(     '║  🎉 ALL TESTS PASSED!                                                          ║');
 
-  WriteLn('╚════════════════════════════════════════════════════════════╝');
+  WriteLn(       '╚════════════════════════════════════════════════════════════════════════════════╝');
 end;
 
 class procedure TBaseTest.ReportFailure(const Msg: string);

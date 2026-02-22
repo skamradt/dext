@@ -177,20 +177,26 @@ for var O in Orders do
   WriteLn(O.User.Name);  // Each access = 1 query!
 
 // With Include: 2 queries total
+### Type-Safe Include (Prototype)
+
+Para evitar o uso de strings e garantir que os relacionamentos existam, você pode usar o objeto Prototype:
+
+```pascal
+uses Dext.Entity.Prototype;
+
+var o := Prototype.Entity<TOrder>;
 var Orders := Context.Orders
-  .Include('User')
+  .Include(o.User)   // Proteção total contra erros de digitação!
+  .Include(o.Items)  // Funciona para Prop<T> e campos baseados em convenção
   .ToList;
-for var O in Orders do
-  WriteLn(O.User.Name);  // Already loaded!
 ```
 
 ### Multiple Includes
 
 ```pascal
 var Orders := Context.Orders
-  .Include('User')
-  .Include('Items')
-  .Include('Items.Product')  // Nested
+  .Include(o.User)
+  .Include('Items.Product')  // Strings ainda podem ser usadas para caminhos profundos
   .ToList;
 ```
 

@@ -36,6 +36,7 @@ uses
   Dext.Entity.Dialects;
 
 type
+  {$M+}
   IDbReader = interface;
   IDbTransaction = interface;
   IDbCommand = interface;
@@ -65,6 +66,9 @@ type
 
     function TableExists(const ATableName: string): Boolean;
     
+    function IsPooled: Boolean;
+    property Pooled: Boolean read IsPooled;
+
     procedure SetOnLog(AValue: TProc<string>);
     function GetOnLog: TProc<string>;
     property OnLog: TProc<string> read GetOnLog write SetOnLog;
@@ -91,6 +95,8 @@ type
     ///   specifies a different type than what would be inferred from TValue.
     /// </summary>
     procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
+    procedure SetParamType(const AName: string; AType: TParamType);
+    function GetParamValue(const AName: string): TValue;
     procedure ClearParams;
     
     procedure Execute;
@@ -119,6 +125,7 @@ type
     
     procedure Close;
   end;
+  {$M-}
 
 implementation
 

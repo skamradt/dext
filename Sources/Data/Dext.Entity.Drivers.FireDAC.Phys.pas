@@ -110,6 +110,8 @@ type
     procedure SetSQL(const ASQL: string);
     procedure AddParam(const AName: string; const AValue: TValue); overload;
     procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
+    procedure SetParamType(const AName: string; AType: TParamType);
+    function GetParamValue(const AName: string): TValue;
     procedure ClearParams;
     
     procedure Execute;
@@ -156,6 +158,8 @@ type
     
     function GetDialect: TDatabaseDialect;
     property Dialect: TDatabaseDialect read GetDialect;
+    
+    function IsPooled: Boolean;
     
     property PhysConnection: IFDPhysConnection read FConnection;
   end;
@@ -421,6 +425,26 @@ begin
     // Fallback: use variant conversion
     Param.Value := AValue.AsVariant;
   end;
+end;
+
+procedure TFireDACPhysCommand.SetParamType(const AName: string; AType: TParamType);
+var
+  Param: TFDParam;
+begin
+  Param := FCommand.Params.FindParam(AName);
+  if Param <> nil then
+    Param.ParamType := AType;
+end;
+
+function TFireDACPhysCommand.GetParamValue(const AName: string): TValue;
+var
+  Param: TFDParam;
+begin
+  Param := FCommand.Params.FindParam(AName);
+  if Param <> nil then
+    Result := TValue.FromVariant(Param.Value)
+  else
+    Result := TValue.Empty;
 end;
 
 procedure TFireDACPhysCommand.ClearParams;
@@ -799,6 +823,11 @@ begin
   if FDialect = ddUnknown then
     DetectDialect;
   Result := FDialect;
+end;
+
+function TFireDACPhysConnection.IsPooled: Boolean;
+begin
+  Result := False; // Phys connections are not pooled
 end;
 
 end.

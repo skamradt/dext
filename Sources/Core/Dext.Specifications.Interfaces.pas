@@ -36,6 +36,11 @@ type
   TJoinType = (jtInner, jtLeft, jtRight, jtFull);
 
   /// <summary>
+  ///   Specifies the type of pessimistic lock to be applied to a query.
+  /// </summary>
+  TLockMode = (lmNone, lmShared, lmExclusive, lmExclusiveNoWait);
+
+  /// <summary>
   ///   Represents an expression in a query (e.g., "Age > 18").
   /// </summary>
   IExpression = interface
@@ -64,11 +69,10 @@ type
   end;
 
   /// <summary>
-  ///   Base interface for specifications.
-  ///   Encapsulates query logic for an entity type T.
+  ///   Base interface for specifications containing non-generic query members.
   /// </summary>
-  ISpecification<T> = interface
-    ['{10000000-0000-0000-0000-000000000003}']
+  ISpecification = interface
+    ['{10000000-0000-0000-0000-000000000006}']
     function GetExpression: IExpression;
     function GetIncludes: TArray<string>;
     function GetOrderBy: TArray<IOrderBy>;
@@ -79,31 +83,36 @@ type
     function IsTrackingEnabled: Boolean;
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
-    
-    /// <summary>
-    ///  Generates a unique signature for the query structure (excluding param values).
-    /// </summary>
+    function IsIgnoringFilters: Boolean;
+    function IsOnlyDeleted: Boolean;
+    function GetLockMode: TLockMode;
     function GetSignature: string;
-    
-    property Expression: IExpression read GetExpression;
-    
-    // Fluent methods
+
     procedure Take(const ACount: Integer);
     procedure Skip(const ACount: Integer);
-    
     procedure EnableTracking(const AValue: Boolean);
     procedure AsNoTracking;
-    
-    procedure AddInclude(const APath: string); deprecated 'Use Include';
-    procedure AddOrderBy(const AOrderBy: IOrderBy); deprecated 'Use OrderBy';
-    procedure AddSelect(const AColumn: string); deprecated 'Use Select';
-
     procedure Include(const APath: string);
+    procedure RemoveInclude(const APath: string);
     procedure OrderBy(const AOrderBy: IOrderBy);
     procedure Select(const AColumn: string);
     procedure Where(const AExpression: IExpression);
     procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression);
     procedure GroupBy(const AColumn: string);
+    procedure IgnoreQueryFilters(const AValue: Boolean = True);
+    procedure OnlyDeleted(const AValue: Boolean = True);
+    procedure WithLock(const ALockMode: TLockMode);
+    
+    property Expression: IExpression read GetExpression;
+  end;
+
+  /// <summary>
+  ///   Generic interface for specifications.
+  ///   Encapsulates query logic for an entity type T.
+  /// </summary>
+  ISpecification<T> = interface(ISpecification)
+    ['{10000000-0000-0000-0000-000000000003}']
+    function Clone: ISpecification<T>;
   end;
 
   /// <summary>

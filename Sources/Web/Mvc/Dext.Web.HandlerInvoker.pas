@@ -217,11 +217,35 @@ begin
        else
          Result := TModelBinderHelper.BindBody<T>(FModelBinder, FContext);
        
-       // Track the created object for cleanup
+       // Track the created object for cleanup (except Entities, which Context owns)
        if TValue.From<T>(Result).AsObject <> nil then
        begin
-         SetLength(FBoundObjects, Length(FBoundObjects) + 1);
-         FBoundObjects[High(FBoundObjects)] := TValue.From<T>(Result).AsObject;
+         var IsEntity := False;
+         var CtxRtti := TRttiContext.Create;
+         try
+           var Typ := CtxRtti.GetType(TypeInfo(T));
+           if Typ <> nil then
+           begin
+             for var Attr in Typ.GetAttributes do
+             begin
+               IsEntity := Attr.ClassName = 'TableAttribute';
+               if IsEntity then Break;
+             end;
+           end;
+         finally
+           CtxRtti.Free;
+         end;
+         
+         // TODO: This ownership transfer is fragile. It assumes the developer will ALWAYS
+         // add the entity to the DbContext, which then assumes memory ownership.
+         // If they don't, we will leak memory. We need a more robust tracking mechanism,
+         // perhaps checking if the entity was actually persisted (e.g., checking if an ID was filled)
+         // or using a dedicated tracking wrapper/interface instead of purely relying on [Table].
+         if not IsEntity then
+         begin
+           SetLength(FBoundObjects, Length(FBoundObjects) + 1);
+           FBoundObjects[High(FBoundObjects)] := TValue.From<T>(Result).AsObject;
+         end;
        end;
     end;
   end

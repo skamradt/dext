@@ -19,6 +19,9 @@ type
 
 implementation
 
+uses
+  Dext.Logging.Global;
+
 { TTenantResolutionMiddleware }
 
 procedure TTenantResolutionMiddleware.Invoke(AContext: IHttpContext; ANext: TRequestDelegate);
@@ -37,7 +40,7 @@ begin
     AContext.Items.AddOrSetValue('TenantContext', TObject(TenantContext));
     AContext.Items.AddOrSetValue('TenantId', TenantId);
     
-    WriteLn(Format('[Tenant] Request for tenant: %s', [TenantId]));
+    Log.Info('[Tenant] Request for tenant: {TenantId}', [TenantId]);
   end
   else
   begin

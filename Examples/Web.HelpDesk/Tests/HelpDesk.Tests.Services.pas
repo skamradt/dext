@@ -55,6 +55,8 @@ begin
   FOptions := TDbContextOptions.Create
     .UseSQLite(':memory:');
   FDb := THelpDeskContext.Create(FOptions);
+  // Limpa os metadados globais para garantir um ambiente virgem para o teste
+  TModelBuilder.Instance.Clear;
   FDb.EnsureCreated;
 
   // 2. Mock UserService

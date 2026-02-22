@@ -6,9 +6,11 @@ Bem-vindo ao documento oficial de roadmap do **Project Dext**. Este documento se
 
 ---
 
-## 📊 Status Atual do Projeto: **Beta 0.96** 🚀
+## 📊 Status Atual do Projeto: **Release Candidate 1.0** 🚀
 
-O framework possui todas as funcionalidades core implementadas e testadas. Estamos na fase final de polimento, documentação e preparação para v1.0.
+O framework atingiu a maturidade necessária para produção. Esta versão consolida todas as funcionalidades planejadas, com cobertura de testes abrangente e documentação completa.
+
+*Última atualização: 22 de Fevereiro de 2026*
 
 ### 🏆 Comparativo de Funcionalidades
 
@@ -285,7 +287,12 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
   - ✅ **Generation**: Criação de novas migrações (`migrate:generate`).
   - [x] **Scaffolding**: Geração automática de classes (Próximo passo).
   - [x] **Facade Generator**: Geração automática de `Dext.pas` a partir de `Dext.Core` (`dext facade`).
-  - [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
+  - ✅ **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions com `[StoredProcedure]` e `[DbParam]`.
+  - ✅ **Pessimistic Locking**: Suporte a `FOR UPDATE` e `UPDLOCK` na API fluente.
+  - ✅ **Multi-Mapping (Dapper-style)**: Suporte a hidratação recursiva via atributo `[Nested]`.
+  - ✅ **FromSql**: Execução de SQL puro com mapeamento direto para Entidades.
+  - ✅ **Database as API**: Geração de JSON via `TUtf8JsonWriter` para máxima performance.
+  - ✅ **Dynamic Specification Mapping**: Filtragem avançada via QueryString (`_gt`, `_lt`, etc).
 
 ### 6. Ecossistema & Tooling (📅 Planejado para v1.1)
 - [ ] **Templates**: Templates de projeto para Delphi (IDE Wizards).

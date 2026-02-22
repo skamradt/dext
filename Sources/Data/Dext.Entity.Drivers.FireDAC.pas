@@ -104,6 +104,8 @@ type
     procedure SetSQL(const ASQL: string);
     procedure AddParam(const AName: string; const AValue: TValue); overload;
     procedure AddParam(const AName: string; const AValue: TValue; ADataType: TFieldType); overload;
+    procedure SetParamType(const AName: string; AType: TParamType);
+    function GetParamValue(const AName: string): TValue;
     procedure ClearParams;
     
     procedure Execute;
@@ -135,6 +137,7 @@ type
     function CreateCommand(const ASQL: string): IDbCommand;
     function GetLastInsertId: Variant;
     function TableExists(const ATableName: string): Boolean;
+    function IsPooled: Boolean;
 
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
@@ -689,6 +692,16 @@ begin
   end;  // end else (no converter)
 end;
 
+procedure TFireDACCommand.SetParamType(const AName: string; AType: TParamType);
+begin
+  FQuery.ParamByName(AName).ParamType := AType;
+end;
+
+function TFireDACCommand.GetParamValue(const AName: string): TValue;
+begin
+  Result := TValue.FromVariant(FQuery.ParamByName(AName).Value);
+end;
+
 procedure TFireDACCommand.ClearParams;
 begin
   FQuery.Params.Clear;
@@ -1017,6 +1030,19 @@ end;
 function TFireDACConnection.IsConnected: Boolean;
 begin
   Result := FConnection.Connected;
+end;
+
+function TFireDACConnection.IsPooled: Boolean;
+begin
+  // First check if the connection is assigned to a manager/pool
+  if FConnection.ConnectionDefName <> '' then
+  begin
+     // We assume if it has a DefName AND it was registered through our manager, it is pooled.
+     // FireDAC pooling is usually defined at the definition level.
+     Result := FConnection.Params.Pooled;
+  end
+  else
+    Result := False;
 end;
 
 procedure TFireDACConnection.SetOnLog(AValue: TProc<string>);

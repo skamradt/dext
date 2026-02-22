@@ -33,9 +33,11 @@ uses
   System.TypInfo,
   System.Rtti,
   System.Variants,
+  System.Character,
   Data.DB,
   Dext.Entity.Attributes,
   Dext.Entity.TypeConverters,
+  Dext.Core.SmartTypes,
   Dext.Specifications.Interfaces;
 
 type
@@ -57,7 +59,9 @@ type
     function HasKey(const APropertyNames: array of string): IEntityTypeBuilder<T>; overload;
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
-    function Prop(const APropertyName: string): IPropertyBuilder<T>;
+    function Prop(const APropertyName: string): IPropertyBuilder<T>; overload;
+    function Prop(const AProp: IPropInfo): IPropertyBuilder<T>; overload;
+    function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     
     // Relationships
@@ -97,6 +101,11 @@ type
     function HasPrecision(APrecision, AScale: Integer): IPropertyBuilder<T>;
     function HasDbType(ADataType: TFieldType): IPropertyBuilder<T>;
     function HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
+    function IsLazy(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsVersion(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsCreatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsUpdatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsShadow(AValue: Boolean = True): IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -142,9 +151,16 @@ type
     // Audit Timestamps
     IsCreatedAt: Boolean;
     IsUpdatedAt: Boolean;
+    // Internal engine optimization
+    FieldOffset: Integer;      // Offset of FInfo
+    FieldValueOffset: Integer; // Offset of FValue
+    PropertyType: PTypeInfo;   // Type of T in Prop<T>
+    // Shadow Property support
+    IsShadow: Boolean;
     // JSON Column Support
     IsJsonColumn: Boolean;
     UseJsonB: Boolean; // PostgreSQL JSONB vs JSON
+    IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
     constructor Create(const APropName: string);
   end;
 
@@ -210,6 +226,7 @@ type
     
     // Property Selection
     function Prop(const APropertyName: string): TEntityBuilder<T>;
+    function HasProperty(const APropertyName: string): TEntityBuilder<T>;
     
     // Property Configuration (Applied to current property)
     function Column(const AName: string): TEntityBuilder<T>;
@@ -221,6 +238,11 @@ type
     function Precision(APrecision, AScale: Integer): TEntityBuilder<T>;
     function HasDbType(ADataType: TFieldType): TEntityBuilder<T>;
     function HasConverter(AConverterClass: TClass): TEntityBuilder<T>;
+    function IsJson(AUseJsonB: Boolean = True): TEntityBuilder<T>;
+    function IsLazy(AValue: Boolean = True): TEntityBuilder<T>;
+    function IsVersion(AValue: Boolean = True): TEntityBuilder<T>;
+    function IsCreatedAt(AValue: Boolean = True): TEntityBuilder<T>;
+    function IsUpdatedAt(AValue: Boolean = True): TEntityBuilder<T>;
     function Ignore: TEntityBuilder<T>;
     
     // Relationship Support (Returning IRelationshipBuilder)
@@ -251,7 +273,9 @@ type
     function HasKey(const APropertyNames: array of string): IEntityTypeBuilder<T>; overload;
     function HasDiscriminator(const AColumn: string; const AValue: Variant): IEntityTypeBuilder<T>;
     function MapInheritance(AStrategy: TInheritanceStrategy): IEntityTypeBuilder<T>;
-    function Prop(const APropertyName: string): IPropertyBuilder<T>;
+    function Prop(const APropertyName: string): IPropertyBuilder<T>; overload;
+    function Prop(const AProp: IPropInfo): IPropertyBuilder<T>; overload;
+    function ShadowProperty(const APropName: string): IPropertyBuilder<T>;
     function Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
     function HasMany(const APropertyName: string): IRelationshipBuilder<T>;
     function HasOne(const APropertyName: string): IRelationshipBuilder<T>;
@@ -277,6 +301,11 @@ type
     function HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
     function HasFieldName(const AName: string): IPropertyBuilder<T>;
     function UseField: IPropertyBuilder<T>;
+    function IsLazy(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsVersion(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsCreatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsUpdatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
+    function IsShadow(AValue: Boolean = True): IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -313,6 +342,7 @@ type
     function GetDiscoveryName(AType: PTypeInfo): string;
     
     function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
+    procedure Clear;
     
     class property Instance: TModelBuilder read FInstance;
   end;
@@ -380,22 +410,59 @@ begin
       if Attr is DiscriminatorValueAttribute then FDiscriminatorValue := DiscriminatorValueAttribute(Attr).Value;
     end;
     
+    for var Fld in Typ.GetFields do
+    begin
+        if Fld.FieldType.Name.StartsWith('Prop<') then
+        begin
+           var FldName := Fld.Name;
+           if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
+             FldName := FldName.Substring(1);
+           
+           PropMap := GetOrAddProperty(FldName);
+           
+           PropMap.FieldOffset := -1;
+           PropMap.FieldValueOffset := -1;
+
+           for var InnerFld in Fld.FieldType.GetFields do
+           begin
+             if SameText(InnerFld.Name, 'FInfo') then
+               PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
+             else if SameText(InnerFld.Name, 'FValue') then
+             begin
+               PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
+               PropMap.PropertyType := InnerFld.FieldType.Handle;
+             end;
+           end;
+        end;
+    end;
+
     for Prop in Typ.GetProperties do
     begin
       PropMap := nil;
       
-      // Auto-detect Navigation properties (Classes/Interfaces)
-      // We do this BEFORE attribute discovery so attributes can override it if needed.
       if Prop.PropertyType.TypeKind in [tkClass, tkInterface] then
       begin
-        // Filter out standard persistable classes if any. 
-        // For now, if it's a class or interface, we assume it's NOT a plain column.
-        PropMap := GetOrAddProperty(Prop.Name);
-        PropMap.IsNavigation := True;
-        if Prop.PropertyType.TypeKind = tkInterface then
-          PropMap.Relationship := rtOneToMany // Likely IList<T>
+        // Filter out classes that have a registered converter (e.g. TStrings)
+        // These should be treated as columns, not navigation properties.
+        var LConverter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+        
+        if LConverter = nil then
+        begin
+          PropMap := GetOrAddProperty(Prop.Name);
+          PropMap.IsNavigation := True;
+          if Prop.PropertyType.TypeKind = tkInterface then
+            PropMap.Relationship := rtOneToMany // Likely IList<T>
+          else
+            PropMap.Relationship := rtManyToOne; // Likely an entity reference
+        end
         else
-          PropMap.Relationship := rtManyToOne; // Likely an entity reference
+        begin
+           // It's a convertible class (like TStrings). Treat as a normal column but enable default lazy load for large types.
+           PropMap := GetOrAddProperty(Prop.Name);
+           PropMap.IsNavigation := False;
+           PropMap.Relationship := rtNone;
+           PropMap.Converter := LConverter;
+        end;
       end;
 
       for Attr in Prop.GetAttributes do
@@ -505,7 +572,7 @@ begin
               begin
                   var Method := RType.GetMethod('Create');
                   if Method <> nil then
-                      PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
+                    PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
                   else
                   begin
                       // Try basic Create
@@ -523,6 +590,15 @@ begin
 
         if PropMap.Converter = nil then
           PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+
+        // Automatically mark large types (TStrings, TBytes) as Lazy if not explicitly configured otherwise
+        // unless they are part of the primary key or explicitly excluded.
+        if (PropMap.Converter <> nil) and not PropMap.IsPK and not PropMap.IsNavigation then
+        begin
+            var LTypeName := string(Prop.PropertyType.Handle.Name);
+            if (LTypeName = 'TStrings') or (LTypeName = 'TBytes') then
+              PropMap.IsLazy := True;
+        end;
       end;
     end;
   finally
@@ -577,6 +653,10 @@ begin
   IsVersion := False;
   IsCreatedAt := False;
   IsUpdatedAt := False;
+  FieldOffset := -1; 
+  FieldValueOffset := -1;
+  PropertyType := nil;
+  IsShadow := False;
   IsJsonColumn := False;
   UseJsonB := True; // Default for PostgreSQL
 end;
@@ -696,6 +776,11 @@ begin
   Result := Self;
 end;
 
+function TEntityBuilder<T>.HasProperty(const APropertyName: string): TEntityBuilder<T>;
+begin
+  Result := Prop(APropertyName);
+end;
+
 function TEntityBuilder<T>.Column(const AName: string): TEntityBuilder<T>;
 begin
   GetCurrentProp.ColumnName := AName;
@@ -742,6 +827,37 @@ end;
 function TEntityBuilder<T>.HasDbType(ADataType: TFieldType): TEntityBuilder<T>;
 begin
   GetCurrentProp.DataType := ADataType;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.IsJson(AUseJsonB: Boolean): TEntityBuilder<T>;
+begin
+  GetCurrentProp.IsJsonColumn := True;
+  GetCurrentProp.UseJsonB := AUseJsonB;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.IsLazy(AValue: Boolean): TEntityBuilder<T>;
+begin
+  GetCurrentProp.IsLazy := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.IsVersion(AValue: Boolean): TEntityBuilder<T>;
+begin
+  GetCurrentProp.IsVersion := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.IsCreatedAt(AValue: Boolean): TEntityBuilder<T>;
+begin
+  GetCurrentProp.IsCreatedAt := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.IsUpdatedAt(AValue: Boolean): TEntityBuilder<T>;
+begin
+  GetCurrentProp.IsUpdatedAt := AValue;
   Result := Self;
 end;
 
@@ -865,6 +981,16 @@ end;
 function TEntityTypeBuilder<T>.Prop(const APropertyName: string): IPropertyBuilder<T>;
 begin
   Result := TPropertyBuilder<T>.Create(FMap.GetOrAddProperty(APropertyName));
+end;
+
+function TEntityTypeBuilder<T>.Prop(const AProp: IPropInfo): IPropertyBuilder<T>;
+begin
+  Result := Prop(AProp.PropertyName);
+end;
+
+function TEntityTypeBuilder<T>.ShadowProperty(const APropName: string): IPropertyBuilder<T>;
+begin
+  Result := Prop(APropName).IsShadow(True);
 end;
 
 function TEntityTypeBuilder<T>.Ignore(const APropertyName: string): IEntityTypeBuilder<T>;
@@ -1001,6 +1127,38 @@ begin
   Result := Self;
 end;
 
+function TPropertyBuilder<T>.IsLazy(AValue: Boolean): IPropertyBuilder<T>;
+begin
+  FPropMap.IsLazy := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.IsVersion(AValue: Boolean): IPropertyBuilder<T>;
+begin
+  FPropMap.IsVersion := AValue;
+  Result := Self;
+end;
+
+
+
+function TPropertyBuilder<T>.IsCreatedAt(AValue: Boolean): IPropertyBuilder<T>;
+begin
+  FPropMap.IsCreatedAt := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.IsUpdatedAt(AValue: Boolean): IPropertyBuilder<T>;
+begin
+  FPropMap.IsUpdatedAt := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.IsShadow(AValue: Boolean): IPropertyBuilder<T>;
+begin
+  FPropMap.IsShadow := AValue;
+  Result := Self;
+end;
+
 function TPropertyBuilder<T>.HasConverter(AConverterClass: TClass): IPropertyBuilder<T>;
 begin
   FPropMap.ConverterClass := AConverterClass;
@@ -1046,6 +1204,14 @@ function TModelBuilder.GetDiscoveryName(AType: PTypeInfo): string;
 begin
   if not FDiscoveryNames.TryGetValue(AType, Result) then
     Result := '';
+end;
+
+procedure TModelBuilder.Clear;
+begin
+  if Assigned(FMaps) then
+    FMaps.Clear;
+  if Assigned(FDiscoveryNames) then
+    FDiscoveryNames.Clear;
 end;
 
 procedure TModelBuilder.ApplyConfiguration<T>(AConfig: IEntityTypeConfiguration<T>);

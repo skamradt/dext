@@ -21,9 +21,9 @@ uses
   Dext.Entity.Core, 
   Dext.Entity.Attributes,
   Dext.Types.Lazy,
-  Dext.Entity.Setup, 
   Dext.Entity.Drivers.FireDAC,
-  Dext.Entity.Drivers.Interfaces;
+  Dext.Entity.Drivers.Interfaces,
+  Dext.Entity.Collections;
 
 type
   TCourseInt = class;
@@ -137,9 +137,13 @@ begin
   // Create Context
   FContext := TIntegrationContext.Create(DbConn);
   
-  // Force RTTI for generic lists
+  // Force RTTI for generic lists and tracking lists
   var Dummy1: IList<TCourseInt> := TSmartList<TCourseInt>.Create;
   var Dummy2: IList<TStudentInt> := TSmartList<TStudentInt>.Create;
+  var Dummy3 := TTrackingList<TCourseInt>.Create(nil, nil, '');
+  var Dummy4 := TTrackingList<TStudentInt>.Create(nil, nil, '');
+  Dummy3.Free;
+  Dummy4.Free;
   
   SetupSchema;
 end;

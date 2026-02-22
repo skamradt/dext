@@ -115,6 +115,48 @@ type
   end;
 
   /// <summary>
+  ///   Specifies the name of the stored procedure associated with a class.
+  /// </summary>
+  StoredProcedureAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
+
+  /// <summary>
+  ///   Specifies parameter metadata for stored procedure calls.
+  /// </summary>
+  DbParamAttribute = class(TCustomAttribute)
+  private
+    FParamType: TParamType;
+    FName: string;
+  public
+    constructor Create(AParamType: TParamType = ptInput; const AName: string = '');
+    property ParamType: TParamType read FParamType;
+    property Name: string read FName;
+  end;
+
+  /// <summary>
+  ///   Marks a property to be used as an Offline Locking Token (user/session id).
+  /// </summary>
+  LockTokenAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a property to be used as an Offline Locking Expiration date/time.
+  /// </summary>
+  LockExpirationAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
+  ///   Marks a property as a nested object for multi-mapping hydration.
+  /// </summary>
+  NestedAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
   ///   Specifies the backing field to be used for a property during hydration.
   ///   This avoids triggering property setters during object loading.
   /// </summary>
@@ -519,6 +561,21 @@ constructor PrecisionAttribute.Create(APrecision, AScale: Integer);
 begin
   FPrecision := APrecision;
   FScale := AScale;
+end;
+
+{ StoredProcedureAttribute }
+
+constructor StoredProcedureAttribute.Create(const AName: string);
+begin
+  FName := AName;
+end;
+
+{ DbParamAttribute }
+
+constructor DbParamAttribute.Create(AParamType: TParamType; const AName: string);
+begin
+  FParamType := AParamType;
+  FName := AName;
 end;
 
 end.

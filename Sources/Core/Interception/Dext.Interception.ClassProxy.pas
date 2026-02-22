@@ -34,7 +34,8 @@ uses
   System.SysUtils,
   System.TypInfo,
   Dext.Interception,
-  Dext.Interception.Proxy;
+  Dext.Interception.Proxy,
+  Dext.Core.Activator;
 
 type
   /// <summary>
@@ -53,8 +54,7 @@ type
   public
     /// <summary>
     ///   Creates a class proxy. 
-    ///   Note: This instantiates the class using basic TObject.Create behavior.
-    ///   Constructors of the target class are NOT executed unless invoked manually via RTTI.
+    ///   This instantiates the class using TActivator to ensure the constructor is executed.
     /// </summary>
     constructor Create(AClass: TClass; const AInterceptors: TArray<IInterceptor>; AOwnsInstance: Boolean = True);
     destructor Destroy; override;
@@ -74,8 +74,8 @@ begin
   FInterceptors := AInterceptors;
   FOwnsInstance := AOwnsInstance;
   
-  // Create instance (Allocates memory, VTable pointing to original class)
-  FInstance := AClass.Create;
+  // Create instance using Activator to call the constructor
+  FInstance := TActivator.CreateInstance(AClass, []);
   
   // Create Interceptor for the class
   FVMI := TVirtualMethodInterceptor.Create(AClass);
@@ -90,16 +90,8 @@ end;
 
 procedure TClassProxy.Unproxify;
 begin
-  if Assigned(FVMI) and not FInstanceIsDead then
-  begin
-    // TVirtualMethodInterceptor will revert the VTable in its destructor.
-    // However, if the instance is already dead, this would crash.
-    if Assigned(FInstance) and not FInstanceIsDead then
-      FreeAndNil(FVMI)
-    else
-      FVMI := nil; // Just leak it or hope it doesn't crash? 
-                   // Actually, we must free it as a TObject to avoid VMT revert if instance is dead.
-  end;
+  if Assigned(FVMI) then
+    FreeAndNil(FVMI);
 end;
 
 destructor TClassProxy.Destroy;
@@ -107,7 +99,7 @@ begin
   if FOwnsInstance and Assigned(FInstance) and not FInstanceIsDead then
     FreeAndNil(FInstance);
   
-  FreeAndNil(FVMI);
+  Unproxify;
   inherited;
 end;
 
@@ -121,6 +113,8 @@ begin
   begin
     if SameText(Method.Name, 'BeforeDestruction') then
     begin
+      // Revert VMT now while instance is still valid to avoid AV in destructor
+      FVMI.Unproxify(Instance);
       FInstanceIsDead := True;
       FOwnsInstance := False;
     end;

@@ -8,7 +8,8 @@ uses
   System.SysUtils,
   WebFrameworkTests.Tests.Base in 'WebFrameworkTests.Tests.Base.pas',
   WebFrameworkTests.Tests.Routing in 'WebFrameworkTests.Tests.Routing.pas',
-  WebFrameworkTests.Tests.Async in 'WebFrameworkTests.Tests.Async.pas';
+  WebFrameworkTests.Tests.Async in 'WebFrameworkTests.Tests.Async.pas',
+  WebFrameworkTests.Tests.DataApi in 'WebFrameworkTests.Tests.DataApi.pas';
 
 procedure RunTest(const TestClass: TBaseTestClass);
 var
@@ -32,7 +33,7 @@ begin
 end;
 
 begin
-  
+  SetConsoleCharSet;
   try
     WriteLn('🌐 Dext Web Framework Stability Tests');
     WriteLn('=====================================');
@@ -40,6 +41,7 @@ begin
     // Execute Tests
     RunTest(TRoutingTest);
     RunTest(TAsyncTest);
+    RunTest(TDataApiTest);
     
     WriteLn('');
     WriteLn('✨ All tests completed.');

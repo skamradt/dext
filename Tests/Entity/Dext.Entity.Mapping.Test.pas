@@ -1,4 +1,4 @@
-unit Dext.Entity.Mapping.Test;
+﻿unit Dext.Entity.Mapping.Test;
 
 interface
 
@@ -10,21 +10,21 @@ uses
   Dext.Entity.Mapping,
   Dext.Entity, // TDbContext
   Dext.Entity.Dialects, // TSQLiteDialect
-  Dext.Entity.DbSet; // TDbSet<T>
+  Dext.Entity.DbSet,
+  Dext.Core.SmartTypes;
 
 type
   // 1. Entity with Attributes
-  [Table('attr_users')]
   TMappedUser = class
   private
     FId: Integer;
-    FName: string;
+    FName: Prop<string>;
   public
     [PK]
     property Id: Integer read FId write FId;
-    
+
     [Column('attr_name')]
-    property Name: string read FName write FName;
+    property Name: Prop<string> read FName write FName;
   end;
 
   // 2. Fluent Configuration
@@ -52,12 +52,16 @@ implementation
 { TMappedUserConfig }
 
 procedure TMappedUserConfig.Configure(Builder: IEntityTypeBuilder<TMappedUser>);
+var
+  u: TMappedUser;
 begin
+  u := Prototype.Entity<TMappedUser>;
+
   // Override Table Name
   Builder.ToTable('fluent_users');
-  
-  // Override Column Name
-  Builder.Prop('Name').HasColumnName('fluent_name');
+
+  // Override Column Name using Typed Selector!
+  Builder.Prop(string(u.Name)).HasColumnName('fluent_name');
 end;
 
 { TTestContext }
@@ -101,29 +105,29 @@ begin
   try
     // Get DbSet (triggers MapEntity)
     SetUser := Ctx.Entities<TMappedUser>;
-    
+
     // 1. Verify Table Name Override
     // Attribute says 'attr_users', Fluent says 'fluent_users'
     TableName := SetUser.GetTableName;
     AssertEqual('"fluent_users"', TableName, 'Table Name should be overridden by Fluent Mapping');
-    
+
     // 2. Verify Column Name Override
     // We can check this by generating a Create Table script or checking internal structures if exposed.
     // TDbSet.GenerateCreateTableScript is a good way to check the final SQL.
     // Expected SQL: CREATE TABLE "fluent_users" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "fluent_name" TEXT);
-    
+
     Sql := SetUser.GenerateCreateTableScript;
-    
+
     if Sql.Contains('"fluent_users"') then
       Log('   ✅ SQL contains correct Table Name')
     else
       Log('   ❌ SQL missing correct Table Name: ' + Sql);
-      
+
     if Sql.Contains('"fluent_name"') then
       Log('   ✅ SQL contains correct Column Name (fluent_name)')
     else
       Log('   ❌ SQL missing correct Column Name: ' + Sql);
-      
+
     if not Sql.Contains('attr_name') then
       Log('   ✅ SQL does NOT contain Attribute Column Name (attr_name)')
     else

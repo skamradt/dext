@@ -28,7 +28,9 @@ uses
   Dext.Entity.Naming.Test,
   Dext.Entity.Pooling.Test,
   Dext.Entity.Mapping.Test,
-  Dext.Entity.DbType.Test;
+  Dext.Entity.DbType.Test,
+  Dext.Entity.SmartTypes.Test,
+  Dext.Entity.Query.Test;
 
 procedure RunTests;
 var
@@ -50,10 +52,30 @@ var
   TestNS: TNamingStrategyTest;
   TestMap: TMappingTest;
   TestDBT: TDbTypeTest;
+  TestST: TSmartTypesTest;
+  TestQuery: TQueryParityTest;
 begin
   SetConsoleCharSet(65001);
   WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
+
+  // Query Parity & Optimizations
+  TestQuery := TQueryParityTest.Create;
+  try
+    TestQuery.Run;
+  finally
+    TestQuery.Free;
+  end;
+  WriteLn('');
+
+  // SmartTypes & Query Enhancements
+  TestST := TSmartTypesTest.Create;
+  try
+    TestST.Run;
+  finally
+    TestST.Free;
+  end;
+  WriteLn('');
   
   // Fluent Mapping
   TestMap := TMappingTest.Create;

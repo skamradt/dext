@@ -56,6 +56,9 @@ type
 
 implementation
 
+uses
+  Dext.Logging.Global;
+
 { TTenantService }
 
 constructor TTenantService.Create(ADbContext: TTenantDbContext);
@@ -81,7 +84,7 @@ begin
   FDbContext.Tenants.Add(Result);
   FDbContext.SaveChanges;
   
-  WriteLn(Format('[Tenant] Created: %s (%s)', [string(Result.Name), string(Result.Id)]));
+  Log.Info('[Tenant] Created: {TenantName} ({TenantId})', [string(Result.Name), string(Result.Id)]);
 end;
 
 function TTenantService.GetTenant(const TenantId: string): TTenant;
@@ -120,7 +123,7 @@ begin
   FDbContext.Products.Add(Result);
   FDbContext.SaveChanges;
   
-  WriteLn(Format('[Product] Created for tenant %s: %s', [TenantId, Dto.Name]));
+  Log.Info('[Product] Created for tenant {TenantId}: {ProductName}', [TenantId, Dto.Name]);
 end;
 
 function TProductService.GetProducts(const TenantId: string): IList<TProduct>;
@@ -137,7 +140,7 @@ begin
       Result.Add(Product);
   end;
   
-  WriteLn(Format('[Product] Listing products for tenant: %s (%d found)', [TenantId, Result.Count]));
+  Log.Info('[Product] Listing products for tenant: {TenantId} ({Count} found)', [TenantId, Result.Count]);
 end;
 
 function TProductService.GetProductById(const TenantId: string; ProductId: Int64): TProduct;

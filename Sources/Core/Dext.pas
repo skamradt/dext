@@ -246,7 +246,7 @@ type
   JsonNumberAttribute = Dext.Json.JsonNumberAttribute;
   JsonBooleanAttribute = Dext.Json.JsonBooleanAttribute;
   // New types (preferred)
-  TCaseStyle = Dext.Json.TCaseStyle;
+  TCaseStyle = Dext.Json.Types.TCaseStyle;
   TEnumStyle = Dext.Json.TEnumStyle;
   TJsonFormatting = Dext.Json.TJsonFormatting;
   TDateFormat = Dext.Json.TDateFormat;
@@ -455,10 +455,10 @@ const
   asStopping = Dext.Hosting.AppState.asStopping;
   asStopped = Dext.Hosting.AppState.asStopped;
   // Dext.Json
-  Unchanged = Dext.Json.Unchanged;
-  CamelCase = Dext.Json.CamelCase;
-  PascalCase = Dext.Json.PascalCase;
-  SnakeCase = Dext.Json.SnakeCase;
+  Unchanged = Dext.Json.Types.Unchanged;
+  CamelCase = Dext.Json.Types.CamelCase;
+  PascalCase = Dext.Json.Types.PascalCase;
+  SnakeCase = Dext.Json.Types.SnakeCase;
   AsNumber = Dext.Json.AsNumber;
   AsString = Dext.Json.AsString;
   None = Dext.Json.None;

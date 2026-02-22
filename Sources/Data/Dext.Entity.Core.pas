@@ -43,6 +43,7 @@ uses
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.MultiTenancy,
+  Dext.Threading.Async,
   Dext.Entity.Mapping;
 
 type
@@ -95,6 +96,10 @@ type
     
     function GetEntityId(const AEntity: TObject): string;
     
+    // Many-to-Many link management (non-generic versions for TTrackingList)
+    procedure LinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+    procedure UnlinkManyToMany(const AEntity: TObject; const APropertyName: string; const ARelatedEntity: TObject);
+    
     property EntityType: PTypeInfo read GetEntityType;
   end;
 
@@ -130,18 +135,30 @@ type
 
     function ToList: IList<T>; overload;
     function ToList(const ASpec: ISpecification<T>): IList<T>;  overload;
+    function ToListAsync: TAsyncBuilder<IList<T>>;
 
     // Inline Queries (aceita IExpression diretamente)
     function ToList(const AExpression: IExpression): IList<T>; overload;
     function FirstOrDefault(const AExpression: IExpression): T; overload;
+    function FirstOrDefault(const ASpec: ISpecification<T>): T; overload;
     function Any(const AExpression: IExpression): Boolean; overload;
     function Count(const AExpression: IExpression): Integer; overload;
+    function Count(const ASpec: ISpecification<T>): Integer; overload;
+    function Any(const ASpec: ISpecification<T>): Boolean; overload;
     
     // Smart Properties Support
     function Where(const APredicate: TQueryPredicate<T>): TFluentQuery<T>; overload;
     function Where(const AValue: BooleanExpression): TFluentQuery<T>; overload;
     function Where(const AExpression: TFluentExpression): TFluentQuery<T>; overload;
     function Where(const AExpression: IExpression): TFluentQuery<T>; overload;
+    
+    /// <summary>
+    ///  Creates a LINQ query based on a raw SQL query.
+    ///  If the SQL is a stored procedure, you cannot compose over it (Where, OrderBy won't work).
+    ///  If the SQL is a SELECT statement, depending on the provider, you might be able to compose.
+    /// </summary>
+    function FromSql(const ASql: string; const AParams: array of TValue): TFluentQuery<T>; overload;
+    function FromSql(const ASql: string): TFluentQuery<T>; overload;
 
     // Lazy Queries (Deferred Execution) - Returns TFluentQuery<T>
     /// <summary>
@@ -163,6 +180,10 @@ type
     function HardDelete(const AEntity: T): IDbSet<T>;
     function Restore(const AEntity: T): IDbSet<T>;
 
+    // Offline Locking
+    function TryLock(const AEntity: T; const AToken: string; ADurationMinutes: Integer = 30): Boolean;
+    function Unlock(const AEntity: T): Boolean;
+
     // Many-to-Many Direct Management
     procedure LinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
     procedure UnlinkManyToMany(const AEntity: T; const APropertyName: string; const ARelatedEntity: TObject);
@@ -179,10 +200,21 @@ type
     procedure Load;
   end;
 
+  IPropertyEntry = interface
+    ['{D4E5F6A7-B8C9-4A12-3456-789012DEF012}']
+    function GetCurrentValue: TValue;
+    procedure SetCurrentValue(const AValue: TValue);
+    function GetIsModified: Boolean;
+    procedure SetIsModified(const AValue: Boolean);
+    property CurrentValue: TValue read GetCurrentValue write SetCurrentValue;
+    property IsModified: Boolean read GetIsModified write SetIsModified;
+  end;
+
   IEntityEntry = interface
     ['{C3D4E5F6-A7B8-4901-2345-678901CDEF01}']
     function Collection(const APropName: string): ICollectionEntry;
     function Reference(const APropName: string): IReferenceEntry;
+    function Member(const APropName: string): IPropertyEntry;
   end;
 
   /// <summary>
@@ -216,6 +248,7 @@ type
     ///   Saves all changes made in this context to the database.
     /// </summary>
     function SaveChanges: Integer;
+    function SaveChangesAsync: TAsyncBuilder<Integer>;
 
     /// <summary>
     ///   Clears the ChangeTracker and IdentityMap of all DbSets.
@@ -235,6 +268,12 @@ type
     procedure Detach(const AEntity: TObject);
 
     /// <summary>
+    ///   Executes a stored procedure and maps output parameters and return values
+    ///   back to the provided DTO object using [DbParam] attributes.
+    /// </summary>
+    procedure ExecuteProcedure(const ADto: TObject);
+
+    /// <summary>
     ///   Access the Change Tracker.
     /// </summary>
     function ChangeTracker: IChangeTracker;
@@ -246,6 +285,12 @@ type
     function GetMapping(AType: PTypeInfo): TObject;
     
     function Entry(const AEntity: TObject): IEntityEntry;
+    
+    /// <summary>
+    ///  Tracks internal framework objects (like proxy managers) that need to be
+    ///  freed when the context is destroyed.
+    /// </summary>
+    procedure TrackProxy(const AProxy: TObject);
     
     // Tenancy
     function GetTenantProvider: ITenantProvider;

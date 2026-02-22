@@ -9,9 +9,6 @@
         <Projects Include="Tests\Web.SalesSystem.Tests.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\..\Sources\Dext.Testing.dproj">
-            <Dependencies/>
-        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -38,23 +35,14 @@
     <Target Name="Web_SalesSystem_Tests:Make">
         <MSBuild Projects="Tests\Web.SalesSystem.Tests.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Dext_Testing">
-        <MSBuild Projects="..\..\Sources\Dext.Testing.dproj"/>
-    </Target>
-    <Target Name="Dext_Testing:Clean">
-        <MSBuild Projects="..\..\Sources\Dext.Testing.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Dext_Testing:Make">
-        <MSBuild Projects="..\..\Sources\Dext.Testing.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Web_SalesSystem_Minimal;Web_SalesSystem_Tests;Dext_Testing"/>
+        <CallTarget Targets="Web_SalesSystem_Minimal;Web_SalesSystem_Tests"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Web_SalesSystem_Minimal:Clean;Web_SalesSystem_Tests:Clean;Dext_Testing:Clean"/>
+        <CallTarget Targets="Web_SalesSystem_Minimal:Clean;Web_SalesSystem_Tests:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Web_SalesSystem_Minimal:Make;Web_SalesSystem_Tests:Make;Dext_Testing:Make"/>
+        <CallTarget Targets="Web_SalesSystem_Minimal:Make;Web_SalesSystem_Tests:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

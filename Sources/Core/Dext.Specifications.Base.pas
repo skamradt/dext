@@ -58,15 +58,18 @@ type
   protected
     FExpression: IExpression;
     FIncludes: TList<string>;
+    FSelectedColumns: TList<string>;
     FOrderBy: TList<IOrderBy>;
     FSkip: Integer;
     FTake: Integer;
     FIsPagingEnabled: Boolean;
     FIsTracking: Boolean;
     
-    FSelectedColumns: TList<string>;
     FJoins: TList<IJoin>;
     FGroupBy: TList<string>;
+    FIgnoreQueryFilters: Boolean;
+    FOnlyDeleted: Boolean;
+    FLockMode: TLockMode;
     
     // Implementation of ISpecification<T>
     
@@ -82,7 +85,11 @@ type
     function GetSelectedColumns: TArray<string>;
     function GetJoins: TArray<IJoin>;
     function GetGroupBy: TArray<string>;
+    function IsIgnoringFilters: Boolean;
+    function IsOnlyDeleted: Boolean;
+    function GetLockMode: TLockMode;
     function GetSignature: string; virtual;
+    function Clone: ISpecification<T>; virtual;
   public
     constructor Create; overload; virtual;
     constructor Create(const AExpression: IExpression); overload; virtual;
@@ -91,11 +98,15 @@ type
     // Fluent Builders (public for TSpecificationBuilder)
     procedure Where(const AExpression: IExpression);
     procedure Include(const APath: string); virtual;
+    procedure RemoveInclude(const APath: string); virtual;
     procedure OrderBy(const AOrderBy: IOrderBy); virtual;
     procedure Select(const AColumn: string); virtual;
     procedure Join(const ATable: string; const AAlias: string; AType: TJoinType; const ACondition: IExpression); virtual;
     procedure GroupBy(const AColumn: string); virtual;
-    
+    procedure IgnoreQueryFilters(const AValue: Boolean = True); virtual;
+    procedure OnlyDeleted(const AValue: Boolean = True); virtual;
+    procedure WithLock(const ALockMode: TLockMode); virtual;
+
     // Legacy support
     procedure AddInclude(const APath: string);
     procedure AddOrderBy(const AOrderBy: IOrderBy);
@@ -123,8 +134,11 @@ begin
   FOrderBy := TList<IOrderBy>.Create;
   FJoins := TList<IJoin>.Create;
   FGroupBy := TList<string>.Create;
+  FLockMode := lmNone;
   FExpression := nil; // Empty expression matches all
   FIsTracking := True; // Tracking enabled by default
+  FIgnoreQueryFilters := False;
+  FOnlyDeleted := False;
 end;
 
 constructor TSpecification<T>.Create(const AExpression: IExpression);
@@ -155,6 +169,11 @@ end;
 procedure TSpecification<T>.Include(const APath: string);
 begin
   FIncludes.Add(APath);
+end;
+
+procedure TSpecification<T>.RemoveInclude(const APath: string);
+begin
+  FIncludes.Remove(APath);
 end;
 
 procedure TSpecification<T>.AddInclude(const APath: string);
@@ -241,6 +260,16 @@ begin
   Result := FIsTracking;
 end;
 
+function TSpecification<T>.GetLockMode: TLockMode;
+begin
+  Result := FLockMode;
+end;
+
+procedure TSpecification<T>.WithLock(const ALockMode: TLockMode);
+begin
+  FLockMode := ALockMode;
+end;
+
 procedure TSpecification<T>.EnableTracking(const AValue: Boolean);
 begin
   FIsTracking := AValue;
@@ -261,6 +290,16 @@ begin
   FGroupBy.Add(AColumn);
 end;
 
+procedure TSpecification<T>.IgnoreQueryFilters(const AValue: Boolean);
+begin
+  FIgnoreQueryFilters := AValue;
+end;
+
+procedure TSpecification<T>.OnlyDeleted(const AValue: Boolean);
+begin
+  FOnlyDeleted := AValue;
+end;
+
 function TSpecification<T>.GetJoins: TArray<IJoin>;
 begin
   Result := FJoins.ToArray;
@@ -269,6 +308,16 @@ end;
 function TSpecification<T>.GetGroupBy: TArray<string>;
 begin
   Result := FGroupBy.ToArray;
+end;
+
+function TSpecification<T>.IsIgnoringFilters: Boolean;
+begin
+  Result := FIgnoreQueryFilters;
+end;
+
+function TSpecification<T>.IsOnlyDeleted: Boolean;
+begin
+  Result := FOnlyDeleted;
 end;
 
 function TSpecification<T>.GetSignature: string;
@@ -331,7 +380,9 @@ begin
     
     // 7. Paging
     if FIsPagingEnabled then
-      SB.AppendFormat(':PAGE[%d,%d]', [FSkip, FTake]);
+      SB.Append(':P[').Append(FSkip).Append(',').Append(FTake).Append(']')
+    else
+      SB.Append(':P[OFF]');
       
     // 8. GroupBy
     if FGroupBy.Count > 0 then
@@ -341,9 +392,12 @@ begin
         SB.Append(FGroupBy[I]).Append(',');
       SB.Append(']');
     end;
-    
-    // 9. Tracking
-    if not FIsTracking then SB.Append(':NOTRACK');
+
+    // 9. Tracking & Filters
+    SB.Append(':TRK[').Append(Ord(FIsTracking)).Append(']');
+    SB.Append(':IGN[').Append(Ord(FIgnoreQueryFilters)).Append(']');
+    SB.Append(':DEL[').Append(Ord(FOnlyDeleted)).Append(']');
+    SB.Append(':LCK[').Append(Ord(FLockMode)).Append(']');
     
     Result := SB.ToString;
   finally
@@ -379,6 +433,26 @@ end;
 function TJoin.GetCondition: IExpression;
 begin
   Result := FCondition;
+end;
+
+function TSpecification<T>.Clone: ISpecification<T>;
+var
+  NewSpec: TSpecification<T>;
+begin
+  NewSpec := TSpecification<T>.Create(FExpression);
+  NewSpec.FIncludes.AddRange(FIncludes);
+  NewSpec.FSelectedColumns.AddRange(FSelectedColumns);
+  NewSpec.FOrderBy.AddRange(FOrderBy);
+  NewSpec.FJoins.AddRange(FJoins);
+  NewSpec.FGroupBy.AddRange(FGroupBy);
+  NewSpec.FSkip := FSkip;
+  NewSpec.FTake := FTake;
+  NewSpec.FIsPagingEnabled := FIsPagingEnabled;
+  NewSpec.FIsTracking := FIsTracking;
+  NewSpec.FIgnoreQueryFilters := FIgnoreQueryFilters;
+  NewSpec.FOnlyDeleted := FOnlyDeleted;
+  NewSpec.FLockMode := FLockMode;
+  Result := NewSpec;
 end;
 
 end.

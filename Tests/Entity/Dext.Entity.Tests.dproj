@@ -129,19 +129,13 @@
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
+        <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="Dext.Entity.Dialects.pas"/>
-        <DCCReference Include="Dext.Entity.Dialect.PostgreSQL.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Dialect.Firebird.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Dialect.MSSQL.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Dialect.MySQL.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Dialect.Oracle.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Naming.Test.pas"/>
-        <DCCReference Include="Dext.Entity.Mapping.Test.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

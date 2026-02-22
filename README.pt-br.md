@@ -50,7 +50,9 @@ Um framework HTTP leve e poderoso para construir REST APIs e microserviços.
 - **Response Compression**: Middleware integrado de compressão GZip.
 - **Cookies**: Suporte completo a leitura e escrita com `TCookieOptions`.
 - **OpenAPI**: Integração nativa com Swagger e geração automática de documentação.
-- **Database as API**: REST endpoints zero-code a partir de entities com `TDataApiHandler<T>.Map` - inclui filtros, paginação e security policies.
+- **Database as API**: REST endpoints zero-code a partir de entities com `TDataApiHandler<T>.Map` ou via nova sintaxe fluente `App.Services.MapDataApi<T>`.
+- **Zero-Allocation JSON**: Geração de resposta extremamente rápida via `TUtf8JsonWriter` para streaming direto.
+- **Dynamic Specification Mapping**: Integração automática de filtros via QueryString (`_gt`, `_lt`, `_sort`, etc).
 - **Comunicação em Tempo Real** ⭐ NOVO: Hubs compatíveis com SignalR para messaging em tempo real. Suporta grupos, targeting por usuário e broadcast com `Dext.Web.Hubs`. [Saiba mais](Docs/hubs.md)
 
 ### 🗄️ Dext.Entity (ORM)
@@ -69,6 +71,11 @@ Um ORM moderno focado em produtividade e performance.
   - **Isolamento por Schema**: Performance extrema via schemas (PostgreSQL `search_path`, SQL Server prefixing).
   - **Tenant por Banco de Dados**: Resolução dinâmica de Connection String baseada no tenant.
   - **Criação Automática**: `EnsureCreated` configura automaticamente os schemas por tenant.
+- **Consultas Avançadas**:
+  - **FromSql**: Execute SQL puro e mapeie os resultados para entidades automaticamente.
+  - **Multi-Mapping ([Nested])**: Hidratação recursiva estilo Dapper para objetos complexos.
+  - **Pessimistic Locking**: Suporte a `FOR UPDATE` e `UPDLOCK` em consultas fluentes.
+  - **Stored Procedures**: Mapeamento declarativo via `[StoredProcedure]` e `[DbParam]`.
 - **Mapeamento de Herança**:
   - **Table-Per-Hierarchy (TPH)**: Suporte total para classes base e subclasses em uma única tabela.
   - **Hydration Polimórfica**: Instanciação automática da subclasse correta durante a recuperação de dados.
@@ -373,6 +380,10 @@ O repositório contém projetos de exemplo práticos:
 - **`Examples/Web.SmartPropsDemo`**: Demonstra o uso de Smart Properties com Model Binding e persistência ORM.
 - **`Examples/Hubs/HubsExample`** ⭐ NOVO: Demo de comunicação em tempo real com grupos, mensagens e broadcast de hora do servidor. [Leia o Guia](Examples/Hubs/README.md).
 - **`Examples/Desktop.MVVM.CustomerCRUD`** ⭐ NOVO: Desktop moderno com padrão MVVM, Navigator, DI e testes unitários. [Leia o Guia](Examples/Desktop.MVVM.CustomerCRUD/README.md).
+- **`Examples/Web.MultiTenancy`** ⭐ NOVO: Demonstra estratégias de isolamento multi-tenant (Schema vs Database).
+- **`Examples/Web.HelpDesk`** ⭐ NOVO: Sistema de help desk completo com arquitetura em camadas e testes de integração.
+- **`Examples/Web.MinimalAPI`** ⭐ NOVO: Exemplos de APIs minimalistas mostrando o poder das definições de rotas fluentes.
+- **`Personal/Web.eShopOnWebByDomain`** ⭐ NOVO: Implementação clássica do eShopOnWeb, demonstrando todo o potencial do Dext em domínios complexos.
 
 ---
 

@@ -17,6 +17,7 @@ type
     FClient: THttpClient;
     FHost: IWebHost;
     FServerThread: TThread; // Explicit thread management
+    FServerError: string;
     
     procedure Log(const Msg: string);
     procedure LogSuccess(const Msg: string);
@@ -75,24 +76,53 @@ begin
   
   Builder := nil; // Force release
   
-  // Run the server in a background thread because Run() is blocking
+  FServerError := '';
   FServerThread := TThread.CreateAnonymousThread(procedure
     begin
       try
-        // Keep a reference to prevent premature destruction if FHost is cleared elsewhere
+        // Keep a reference to prevent premature destruction
         HostRef := FHost; 
         if HostRef <> nil then
-          HostRef.Run;
+        begin
+          // Use Start instead of Run because Run might exit prematurely 
+          // if the 'no-wait' command line switch is present.
+          HostRef.Start;
+        end;
       except
-        // Ignore errors during shutdown or startup in background
+        on E: Exception do
+          FServerError := E.Message;
       end;
     end);
     
-  FServerThread.FreeOnTerminate := False; // We will manage lifecycle
+  FServerThread.FreeOnTerminate := False;
   FServerThread.Start;
   
-  // Give it a moment to start
-  Sleep(200);
+  // Robust wait for server to start
+  var Retries := 0;
+  var Success := False;
+  while (Retries < 50) and (not Success) and (FServerError = '') do
+  begin
+    try
+      // Try to connect to the base URL
+      var Resp := FClient.Get(GetBaseUrl + '/');
+      if Resp <> nil then
+      begin
+        Success := True;
+        Break;
+      end;
+    except
+      // Server not yet active
+    end;
+    
+    Sleep(100);
+    Inc(Retries);
+  end;
+
+  if FServerError <> '' then
+    raise Exception.Create('Server failed to start: ' + FServerError);
+
+  if not Success then
+    raise Exception.Create('Server start timeout after 5 seconds at ' + GetBaseUrl);
 end;
 
 procedure TBaseTest.ConfigureHost(const Builder: IWebHostBuilder);

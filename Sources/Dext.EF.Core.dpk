@@ -75,6 +75,9 @@ contains
   Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas',
   Dext.Entity.Cache in 'Data\Dext.Entity.Cache.pas',
   Dext.Entity.Drivers.FireDAC.Links in 'Data\Dext.Entity.Drivers.FireDAC.Links.pas',
-  Dext.Entity.Validator in 'Data\Dext.Entity.Validator.pas';
+  Dext.Entity.Validator in 'Data\Dext.Entity.Validator.pas',
+  Dext.Entity.Collections in 'Data\Dext.Entity.Collections.pas',
+  Dext.Entity.ProxyFactory in 'Data\Dext.Entity.ProxyFactory.pas';
 
 end.
+

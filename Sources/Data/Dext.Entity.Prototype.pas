@@ -52,15 +52,17 @@ type
   Prototype = class
   private class var
     FCache: TDictionary<PTypeInfo, TObject>;
+    FStack: TList<PTypeInfo>;
     class constructor Create;
     class destructor Destroy;
     class function CreatePrototype(ATypeInfo: PTypeInfo): TObject; static;
+    class function Entity(ATypeInfo: PTypeInfo): TObject; overload; static;
   public
     /// <summary>
     ///   Returns a cached prototype entity for query building.
     ///   Creates and caches the prototype on first call for each type.
     /// </summary>
-    class function Entity<T>: T; static;
+    class function Entity<T>: T; overload; static;
     
     /// <summary>
     ///   Clears the prototype cache. Useful for testing or hot-reload scenarios.
@@ -82,6 +84,7 @@ uses
 class constructor Prototype.Create;
 begin
   FCache := TDictionary<PTypeInfo, TObject>.Create;
+  FStack := TList<PTypeInfo>.Create;
 end;
 
 class destructor Prototype.Destroy;
@@ -94,6 +97,7 @@ begin
       Obj.Free;
     FCache.Free;
   end;
+  FStack.Free;
 end;
 
 class procedure Prototype.ClearCache;
@@ -109,13 +113,9 @@ class function Prototype.CreatePrototype(ATypeInfo: PTypeInfo): TObject;
 var
   Ctx: TRttiContext;
   Typ: TRttiType;
-  Fld: TRttiField;
   PropInfo: IPropInfo;
-  MetaVal: TValue;
-  RecType: TRttiRecordType;
-  InfoField: TRttiField;
   InstancePtr: Pointer;
-  PropertyName, ColumnName: string;
+  ColumnName: string;
   EntityMap: TEntityMap;
   PropMap: TPropertyMap;
 begin
@@ -125,51 +125,31 @@ begin
     if (Typ = nil) or (Typ.TypeKind <> tkClass) then
       raise Exception.Create('Prototype.Entity<T> only supports class types.');
 
-    // Create Instance using RTTI
-    var Method := Typ.GetMethod('Create');
-    if Method <> nil then
-    begin
-      var Val := Method.Invoke(Typ.AsInstance.MetaclassType, []);
-      Result := Val.AsObject;
-    end
-    else
-    begin
-      Result := Typ.AsInstance.MetaclassType.Create;
-    end;
-    
+    // Create Instance - Prefer default constructor if available
+    Result := Typ.AsInstance.MetaclassType.Create;
     InstancePtr := Result;
 
     EntityMap := TModelBuilder.Instance.GetMap(ATypeInfo);
     if EntityMap <> nil then
     begin
-      for Fld in Typ.GetFields do
+      for PropMap in EntityMap.Properties.Values do
       begin
-        if not Fld.FieldType.Name.StartsWith('Prop<') then
-          Continue;
-
-        PropertyName := Fld.Name;
-        if (PropertyName.Length > 1) and 
-           (PropertyName.Chars[0] = 'F') and 
-           (PropertyName.Chars[1].IsUpper) then
-          Delete(PropertyName, 1, 1);
-
-        if EntityMap.Properties.TryGetValue(PropertyName, PropMap) then
-          ColumnName := PropMap.ColumnName
-        else
-          ColumnName := PropertyName; 
-
-        PropInfo := TPropInfo.Create(ColumnName);
-        TValue.Make(@PropInfo, TypeInfo(IPropInfo), MetaVal);
-
-        RecType := Fld.FieldType.AsRecord;
-        InfoField := RecType.GetField('FInfo');
-
-        if InfoField <> nil then
+        // 1. Inject IPropInfo (Metadata for SQL generation)
+        if PropMap.FieldOffset <> -1 then
         begin
-          InfoField.SetValue(
-            Pointer(NativeInt(InstancePtr) + Fld.Offset), 
-            MetaVal
-          );
+          ColumnName := PropMap.ColumnName;
+          if ColumnName = '' then ColumnName := PropMap.PropertyName;
+
+          PropInfo := TPropInfo.Create(PropMap.ColumnName, PropMap.PropertyName);
+          IPropInfo(PPointer(NativeInt(InstancePtr) + PropMap.FieldOffset)^) := PropInfo;
+        end;
+
+        // 2. Inject Sub-Prototypes (Recursive Drill-down Support)
+        if (PropMap.FieldValueOffset <> -1) and (PropMap.PropertyType <> nil) and 
+           (PropMap.PropertyType.Kind = tkClass) then
+        begin
+           // We use the non-generic Entity call which handles the cache and recursion
+           PPointer(NativeInt(InstancePtr) + PropMap.FieldValueOffset)^ := Entity(PropMap.PropertyType);
         end;
       end;
     end;
@@ -180,27 +160,28 @@ end;
 
 class function Prototype.Entity<T>: T;
 var
-  TypeInfoPtr: PTypeInfo;
   Obj: TObject;
 begin
-  TypeInfoPtr := TypeInfo(T);
-  
-  // Runtime check for class type
-  if PTypeInfo(TypeInfoPtr).Kind <> tkClass then
-    raise Exception.Create('Prototype.Entity<T> only supports class types.');
-  
-  // Check cache first
-  if FCache.TryGetValue(TypeInfoPtr, Obj) then
-  begin
-    // Use TValue to convert TObject to T without compile-time constraint
-    Result := TValue.From(Obj).AsType<T>;
+  Obj := Entity(TypeInfo(T));
+  Result := T(Pointer(@Obj)^);
+end;
+
+class function Prototype.Entity(ATypeInfo: PTypeInfo): TObject;
+begin
+  if FCache.TryGetValue(ATypeInfo, Result) then
     Exit;
+
+  // Recursion Guard
+  if FStack.Contains(ATypeInfo) then
+    Exit(nil);
+
+  FStack.Add(ATypeInfo);
+  try
+    Result := CreatePrototype(ATypeInfo);
+    FCache.Add(ATypeInfo, Result);
+  finally
+    FStack.Remove(ATypeInfo);
   end;
-  
-  // Create and cache new prototype
-  Obj := CreatePrototype(TypeInfoPtr);
-  FCache.Add(TypeInfoPtr, Obj);
-  Result := TValue.From(Obj).AsType<T>;
 end;
 
 end.

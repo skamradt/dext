@@ -212,14 +212,12 @@ end;
 
 function TUUID.ToString: string;
 begin
-  // Canonical format: lowercase, no braces, with hyphens
-  // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   Result := Format('%2.2x%2.2x%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x-%2.2x%2.2x%2.2x%2.2x%2.2x%2.2x',
     [FBytes[0], FBytes[1], FBytes[2], FBytes[3],
      FBytes[4], FBytes[5],
      FBytes[6], FBytes[7],
      FBytes[8], FBytes[9],
-     FBytes[10], FBytes[11], FBytes[12], FBytes[13], FBytes[14], FBytes[15]]);
+     FBytes[10], FBytes[11], FBytes[12], FBytes[13], FBytes[14], FBytes[15]]).ToLower;
 end;
 
 function TUUID.ToStringWithBraces: string;

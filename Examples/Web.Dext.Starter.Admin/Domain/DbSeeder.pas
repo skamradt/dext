@@ -24,6 +24,9 @@ type
 
 implementation
 
+uses
+  Dext.Logging.Global;
+
 { TDbSeeder }
 
 constructor TDbSeeder.Create(const AServiceProvider: Dext.DI.Interfaces.IServiceProvider);
@@ -34,7 +37,7 @@ end;
 procedure TDbSeeder.Seed;
 begin
   try
-    Writeln('[*] Seeding Database...');
+    Log.Info('[*] Seeding Database...');
     
     // Create a scope to resolve Scoped services (DbContext)
     var Scope := FServiceProvider.CreateScope;
@@ -44,22 +47,22 @@ begin
     var DbObj := Scope.ServiceProvider.GetService(SvcType);
     if DbObj = nil then
     begin
-      Writeln('[ERROR] TAppDbContext could not be resolved');
+      Log.Error('[ERROR] TAppDbContext could not be resolved');
       Exit;
     end;
     var Db := DbObj as TAppDbContext;
     
     // Register entities in FCache (required for EnsureCreated to work)
-    Writeln('[*] Registering entities...');
+    Log.Info('[*] Registering entities...');
     Db.Entities<TUser>;
     Db.Entities<TUserSettings>;
     Db.Entities<TCustomer>;
     Db.Entities<TOrder>;
     
     // Migrate/EnsureCreated
-    Writeln('[*] Creating schema...');
+    Log.Info('[*] Creating schema...');
     Db.EnsureCreated;
-    Writeln('[OK] Database schema created/verified.');
+    Log.Info('[OK] Database schema created/verified.');
     
     // Seed Data
     if Db.Entities<TUser>.ToList.Count = 0 then
@@ -86,15 +89,15 @@ begin
       Db.Entities<TCustomer>.Add(C3);
       
       Db.SaveChanges;
-      Writeln('[OK] Database seeded!');
+      Log.Info('[OK] Database seeded!');
     end
     else
     begin
-      Writeln('[OK] Database already exists.');
+      Log.Info('[OK] Database already exists.');
     end;
   except
     on E: Exception do
-      Writeln('[ERROR] Seeding DB: ' + E.Message);
+      Log.Error('[ERROR] Seeding DB: {Message}', [E.Message]);
   end;
 end;
 

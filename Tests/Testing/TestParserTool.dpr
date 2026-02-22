@@ -7,6 +7,7 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.IOUtils,
+  Dext.Utils,
   Dext.Dashboard.TestScanner in '..\..\Sources\Dashboard\Dext.Dashboard.TestScanner.pas',
   DelphiAST in '..\..\External\DelphiAST\Source\DelphiAST.pas',
   DelphiAST.Consts in '..\..\External\DelphiAST\Source\DelphiAST.Consts.pas',
@@ -93,10 +94,12 @@ begin
 end;
 
 begin
+  SetConsoleCharSet;
   try
     Run;
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

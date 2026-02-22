@@ -40,9 +40,6 @@ requires
 
 contains
   Dext.Assertions in 'Testing\Dext.Assertions.pas',
-  Dext.Interception.ClassProxy in 'Testing\Dext.Interception.ClassProxy.pas',
-  Dext.Interception in 'Testing\Dext.Interception.pas',
-  Dext.Interception.Proxy in 'Testing\Dext.Interception.Proxy.pas',
   Dext.Mocks.Auto in 'Testing\Dext.Mocks.Auto.pas',
   Dext.Mocks.Interceptor in 'Testing\Dext.Mocks.Interceptor.pas',
   Dext.Mocks.Matching in 'Testing\Dext.Mocks.Matching.pas',

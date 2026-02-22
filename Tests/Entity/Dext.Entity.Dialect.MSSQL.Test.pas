@@ -84,6 +84,23 @@ begin
 
   // 7. UUID Support
   AssertEqual('UNIQUEIDENTIFIER', FDialect.GetColumnType(TypeInfo(TGUID)), 'GUID mapping should be UNIQUEIDENTIFIER');
+
+  // 8. Stored Procedure Call
+  AssertEqual('EXEC CalculateBonus :pEmpId, :pAmount', 
+    FDialect.GenerateProcedureCallSQL('CalculateBonus', ['pEmpId', 'pAmount']), 'Procedure Call SQL');
+
+  // 9. Locking SQL
+  TestLockingSQL;
+end;
+
+procedure TSQLServerDialectTest.TestLockingSQL;
+var
+  SQL: string;
+begin
+  Log('9. Locking SQL');
+  Log('-----------------');
+  SQL := FDialect.GetLockingSQL(lmExclusive);
+  AssertEqual('WITH (UPDLOCK, ROWLOCK)', SQL, 'GetLockingSQL(lmExclusive) should be WITH (UPDLOCK, ROWLOCK)');
 end;
 
 end.

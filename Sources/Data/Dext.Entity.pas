@@ -93,6 +93,10 @@ type
   DiscriminatorValueAttribute = Dext.Entity.Attributes.DiscriminatorValueAttribute;
   DbTypeAttribute = Dext.Entity.Attributes.DbTypeAttribute;
   TypeConverterAttribute = Dext.Entity.Attributes.TypeConverterAttribute;
+  StoredProcedureAttribute = Dext.Entity.Attributes.StoredProcedureAttribute;
+  DbParamAttribute = Dext.Entity.Attributes.DbParamAttribute;
+  LockTokenAttribute = Dext.Entity.Attributes.LockTokenAttribute;
+  LockExpirationAttribute = Dext.Entity.Attributes.LockExpirationAttribute;
 
   // Dext.Entity.Cache
   TSQLCache = Dext.Entity.Cache.TSQLCache;

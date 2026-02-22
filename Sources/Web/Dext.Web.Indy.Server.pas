@@ -29,7 +29,7 @@ unit Dext.Web.Indy.Server;
 interface
 
 uses
-  System.Classes, System.SysUtils, IdHTTPServer, IdContext, IdCustomHTTPServer, IdServerIOHandler,
+  System.Classes, System.SysUtils, System.SyncObjs,IdHTTPServer, IdContext, IdCustomHTTPServer, IdServerIOHandler,
   Dext.Web.Interfaces, Dext.DI.Interfaces, Dext.Web.Indy.SSL.Interfaces, Dext.Hosting.ApplicationLifetime;
 
 type
@@ -41,6 +41,7 @@ type
     FPort: Integer;
     FSSLHandler: IIndySSLHandler;
     FSSLEnabled: Boolean; // Tracks if SSL was successfully configured
+    FLock: TCriticalSection;
     
     procedure ConfigureSecureServer;
 
@@ -115,6 +116,8 @@ begin
   FHTTPServer.KeepAlive := True;
   FHTTPServer.ServerSoftware := 'Dext Web Server/1.0';
 
+  FLock := System.SyncObjs.TCriticalSection.Create;
+
   if FSSLHandler <> nil then
     ConfigureSecureServer;
 end;
@@ -157,6 +160,7 @@ destructor TIndyWebServer.Destroy;
 begin
   Stop;
   FHTTPServer.Free;
+  FLock.Free;
   FPipeline := nil; // Explicitly break cycle/release reference
   inherited Destroy;
 end;
@@ -258,48 +262,53 @@ var
   i: Integer;
   Ctx: TIdContext;
 begin
-  // Signal graceful stop
-  GServerStopping := True;
-  
-  // 1. Aggressively close all sockets to unblock any stuck threads (SSE, etc)
-  if FHTTPServer.Active then
-  begin
-    try
-      LContexts := FHTTPServer.Contexts.LockList;
+  FLock.Enter;
+  try
+    // Signal graceful stop
+    GServerStopping := True;
+    
+    // 1. Aggressively close all sockets to unblock any stuck threads (SSE, etc)
+    if (FHTTPServer <> nil) and FHTTPServer.Active then
+    begin
       try
-        for i := LContexts.Count - 1 downto 0 do
-        begin
-          Ctx := TIdContext(LContexts[i]);
-          
-          // Force close the socket handle. 
-          // This causes an immediate EIdSocketError or similar in the worker thread,
-          // breaking it out of blocking I/O calls.
-          if (Ctx.Binding <> nil) and Ctx.Binding.HandleAllocated then
+        LContexts := FHTTPServer.Contexts.LockList;
+        try
+          for i := LContexts.Count - 1 downto 0 do
           begin
-             try
-               Ctx.Binding.CloseSocket;
-             except
-               // Ignore errors closing socket, we just want to ensure it's closed
-             end;
+            Ctx := TIdContext(LContexts[i]);
+            
+            // Force close the socket handle. 
+            // This causes an immediate EIdSocketError or similar in the worker thread,
+            // breaking it out of blocking I/O calls.
+            if (Ctx.Binding <> nil) and Ctx.Binding.HandleAllocated then
+            begin
+               try
+                 Ctx.Binding.CloseSocket;
+               except
+                 // Ignore errors closing socket, we just want to ensure it's closed
+               end;
+            end;
           end;
+        finally
+          FHTTPServer.Contexts.UnlockList;
         end;
-      finally
-        FHTTPServer.Contexts.UnlockList;
+      except
+        on E: Exception do
+          SafeWriteLn('Error forcing socket close: ' + E.Message);
       end;
-    except
-      on E: Exception do
-        SafeWriteLn('Error forcing socket close: ' + E.Message);
-    end;
 
-    // 2. Deactivate the server
-    try
-      FHTTPServer.Active := False;
-    except
-      // Silence exceptions during shutdown
+      // 2. Deactivate the server
+      try
+        FHTTPServer.Active := False;
+      except
+        // Silence exceptions during shutdown
+      end;
+      
+      Sleep(200);
     end;
+  finally
+    FLock.Leave;
   end;
-  
-  Sleep(200);
 end;
 
 end.

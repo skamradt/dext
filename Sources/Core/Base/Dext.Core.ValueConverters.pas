@@ -202,13 +202,16 @@ begin
   RegisterConverter(TypeInfo(string), TypeInfo(Int64), TVariantToIntegerConverter.Create);
   RegisterConverter(TypeInfo(string), TypeInfo(Double), TVariantToFloatConverter.Create);
   RegisterConverter(TypeInfo(string), TypeInfo(TDateTime), TVariantToDateTimeConverter.Create);
+  RegisterConverter(TypeInfo(string), TypeInfo(Boolean), TVariantToBooleanConverter.Create);
 
   // Kind-based Catch-all for Strings to Primitives
   RegisterConverter(tkUString, tkInteger, TVariantToIntegerConverter.Create);
   RegisterConverter(tkUString, tkFloat, TVariantToFloatConverter.Create);
   RegisterConverter(tkUString, tkInt64, TVariantToIntegerConverter.Create);
+  RegisterConverter(tkUString, tkEnumeration, TVariantToEnumConverter.Create);
   RegisterConverter(tkString, tkInteger, TVariantToIntegerConverter.Create);
   RegisterConverter(tkString, tkFloat, TVariantToFloatConverter.Create);
+  RegisterConverter(tkString, tkEnumeration, TVariantToEnumConverter.Create);
 
   // TUUID support
   RegisterConverter(TypeInfo(string), TypeInfo(TUUID), TStringToUUIDConverter.Create);
@@ -227,6 +230,12 @@ begin
   
   RegisterConverter(tkFloat, tkInt64, NumericToInt);
   RegisterConverter(tkInteger, tkInt64, NumericToInt);
+  
+  // Float/Integer -> Enum support
+  var NumericToEnum := TVariantToEnumConverter.Create;
+  RegisterConverter(tkInteger, tkEnumeration, NumericToEnum);
+  RegisterConverter(tkInt64, tkEnumeration, NumericToEnum);
+  RegisterConverter(tkFloat, tkEnumeration, NumericToEnum);
 end;
 
 class destructor TValueConverterRegistry.Destroy;
@@ -343,7 +352,14 @@ begin
     Result := Converter.Convert(AValue, ATargetType)
   else
   begin
-    // Fallback: Try TValue.Cast (built-in RTTI conversion)
+    // Fallback 1: Target is String (use TValue.ToString which is very robust)
+    if ATargetType.Kind in [tkString, tkUString, tkWString] then
+    begin
+       Result := AValue.ToString;
+       Exit;
+    end;
+
+    // Fallback 2: Try TValue.Cast (built-in RTTI conversion)
     try
       Result := AValue.Cast(ATargetType);
     except
