@@ -2317,11 +2317,16 @@ begin
       if PropMap <> nil then
       begin
         if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsNavigation then IsMapped := False; // Navigation properties are NOT columns
         if PropMap.IsPK then IsPK := True;
         if PropMap.IsAutoInc then IsAutoInc := True;
         if PropMap.ColumnName <> '' then ColName := PropMap.ColumnName;
         if PropMap.IsRequired then IsRequired := True;
       end;
+
+      // Class/Interface detection as a safety net (unless explicitly mapped via attributes/mapping)
+      if IsMapped and (PropMap = nil) and (Prop.PropertyType.TypeKind in [tkClass, tkInterface]) then
+        IsMapped := False;
 
       for Attr in Prop.GetAttributes do
       begin
@@ -2329,21 +2334,39 @@ begin
         if Attr is PrimaryKeyAttribute then IsPK := True;
         if Attr is AutoIncAttribute then IsAutoInc := True;
         if Attr is RequiredAttribute then IsRequired := True;
+        if Attr is JsonColumnAttribute then IsMapped := True; // Force mapping for JSON columns
 
         if Attr is ForeignKeyAttribute then
         begin
              FK := ForeignKeyAttribute(Attr);
-             if ColName = Prop.Name then // Only if not already changed by PropMap or ColumnAttr
-                ColName := FK.ColumnName;
-                
-             FKPropName := FK.ColumnName;
-             FKColName := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, FKPropName);
           
-             if (Prop.PropertyType.TypeKind = tkClass) and 
-                TSQLGeneratorHelper.GetRelatedTableAndPK(FRttiContext, Prop.PropertyType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
+             var LLocalCol := ColName;
+             var LRelatedTargetType: TRttiType := nil;
+             var LFKPropName := FK.ColumnName;
+
+             if (Prop.PropertyType.TypeKind = tkClass) then
+             begin
+                // Pattern A: [ForeignKey('RequesterId')] property Requester: TUser
+                LLocalCol := TSQLGeneratorHelper.GetColumnNameForProperty(Typ, LFKPropName);
+                LRelatedTargetType := Prop.PropertyType;
+             end
+             else
+             begin
+                // Pattern B: [ForeignKey('Requester')] property RequesterId: Integer
+                var NavProp := Typ.GetProperty(LFKPropName);
+                if (NavProp <> nil) and (NavProp.PropertyType.TypeKind = tkClass) then
+                begin
+                   LRelatedTargetType := NavProp.PropertyType;
+                   // LLocalCol is already the current column name being processed (RequesterId)
+                end;
+             end;
+
+             if (LRelatedTargetType <> nil) and 
+                // logic below renamed to use LRelatedTargetType
+                TSQLGeneratorHelper.GetRelatedTableAndPK(FRttiContext, LRelatedTargetType.AsInstance.MetaclassType, RelatedTable, RelatedPK) then
              begin
                  LConstraint := Format('FOREIGN KEY (%s) REFERENCES %s (%s)', 
-                   [FDialect.QuoteIdentifier(FKColName), 
+                   [FDialect.QuoteIdentifier(LLocalCol), 
                     FDialect.QuoteIdentifier(RelatedTable), 
                     FDialect.QuoteIdentifier(RelatedPK)]);
                     

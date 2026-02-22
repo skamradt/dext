@@ -735,7 +735,7 @@ begin
   ApplyTenantConfig(True);
   Nodes := TObjectList<TEntityNode>.Create;
   Created := TList<PTypeInfo>.Create;
-  if fCache.count = 0 then
+  if FCache.Count = 0 then
     PreloadDBSets;
   Ctx := TRttiContext.Create;
   try
@@ -854,9 +854,9 @@ begin
               except
                  on E: Exception do
                  begin
-                   // Always log failed SQL if we have a logger
                    if Assigned(FOnLog) then
                      FOnLog('FAILED SQL: ' + SQL);
+                   raise; // Propagate the error so the developer knows why it failed
                  end;
               end;
             end;

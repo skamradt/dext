@@ -157,8 +157,8 @@ begin
         
         TApplicationBuilderRateLimitExtensions.UseRateLimiting(App, 
           TRateLimitPolicy.FixedWindow(100, 60)
-            .WithPartitionByIp
-            .WithGlobalLimit(1000));
+            .PartitionByIp
+            .GlobalLimit(1000));
         
         // Alternative examples (commented):
         

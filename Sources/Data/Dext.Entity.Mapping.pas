@@ -342,6 +342,7 @@ type
     function GetDiscoveryName(AType: PTypeInfo): string;
     
     function FindMapByDiscriminator(ABaseType: PTypeInfo; const AValue: Variant): TEntityMap;
+    procedure Clear;
     
     class property Instance: TModelBuilder read FInstance;
   end;
@@ -1203,6 +1204,14 @@ function TModelBuilder.GetDiscoveryName(AType: PTypeInfo): string;
 begin
   if not FDiscoveryNames.TryGetValue(AType, Result) then
     Result := '';
+end;
+
+procedure TModelBuilder.Clear;
+begin
+  if Assigned(FMaps) then
+    FMaps.Clear;
+  if Assigned(FDiscoveryNames) then
+    FDiscoveryNames.Clear;
 end;
 
 procedure TModelBuilder.ApplyConfiguration<T>(AConfig: IEntityTypeConfiguration<T>);
