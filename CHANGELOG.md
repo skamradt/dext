@@ -6,6 +6,54 @@
 
 ---
 
+## 🚀 2026-02-22 - Dext v1.0 Release Candidate: ORM Evolution & Performance
+
+### ✨ Major Features / Features Principais
+
+> **A evolução final do Dext ORM e Web API antes da v1.0!**
+>
+> **The final evolution of Dext ORM and Web API before v1.0!**
+
+#### ORM Evolution & Fluency
+**[PT-BR]** Simplificamos drasticamente a exposição de dados e a execução de consultas complexas.
+- ⚡ **MapDataApi<T>** - Nova sintaxe fluente para criar endpoints REST completos a partir de uma entidade com uma única linha de código.
+- 🛠️ **FromSql Support** - Agora você pode executar SQL puro diretamente via `DbContext.Users.FromSql(...)` mantendo o mapeamento automático para objetos.
+- 🔗 **Multi-Mapping ([Nested])** - Suporte a hidratação recursiva estilo Dapper. Mapeie objetos complexos em uma única query usando o atributo `[Nested]`.
+- 🔒 **Pessimistic Locking** - Controle total de concorrência com suporte nativo a `FOR UPDATE` (PostgreSQL/Oracle) e `UPDLOCK` (SQL Server).
+- 🧬 **Stored Procedures Evolution** - Mapeamento declarativo via `[StoredProcedure]` e atributos `[DbParam]` para parâmetros de entrada e saída.
+
+**[EN]** Drastically simplified data exposure and complex query execution.
+- ⚡ **MapDataApi<T>** - New fluent syntax to create full REST endpoints from an entity with a single line of code.
+- 🛠️ **FromSql Support** - You can now execute raw SQL directly via `DbContext.Users.FromSql(...)` while maintaining automatic object mapping.
+- 🔗 **Multi-Mapping ([Nested])** - Dapper-style recursive hydration support. Map complex objects in a single query using the `[Nested]` attribute.
+- 🔒 **Pessimistic Locking** - Full concurrency control with native support for `FOR UPDATE` (PostgreSQL/Oracle) and `UPDLOCK` (SQL Server).
+- 🧬 **Stored Procedures Evolution** - Declarative mapping via `[StoredProcedure]` and `[DbParam]` attributes for input and output parameters.
+
+#### Web & Performance
+**[PT-BR]** Foco em performance e flexibilidade na filtragem de dados.
+- 🚀 **Zero-Allocation JSON** - Motor "Database as API" agora utiliza `TUtf8JsonWriter` para streaming direto do banco para o socket, minimizando alocações de memória.
+- 🔍 **Dynamic Specification Mapping** - Filtragem avançada via QueryString integrada (`_gt`, `_lt`, `_sort`, etc) que mapeia automaticamente para o SQL.
+- 🏗️ **Core Interception** - O motor de Proxy e ClassProxy foi movido para o Core, eliminando dependências circulares e otimizando o Lazy Loading.
+
+**[EN]** Focus on performance and flexibility in data filtering.
+- 🚀 **Zero-Allocation JSON** - "Database as API" engine now uses `TUtf8JsonWriter` for direct streaming from database to socket, minimizing memory allocations.
+- 🔍 **Dynamic Specification Mapping** - Integrated advanced QueryString filtering (`_gt`, `_lt`, `_sort`, etc) that automatically maps to SQL.
+- 🏗️ **Core Interception** - The Proxy and ClassProxy engine has been moved to Core, eliminating circular dependencies and optimizing Lazy Loading.
+
+### 🧪 New Examples / Novos Exemplos
+
+- **eShopOnWeb**: Implementação completa do clássico demo da Microsoft adaptado para Dext.
+- **HelpDesk**: Sistema de chamados com arquitetura em camadas e testes de integração.
+- **MultiTenancy**: Demonstração de isolamento de dados por Schema e por Banco.
+- **SmartPropsDemo**: Uso avançado de `Prop<T>` e `Nullable<T>` com persistência.
+
+### 🐛 Bug Fixes & Stability
+
+- **SQL Generator**: Melhoria na geração de Foreign Keys, ignorando propriedades de navegação durante o `CREATE TABLE`.
+- **Memory Management**: Resolvido conflitos de ownership no `THandlerInvoker` e memory leaks no seeding de dados.
+- **Lazy Loading**: Correção de Access Violations causados por inicialização incorreta de proxies.
+- **TActivator**: Priorização inteligente de construtores de classes derivadas.
+
 ## 🚀 2026-02-06 - Dext.Entity: DbType Propagation & Legacy Paging
 
 ### ✨ Major Feature / Feature Principal

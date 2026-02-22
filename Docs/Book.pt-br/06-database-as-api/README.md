@@ -58,6 +58,15 @@ App.Configure(procedure(App: IApplicationBuilder)
 | `_sw`  | `LIKE x%`    | `?code_sw=ABC` | Começa com |
 | `_ew`  | `LIKE %x`    | `?mail_ew=gmail.com` | Termina com |
 | `_in`  | `IN (...)`   | `?cat_in=1,2,5` | Lista de valores |
+| `_null`| `IS NULL`     | `?addr_null=true` | Verifica valor nulo |
+
+## Performance: Streaming Zero-Allocation
+
+Um diferencial chave do Data API do Dext é seu **motor JSON de alta performance**. Ao contrário das abordagens tradicionais que carregam todos os dados na memória e depois os serializam para strings, o Dext utiliza uma **abordagem de streaming**:
+
+1.  **Streaming Direto**: Utiliza o `TUtf8JsonWriter` para escrever os dados diretamente no stream da resposta.
+2.  **Integração Binária**: Lê os valores diretamente do driver de banco de dados e os escreve no tráfego sem alocações intermediárias de string para grandes conjuntos de dados.
+3.  **Baixo Consumo de Memória**: Esta arquitetura permite servir grandes volumes de dados com impacto mínimo na memória, crucial para ambientes de alto tráfego.
 
 ---
 
