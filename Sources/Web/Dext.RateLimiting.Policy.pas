@@ -42,7 +42,7 @@ type
   TRateLimitPolicy = record
   private
     FConfig: TRateLimitConfig;
-    FInitialized: Boolean;
+    FInitGuard: string;
     procedure EnsureInitialized;
   public
     /// <summary>
@@ -118,10 +118,10 @@ implementation
 
 procedure TRateLimitPolicy.EnsureInitialized;
 begin
-  if not FInitialized then
+  if FInitGuard = '' then
   begin
     FConfig := TRateLimitConfig.Create;
-    FInitialized := True;
+    FInitGuard := 'init';
   end;
 end;
 

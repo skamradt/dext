@@ -84,7 +84,6 @@ begin
   // Global JSON settings: camelCase, case-insensitive
   JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
 
-
   App.Builder
     // 1. Exception Handler (first middleware)
     .UseExceptionHandler
