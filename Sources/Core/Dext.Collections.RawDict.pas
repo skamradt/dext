@@ -137,12 +137,19 @@ function StringRawHash(Key: Pointer; KeySize: Integer): Cardinal;
 /// <summary>Equality function for string keys</summary>
 function StringRawEqual(A, B: Pointer; KeySize: Integer): Boolean;
 
+function StringRawHashIgnoreCase(Key: Pointer; KeySize: Integer): Cardinal;
+function StringRawEqualIgnoreCase(A, B: Pointer; KeySize: Integer): Boolean;
+
 function FastHash4(Key: Pointer; KeySize: Integer): Cardinal;
 function FastHash8(Key: Pointer; KeySize: Integer): Cardinal;
 function FastEqual4(A, B: Pointer; KeySize: Integer): Boolean;
 function FastEqual8(A, B: Pointer; KeySize: Integer): Boolean;
 
 implementation
+
+const
+  FNV_OFFSET_BASIS = 2166136261;
+  FNV_PRIME = 16777619;
 
 { Hash Functions — overflow is intentional in hash algorithms }
 {$OVERFLOWCHECKS OFF}
@@ -184,17 +191,39 @@ begin
     Exit(0);
 
   // FNV-1a hash for strings
-  Result := 2166136261;
+  Result := FNV_OFFSET_BASIS;
   for I := 1 to Length(S) do
   begin
     Result := Result xor Ord(S[I]);
-    Result := Result * 16777619;
+    Result := Result * FNV_PRIME;
   end;
 end;
 
 function StringRawEqual(A, B: Pointer; KeySize: Integer): Boolean;
 begin
   Result := PString(A)^ = PString(B)^;
+end;
+
+function StringRawHashIgnoreCase(Key: Pointer; KeySize: Integer): Cardinal;
+var
+  S: string;
+  I: Integer;
+begin
+  S := UpperCase(PString(Key)^); // UpperCase is more predictable than ToUpper sometimes
+  if S = '' then
+    Exit(0);
+
+  Result := FNV_OFFSET_BASIS;
+  for I := 1 to Length(S) do
+  begin
+    Result := Result xor Ord(S[I]);
+    Result := Result * FNV_PRIME;
+  end;
+end;
+
+function StringRawEqualIgnoreCase(A, B: Pointer; KeySize: Integer): Boolean;
+begin
+  Result := SameText(PString(A)^, PString(B)^);
 end;
 
 function FastHash4(Key: Pointer; KeySize: Integer): Cardinal;
@@ -262,7 +291,12 @@ begin
   FValueTypeInfo := AValueTypeInfo;
   FKeyIsManaged := IsManagedType(AKeyTypeInfo);
   FValueIsManaged := IsManagedType(AValueTypeInfo);
-  if PTypeInfo(AKeyTypeInfo).Kind in [tkUString, tkLString, tkWString] then
+  if Assigned(AHashFunc) and Assigned(AEqualFunc) then
+  begin
+    FHashFunc := AHashFunc;
+    FEqualFunc := AEqualFunc;
+  end
+  else if PTypeInfo(AKeyTypeInfo).Kind in [tkUString, tkLString, tkWString] then
   begin
     FHashFunc := @StringRawHash;
     FEqualFunc := @StringRawEqual;
@@ -422,7 +456,7 @@ begin
   for I := 0 to OldCapacity - 1 do
   begin
     Meta := PByte(NativeUInt(OldMetadata) + NativeUInt(I))^;
-    if Meta = SLOT_OCCUPIED then
+    if Meta >= $80 then
     begin
       SlotPtr := Pointer(NativeUInt(OldSlots) + NativeUInt(I * FSlotSize));
       KeyPtr := SlotPtr; // Key is at start of slot
@@ -437,7 +471,7 @@ begin
       // Move data (transfer ownership, no addref needed)
       NewSlotPtr := Pointer(NativeUInt(FSlots) + NativeUInt(Idx * FSlotSize));
       System.Move(SlotPtr^, NewSlotPtr^, FSlotSize);
-      PByte(NativeUInt(FMetadata) + NativeUInt(Idx))^ := SLOT_OCCUPIED;
+      PByte(NativeUInt(FMetadata) + NativeUInt(Idx))^ := Byte(Hash shr 24) or $80;
     end
     else if Meta <> SLOT_EMPTY then
     begin
@@ -566,7 +600,7 @@ begin
     for I := 0 to FCapacity - 1 do
     begin
       Meta := PByte(NativeUInt(FMetadata) + NativeUInt(I))^;
-      if Meta = SLOT_OCCUPIED then
+      if Meta >= $80 then
       begin
         SlotPtr := GetSlotPtr(I);
         FreeSlotContent(SlotPtr);
@@ -591,7 +625,7 @@ begin
   for I := 0 to FCapacity - 1 do
   begin
     Meta := PByte(NativeUInt(FMetadata) + NativeUInt(I))^;
-    if Meta = SLOT_OCCUPIED then
+    if Meta >= $80 then
     begin
       SlotPtr := GetSlotPtr(I);
       if not Callback(GetKeyPtr(SlotPtr), GetValuePtr(SlotPtr)) then
@@ -602,7 +636,7 @@ end;
 
 function TRawDictionary.IsSlotOccupied(Index: Integer): Boolean;
 begin
-  Result := PByte(NativeUInt(FMetadata) + NativeUInt(Index))^ = SLOT_OCCUPIED;
+  Result := PByte(NativeUInt(FMetadata) + NativeUInt(Index))^ >= $80;
 end;
 
 function TRawDictionary.GetKeyPtrAtIndex(Index: Integer): Pointer;

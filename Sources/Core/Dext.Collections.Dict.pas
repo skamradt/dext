@@ -100,7 +100,6 @@ type
     function GetEnumerator: IEnumerator<TPair<K, V>>;
   end;
 
-
   /// <summary>Generic dictionary implementation backed by TRawDictionary</summary>
   TDictionary<K, V> = class(TDictionaryBase<K, V>, IDictionary<K, V>)
   private
@@ -115,10 +114,10 @@ type
     constructor Create; overload;
     constructor Create(ACapacity: Integer); overload;
     constructor Create(AOwnsValues: Boolean; ACapacity: Integer = 0); overload;
+    constructor Create(AIgnoreCase: Boolean; AOwnsValues: Boolean; ACapacity: Integer); overload;
     destructor Destroy; override;
 
     function GetEnumerator: TDictionaryEnumerator<K, V>; reintroduce; inline;
-
     procedure Add(const Key: K; const Value: V);
     procedure AddOrSetValue(const Key: K; const Value: V);
     function TryGetValue(const Key: K; out Value: V): Boolean;
@@ -166,6 +165,11 @@ begin
 end;
 
 constructor TDictionary<K, V>.Create(AOwnsValues: Boolean; ACapacity: Integer);
+begin
+  Create(False, AOwnsValues, ACapacity);
+end;
+
+constructor TDictionary<K, V>.Create(AIgnoreCase: Boolean; AOwnsValues: Boolean; ACapacity: Integer);
 var
   HF: TRawHashFunc;
   EF: TRawEqualFunc;
@@ -175,8 +179,16 @@ begin
 
   if PTypeInfo(System.TypeInfo(K)).Kind in [tkUString, tkLString, tkWString] then
   begin
-    HF := @StringRawHash;
-    EF := @StringRawEqual;
+    if AIgnoreCase then
+    begin
+      HF := @StringRawHashIgnoreCase;
+      EF := @StringRawEqualIgnoreCase;
+    end
+    else
+    begin
+      HF := @StringRawHash;
+      EF := @StringRawEqual;
+    end;
   end
   else
   begin

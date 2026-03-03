@@ -160,7 +160,7 @@ implementation
 constructor TConfigurationProvider.Create;
 begin
   inherited;
-  FData := TCollections.CreateDictionary<string, string>;
+  FData := TCollections.CreateDictionaryIgnoreCase<string, string>;
 end;
 
 destructor TConfigurationProvider.Destroy;

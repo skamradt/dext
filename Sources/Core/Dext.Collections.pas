@@ -242,6 +242,7 @@ type
     class function CreateObjectList<T: class>(OwnsObjects: Boolean = False): IList<T>; static;
     class function CreateDictionary<K, V>(ACapacity: Integer = 0): IDictionary<K, V>; overload; static;
     class function CreateDictionary<K, V>(AOwnsValues: Boolean; ACapacity: Integer = 0): IDictionary<K, V>; overload; static;
+    class function CreateDictionaryIgnoreCase<K, V>(AOwnsValues: Boolean = False; ACapacity: Integer = 0): IDictionary<K, V>; static;
 
     class function CreateStack<T>: IStack<T>; static;
     class function CreateQueue<T>: IQueue<T>; static;
@@ -864,6 +865,11 @@ end;
 class function TCollections.CreateDictionary<K, V>(AOwnsValues: Boolean; ACapacity: Integer): IDictionary<K, V>;
 begin
   Result := TDictionary<K, V>.Create(AOwnsValues, ACapacity);
+end;
+
+class function TCollections.CreateDictionaryIgnoreCase<K, V>(AOwnsValues: Boolean; ACapacity: Integer): IDictionary<K, V>;
+begin
+  Result := TDictionary<K, V>.Create(True, AOwnsValues, ACapacity);
 end;
 
 class function TCollections.CreateStack<T>: IStack<T>;
