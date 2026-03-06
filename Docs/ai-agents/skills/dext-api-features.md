@@ -65,21 +65,9 @@ App.Builder.Use(procedure(Ctx: IHttpContext; Next: TRequestDelegate)
   end);
 ```
 
-### Conditional Middleware
-
-```pascal
-App.Builder.UseWhen(
-  function(Ctx: IHttpContext): Boolean
-  begin
-    Result := Ctx.Request.Path.StartsWith('/api');
-  end,
-  procedure(App: IApplicationBuilder)
-  begin
-    App.UseRateLimiting(ApiOptions);
-  end);
-```
-
 ## CORS
+
+`CorsOptions` is a function factory that replaces `TCorsOptions.Create`. The function factory makes the code cleaner and more fluent.
 
 ```pascal
 // Development (open)
@@ -88,7 +76,7 @@ App.Builder.UseCors(
 
 // Production (restrictive)
 App.Builder.UseCors(
-  TCorsOptions.Create
+  CorsOptions
     .AllowOrigins(['https://myapp.com'])
     .AllowMethods(['GET', 'POST', 'PUT', 'DELETE'])
     .AllowHeaders(['Content-Type', 'Authorization'])
@@ -99,37 +87,31 @@ App.Builder.UseCors(
 > `AllowAnyOrigin` + `AllowCredentials` is invalid — use specific origins when credentials are needed.
 > CORS must be registered **before** route mapping.
 
-Per-endpoint override:
-```pascal
-Builder.MapGet<IResult>('/public', ...).Cors(
-  TCorsOptions.Create.AllowAnyOrigin.AllowMethods(['GET']));
-Builder.MapGet<IResult>('/internal', ...).DisableCors;
-```
-
 ## Rate Limiting
 
 ```pascal
-// Fixed window
+// Fixed window (e.g., 100 permits per 60 seconds)
 App.Builder.UseRateLimiting(
-  TRateLimitOptions.Create.Limit(100).PerMinute);
+  RateLimitPolicy.FixedWindow(100, 60));
 
-// Token bucket
+// Token bucket (e.g., limit 100, refill 10)
 App.Builder.UseRateLimiting(
-  TRateLimitOptions.Create.TokenBucket.BucketSize(100).RefillRate(10));
+  RateLimitPolicy.TokenBucket(100, 10));
 
-// By key
-TRateLimitOptions.Create.ByIP.Limit(100).PerMinute
-TRateLimitOptions.Create.ByUser.Limit(1000).PerHour
-TRateLimitOptions.Create.ByHeader('X-API-Key').Limit(5000).PerDay
-TRateLimitOptions.Create.ByKey(function(Ctx): string
-  begin Result := Ctx.Request.QueryParam('tenant'); end)
-  .Limit(100).PerMinute
-```
+// Partition strategies
+App.Builder.UseRateLimiting(
+  RateLimitPolicy.FixedWindow(100, 60).PartitionByIp);
 
-Per-endpoint override:
-```pascal
-Builder.MapPost<IResult>('/expensive', ...).RateLimit(
-  TRateLimitOptions.Create.Limit(10).PerMinute);
+App.Builder.UseRateLimiting(
+  RateLimitPolicy.FixedWindow(1000, 3600).PartitionByHeader('X-API-Key'));
+
+App.Builder.UseRateLimiting(
+  RateLimitPolicy.FixedWindow(100, 60)
+    .PartitionKey(
+      function(Ctx: IHttpContext): string
+      begin
+        Result := Ctx.Request.QueryParam('tenant');
+      end));
 ```
 
 Exceeded requests return `429 Too Many Requests` with headers:
@@ -137,148 +119,254 @@ Exceeded requests return `429 Too Many Requests` with headers:
 
 ## Response Caching
 
-### Minimal API
+### Middleware Configuration
 
 ```pascal
-Builder.MapGet<IResult>('/api/news', ...).Cache(60); // 60 seconds
+App.Builder.UseResponseCache(
+  ResponseCacheOptions
+    .DefaultDuration(30)
+    .MaxSize(100)
+    .VaryByQueryString);
 ```
 
-### Controller
+## Built-In Filters & Attributes
+
+Dext provides various routing and filter attributes out-of-the-box that can be applied to controllers or individual actions.
 
 ```pascal
-[HttpGet]
-[ResponseCache(Duration := 60)]
-function GetAll: IResult;
+[ApiController('/api/examples')]|// or [ApiController, Route('/api/examples')]
+[LogAction] // Controller-level filter: applies to ALL endpoints in this class
+TExamplesController = class
+public
+  // 1. Core routing verbs
+  [HttpGet('/get')]
+  [HttpPost('/post')]
+  [HttpPut('/put')]
+  [HttpDelete('/delete')]
+  [HttpPatch('/patch')]
+  
+  // 2. Custom route overriding
+  [Route('/custom-path')] 
+  procedure CoreVerbsEndpoint(Ctx: IHttpContext);
+
+  // 3. Header validations
+  [HttpGet('/secured')]
+  [RequireHeader('X-Tenant-ID', 'Tenant ID is required')]
+  procedure SecuredEndpoint(Ctx: IHttpContext);
+
+  // 4. Response modifications & Caching
+  [HttpGet('/cached')]
+  [ResponseCache(60, 'public')] // Adds Cache-Control: public, max-age=60
+  [AddHeader('X-Custom-Header', 'Dext-Rocks')]
+  procedure CachedEndpoint(Ctx: IHttpContext);
+
+  // 5. Model state validation
+  [HttpPost('/validate')]
+  [ValidateModel]
+  procedure ValidateEndpoint(Ctx: IHttpContext);
+end;
 ```
-
-### Cache Profiles
-
-```pascal
-// ConfigureServices
-Services.AddResponseCaching(procedure(Options: TResponseCachingOptions)
-  begin
-    Options.AddProfile('Default', procedure(P: TCacheProfile)
-      begin
-        P.Duration := 300;
-        P.Location := clAny;
-      end);
-  end);
-
-// Usage
-[ResponseCache(Profile := 'Default')]
-```
-
-Adds `Cache-Control: public, max-age=N` and `Expires` headers.
 
 ## Health Checks
 
-```pascal
-// Simple liveness
-Builder.MapGet<IResult>('/health/live',
-  function: IResult
-  begin
-    Result := Results.Ok('OK');
-  end);
+Dext provides a built-in DI-based health check pipeline that exposes a `/health` endpoint automatically.
 
-// Detailed readiness
-Builder.MapGet<IResult>('/health/ready',
-  function(Db: TAppDbContext): IResult
-  begin
-    var Status := 200;
-    var DbOk := True;
-    try
-      Db.Connection.Execute('SELECT 1');
-    except
-      DbOk := False;
-      Status := 503;
-    end;
-    Result := Results.StatusCode(Status,
-      Format('{"status":"%s","db":%s}',
-        [IfThen(DbOk,'healthy','unhealthy'), BoolToStr(DbOk,'true','false')]));
-  end);
+### 1. Define a Health Check
+
+Implement the `IHealthCheck` interface.
+
+```pascal
+type
+  TDatabaseHealthCheck = class(TInterfacedObject, IHealthCheck)
+  public
+    function CheckHealth: THealthCheckResult;
+  end;
+
+function TDatabaseHealthCheck.CheckHealth: THealthCheckResult;
+begin
+  try
+    // In a real app, query the database here
+    Result := THealthCheckResult.Healthy('Ready');
+  except
+    on E: Exception do
+      Result := THealthCheckResult.Unhealthy('Database is unreachable', E);
+  end;
+end;
 ```
 
-Standard: `200 OK` = healthy, `503 Service Unavailable` = unhealthy.
+### 2. Register Checks
+
+```pascal
+App.Services
+  .AddHealthChecks
+    .AddCheck<TDatabaseHealthCheck>
+    .AddCheck<TRedisHealthCheck>
+    .Build;
+```
+
+### 3. Add Middleware
+
+```pascal
+App.UseMiddleware(THealthCheckMiddleware);
+```
+
+The middleware automatically intercepts requests to `/health` and returns a JSON payload with the status of all registered checks. Standard HTTP codes apply: `200 OK` = healthy/degraded, `503 Service Unavailable` = unhealthy.
 
 ## OpenAPI / Swagger
 
-### Setup
+### 1. Global Setup & Security
+
+Use the `SwaggerOptions` factory to define global info and security definitions like Bearer/API keys.
+
+> **API Design Note**: Dext avoids the `With` prefix in fluent syntaxes to keep the code cleaner. Use `BearerAuth` instead of `WithBearerAuth`.
 
 ```pascal
 App.Builder
-  .MapControllers
-  .UseSwagger(Swagger.Title('My API').Version('v1').AddBearerAuth);
+  .MapControllers // Map your routes first
+  .UseSwagger(
+    SwaggerOptions
+      .Title('My Dext API')
+      .Description('API documentation')
+      .Version('v1')
+      .BearerAuth('JWT', 'Enter token: Bearer {token}')
+  ); // Always register Swagger last!
 ```
 
-`AddBearerAuth` adds the JWT "Authorize" button to the Swagger UI.
+### 2. Schema Models (DTOs)
 
-### Minimal API Metadata
+Document your records and classes using schema attributes.
 
 ```pascal
-Builder.MapGet<IResult>('/api/users', ...)
-  .WithTags('Users')
-  .WithSummary('List all users')
-  .WithDescription('Returns all registered users.')
-  .RequireAuthorization;
+[SwaggerSchema('User', 'Represents a user in the system')]
+TUser = record
+  [SwaggerProperty('Unique identifier')]
+  [SwaggerExample('1')]
+  Id: Integer;
+
+  [SwaggerRequired]
+  [SwaggerProperty('Email address')]
+  [SwaggerFormat('email')]
+  Email: string;
+  
+  [SwaggerIgnoreProperty] // Hide from Swagger
+  InternalSecret: string;
+end;
 ```
 
-### Controller Swagger Attributes
+### 3. Minimal API Metadata
+
+Use the fluent `SwaggerEndpoint.From` wrapper to document Minimal APIs.
+
+```pascal
+var GetUsersEndpoint := App.Builder.MapGet('/api/users', 
+  procedure (Ctx: IHttpContext) begin end);
+
+SwaggerEndpoint.From(GetUsersEndpoint)
+  .Summary('Get all users')
+  .Description('Retrieves a list of users')
+  .Tag('Users')
+  .Response(200, TypeInfo(TArray<TUser>), 'Success')
+  .Response(404, TypeInfo(TErrorResponse), 'Not found')
+  .RequireAuthorization('JWT');
+```
+
+### 4. Controller Attributes
+
+Use OpenAPI attributes to document endpoint methods and classes.
 
 ```pascal
 type
   [ApiController('/api/users')]
-  [SwaggerTag('Users', 'User management')]
+  [SwaggerTag('Users')] // Groups under "Users" in Swagger UI
   TUsersController = class
   public
     [HttpGet]
-    [SwaggerSummary('List all users')]
-    [SwaggerResponse(200, 'Success', TArray<TUser>)]
+    [SwaggerOperation('List all users', 'Retrieves registered users')]
+    [SwaggerResponse(200, TUserArray, 'Success')] 
     function GetAll: IResult;
 
     [HttpGet('/{id}')]
-    [SwaggerSummary('Get user by ID')]
-    [SwaggerParam('id', 'User ID', True)]
-    [SwaggerResponse(200, 'Found', TUser)]
-    [SwaggerResponse(404, 'Not found')]
+    [SwaggerOperation('Get user by ID')]
+    [SwaggerParam('id', 'User internal ID', TSwaggerParamLocation.Path)]
+    [SwaggerResponse(200, TUser, 'User found')]
+    [SwaggerResponse(404, 'User not found')] // Without schema type
+    [SwaggerIgnore] // Optional: Completely hide this endpoint
     function GetById(Id: Integer): IResult;
 
     [HttpPost]
-    [SwaggerBody(TCreateUserRequest)]
-    [SwaggerResponse(201, 'Created', TUser)]
-    function CreateUser([Body] Req: TCreateUserRequest): IResult;
+    [SwaggerOperation('Create User')]
+    [SwaggerAuthorize] // Show lock icon, requires auth
+    function CreateUser([Body] Req: TUser): IResult;
   end;
 ```
 
-### Swagger Attribute Reference
+### Supported OpenAPI Attributes
 
-| Attribute | Description |
-|-----------|-------------|
-| `[SwaggerSummary('')]` | Short description |
-| `[SwaggerDescription('')]` | Long description |
-| `[SwaggerTag('Name')]` | Group in Swagger UI |
-| `[SwaggerParam('name','desc', required)]` | Document parameter |
-| `[SwaggerBody(TType)]` | Request body type |
-| `[SwaggerResponse(code,'desc')]` | Response |
-| `[SwaggerResponse(code,'desc',TType)]` | Response with type |
+| Attribute | Applies To | Description |
+| --------- | ---------- | ----------- |
+| `[SwaggerSchema(Title, Desc)]` | Record / Class | Defines an object schema |
+| `[SwaggerProperty(Desc)]` | Field / Prop | Documents a field |
+| `[SwaggerRequired]` | Field / Prop | Marks a field as required |
+| `[SwaggerExample(Value)]` | Field / Prop | Provides an example value |
+| `[SwaggerFormat(Format)]` | Field / Prop | Data format (e.g. 'email', 'date-time') |
+| `[SwaggerIgnoreProperty]` | Field / Prop | Hides internal fields |
+| `[SwaggerTag(Name)]` | Controller | Groups endpoints |
+| `[SwaggerOperation(Summary, Desc, Id)]` | Method | Endpoint info |
+| `[SwaggerParam(Name, Desc, Location)]` | Method | Documents a parameter |
+| `[SwaggerResponse(Code, Class, Desc)]` | Method | Response schema & code |
+| `[SwaggerIgnore]` | Method / Class | Excludes from Swagger docs |
+| `[SwaggerAuthorize]` | Method | Implies authorization is needed |
 
 ## Static Files
 
+You can serve static files using either a simple root path or detailed options.
+
 ```pascal
-App.Builder.UseStaticFiles('/public', './wwwroot');
+// 1. Simple overload (serves from the specified path)
+App.Builder.UseStaticFiles('./wwwroot');
+
+// 2. Detailed options
+var Options := TStaticFileOptions.Create;
+Options.RootPath := './public';
+Options.DefaultFile := 'index.html';
+Options.ServeUnknownFileTypes := False;
+
+App.Builder.UseStaticFiles(Options);
 ```
 
 ## Compression
 
 ```pascal
-App.Builder.UseCompression; // GZip by default
+// Response Compression (gzip/deflate)
+App.Builder.UseMiddleware(TCompressionMiddleware);
 ```
 
 ## Examples
 
+The Dext framework provides several high-quality examples, categorized by utilities and complete real-world scenarios.
+
+### Utility & Feature Demos
+
 | Example | What it shows |
-|---------|---------------|
+| --- | --- |
 | `Web.CachingDemo` | Response caching middleware, configurable duration, vary-by-query |
-| `Web.RateLimitDemo` | Fixed window rate limiting, rejection handling, rate-limit headers |
+| `Web.ControllerExample` | Traditional MVC controller endpoints with full DI integration |
+| `Web.JwtAuthDemo` | JWT generation, validation, and Claims manipulation |
 | `Web.SwaggerExample` | Swagger with Minimal API — fluent DSL, schema generation |
-| `Web.SwaggerControllerExample` | Swagger with Controllers — attributes, security integration |
+| `Web.MinimalAPI` | Basic routing, Dependency Injection, and modern Minimal API mapping |
+| `Web.RateLimitDemo` | Fixed window rate limiting, rejection handling, rate-limit headers |
+| `Web.SmartPropsDemo` | Smart Properties, dynamic filtering, validation, and DTO handling |
 | `Web.SslDemo` | SSL/HTTPS with OpenSSL and Taurus TLS certificate configuration |
+| `Web.StreamingDemo` | Multipart file uploads (single/multiple) and direct file downloads via stream |
+| `Web.SwaggerControllerExample` | Swagger with Controllers — attributes, security integration |
+
+### Business Projects & Complete Scenarios
+
+These projects reflect modern standard practices, utilizing up-to-date fluent syntax, clean architecture, and comprehensive features.
+
+| Example | What it shows |
+| --- | --- |
+| `Web.FoodDelivery` | End-to-end delivery API, ORM mapping, advanced routing, background jobs |
+| `Web.HelpDesk` | Ticketing system, auth, robust schema modeling, relations, Swagger |
+| `Web.SalesSystem` | Complex domain, transaction orchestration, layered repositories |
+| `Web.TicketSales` | Complete ticket/event API, concurrency limits, real-time endpoints |
