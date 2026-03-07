@@ -170,6 +170,7 @@ type
     FFirstItemValid: Boolean;
   public
     constructor Create(AEnum: IEnumerator<T>; ANeedYieldFirst, AFirstItemValid: Boolean);
+    destructor Destroy; override;
     function MoveNext: Boolean;
     function GetCurrent: T;
     property Current: T read GetCurrent;
@@ -210,15 +211,19 @@ end;
 destructor TViewData.Destroy;
 var
   Obj: TObject;
+  Owned: IList<TObject>;
 begin
-  if Assigned(FOwnedObjects) then
-  begin
-    for Obj in FOwnedObjects do
-      Obj.Free;
-  end;
+  // Capture the list and clear refs first to avoid zombie pointers in collections
+  Owned := FOwnedObjects;
   FOwnedObjects := nil;
   FValues := nil;
   FObjects := nil;
+
+  if Assigned(Owned) then
+  begin
+    for Obj in Owned do
+      Obj.Free;
+  end;
   inherited;
 end;
 
@@ -250,7 +255,11 @@ begin
     FObjects[AName] := AData;
     
   if AOwns and (AData <> nil) and Assigned(FOwnedObjects) then
-    FOwnedObjects.Add(AData);
+  begin
+    // Prevent double-ownership and subsequent double-free
+    if not FOwnedObjects.Contains(AData) then
+      FOwnedObjects.Add(AData);
+  end;
 end;
 
 procedure TViewData.SetValue(const AName: string; const AValue: TValue);
@@ -415,6 +424,12 @@ begin
   FFirstItemValid := AFirstItemValid;
 end;
 
+destructor TStreamingEnumeratorProxy<T>.Destroy;
+begin
+  FEnumerator := nil;
+  inherited;
+end;
+
 function TStreamingEnumeratorProxy<T>.GetCurrent: T;
 begin
   Result := FEnumerator.GetCurrent;
@@ -441,8 +456,15 @@ begin
 end;
 
 destructor TStreamingListWrapper<T>.Destroy;
+var
+  LEnum: IInterface;
 begin
-  FEnumerator := nil;
+  if Assigned(FEnumerator) then
+  begin
+    LEnum := FEnumerator;
+    FEnumerator := nil;
+    LEnum := nil;
+  end;
   inherited;
 end;
 

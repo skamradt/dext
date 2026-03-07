@@ -61,6 +61,7 @@ end;
 procedure TDextFileWatcher.Execute;
 var
   WaitResult: DWORD;
+  Handles: array[0..1] of THandle;
 begin
   FDirectoryHandle := CreateFile(
     PChar(FDirectory),
@@ -94,7 +95,6 @@ begin
       begin
         // Wait for change or stop signal
         // We use WaitForMultipleObjects to check for both IO Completion (via Overlapped hEvent) and our Stop Event
-        var Handles: array[0..1] of THandle;
         Handles[0] := FOverlapped.hEvent;
         Handles[1] := FStopEvent.Handle;
         

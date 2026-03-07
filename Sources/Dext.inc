@@ -10,18 +10,42 @@
 {$DEFINE DEXT_INC}
 
 //---------------------------------------------------------------------------
+// Delphi Version Detection (Industry Standard Pattern)
+//---------------------------------------------------------------------------
+
+{$IFDEF VER290} {$DEFINE DEXT_DELPHIXE8_UP}    {$ENDIF} // XE8
+{$IFDEF VER300} {$DEFINE DEXT_DELPHI10_UP}     {$ENDIF} // 10 Seattle
+{$IFDEF VER310} {$DEFINE DEXT_DELPHI101_UP}    {$ENDIF} // 10.1 Berlin
+{$IFDEF VER320} {$DEFINE DEXT_DELPHI102_UP}    {$ENDIF} // 10.2 Tokyo
+{$IFDEF VER330} {$DEFINE DEXT_DELPHI103_UP}    {$ENDIF} // 10.3 Rio
+{$IFDEF VER340} {$DEFINE DEXT_DELPHI104_UP}    {$ENDIF} // 10.4 Sydney
+{$IFDEF VER350} {$DEFINE DEXT_DELPHI11_UP}     {$ENDIF} // 11 Alexandria
+{$IFDEF VER360} {$DEFINE DEXT_DELPHI12_UP}     {$ENDIF} // 12 Athens
+{$IFDEF VER370} {$DEFINE DEXT_DELPHI13_UP}     {$ENDIF} // 13 Athens (Next)
+
+// Accumulate "UP" flags for easier checking
+{$IFDEF DEXT_DELPHI13_UP}  {$DEFINE DEXT_DELPHI12_UP}  {$ENDIF}
+{$IFDEF DEXT_DELPHI12_UP}  {$DEFINE DEXT_DELPHI11_UP}  {$ENDIF}
+{$IFDEF DEXT_DELPHI11_UP}  {$DEFINE DEXT_DELPHI104_UP} {$ENDIF}
+{$IFDEF DEXT_DELPHI104_UP} {$DEFINE DEXT_DELPHI103_UP} {$ENDIF}
+{$IFDEF DEXT_DELPHI103_UP} {$DEFINE DEXT_DELPHI102_UP} {$ENDIF}
+{$IFDEF DEXT_DELPHI102_UP} {$DEFINE DEXT_DELPHI101_UP} {$ENDIF}
+{$IFDEF DEXT_DELPHI101_UP} {$DEFINE DEXT_DELPHI10_UP}  {$ENDIF}
+{$IFDEF DEXT_DELPHI10_UP}  {$DEFINE DEXT_DELPHIXE8_UP} {$ENDIF}
+
+//---------------------------------------------------------------------------
 // Compiler Features
 //---------------------------------------------------------------------------
 
-// System.Hash unit (Introduced in Delphi XE8 / CompilerVersion 29.0)
-{$IF CompilerVersion >= 29.0}
+// System.Hash unit (Introduced in Delphi XE8)
+{$IFDEF DEXT_DELPHIXE8_UP}
   {$DEFINE DEXT_HAS_SYSTEM_HASH}
-{$IFEND}
+{$ENDIF}
 
-// Web Stencils support (Introduced in Delphi 12.2 / CompilerVersion 36.0)
-{$IF CompilerVersion >= 36.0}
+// Web Stencils support (Introduced in Delphi 12.2)
+{$IFDEF DEXT_DELPHI12_UP}
   {$DEFINE DEXT_ENABLE_WEB_STENCILS}
-{$IFEND}
+{$ENDIF}
 
 //---------------------------------------------------------------------------
 // User Overrides

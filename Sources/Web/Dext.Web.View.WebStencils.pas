@@ -56,7 +56,9 @@ type
   TWebStencilsRenderContext = class
   private
     FViewData: IViewData;
+    {$IF CompilerVersion >= 37.0}
     function HandleLookup(AVar: TWebStencilsDataVar; const APropName: string; var AValue: string): Boolean;
+    {$ENDIF}
     function ResolveValue(AObj: TObject; const APropName: string): TValue;
   public
     constructor Create(AData: IViewData);
@@ -119,6 +121,7 @@ begin
 end;
 
 class procedure TWebStencilsViewEngine.ApplyWhitelist(AOptions: TViewOptions);
+{$IF CompilerVersion >= 37.0}
 var
   C: TClass;
   Map: TEntityMap;
@@ -175,6 +178,11 @@ begin
     end;
   end;
 end;
+{$ELSE}
+begin
+  // Whitelist feature only available in Delphi 13 (Athens) / CompilerVersion 37.0+
+end;
+{$IFEND}
 
 constructor TWebStencilsViewEngine.Create(AOptions: TViewOptions);
 begin
@@ -188,6 +196,7 @@ end;
 destructor TWebStencilsViewEngine.Destroy;
 begin
   FEngine.Free;
+  FOptions.Free;
   inherited;
 end;
 
@@ -238,7 +247,11 @@ begin
   begin
     if ObjPair.Value <> nil then
     begin
+       {$IF CompilerVersion >= 37.0}
        AProcessor.AddVar(ObjPair.Key, ObjPair.Value, False, HandleLookup);
+       {$ELSE}
+       AProcessor.AddVar(ObjPair.Key, ObjPair.Value, False);
+       {$IFEND}
     end;
   end;
 end;
@@ -248,6 +261,7 @@ begin
   Result := TReflection.GetValue(AObj, APropName);
 end;
 
+{$IF CompilerVersion >= 37.0}
 function TWebStencilsRenderContext.HandleLookup(AVar: TWebStencilsDataVar; const APropName: string; var AValue: string): Boolean;
 var
   Value, Unwrapped: TValue;
@@ -268,6 +282,7 @@ begin
     Result := True;
   end;
 end;
+{$ENDIF}
 
 procedure TWebStencilsRenderContext.OnValue(Sender: TObject; const AObjectName, APropName: string;
   var AValue: string; var AHandled: Boolean);
