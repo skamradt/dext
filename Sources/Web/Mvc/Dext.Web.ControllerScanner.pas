@@ -154,11 +154,11 @@ begin
                 var R := RouteAttribute(Attr);
                 FoundRoute := True;
                 MethodInfo.RouteAttribute := R;
-                
+
                 // Prioritize non-empty values
                 if R.Path <> '' then
                   MethodInfo.Path := R.Path;
-                  
+
                 if R.Method <> '' then
                   MethodInfo.HttpMethod := R.Method;
               end;
@@ -270,7 +270,7 @@ begin
         if R.Path <> '' then
           Prefix := R.Path;
         // Break? Usually one route attribute per class.
-        Break; 
+        Break;
       end;
     end;
 
@@ -305,13 +305,13 @@ begin
       CachedMethod.IsClass := (Controller.RttiType.TypeKind = tkClass);
       CachedMethod.FullPath := FullPath;
       CachedMethod.HttpMethod := ControllerMethod.HttpMethod;
-      
+
       // ✅ CHECK AUTH ATTRIBUTES (Controller or Method level)
       // RULE: [AllowAnonymous] on method OVERRIDES [Authorize] on controller
       var ControllerRequiresAuth := False;
       var MethodRequiresAuth := False;
       var MethodAllowsAnonymous := False;
-      
+
       // Check controller level [Authorize]
       for var Attr in Controller.RttiType.GetAttributes do
         if Attr is AuthorizeAttribute then
@@ -319,7 +319,7 @@ begin
           ControllerRequiresAuth := True;
           Break;
         end;
-      
+
       // Check method level attributes
       for var Attr in ControllerMethod.Method.GetAttributes do
       begin
@@ -330,7 +330,7 @@ begin
           MethodAllowsAnonymous := True;
       end;
 
-      // Final decision: 
+      // Final decision:
       // - If method has [AllowAnonymous], it's always allowed (overrides controller [Authorize])
       // - Otherwise, auth is required if controller OR method has [Authorize]
       if MethodAllowsAnonymous then
@@ -340,7 +340,7 @@ begin
 
       // ✅ FILTERS REMOVED FROM CACHE
       // We now fetch them dynamically in ExecuteCachedMethod to avoid AVs
-      
+
       FCachedMethods.Add(CachedMethod);
 
       // ✅ REGISTRAR ROTA USANDO CACHE (EVITA PROBLEMAS DE REFERÊNCIA RTTI)
@@ -363,15 +363,21 @@ begin
             SecuritySchemes.Add(AuthorizeAttribute(Attr).Scheme);
 
         // 3. Atualizar Metadados da Rota
-        if SecuritySchemes.Count > 0 then
+        if (SecuritySchemes.Count > 0) or MethodAllowsAnonymous then
         begin
           var Routes := AppBuilder.GetRoutes;
           if Length(Routes) > 0 then
           begin
             var Metadata := Routes[High(Routes)];
-            Metadata.Security := SecuritySchemes.ToArray;
+            if SecuritySchemes.Count > 0 then
+            begin
+              Metadata.Security := SecuritySchemes.ToArray;
+              SafeWriteLn('      🔒 Secured with: ' + string.Join(', ', Metadata.Security));
+            end;
+            Metadata.AllowAnonymous := MethodAllowsAnonymous;
+            if MethodAllowsAnonymous then
+              SafeWriteLn('      🔓 Allows Anonymous Access');
             AppBuilder.UpdateLastRouteMetadata(Metadata);
-            SafeWriteLn('      🔒 Secured with: ' + string.Join(', ', Metadata.Security));
           end;
         end;
       finally
@@ -401,8 +407,8 @@ begin
         end;
 
         // 2. Extrair RequestType dos parâmetros do método (para POST/PUT/PATCH)
-        if (ControllerMethod.HttpMethod = 'POST') or 
-           (ControllerMethod.HttpMethod = 'PUT') or 
+        if (ControllerMethod.HttpMethod = 'POST') or
+           (ControllerMethod.HttpMethod = 'PUT') or
            (ControllerMethod.HttpMethod = 'PATCH') then
         begin
           var Params := ControllerMethod.Method.GetParameters;
@@ -542,7 +548,7 @@ begin
     for FilterAttr in ControllerType.GetAttributes do
       if Supports(FilterAttr, IActionFilter) then
         FilterList.Add(FilterAttr);
-      
+
     // Method Level
     for FilterAttr in Method.GetAttributes do
       if Supports(FilterAttr, IActionFilter) then
@@ -637,7 +643,7 @@ begin
       on E: Exception do
       begin
         SafeWriteLn('❌ Error executing method: ' + E.Message);
-          
+
         // ✅ EXECUTE ACTION FILTERS - OnActionExecuted (with exception)
         var ExecutedContext: IActionExecutedContext := TActionExecutedContext.Create(Context, ActionDescriptor, nil, E);
         for I := FilterList.Count - 1 downto 0 do

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -87,7 +87,7 @@ begin
       AContext.Items.AddOrSetValue('endpoint_metadata', TValue.From<TEndpointMetadata>(Metadata));
 
       // Authorization Check
-      if Length(Metadata.Security) > 0 then
+      if (Length(Metadata.Security) > 0) and not Metadata.AllowAnonymous then
       begin        
         if (AContext.User = nil) or not AContext.User.Identity.IsAuthenticated then
         begin          

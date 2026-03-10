@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -68,6 +68,11 @@ type
     /// </summary>
     class function RequireAuthorization(App: IApplicationBuilder; const ASchemes: array of string): IApplicationBuilder; overload;
     class function RequireAuthorization(App: IApplicationBuilder; const AScheme: string): IApplicationBuilder; overload;
+
+    /// <summary>
+    ///   Marks the endpoint as allowing anonymous access (skips authorization).
+    /// </summary>
+    class function AllowAnonymous(App: IApplicationBuilder): IApplicationBuilder;
     
     /// <summary>
     ///   Adds a documented response to the endpoint.
@@ -217,6 +222,22 @@ end;
 class function TEndpointMetadataExtensions.RequireAuthorization(App: IApplicationBuilder; const AScheme: string): IApplicationBuilder;
 begin
   Result := RequireAuthorization(App, [AScheme]);
+end;
+
+class function TEndpointMetadataExtensions.AllowAnonymous(App: IApplicationBuilder): IApplicationBuilder;
+var
+  Routes: TArray<TEndpointMetadata>;
+  Metadata: TEndpointMetadata;
+begin
+  Result := App;
+  
+  Routes := App.GetRoutes;
+  if Length(Routes) > 0 then
+  begin
+    Metadata := Routes[High(Routes)];
+    Metadata.AllowAnonymous := True;
+    App.UpdateLastRouteMetadata(Metadata);
+  end;
 end;
 
 class function TEndpointMetadataExtensions.WithResponse(App: IApplicationBuilder; 

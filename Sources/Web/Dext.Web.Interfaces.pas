@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -70,6 +70,7 @@ type
     RequestType: PTypeInfo;      // Type info for request body
     ResponseType: PTypeInfo;     // Type info for response body
     Responses: TArray<TOpenAPIResponseMetadata>; // Documented responses
+    AllowAnonymous: Boolean;     // Skips authorization check
   end;
 
   TCookieOptions = record
