@@ -1,4 +1,4 @@
-unit Customer.ViewModel;
+﻿unit Customer.ViewModel;
 
 interface
 
@@ -20,6 +20,7 @@ type
     FCustomer: TCustomer;
     FOwnsCustomer: Boolean;
     FErrors: TStrings;
+    FDirty: Boolean;
 
     function GetId: Integer;
     function GetName: string;
@@ -35,6 +36,8 @@ type
     function GetNotes: string;
     procedure SetNotes(const Value: string);
     function GetIsNew: Boolean;
+    function GetIsValid: Boolean;
+    function GetCanSave: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -56,6 +59,8 @@ type
 
     // State properties
     property IsNew: Boolean read GetIsNew;
+    property IsValid: Boolean read GetIsValid;
+    property CanSave: Boolean read GetCanSave;
     property Errors: TStrings read FErrors;
   end;
 
@@ -85,6 +90,7 @@ begin
   FCustomer := ACustomer;
   FOwnsCustomer := AOwnsCustomer;
   FErrors.Clear;
+  FDirty := False;
 end;
 
 procedure TCustomerViewModel.Clear;
@@ -95,6 +101,7 @@ begin
   FCustomer := TCustomer.Create;
   FOwnsCustomer := True;
   FErrors.Clear;
+  FDirty := False;
 end;
 
 function TCustomerViewModel.Validate: Boolean;
@@ -130,7 +137,11 @@ end;
 
 procedure TCustomerViewModel.SetName(const Value: string);
 begin
-  FCustomer.Name := Value;
+  if FCustomer.Name.Value <> Value then
+  begin
+    FCustomer.Name := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetEmail: string;
@@ -140,7 +151,11 @@ end;
 
 procedure TCustomerViewModel.SetEmail(const Value: string);
 begin
-  FCustomer.Email := Value;
+  if FCustomer.Email.Value <> Value then
+  begin
+    FCustomer.Email := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetPhone: string;
@@ -150,7 +165,11 @@ end;
 
 procedure TCustomerViewModel.SetPhone(const Value: string);
 begin
-  FCustomer.Phone := Value;
+  if FCustomer.Phone.Value <> Value then
+  begin
+    FCustomer.Phone := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetDocument: string;
@@ -160,7 +179,11 @@ end;
 
 procedure TCustomerViewModel.SetDocument(const Value: string);
 begin
-  FCustomer.Document := Value;
+  if FCustomer.Document.Value <> Value then
+  begin
+    FCustomer.Document := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetActive: Boolean;
@@ -170,7 +193,11 @@ end;
 
 procedure TCustomerViewModel.SetActive(const Value: Boolean);
 begin
-  FCustomer.Active := Value;
+  if FCustomer.Active.Value <> Value then
+  begin
+    FCustomer.Active := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetNotes: string;
@@ -180,12 +207,26 @@ end;
 
 procedure TCustomerViewModel.SetNotes(const Value: string);
 begin
-  FCustomer.Notes := Value;
+  if FCustomer.Notes.Value <> Value then
+  begin
+    FCustomer.Notes := Value;
+    FDirty := True;
+  end;
 end;
 
 function TCustomerViewModel.GetIsNew: Boolean;
 begin
   Result := FCustomer.Id = 0;
+end;
+
+function TCustomerViewModel.GetIsValid: Boolean;
+begin
+  Result := Validate; // Chama a validação completa e atualiza FErrors
+end;
+
+function TCustomerViewModel.GetCanSave: Boolean;
+begin
+  Result := GetIsValid and (FDirty or GetIsNew);
 end;
 
 end.

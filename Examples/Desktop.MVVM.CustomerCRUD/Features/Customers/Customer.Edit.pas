@@ -57,6 +57,7 @@ type
     NotesMemo: TMemo;
     
     ButtonPanel: TPanel;
+    [BindEnabled('CanSave')]
     [OnClickMsg(TSaveMsg)]
     SaveButton: TButton;
     
@@ -79,7 +80,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     
-    procedure LoadCustomer(AViewModel: TCustomerViewModel);
+    procedure LoadCustomer(AViewModel: TCustomerViewModel; ATakeOwnership: Boolean = False);
     procedure NewCustomer;
     
     property OnSave: TOnSaveEvent read FOnSave write FOnSave;
@@ -109,9 +110,9 @@ begin
   inherited;
 end;
 
-procedure TCustomerEditFrame.LoadCustomer(AViewModel: TCustomerViewModel);
+procedure TCustomerEditFrame.LoadCustomer(AViewModel: TCustomerViewModel; ATakeOwnership: Boolean = False);
 begin
-  FViewModel.Load(AViewModel.GetEntity);
+  FViewModel.Load(AViewModel.GetEntity, ATakeOwnership);
   FBinder.Render(FViewModel);
 end;
 

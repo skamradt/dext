@@ -54,6 +54,11 @@ uses
 
 type
   /// <summary>
+  /// Message sent when the UI needs to be updated after a model change.
+  /// </summary>
+  TUIUpdateMsg = class(TMessage);
+
+  /// <summary>
   /// Internal binding information
   /// </summary>
   TBindingInfo = record
@@ -110,6 +115,9 @@ type
   end;
 
 implementation
+
+uses
+  System.Variants;
 
 { TMVUBinder<TModel, TMsg> }
 
@@ -295,6 +303,7 @@ procedure TMVUBinder<TModel, TMsg>.HandleChange(Sender: TObject);
 var
   Binding: TBindingInfo;
   Control: TControl;
+  UpdateMsg: TMsg;
 begin
   if not (Sender is TControl) then Exit;
   Control := TControl(Sender);
@@ -305,6 +314,23 @@ begin
     if Binding.Control = Control then
     begin
       UpdateModelFromControl(Binding, Control);
+      
+      // Refresh all bindings to reflect potential state changes in the model (like CanSave)
+      if FModel <> nil then
+      begin
+        Render(PModel(FModel)^);
+        
+        if TUIUpdateMsg.InheritsFrom(TClass(TMsg)) then
+        begin
+          UpdateMsg := TMessageClass(TUIUpdateMsg).Create as TMsg;
+          try
+            FDispatch(UpdateMsg);
+          finally
+            UpdateMsg.Free;
+          end;
+        end;
+      end;
+      
       Break;
     end;
   end;
@@ -406,14 +432,26 @@ begin
       
     btEnabled:
       begin
-        BoolValue := Value.AsBoolean;
+        if Value.Kind in [tkInteger, tkInt64, tkFloat] then
+          BoolValue := Value.AsVariant <> 0
+        else if Value.Kind = tkVariant then
+          BoolValue := not VarIsNull(Value.AsVariant) and (Value.AsVariant <> 0)
+        else
+          BoolValue := Value.AsBoolean;
+
         if Binding.Invert then BoolValue := not BoolValue;
         Binding.Control.Enabled := BoolValue;
       end;
       
     btVisible:
       begin
-        BoolValue := Value.AsBoolean;
+        if Value.Kind in [tkInteger, tkInt64, tkFloat] then
+          BoolValue := Value.AsVariant <> 0
+        else if Value.Kind = tkVariant then
+          BoolValue := not VarIsNull(Value.AsVariant) and (Value.AsVariant <> 0)
+        else
+          BoolValue := Value.AsBoolean;
+
         if Binding.Invert then BoolValue := not BoolValue;
         Binding.Control.Visible := BoolValue;
       end;
@@ -426,37 +464,57 @@ var
   Field: TRttiField;
   Prop: TRttiProperty;
   Instance: TObject;
+  Parts: TArray<string>;
+  CurrentValue: TValue;
+  I: Integer;
 begin
   Result := TValue.Empty;
-  RttiType := FContext.GetType(TypeInfo(TModel));
-  if RttiType = nil then Exit;
-
-  Instance := nil;
-  if RttiType.IsInstance then
-    Instance := TObject((@Model)^);
-
-  // Try field first
-  Field := RttiType.GetField(PropertyPath);
-  if Field <> nil then
-  begin
-    if Instance <> nil then
-      Result := Field.GetValue(Instance)
-    else
-      Result := Field.GetValue(@Model);
-    Exit;
-  end;
+  Parts := PropertyPath.Split(['.']);
   
-  // Try property
-  Prop := RttiType.GetProperty(PropertyPath);
-  if Prop <> nil then
+  // Start with the model instance
+  CurrentValue := TValue.From<TModel>(Model);
+  
+  for I := 0 to High(Parts) do
   begin
-    if Instance <> nil then
-      Result := Prop.GetValue(Instance)
+    if CurrentValue.IsEmpty then Exit(TValue.Empty);
+    
+    RttiType := FContext.GetType(CurrentValue.TypeInfo);
+    if RttiType = nil then Exit(TValue.Empty);
+
+    Instance := nil;
+    if RttiType.IsInstance then
+    begin
+      Instance := CurrentValue.AsObject;
+      if Instance <> nil then
+        RttiType := FContext.GetType(Instance.ClassType);
+    end;
+
+    // Try field
+    Field := RttiType.GetField(Parts[I]);
+    if Field <> nil then
+    begin
+      if Instance <> nil then
+        CurrentValue := Field.GetValue(Instance)
+      else
+        CurrentValue := Field.GetValue(CurrentValue.GetReferenceToRawData);
+    end
     else
     begin
-      Result := Prop.GetValue(@Model);
+      // Try property
+      Prop := RttiType.GetProperty(Parts[I]);
+      if Prop <> nil then
+      begin
+        if Instance <> nil then
+          CurrentValue := Prop.GetValue(Instance)
+        else
+          CurrentValue := Prop.GetValue(CurrentValue.GetReferenceToRawData);
+      end
+      else
+        Exit(TValue.Empty); // Path part not found
     end;
   end;
+  
+  Result := CurrentValue;
 end;
 
 procedure TMVUBinder<TModel, TMsg>.SetPropertyValue(var Model: TModel; const PropertyPath: string; const Value: TValue);
@@ -464,39 +522,85 @@ var
   RttiType: TRttiType;
   Field: TRttiField;
   Prop: TRttiProperty;
-  ModelValue: TValue;
   Instance: TObject;
+  Parts: TArray<string>;
+  CurrentValue: TValue;
+  I: Integer;
 begin
-  RttiType := FContext.GetType(TypeInfo(TModel));
-  if RttiType = nil then Exit;
+  Parts := PropertyPath.Split(['.']);
   
-  Instance := nil;
-  if RttiType.IsInstance then
-    Instance := TObject((@Model)^);
-
-  // Try field first
-  Field := RttiType.GetField(PropertyPath);
-  if Field <> nil then
+  if Length(Parts) = 1 then
   begin
-    if Instance <> nil then
-      Field.SetValue(Instance, Value)
-    else
-      Field.SetValue(@Model, Value);
+    // Fast path for top-level properties
+    CurrentValue := TValue.From<TModel>(Model);
+    RttiType := FContext.GetType(CurrentValue.TypeInfo);
+    if RttiType = nil then Exit;
+
+    Instance := nil;
+    if RttiType.IsInstance then
+      Instance := CurrentValue.AsObject;
+
+    Field := RttiType.GetField(Parts[0]);
+    if Field <> nil then
+    begin
+      if Instance <> nil then Field.SetValue(Instance, Value)
+      else Field.SetValue(CurrentValue.GetReferenceToRawData, Value);
+      Exit;
+    end;
+
+    Prop := RttiType.GetProperty(Parts[0]);
+    if (Prop <> nil) and Prop.IsWritable then
+    begin
+      if Instance <> nil then Prop.SetValue(Instance, Value)
+      else Prop.SetValue(CurrentValue.GetReferenceToRawData, Value);
+    end;
     Exit;
   end;
-  
-  // Try property
-  Prop := RttiType.GetProperty(PropertyPath);
-  if (Prop <> nil) and Prop.IsWritable then
+
+  // Nested path: Resolve all but the last part
+  CurrentValue := TValue.From<TModel>(Model);
+  for I := 0 to High(Parts) - 1 do
   begin
-    if Instance <> nil then
-      Prop.SetValue(Instance, Value)
+    RttiType := FContext.GetType(CurrentValue.TypeInfo);
+    if RttiType = nil then Exit;
+    
+    Instance := nil;
+    if RttiType.IsInstance then
+      Instance := CurrentValue.AsObject;
+
+    Prop := RttiType.GetProperty(Parts[I]);
+    if Prop <> nil then
+      CurrentValue := Prop.GetValue(Instance)
     else
     begin
-      ModelValue := TValue.From<TModel>(Model);
-      Prop.SetValue(ModelValue.GetReferenceToRawData, Value);
-      if RttiType.TypeKind = tkRecord then
-        Model := ModelValue.AsType<TModel>;
+      Field := RttiType.GetField(Parts[I]);
+      if Field <> nil then
+        CurrentValue := Field.GetValue(Instance)
+      else
+        Exit; // Path segment not found
+    end;
+  end;
+
+  // Final part
+  if CurrentValue.IsEmpty then Exit;
+  RttiType := FContext.GetType(CurrentValue.TypeInfo);
+  Instance := nil;
+  if RttiType.IsInstance then
+    Instance := CurrentValue.AsObject;
+
+  Prop := RttiType.GetProperty(Parts[High(Parts)]);
+  if (Prop <> nil) and Prop.IsWritable then
+  begin
+    if Instance <> nil then Prop.SetValue(Instance, Value)
+    else Prop.SetValue(CurrentValue.GetReferenceToRawData, Value);
+  end
+  else
+  begin
+    Field := RttiType.GetField(Parts[High(Parts)]);
+    if Field <> nil then
+    begin
+      if Instance <> nil then Field.SetValue(Instance, Value)
+      else Field.SetValue(CurrentValue.GetReferenceToRawData, Value);
     end;
   end;
 end;

@@ -4,6 +4,7 @@ object CustomerListFrame: TCustomerListFrame
   Width = 700
   Height = 500
   TabOrder = 0
+  StyleName = 'Windows'
   object TitlePanel: TPanel
     Left = 0
     Top = 0
@@ -120,6 +121,7 @@ object CustomerListFrame: TCustomerListFrame
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect]
       TabOrder = 0
       OnSelectCell = CustomerGridSelectCell
+      OnDblClick = CustomerGridDblClick
     end
   end
   object StatusPanel: TPanel

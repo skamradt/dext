@@ -26,7 +26,8 @@ uses
   System.SysUtils,
   System.IOUtils,
   Dext.Web,
-  Dext.Web.Extensions;
+  Dext.Web.Extensions,
+  Dext.OpenAPI.Extensions;
 
 procedure EnsureAppSettingsExists;
 begin
@@ -63,6 +64,15 @@ begin
       Ctx.Response.Json('{"version": "2.0", "message": "This is API v2 - Newer and Better!"}');
     end);
   TWebRouteHelpers.HasApiVersion(Builder, '2.0');
+
+  // Fluent API Anonymous Test
+  Builder.MapGet('/api/fluent/anonymous', 
+    procedure(Ctx: IHttpContext)
+    begin
+      Ctx.Response.Json('{"message": "Fluent API anonymous worked!"}');
+    end);
+  TEndpointMetadataExtensions.RequireAuthorization(Builder, 'Bearer');
+  TEndpointMetadataExtensions.AllowAnonymous(Builder); // This bypasses the Bearer req
 end;
 
 procedure PrintFeatureInstructions;

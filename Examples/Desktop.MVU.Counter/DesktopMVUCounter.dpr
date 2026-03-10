@@ -13,7 +13,6 @@ begin
   ReportMemoryLeaksOnShutdown := True;
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  TStyleManager.TrySetStyle('Windows11 Impressive Dark SE');
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

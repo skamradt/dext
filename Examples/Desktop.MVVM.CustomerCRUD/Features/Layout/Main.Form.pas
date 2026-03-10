@@ -288,7 +288,9 @@ begin
   // Capture state before loading (Load may modify internal state)
   IsNew := ViewModel.Id = 0;
   
-  FEditFrame.LoadCustomer(ViewModel);
+  // The frame's viewmodel should take ownership of the entity if it's a new one
+  // to avoid dangling pointers and ensure correct cleanup.
+  FEditFrame.LoadCustomer(ViewModel, IsNew);
   
   // Navigate using Navigator
   if IsNew then
@@ -296,11 +298,11 @@ begin
   else
   begin
     FNavigator.Push(ROUTE_CUSTOMER_EDIT);
-    // Only release ownership for existing customers (entity is from DB/service)
-    ViewModel.ReleaseOwnership;
   end;
-    
-  // Free the ViewModel passed from Controller
+
+  // Release ownership from temporary ViewModel so it doesn't free the entity
+  // even if it was the original owner.
+  ViewModel.ReleaseOwnership;
   ViewModel.Free;
 end;
 

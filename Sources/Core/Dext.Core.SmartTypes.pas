@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -505,8 +505,8 @@ end;
 
 class operator Prop<T>.Implicit(const Value: T): Prop<T>;
 begin
+  Result := Default(Prop<T>);
   Result.FValue := Value;
-  Result.FInfo := nil;  // Real instances don't have metadata
 end;
 
 class operator Prop<T>.Implicit(const Value: Prop<T>): T;
@@ -545,17 +545,17 @@ end;
 
 class operator Prop<T>.Implicit(const Value: Nullable<T>): Prop<T>;
 begin
+  Result := Default(Prop<T>);
   if Value.HasValue then
     Result.FValue := Value.Value
   else
     Result.FValue := Default(T);
-  Result.FInfo := nil;
 end;
 
 class operator Prop<T>.Implicit(const Value: Variant): Prop<T>;
 begin
+  Result := Default(Prop<T>);
   Result.FValue := TValue.FromVariant(Value).AsType<T>;
-  Result.FInfo := nil;
 end;
 
 class operator Prop<T>.Implicit(const Value: Prop<T>): Variant;
@@ -828,14 +828,15 @@ begin
   else
   begin
     // Runtime math using variants
+    Result := Default(Prop<T>);
     var V: Variant := TValue.From<T>(Value.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(-V).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
 class operator Prop<T>.Positive(const Value: Prop<T>): Prop<T>;
 begin
+  Result := Default(Prop<T>);
   Result := Value;
 end;
 
@@ -845,10 +846,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoAdd))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS).AsVariant;
     Result.FValue := TValue.FromVariant(V1 + V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -858,10 +859,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoAdd))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 + V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -876,10 +877,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoSubtract))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS).AsVariant;
     Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -889,10 +890,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoSubtract))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -915,10 +916,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoMultiply))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS).AsVariant;
     Result.FValue := TValue.FromVariant(V1 * V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -928,10 +929,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoMultiply))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 * V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -946,10 +947,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoDivide))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS).AsVariant;
     Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 
@@ -959,10 +960,10 @@ begin
     Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoDivide))
   else
   begin
+    Result := Default(Prop<T>);
     var V1: Variant := TValue.From<T>(LHS.FValue).AsVariant;
     var V2: Variant := TValue.From<T>(RHS.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
-    Result.FInfo := nil;
   end;
 end;
 

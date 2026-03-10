@@ -138,13 +138,14 @@ Test-Endpoint "GET" "/api/object/list" -Description "GET /api/object/list (List 
 Write-Host ""
 
 # ============================================================================
-# 7. API VERSIONING
+# 7. API VERSIONING & FLUENT API
 # ============================================================================
-Write-Host "[7] API Versioning" -ForegroundColor Magenta
+Write-Host "[7] API Versioning & Fluent API" -ForegroundColor Magenta
 Test-Endpoint "GET" "/api/versioned?api-version=1.0" -Description "Version 1.0 (Query String)"
 Test-Endpoint "GET" "/api/versioned?api-version=2.0" -Description "Version 2.0 (Query String)"
 Test-Endpoint "GET" "/api/versioned" -Headers @{ "X-Version" = "1.0" } -Description "Version 1.0 (X-Version Header)"
 Test-Endpoint "GET" "/api/versioned" -Headers @{ "X-Version" = "2.0" } -Description "Version 2.0 (X-Version Header)"
+Test-Endpoint "GET" "/api/fluent/anonymous" -Description "Fluent API (AllowAnonymous)"
 Write-Host ""
 
 # ============================================================================

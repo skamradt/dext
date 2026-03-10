@@ -27,7 +27,6 @@ begin
     Application.Initialize;
     Application.MainFormOnTaskbar := True;
     Application.Title := 'Customer Management';
-    TStyleManager.TrySetStyle('Windows11 Impressive Dark SE');
     Application.CreateForm(TMainForm, MainForm);
   // Inject controller (Navigator is created internally by MainForm)
     MainForm.InjectDependencies(TAppStartup.GetCustomerController);

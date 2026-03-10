@@ -65,7 +65,13 @@ implementation
 constructor TCustomer.Create;
 begin
   inherited;
+  FId := 0;
+  FName := '';
+  FEmail := '';
+  FPhone := '';
+  FDocument := '';
   FActive := True;
+  FNotes := '';
 end;
 
 end.

@@ -52,6 +52,7 @@ type
     procedure RefreshButtonClick(Sender: TObject);
     procedure SearchEditChange(Sender: TObject);
     procedure CustomerGridSelectCell(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
+    procedure CustomerGridDblClick(Sender: TObject);
   private
     FCustomers: IList<TCustomer>;
     FSelectedIndex: Integer;
@@ -193,6 +194,11 @@ begin
     FSelectedIndex := ARow - 1;
     UpdateButtonState;
   end;
+end;
+
+procedure TCustomerListFrame.CustomerGridDblClick(Sender: TObject);
+begin
+  EditButtonClick(Sender);
 end;
 
 procedure TCustomerListFrame.NewButtonClick(Sender: TObject);

@@ -6,11 +6,13 @@ uses
   System.SysUtils,
   Dext,
   Dext.Web,
+  Dext.Utils,
   ControllerExample.Setup in 'ControllerExample.Setup.pas',
   ControllerExample.Services in 'ControllerExample.Services.pas',
   ControllerExample.Controller in 'ControllerExample.Controller.pas';
 
 begin
+  SetConsoleCharSet;
   try
     WriteLn('🚀 Starting Dext Controller Example with Fluent API...');
     
@@ -72,4 +74,5 @@ begin
     on E: Exception do
       Writeln('❌ Error: ', E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

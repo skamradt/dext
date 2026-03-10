@@ -4,6 +4,7 @@ object CustomerEditFrame: TCustomerEditFrame
   Width = 450
   Height = 500
   TabOrder = 0
+  StyleName = 'Windows'
   object TitlePanel: TPanel
     Left = 0
     Top = 0
