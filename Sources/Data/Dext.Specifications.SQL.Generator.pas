@@ -2280,8 +2280,6 @@ var
   PropMap: TPropertyMap;
   i: Integer;
   FK: ForeignKeyAttribute;
-  FKPropName: string;
-  FKColName: string;
   RelatedTable, RelatedPK: string;
   LConstraint: string;
   PropTypeHandle: PTypeInfo;

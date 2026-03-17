@@ -93,9 +93,13 @@ begin
     .MapPost<IOrderService, IHttpContext, IResult>('/api/orders',
       function(Service: IOrderService; Ctx: IHttpContext): IResult
       var
+        TotalStr: string;
         Total: Currency;
       begin
-        Total := StrToCurrDef(Ctx.Request.Query.Values['total'], 0);
+        if Ctx.Request.Query.TryGetValue('total', TotalStr) then
+          Total := StrToCurrDef(TotalStr, 0)
+        else
+          Total := 0;
         Service.CreateOrder(Total);
         Result := Results.Ok('{"message": "Pedido criado"}');
       end)

@@ -28,6 +28,7 @@ unit Dext.Json.Driver.SystemJson;
 interface
 
 uses
+  System.Generics.Collections, // Used by System.JSON
   System.JSON,
   System.SysUtils,
   Dext.Json.Types;

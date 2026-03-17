@@ -76,7 +76,7 @@ begin
             Svc: IGreetingService;
             Name: string;
           begin
-            Name := Context.Request.Query.Values['name'];
+            Context.Request.Query.TryGetValue('name', Name);
             // Resolve service from request context using Supports
             if Supports(Context.Services.GetService(TypeInfo(IGreetingService)), IGreetingService, Svc) then
               Context.Response.Write(Svc.GetGreeting(Name))
@@ -90,7 +90,7 @@ begin
           var
             Text: string;
           begin
-            Text := Context.Request.Query.Values['text'];
+            Context.Request.Query.TryGetValue('text', Text);
             if Text = '' then Text := 'No text provided';
             Context.Response.Write('Echo: ' + Text);
           end);
