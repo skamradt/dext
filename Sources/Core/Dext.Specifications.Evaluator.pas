@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -92,14 +92,22 @@ function TEvaluatorVisitor.GetPropertyValue(const APropertyName: string): TValue
 var
   Typ: TRttiType;
   Prop: TRttiProperty;
+  Fld: TRttiField;
   Val: TValue;
 begin
   Typ := FCtx.GetType(FObject.ClassType);
   Prop := Typ.GetProperty(APropertyName);
-  if Prop = nil then
-    raise Exception.CreateFmt('Property "%s" not found on class "%s"', [APropertyName, FObject.ClassName]);
   
-  Val := Prop.GetValue(FObject);
+  if Prop <> nil then
+    Val := Prop.GetValue(FObject)
+  else
+  begin
+    Fld := Typ.GetField(APropertyName);
+    if Fld <> nil then
+      Val := Fld.GetValue(FObject)
+    else
+      raise Exception.CreateFmt('Property or Field "%s" not found on class "%s"', [APropertyName, FObject.ClassName]);
+  end;
   
   // Unwrap Smart Types (Prop<T>)
   if (Val.Kind = tkRecord) and string(Val.TypeInfo.Name).StartsWith('Prop<') then

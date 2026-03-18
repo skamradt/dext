@@ -20,7 +20,10 @@ begin
       TTest.Configure
         .Verbose
         .RegisterFixtures([
-          TEntityDataSetTests
+          TEntityDataSetTests,
+          TProductDataSetTests,
+          TMasterDetailDataSetTests,
+          TEntityDataSetCRUDTests
         ]).Run
     );
   except

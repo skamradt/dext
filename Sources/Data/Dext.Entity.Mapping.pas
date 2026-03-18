@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -203,6 +203,7 @@ type
     property DiscriminatorValue: Variant read FDiscriminatorValue write FDiscriminatorValue;
 
     procedure DiscoverAttributes;
+    procedure ProcessAttribute(APropMap: TPropertyMap; AAttr: TCustomAttribute);
     function GetOrAddProperty(const APropName: string): TPropertyMap;
   end;
 
@@ -383,6 +384,91 @@ begin
   DiscoverAttributes;
 end;
 
+procedure TEntityMap.ProcessAttribute(APropMap: TPropertyMap; AAttr: TCustomAttribute);
+begin
+  if (AAttr is ColumnAttribute) or (AAttr is PrimaryKeyAttribute) or (AAttr is AutoIncAttribute) or 
+      (AAttr is ForeignKeyAttribute) or (AAttr is NotMappedAttribute) or (AAttr is FieldAttribute) or
+      (AAttr is RequiredAttribute) or (AAttr is MaxLengthAttribute) or (AAttr is MinLengthAttribute) or (AAttr is PrecisionAttribute) or
+      (AAttr is TypeConverterAttribute) or (AAttr is HasManyAttribute) or (AAttr is BelongsToAttribute) or
+      (AAttr is HasOneAttribute) or (AAttr is InversePropertyAttribute) or (AAttr is DeleteBehaviorAttribute) or
+      (AAttr is ManyToManyAttribute) or (AAttr is VersionAttribute) or (AAttr is CreatedAtAttribute) or
+      (AAttr is UpdatedAtAttribute) or (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) then
+  begin
+    if AAttr is ColumnAttribute then APropMap.ColumnName := ColumnAttribute(AAttr).Name;
+    if AAttr is FieldAttribute then 
+    begin
+      if FieldAttribute(AAttr).Name <> '' then
+        APropMap.FieldName := FieldAttribute(AAttr).Name
+      else
+        APropMap.FieldName := 'F' + APropMap.PropertyName;
+    end;
+    if AAttr is PrimaryKeyAttribute then 
+    begin
+      APropMap.IsPK := True;
+      if not FKeys.Contains(APropMap.PropertyName) then FKeys.Add(APropMap.PropertyName);
+    end;
+    if AAttr is AutoIncAttribute then APropMap.IsAutoInc := True;
+    if AAttr is NotMappedAttribute then APropMap.IsIgnored := True;
+    if AAttr is ForeignKeyAttribute then APropMap.ForeignKeyColumn := ForeignKeyAttribute(AAttr).ColumnName;
+    if AAttr is DbTypeAttribute then APropMap.DataType := DbTypeAttribute(AAttr).DataType;
+    if AAttr is TypeConverterAttribute then APropMap.ConverterClass := TypeConverterAttribute(AAttr).ConverterClass;
+
+    if AAttr is RequiredAttribute then APropMap.IsRequired := True;
+    if AAttr is MaxLengthAttribute then APropMap.MaxLength := MaxLengthAttribute(AAttr).Length;
+    if AAttr is MinLengthAttribute then APropMap.MinLength := MinLengthAttribute(AAttr).Length;
+    if AAttr is PrecisionAttribute then
+    begin
+      APropMap.Precision := PrecisionAttribute(AAttr).Precision;
+      APropMap.Scale := PrecisionAttribute(AAttr).Scale;
+    end;
+
+    // Relationships
+    if AAttr is HasManyAttribute then 
+    begin
+      APropMap.Relationship := rtOneToMany;
+      APropMap.IsNavigation := True;
+    end;
+    if AAttr is BelongsToAttribute then 
+    begin
+      APropMap.Relationship := rtManyToOne;
+      APropMap.IsNavigation := True;
+    end;
+    if AAttr is HasOneAttribute then 
+    begin
+      APropMap.Relationship := rtOneToOne;
+      APropMap.IsNavigation := True;
+    end;
+    if AAttr is ManyToManyAttribute then 
+    begin
+      APropMap.Relationship := rtManyToMany;
+      APropMap.IsNavigation := True;
+      APropMap.JoinTableName := ManyToManyAttribute(AAttr).JoinTableName;
+      APropMap.LeftKeyColumn := ManyToManyAttribute(AAttr).LeftKeyColumn;
+      APropMap.RightKeyColumn := ManyToManyAttribute(AAttr).RightKeyColumn;
+    end;
+    if AAttr is InversePropertyAttribute then 
+    begin
+      APropMap.InverseProperty := InversePropertyAttribute(AAttr).Name;
+      APropMap.IsNavigation := True;
+    end;
+    if AAttr is DeleteBehaviorAttribute then APropMap.DeleteBehavior := DeleteBehaviorAttribute(AAttr).Behavior;
+    
+    // Optimistic Concurrency
+    if AAttr is VersionAttribute then APropMap.IsVersion := True;
+    
+    // Audit Timestamps
+    if AAttr is CreatedAtAttribute then APropMap.IsCreatedAt := True;
+    if AAttr is UpdatedAtAttribute then APropMap.IsUpdatedAt := True;
+    
+    // JSON Column
+    if AAttr is JsonColumnAttribute then
+    begin
+      APropMap.IsJsonColumn := True;
+      APropMap.UseJsonB := JsonColumnAttribute(AAttr).UseJsonB;
+    end;
+  end;
+end;
+
 procedure TEntityMap.DiscoverAttributes;
 var
   Ctx: TRttiContext;
@@ -413,28 +499,49 @@ begin
     
     for var Fld in Typ.GetFields do
     begin
-        if Fld.FieldType.Name.StartsWith('Prop<') then
-        begin
-           var FldName := Fld.Name;
-           if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
-             FldName := FldName.Substring(1);
-           
-           PropMap := GetOrAddProperty(FldName);
-           
-           PropMap.FieldOffset := -1;
-           PropMap.FieldValueOffset := -1;
+      // 1. Smart Properties (Prop<T>)
+      if Fld.FieldType.Name.StartsWith('Prop<') then
+      begin
+        var FldName := Fld.Name;
+        if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
+          FldName := FldName.Substring(1);
+        
+        PropMap := GetOrAddProperty(FldName);
+        PropMap.FieldOffset := Fld.Offset;
+        PropMap.FieldValueOffset := -1;
 
-           for var InnerFld in Fld.FieldType.GetFields do
-           begin
-             if SameText(InnerFld.Name, 'FInfo') then
-               PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
-             else if SameText(InnerFld.Name, 'FValue') then
-             begin
-               PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
-               PropMap.PropertyType := InnerFld.FieldType.Handle;
-             end;
-           end;
+        for var InnerFld in Fld.FieldType.GetFields do
+        begin
+          if SameText(InnerFld.Name, 'FInfo') then
+            PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
+          else if SameText(InnerFld.Name, 'FValue') then
+          begin
+            PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
+            PropMap.PropertyType := InnerFld.FieldType.Handle;
+          end;
         end;
+        
+        // Processar atributos do campo
+        for Attr in Fld.GetAttributes do
+          ProcessAttribute(PropMap, Attr);
+      end
+      // 2. Campos normais públicos ou com atributos
+      else if (Fld.Visibility in [mvPublic, mvPublished]) or (Length(Fld.GetAttributes) > 0) then
+      begin
+        var FldName := Fld.Name;
+        if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
+          FldName := FldName.Substring(1);
+          
+        PropMap := GetOrAddProperty(FldName);
+        if PropMap.FieldValueOffset <= 0 then
+        begin
+           PropMap.FieldValueOffset := Fld.Offset;
+           PropMap.PropertyType := Fld.FieldType.Handle;
+        end;
+        
+        for Attr in Fld.GetAttributes do
+          ProcessAttribute(PropMap, Attr);
+      end;
     end;
 
     for Prop in Typ.GetProperties do
@@ -466,97 +573,13 @@ begin
         end;
       end;
 
+      if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
+
       for Attr in Prop.GetAttributes do
-      begin
-        if (Attr is ColumnAttribute) or (Attr is PrimaryKeyAttribute) or (Attr is AutoIncAttribute) or 
-            (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) or
-            (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is MinLengthAttribute) or (Attr is PrecisionAttribute) or
-            (Attr is TypeConverterAttribute) or (Attr is HasManyAttribute) or (Attr is BelongsToAttribute) or
-            (Attr is HasOneAttribute) or (Attr is InversePropertyAttribute) or (Attr is DeleteBehaviorAttribute) or
-            (Attr is ManyToManyAttribute) or (Attr is VersionAttribute) or (Attr is CreatedAtAttribute) or
-            (Attr is UpdatedAtAttribute) or (Attr is JsonColumnAttribute) or (Attr is DbTypeAttribute) then
-        begin
-          if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
-          
-          if Attr is ColumnAttribute then PropMap.ColumnName := ColumnAttribute(Attr).Name;
-          if Attr is FieldAttribute then 
-          begin
-            if FieldAttribute(Attr).Name <> '' then
-              PropMap.FieldName := FieldAttribute(Attr).Name
-            else
-              PropMap.FieldName := 'F' + Prop.Name;
-          end;
-          if Attr is PrimaryKeyAttribute then 
-          begin
-            PropMap.IsPK := True;
-            if not FKeys.Contains(Prop.Name) then FKeys.Add(Prop.Name);
-          end;
-          if Attr is AutoIncAttribute then PropMap.IsAutoInc := True;
-          if Attr is NotMappedAttribute then PropMap.IsIgnored := True;
-          if Attr is ForeignKeyAttribute then PropMap.ForeignKeyColumn := ForeignKeyAttribute(Attr).ColumnName;
-          if Attr is DbTypeAttribute then PropMap.DataType := DbTypeAttribute(Attr).DataType;
-          if Attr is TypeConverterAttribute then PropMap.ConverterClass := TypeConverterAttribute(Attr).ConverterClass;
-
-          if Attr is RequiredAttribute then PropMap.IsRequired := True;
-          if Attr is MaxLengthAttribute then PropMap.MaxLength := MaxLengthAttribute(Attr).Length;
-          if Attr is MinLengthAttribute then PropMap.MinLength := MinLengthAttribute(Attr).Length;
-          if Attr is PrecisionAttribute then
-          begin
-            PropMap.Precision := PrecisionAttribute(Attr).Precision;
-            PropMap.Scale := PrecisionAttribute(Attr).Scale;
-          end;
-
-          // Relationships
-          if Attr is HasManyAttribute then 
-          begin
-            PropMap.Relationship := rtOneToMany;
-            PropMap.IsNavigation := True;
-          end;
-          if Attr is BelongsToAttribute then 
-          begin
-            PropMap.Relationship := rtManyToOne;
-            PropMap.IsNavigation := True;
-          end;
-          if Attr is HasOneAttribute then 
-          begin
-            PropMap.Relationship := rtOneToOne;
-            PropMap.IsNavigation := True;
-          end;
-          if Attr is ManyToManyAttribute then 
-          begin
-            PropMap.Relationship := rtManyToMany;
-            PropMap.IsNavigation := True;
-            PropMap.JoinTableName := ManyToManyAttribute(Attr).JoinTableName;
-            PropMap.LeftKeyColumn := ManyToManyAttribute(Attr).LeftKeyColumn;
-            PropMap.RightKeyColumn := ManyToManyAttribute(Attr).RightKeyColumn;
-          end;
-          if Attr is InversePropertyAttribute then 
-          begin
-            PropMap.InverseProperty := InversePropertyAttribute(Attr).Name;
-            PropMap.IsNavigation := True;
-          end;
-          if Attr is DeleteBehaviorAttribute then PropMap.DeleteBehavior := DeleteBehaviorAttribute(Attr).Behavior;
-          
-          // Optimistic Concurrency
-          if Attr is VersionAttribute then PropMap.IsVersion := True;
-          
-          // Audit Timestamps
-          if Attr is CreatedAtAttribute then PropMap.IsCreatedAt := True;
-          if Attr is UpdatedAtAttribute then PropMap.IsUpdatedAt := True;
-          
-          // JSON Column
-          if Attr is JsonColumnAttribute then
-          begin
-            PropMap.IsJsonColumn := True;
-            PropMap.UseJsonB := JsonColumnAttribute(Attr).UseJsonB;
-          end;
-        end;
-      end;
+        ProcessAttribute(PropMap, Attr);
       
       // Resolve Converter (Optimization)
       // Even if no attributes, we might want to resolve converter for standard types (like TDateTime or Enums)
-      if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
-      
       if PropMap <> nil then
       begin
         // If a specific converter class is defined (fluent or attribute), use it
@@ -599,6 +622,17 @@ begin
             var LTypeName := string(Prop.PropertyType.Handle.Name);
             if (LTypeName = 'TStrings') or (LTypeName = 'TBytes') then
               PropMap.IsLazy := True;
+        end;
+
+        // Try to resolve backing field offset to enable fast-path even for properties
+        if (PropMap <> nil) and (PropMap.FieldValueOffset <= 0) then
+        begin
+          var BackingFld := Typ.GetField('F' + Prop.Name);
+          if BackingFld <> nil then
+          begin
+             PropMap.FieldValueOffset := BackingFld.Offset;
+             PropMap.PropertyType := Prop.PropertyType.Handle;
+          end;
         end;
       end;
     end;
