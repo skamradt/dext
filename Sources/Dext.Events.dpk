@@ -1,0 +1,47 @@
+package Dext.Events;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - Event Bus (in-process pub/sub with DI integration)'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  IndySystem,
+  IndyCore,
+  Dext.Core;
+
+contains
+  Dext.Events.Interfaces in 'Events\Dext.Events.Interfaces.pas',
+  Dext.Events.Bus in 'Events\Dext.Events.Bus.pas',
+  Dext.Events.Behaviors in 'Events\Dext.Events.Behaviors.pas',
+  Dext.Events.Extensions in 'Events\Dext.Events.Extensions.pas',
+  Dext.Events.Lifecycle in 'Events\Dext.Events.Lifecycle.pas',
+  Dext.Events in 'Events\Dext.Events.pas',
+  Dext.Events.Testing in 'Events\Dext.Events.Testing.pas';
+
+end.

@@ -8,6 +8,8 @@ Deep dives into infrastructure and advanced patterns.
 2. [Background Services](background-services.md) - Hosted services
 3. [Configuration](configuration.md) - `IOptions<T>` pattern
 4. [Async API](async-api.md) - `TAsyncTask` and concurrency
+5. [Event Bus](event-bus.md) - In-process publish/subscribe with DI integration
+6. [Event Bus Comparison](event-bus-comparison.md) - Dext vs Delphi Event Bus vs NX Horizon
 
 ## Quick Examples
 
@@ -49,6 +51,19 @@ procedure DoWork(Options: IOptions<TDatabaseOptions>);
 begin
   var ConnStr := Options.Value.ConnectionString;
 end;
+```
+
+### Event Bus
+
+```pascal
+Services
+  .AddEventBus
+  .AddEventHandler<TOrderPlacedEvent, TOrderEmailHandler>
+  .AddEventPublisher<TOrderPlacedEvent>
+  .AddEventBehavior<TEventExceptionBehavior>;
+
+// Publish — typed, ISP-compliant
+FPublisher.Publish(Event);
 ```
 
 ### Async Tasks
