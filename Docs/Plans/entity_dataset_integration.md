@@ -106,8 +106,8 @@ Para trafegar dados entre camadas (API -> Client) com máxima eficiência.
 
 - [x] **Nullable Support:** Testar e validar compatibilidade total com `Nullable<Prop<T>>` e `Nullable<T>`.
 - [x] **SmartTypes (Prop/Lazy):** Implementar suporte nativo a `Prop<T>` e `Lazy<T>` com unwrapping automático.
-- [ ] **Blob Support:** Suporte e testes exaustivos para campos "Blob" (Texto longo - CLOB e Imagens - BLOB).
-- [ ] **Master-Detail:** Implementar e testar cenários de Mestre-Detalhe vinculados.
+- [x] **Blob Support:** Suporte e testes exaustivos para campos "Blob" (Texto longo - CLOB e Imagens - BLOB).
+- [x] **Master-Detail:** Implementar e testar cenários de Mestre-Detalhe vinculados.
 - [x] **Performance & RTTI Fix:** Otimização do pipeline de RTTI (Context global) e correção de memory leaks.
 - [ ] **Shadow Properties:** Validar leitura/escrita de propriedades persistentes que não possuem campo físico na classe (`TEntityMap`).
 - [ ] **Calculated Fields:** Suporte nativo a campos calculados via evento `OnCalcFields` do `TDataSet`.
@@ -125,7 +125,7 @@ Para trafegar dados entre camadas (API -> Client) com máxima eficiência.
 
 *Objetivo: Produtividade máxima do desenvolvedor Delphi no ecossistema Dext.*
 
-- [ ] **Delphi AST Discovery:** Usar o parser AST para autocompletar e descobrir classes de entidades no projeto dentro da IDE.
+- [ ] **Delphi AST Discovery:** Usar o parser AST para autocompletar e descobrir classes de entidades no projeto dentro da IDE. (Atualizar Delphi AST antes de executar esta tarefa)
 - [ ] **Auto Persistence:** Auto-criação de `TFields` (Persistent Fields) no Fields Editor em tempo de design.
 - [ ] **Design-time Data Viewer:** Implementar janela para execução e visualização de dados (estilo DataApi) em Design-time.
 - [ ] **Attribute Driven UI:**

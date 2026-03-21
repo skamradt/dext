@@ -141,7 +141,10 @@ type
     ///  UTF-8 JSON data loading (Zero-Alloc Pipeline)
     /// </summary>
     procedure LoadFromUtf8Json(const ASpan: TByteSpan; AClass: TClass);
+    procedure Refresh;
 
+    function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream; override;
+    function GetCurrentObject: TObject;
     property Items: IList<TObject> read FItems write SetItems;
   published
     property Active;
@@ -191,6 +194,20 @@ uses
   Dext.Core.ValueConverters,
   Dext.Entity;
 
+type
+  TEntityBlobStream = class(TMemoryStream)
+  private
+    FField: TField;
+    FDataSet: TEntityDataSet;
+    FMode: TBlobStreamMode;
+    FModified: Boolean;
+    FObj: TObject;
+  public
+    constructor Create(Field: TField; DataSet: TEntityDataSet; Mode: TBlobStreamMode);
+    destructor Destroy; override;
+    function Write(const Buffer; Count: Integer): Longint; override;
+  end;
+
 function TValueBufferToValue(ABuffer: TValueBuffer; ADataType: TFieldType): TValue;
 begin
   case ADataType of
@@ -213,7 +230,14 @@ end;
 
 { TEntityDataSet }
 
-{ TEntityDataSet }
+procedure TEntityDataSet.Refresh;
+begin
+  if Active then
+  begin
+    ApplyFilterAndSort(Filtered);
+    Resync([]);
+  end;
+end;
 
 constructor TEntityDataSet.Create(AOwner: TComponent);
 begin
@@ -238,6 +262,105 @@ begin
     FEntityMap.Free;
     
   inherited Destroy;
+end;
+
+function TEntityDataSet.GetCurrentObject: TObject;
+var
+  Header: PEntityRecordHeader;
+begin
+  Result := nil;
+  if not Active then Exit;
+  
+  Header := PEntityRecordHeader(ActiveBuffer);
+  if (Header <> nil) then
+  begin
+    if (Header.BookmarkIndex = -2) then
+      Exit(FInsertObj)
+    else if (Header.BookmarkIndex >= 0) and (Header.BookmarkIndex < FVirtualIndex.Count) then
+      Exit(FItems[FVirtualIndex[Header.BookmarkIndex]]);
+  end;
+
+  if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
+    Result := FItems[FVirtualIndex[FCurrentRec]];
+end;
+
+function TEntityDataSet.CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
+begin
+  Result := TEntityBlobStream.Create(Field, Self, Mode);
+end;
+
+{ TEntityBlobStream }
+
+constructor TEntityBlobStream.Create(Field: TField; DataSet: TEntityDataSet; Mode: TBlobStreamMode);
+var
+  Val: TValue;
+  B: TBytes;
+  S: string;
+begin
+  inherited Create;
+  FField := Field;
+  FDataSet := DataSet;
+  FMode := Mode;
+  FModified := False;
+  FObj := FDataSet.GetCurrentObject;
+  
+  if (FMode <> bmWrite) and Assigned(FObj) then
+  begin
+    Val := TReflection.GetValue(FObj, FField.FieldName);
+    if not Val.IsEmpty then
+    begin
+      if FField.DataType in [ftMemo, ftWideMemo] then
+      begin
+        S := Val.AsString;
+        if S <> '' then
+        begin
+          B := TEncoding.Unicode.GetBytes(S);
+          Write(B[0], Length(B));
+        end;
+      end
+      else if FField.DataType = ftBlob then
+      begin
+        B := Val.AsType<TBytes>;
+        if Length(B) > 0 then
+          Write(B[0], Length(B));
+      end;
+      Position := 0;
+    end;
+  end;
+end;
+
+destructor TEntityBlobStream.Destroy;
+var
+  B: TBytes;
+  S: string;
+begin
+  if FModified and (FMode <> bmRead) and Assigned(FObj) then
+  begin
+    Position := 0;
+    SetLength(B, Size);
+    if Size > 0 then
+      Read(B[0], Size);
+
+    if FField.DataType in [ftMemo, ftWideMemo] then
+    begin
+      // Detect and strip Unicode BOM ($FF $FE) if present
+      if (Size >= 2) and (B[0] = $FF) and (B[1] = $FE) then
+        S := TEncoding.Unicode.GetString(B, 2, Size - 2)
+      else
+        S := TEncoding.Unicode.GetString(B);
+        
+      TReflection.SetValueByPath(FObj, FField.FieldName, S);
+    end
+    else
+      TReflection.SetValueByPath(FObj, FField.FieldName, TValue.From<TBytes>(B));
+  end;
+  inherited Destroy;
+end;
+
+function TEntityBlobStream.Write(const Buffer; Count: Integer): Longint;
+begin
+  Result := inherited Write(Buffer, Count);
+  FModified := True;
 end;
 
 procedure TEntityDataSet.Load(const AItems: IList<TObject>; AClass: TClass; AOwns: Boolean = False);
@@ -423,17 +546,17 @@ end;
 procedure TEntityDataSet.ApplyFilterAndSort(AFiltered: Boolean);
 var
   Context: TRttiContext;
-  CurrentRealIdx: Integer;
+  CurrentObj: TObject;
   EntityType: TRttiType;
   Expr: IExpression;
   i: Integer;
   Names: TArray<string>;
   Passing: Boolean;
 begin
-  // Salvar o índice real do item atual para restaurar FCurrentRec depois
-  CurrentRealIdx := -1;
+  // Salvar o objeto atual para restaurar FCurrentRec depois (mais seguro que índice físico)
+  CurrentObj := nil;
   if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
-    CurrentRealIdx := FVirtualIndex[FCurrentRec];
+    CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
 
   FVirtualIndex.Clear;
 
@@ -479,8 +602,14 @@ begin
   end;
 
   // Restaurar a posição do cursor na visão virtual
-  if CurrentRealIdx >= 0 then
-    FCurrentRec := FVirtualIndex.IndexOf(CurrentRealIdx)
+  if CurrentObj <> nil then
+  begin
+    var NewPhysicalIdx := FItems.IndexOf(CurrentObj);
+    if NewPhysicalIdx >= 0 then
+      FCurrentRec := FVirtualIndex.IndexOf(NewPhysicalIdx)
+    else
+      FCurrentRec := -1;
+  end
   else
     FCurrentRec := -1;
 end;
@@ -1035,6 +1164,9 @@ begin
         ResolvedType := MapTypeToFieldType(PropMap.PropertyType);
 
       // CRITICAL: Persist resolved type back into PropMap
+      if (ResolvedType in [ftString, ftWideString]) and (PropMap.MaxLength > 255) then
+        ResolvedType := ftMemo;
+
       if (PropMap.DataType = ftUnknown) and (ResolvedType <> ftUnknown) then
         PropMap.DataType := ResolvedType;
 
@@ -1371,7 +1503,7 @@ begin
     PValue := Pointer(PByte(CurrentObj) + PropMap.FieldOffset);
 
   case Field.DataType of
-    ftString, ftWideString:
+    ftString, ftWideString, ftMemo, ftWideMemo:
       Value := PString(PValue)^;
     ftInteger, ftSmallint:
       Value := PInteger(PValue)^;
@@ -1568,7 +1700,7 @@ begin
   if P <> nil then
   begin
     case Field.DataType of
-      ftString, ftWideString:
+      ftString, ftWideString, ftMemo, ftWideMemo:
         PString(PValue)^ := string(PWideChar(P));
       ftInteger, ftSmallint:
         PInteger(PValue)^ := PInteger(P)^;
@@ -1588,7 +1720,7 @@ begin
   begin
     // Buffer vazio = limpar campo
     case Field.DataType of
-      ftString, ftWideString:
+      ftString, ftWideString, ftMemo, ftWideMemo:
         PString(PValue)^ := '';
       ftInteger, ftSmallint:
         PInteger(PValue)^ := 0;

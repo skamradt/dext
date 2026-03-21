@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.DataSet.Tests;
+unit Dext.Entity.DataSet.Tests;
 
 interface
 
@@ -162,6 +162,14 @@ type
     procedure Test_Blob_FieldType;
     [Test]
     procedure Test_Blob_IsNull_When_Empty;
+    [Test]
+    procedure Test_Blob_Read_Stream;
+    [Test]
+    procedure Test_Blob_Write_Stream;
+    [Test]
+    procedure Test_Memo_Read_Stream;
+    [Test]
+    procedure Test_Memo_Write_Stream;
 
     // Testes de Sorting
     [Test]
@@ -512,6 +520,92 @@ procedure TProductDataSetTests.Test_Blob_IsNull_When_Empty;
 begin
   FDataSet.Next; // Segundo produto: Photo = nil
   Should(FDataSet.FieldByName('Photo').IsNull).BeTrue.Because('Photo nil deve ser IsNull');
+end;
+
+procedure TProductDataSetTests.Test_Blob_Read_Stream;
+var
+  Stream: TStream;
+begin
+  FDataSet.First; // Primeiro produto tem Photo [$FF, $D8, $FF, $E0]
+  Stream := FDataSet.CreateBlobStream(FDataSet.FieldByName('Photo'), bmRead);
+  try
+    Should(Stream.Size).Be(4).Because('Tamanhos do stream de foto incorreto');
+    var B: Byte;
+    Stream.Read(B, 1);
+    Should(B).Be($FF);
+    Stream.Read(B, 1);
+    Should(B).Be($D8);
+  finally
+    Stream.Free;
+  end;
+end;
+
+procedure TProductDataSetTests.Test_Blob_Write_Stream;
+var
+  Stream: TStream;
+  PhotoField: TField;
+begin
+  FDataSet.First;
+  PhotoField := FDataSet.FieldByName('Photo');
+
+  FDataSet.Edit;
+  Stream := FDataSet.CreateBlobStream(PhotoField, bmWrite);
+  try
+    var NewData: TBytes := [$01, $02, $03];
+    Stream.Write(NewData[0], 3);
+  finally
+    Stream.Free; // Salva no campo (se seguir padrão Spring4D)
+  end;
+  FDataSet.Post;
+
+  // Verificar na entidade real
+  var P1 := TProductTest(FProducts[0]);
+  Should(Length(P1.Photo)).Be(3);
+  Should(P1.Photo[0]).Be($01);
+end;
+
+procedure TProductDataSetTests.Test_Memo_Read_Stream;
+var
+  Stream: TStream;
+  Reader: TStreamReader;
+begin
+  FDataSet.First;
+  Stream := FDataSet.CreateBlobStream(FDataSet.FieldByName('Description'), bmRead);
+  try
+    Reader := TStreamReader.Create(Stream, TEncoding.Unicode);
+    try
+      var Text := Reader.ReadToEnd;
+      Should(Text).Be('Premium widget for daily use');
+    finally
+      Reader.Free;
+    end;
+  finally
+    Stream.Free;
+  end;
+end;
+
+procedure TProductDataSetTests.Test_Memo_Write_Stream;
+var
+  Stream: TStream;
+  Writer: TStreamWriter;
+begin
+  FDataSet.First;
+  FDataSet.Edit;
+  Stream := FDataSet.CreateBlobStream(FDataSet.FieldByName('Description'), bmWrite);
+  try
+    Writer := TStreamWriter.Create(Stream, TEncoding.Unicode);
+    try
+      Writer.Write('Novo Texto Longo');
+    finally
+      Writer.Free;
+    end;
+  finally
+    Stream.Free;
+  end;
+  FDataSet.Post;
+
+  var P1 := TProductTest(FProducts[0]);
+  Should(P1.Description).Be('Novo Texto Longo');
 end;
 
 procedure TProductDataSetTests.Test_Sort_By_Name;

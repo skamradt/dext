@@ -29,12 +29,11 @@ begin
       .Configure
       .Verbose
       .RegisterFixtures([
-        TSmartTypesTests,
-        TDataSetSmartTypesTests,
-        TFluentQueryTests,
-        TSqlGeneratorTests,
-        TFluentMappingTests,
-        TAsyncTests,
+        TEntityDataSetCRUDTests,
+        TEntityDataSetTests,
+        TProductDataSetTests,
+        TMasterDetailDataSetTests,
+        TEntityDataSetStressTests,
         TDataSetSmartTypesTests
       ]).Run;
 
