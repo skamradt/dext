@@ -1,4 +1,4 @@
-﻿unit Dext.Core.Reflection;
+unit Dext.Core.Reflection;
 
 interface
 
@@ -55,7 +55,8 @@ type
     class procedure SetValue(AInstance: Pointer; AMember: TRttiMember; const AValue: TValue); static;
     class procedure SetValueByPath(AInstance: TObject; const APath: string; const AValue: TValue); static;
     class function IsSmartProp(AType: PTypeInfo): Boolean; static;
-    class function GetUnderlyingType(AType: PTypeInfo): PTypeInfo; static;
+    class function GetUnderlyingType(AType: PTypeInfo): PTypeInfo; overload; static;
+    class function GetUnderlyingType(const AValue: TValue): PTypeInfo; overload; static;
     class function TryUnwrapProp(const ASource: TValue; var ADest: TValue): Boolean; static;
     class function TryWrapProp(var ADest: TValue; const ASource: TValue): Boolean; static;
     class function CreateInstance(AClass: TClass): TObject; static;
@@ -196,26 +197,30 @@ begin
   else if (RttiType <> nil) and (RttiType.TypeKind = tkInterface) then
   begin
     var LTypeName := string(RttiType.Handle.Name);
-    if LTypeName.Contains('ILazy<') then
+    if (LTypeName = 'ILazy') or LTypeName.Contains('ILazy<') then
     begin
-        IsSmartProp := True;
+        IsLazy := True;
+        IsSmartProp := False; // Lazy is NOT a SmartProp (it doesn't have FValue: T)
         var LTMark := LTypeName.IndexOf('<');
-        var LInnerTypeName := LTypeName.Substring(LTMark + 1, LTypeName.Length - LTMark - 2);
-        
-        var LInnerRtti := TReflection.Context.FindType(LInnerTypeName);
-        if LInnerRtti = nil then
-          LInnerRtti := TReflection.Context.FindType('System.' + LInnerTypeName);
-          
-        if LInnerRtti <> nil then
-          InnerType := LInnerRtti.Handle;
-
-        if InnerType = nil then
+        if LTMark > 0 then
         begin
-          if SameText(LInnerTypeName, 'Integer') or SameText(LInnerTypeName, 'System.Integer') then InnerType := TypeInfo(Integer)
-          else if SameText(LInnerTypeName, 'string') or SameText(LInnerTypeName, 'System.string') then InnerType := TypeInfo(string)
-          else if SameText(LInnerTypeName, 'Boolean') or SameText(LInnerTypeName, 'System.Boolean') then InnerType := TypeInfo(Boolean)
-          else if SameText(LInnerTypeName, 'Double') or SameText(LInnerTypeName, 'System.Double') then InnerType := TypeInfo(Double)
-          else if SameText(LInnerTypeName, 'TDateTime') or SameText(LInnerTypeName, 'System.TDateTime') then InnerType := TypeInfo(TDateTime);
+          var LInnerTypeName := LTypeName.Substring(LTMark + 1, LTypeName.Length - LTMark - 2);
+          
+          var LInnerRtti := TReflection.Context.FindType(LInnerTypeName);
+          if LInnerRtti = nil then
+            LInnerRtti := TReflection.Context.FindType('System.' + LInnerTypeName);
+            
+          if LInnerRtti <> nil then
+            InnerType := LInnerRtti.Handle;
+  
+          if InnerType = nil then
+          begin
+            if SameText(LInnerTypeName, 'Integer') or SameText(LInnerTypeName, 'System.Integer') then InnerType := TypeInfo(Integer)
+            else if SameText(LInnerTypeName, 'string') or SameText(LInnerTypeName, 'System.string') then InnerType := TypeInfo(string)
+            else if SameText(LInnerTypeName, 'Boolean') or SameText(LInnerTypeName, 'System.Boolean') then InnerType := TypeInfo(Boolean)
+            else if SameText(LInnerTypeName, 'Double') or SameText(LInnerTypeName, 'System.Double') then InnerType := TypeInfo(Double)
+            else if SameText(LInnerTypeName, 'TDateTime') or SameText(LInnerTypeName, 'System.TDateTime') then InnerType := TypeInfo(TDateTime);
+          end;
         end;
     end;
   end;
@@ -252,8 +257,8 @@ begin
   if AMember is TRttiProperty then TargetType := TRttiProperty(AMember).PropertyType.Handle
   else if AMember is TRttiField then TargetType := TRttiField(AMember).FieldType.Handle
   else Exit;
-  // Handling SmartProps during SetValue
-  if IsSmartProp(TargetType) then
+  var Meta := GetMetadata(TargetType);
+  if Meta.IsSmartProp or Meta.IsLazy then
   begin
     // Fast path: if the value is already of the target type, just set it directly
     if AValue.TypeInfo = TargetType then
@@ -364,6 +369,27 @@ begin
   Result := GetMetadata(AType).InnerType;
   if Result = nil then
     Result := AType;
+end;
+
+class function TReflection.GetUnderlyingType(const AValue: TValue): PTypeInfo;
+var
+  LLazy: ILazy;
+begin
+  Result := nil;
+  // If it's an interface, check if it's an ILazy to get TargetType without loading
+  if AValue.Kind = tkInterface then
+  begin
+    var LIntf := AValue.AsInterface;
+    if (LIntf <> nil) and (LIntf.QueryInterface(ILazy, LLazy) = S_OK) then
+      Exit(LLazy.TargetType);
+  end;
+
+  // Fallback to static type information
+  if AValue.TypeInfo <> nil then
+    Result := GetUnderlyingType(AValue.TypeInfo);
+
+  if Result = nil then
+    Result := AValue.TypeInfo;
 end;
 
 class function TReflection.TryUnwrapProp(const ASource: TValue; var ADest: TValue): Boolean;

@@ -41,8 +41,10 @@ type
     ['{40223BA9-0C66-49E7-AA33-BDAEF9F506D6}']
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
+    function GetTargetType: PTypeInfo;
     property IsValueCreated: Boolean read GetIsValueCreated;
     property Value: TValue read GetValue;
+    property TargetType: PTypeInfo read GetTargetType;
   end;
 
   ILazy<T> = interface(ILazy)
@@ -57,7 +59,7 @@ type
   {$RTTI EXPLICIT PROPERTIES([])}
   Lazy<T> = record
   private
-    FInstance: ILazy<T>;
+    FInstance: ILazy;
     function GetIsValueCreated: Boolean;
     function GetValue: T;
   public
@@ -84,6 +86,7 @@ type
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
     function GetValueT: T;
+    function GetTargetType: PTypeInfo;
   public
     constructor Create(const AValueFactory: TFunc<T>; AOwnsValue: Boolean = True);
     destructor Destroy; override;
@@ -96,6 +99,7 @@ type
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
     function GetValueT: T;
+    function GetTargetType: PTypeInfo;
   public
     constructor Create(const AValue: T; AOwnsValue: Boolean = False);
     destructor Destroy; override;
@@ -137,6 +141,11 @@ end;
 function TLazy<T>.GetValue: TValue;
 begin
   Result := TValue.From<T>(GetValueT);
+end;
+
+function TLazy<T>.GetTargetType: PTypeInfo;
+begin
+  Result := TypeInfo(T);
 end;
 
 function TLazy<T>.GetValueT: T;
@@ -190,6 +199,11 @@ begin
   Result := TValue.From<T>(FValue);
 end;
 
+function TValueLazy<T>.GetTargetType: PTypeInfo;
+begin
+  Result := TypeInfo(T);
+end;
+
 function TValueLazy<T>.GetValueT: T;
 begin
   Result := FValue;
@@ -224,7 +238,15 @@ end;
 function Lazy<T>.GetValue: T;
 begin
   if FInstance <> nil then
-    Result := FInstance.Value
+  begin
+     // If it is our generic interface, use it directly (optimized)
+     var LSpecific: ILazy<T>;
+     if Supports(FInstance, ILazy<T>, LSpecific) then
+       Exit(LSpecific.Value);
+
+     // Fallback to TValue conversion
+     Result := FInstance.Value.AsType<T>;
+  end
   else
     Result := Default(T);
 end;

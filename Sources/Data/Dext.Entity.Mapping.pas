@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -160,7 +160,8 @@ type
     IsCreatedAt: Boolean;
     IsUpdatedAt: Boolean;
     // Internal engine optimization
-    FieldOffset: Integer;      // Offset of FInfo
+    FieldOffset: Integer;      // Offset of Null flag (Boolean) - Used by TEntityDataSet
+    MetadataOffset: Integer;   // Offset of FInfo (IPropInfo) - Used by Prototype
     FieldValueOffset: Integer; // Offset of FValue
     PropertyType: PTypeInfo;   // Type of T in Prop<T>
     // Shadow Property support
@@ -558,10 +559,16 @@ begin
         // Skip fast path for Lazy to force RTTI (which triggers Load)
         if not PropMap.IsLazy then
         begin
-          // Only use FieldOffset if it is a Boolean (real null flag as in Nullable<T>)
-          // Avoids confusing FInfo (Interface) with a null flag in Prop<T>
-          if (Metadata.HasValueField <> nil) and (Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
-             PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset;
+          // CRITICAL: We separate NullFlag and MetadataOffset.
+          // TEntityDataSet uses FieldOffset to check for NULL via PBoolean (must be boolean).
+          // Prototype usage needs FInfo, which is an Interface (must NOT be treated as null flag).
+          if Metadata.HasValueField <> nil then
+          begin
+            if Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+              PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset
+            else if Metadata.HasValueField.FieldType.TypeKind = tkInterface then
+              PropMap.MetadataOffset := Fld.Offset + Metadata.HasValueField.Offset;
+          end;
 
           if Metadata.ValueField <> nil then
           begin
@@ -774,6 +781,7 @@ begin
   IsCreatedAt := False;
   IsUpdatedAt := False;
   FieldOffset := -1; 
+  MetadataOffset := -1;
   FieldValueOffset := -1;
   PropertyType := nil;
   IsShadow := False;

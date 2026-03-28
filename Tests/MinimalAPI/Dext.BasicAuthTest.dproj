@@ -29,7 +29,7 @@
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <SanitizedProjectName>Dext_BasicAuthTest</SanitizedProjectName>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\..\Sources\Core;..\..\Sources\Core\Base;..\..\Sources\Core\Interception;..\..\Sources\Core\Json;..\..\Sources\Data;..\..\Sources\Hosting;..\..\Sources\Hosting\CLI;..\..\Sources\Hubs;..\..\Sources\Net;..\..\Sources\Testing;..\..\Sources\Web;..\..\Sources\Web\Caching;..\..\Sources\Web\Hosting;..\..\Sources\Web\Indy;..\..\Sources\Web\Middleware;..\..\Sources\Web\Mvc;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>

@@ -23,8 +23,7 @@ begin
       TTest
         .Configure
         .Verbose
-        .RegisterFixtures([TEntityRelationshipTests])
-        .RegisterFixtures([TManyToManyIntegrationTests])
+        .RegisterFixtures([TEntityRelationshipTests, TManyToManyIntegrationTests])
         .Run
     );
 

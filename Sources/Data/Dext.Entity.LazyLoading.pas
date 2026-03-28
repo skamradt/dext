@@ -75,6 +75,7 @@ type
     // ILazy implementation
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
+    function GetTargetType: PTypeInfo;
   public
     constructor Create(AContext: TObject; AEntity: TObject; const APropName: string; AIsCollection: Boolean; const AValue: TValue);
     destructor Destroy; override;
@@ -228,7 +229,7 @@ begin
   end;
 
   // 5. Create Loader passing existing value
-  Loader := TLazyLoader.Create(TObject(AContext), AEntity, PropName, IsCollection, ExistingValue);
+  Loader := TLazyLoader.Create(TDbContext(AContext), AEntity, PropName, IsCollection, ExistingValue);
   LazyIntf := Loader;
 
   // 6. Assign interface to Lazy<T>.FInstance
@@ -289,6 +290,39 @@ begin
   end;
 
   Result := FValue;
+end;
+
+function TLazyLoader.GetTargetType: PTypeInfo;
+var
+  Ctx: TRttiContext;
+  Prop: TRttiProperty;
+begin
+  Ctx := TRttiContext.Create;
+  try
+    Prop := Ctx.GetType(FEntity.ClassType).GetProperty(FPropName);
+    if Prop <> nil then
+    begin
+      // Extract inner type from Lazy<T>
+      var TypeName := Prop.PropertyType.Name;
+      if TypeName.StartsWith('Lazy<') then
+      begin
+        var StartPos := Pos('<', TypeName);
+        var EndPos := Pos('>', TypeName);
+        if (StartPos > 0) and (EndPos > StartPos) then
+        begin
+          var ItemTypeName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+          var ItemType := Ctx.FindType(ItemTypeName);
+          if ItemType <> nil then
+            Exit(ItemType.Handle);
+        end;
+      end;
+      Result := Prop.PropertyType.Handle;
+    end
+    else
+      Result := nil;
+  finally
+    Ctx.Free;
+  end;
 end;
 
 procedure TLazyLoader.LoadValue;
