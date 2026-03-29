@@ -80,7 +80,6 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Winapi.Windows,{$ENDIF}
   System.IOUtils,
-  System.Generics.Collections,
   System.Bindings.Methods,
   Dext.Core.Reflection,
   Dext.Entity.Core,
