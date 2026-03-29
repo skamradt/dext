@@ -13,8 +13,6 @@ uses
   System.Math,
   System.DateUtils,
   Data.DB,
-  System.Generics.Collections,
-  System.Generics.Defaults,
   Dext.Core.DateUtils,
   Dext.Utils,
   Dext.Collections,
@@ -69,7 +67,7 @@ type
     FInsertObjRef: TObject; // Reference to track after post
     FIsAppending: Boolean;
     FPositionBeforeAction: Integer;
-    FCalcOffsets: System.Generics.Collections.TDictionary<string, Integer>;
+    FCalcOffsets: TDictionary<string, Integer>;
     FCalcAreaSize: Integer;
     FInternalCalcStorage: TArray<TBytes>;
     FPropertyCache: TDictionary<string, TRttiProperty>;
@@ -304,7 +302,7 @@ begin
   FReadOnly := False;
   BookmarkSize := SizeOf(Integer);
   FPositionBeforeAction := -2;
-  FCalcOffsets := System.Generics.Collections.TDictionary<string, Integer>.Create;
+  FCalcOffsets := TDictionary<string, Integer>.Create;
   FPropertyCache := TDictionary<string, TRttiProperty>.Create;
 end;
 
